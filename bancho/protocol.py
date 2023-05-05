@@ -13,6 +13,7 @@ from .constants import (
 )
 
 from .streams import StreamIn, StreamOut
+from .objects.client import OsuClient
 
 import traceback
 import bancho
@@ -63,7 +64,8 @@ class BanchoProtocol(Protocol):
             self.buffer += data
 
             while self.buffer:
-                if self.buffer.startswith(b'GET'):
+                if self.buffer.startswith(b'GET /'):
+                    print(self.buffer)
                     self.handleWeb()
                     return
 
@@ -73,12 +75,17 @@ class BanchoProtocol(Protocol):
 
                     username, password, client, self.buffer = self.buffer.split(b'\r\n', 3)
 
-                    bancho.services.logger.info(f'<{self.address.host}> -> Login attempt as "{username.decode()}".')
+                    client = OsuClient.from_string(
+                        client.decode(),
+                        self.address.host
+                    )
+
+                    bancho.services.logger.info(f'<{self.address.host}> -> Login attempt as "{username.decode()}" with {client.version.string}.')
 
                     self.loginReceived(
                         username.decode(), 
                         password.decode(), 
-                        client.decode()
+                        client
                     )
 
                     # We now expect packets from the client

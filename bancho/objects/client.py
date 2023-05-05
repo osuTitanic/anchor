@@ -40,13 +40,13 @@ class OsuClient:
         self.friendonly_dms = friendonly_dms
 
     @classmethod
-    def from_string(cls, line: str, ip: IPAddress):
+    def from_string(cls, line: str, ip: str):
         build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
 
         # TODO: Parse and validate client hash
 
         return OsuClient(
-            ip,
+            IPAddress(ip),
             ClientVersion.from_string(build_version),
             client_hash,
             int(utc_offset),
