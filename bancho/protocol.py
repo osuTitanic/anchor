@@ -156,7 +156,7 @@ class BanchoProtocol(Protocol):
 
         self.transport.loseConnection()
 
-    def sendError(self, message = ""):
+    def sendError(self, reason = -5, message = ""):
         if message:
             stream = StreamOut()
             stream.string(message)
@@ -167,10 +167,10 @@ class BanchoProtocol(Protocol):
                 stream.get()
             )
 
-        # Send login reply with error code: -5
+        # Send login reply with error code
         self.sendPacket(
             ResponsePacket.LOGIN_REPLY,
-            int(-5).to_bytes(
+            int(reason).to_bytes(
                 length=4,
                 byteorder='little',
                 signed=True
