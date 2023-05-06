@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass, field
 from typing      import List, Optional
+from datetime    import datetime
 
 from ..streams import StreamIn
 
@@ -41,6 +42,7 @@ class Status:
     checksum: str = ""
     mods: List[Mod] = field(default_factory=list) # = []
     mode: Mode = Mode.Osu
+    beatmap: int = -1
 
     def __repr__(self) -> str:
         return f'<Status ({self.action})>'
@@ -64,6 +66,8 @@ class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
         self.address = address
         self.logger  = logging.getLogger(self.address.host)
+
+        self.last_response = datetime.now()
 
         from .collections import Players
 
@@ -90,6 +94,10 @@ class Player(BanchoProtocol):
     @property
     def restricted(self) -> bool:
         return self.object.restricted
+    
+    @property
+    def friends(self) -> List[int]:
+        return [rel.target_id for rel in self.object.relationships]
     
     def enqueue(self, data: bytes):
         self.logger.debug(f'{data} -> {self}')
@@ -143,7 +151,7 @@ class Player(BanchoProtocol):
         self.closeConnection()
 
     def loginSuccess(self):
-        self.handler.login_reply(self.id)
+        self.handler.enqueue_login_reply(self.id)
 
     def announce(self, message: str):
-        self.handler.announce(message)
+        self.handler.enqueue_announce(message)
