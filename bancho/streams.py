@@ -98,7 +98,7 @@ class StreamOut:
 		self.string(player.status.checksum)
 		self.u32(sum(mod.value for mod in player.status.mods))
 		self.u8(player.status.mode.value)
-		self.u32(player.status.beatmap)
+		self.s32(player.status.beatmap)
 
 class StreamIn:
 	def __init__(self, data: bytes, endian="<"):
