@@ -125,7 +125,7 @@ class BanchoProtocol(Protocol):
 
                 bancho.services.logger.debug(
                     '\n'.join([
-                        f'<{self.address.host}> -> "{packet.name}"',
+                        f'<{self.address.host}> -> "{packet}"',
                         f'"""\n{payload.get()}\n"""'
                     ])
                 )
