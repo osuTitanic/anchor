@@ -8,7 +8,6 @@ from typing import Optional, Union
 
 from .constants import (
     ResponsePacket,
-    RequestPacket,
     WEB_RESPONSE
 )
 
@@ -116,7 +115,7 @@ class BanchoProtocol(Protocol):
             while self.buffer:
                 stream = StreamIn(self.buffer)
 
-                packet = RequestPacket(stream.u16())
+                packet = stream.u16()
                 compression = stream.bool() # unused?
                 payload = StreamIn(
                     stream.read(
@@ -207,7 +206,7 @@ class BanchoProtocol(Protocol):
 
         self.closeConnection()
 
-    def packetReceived(self, packet_type: RequestPacket, stream: StreamIn):
+    def packetReceived(self, packet_id: int, stream: StreamIn):
         ...
 
     def loginReceived(self, username: str, md5: str, client: str):
