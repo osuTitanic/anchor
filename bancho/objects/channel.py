@@ -46,7 +46,7 @@ class Channel:
         )
     
     def can_read(self, perms: int):
-        return perms > self.read_perms
+        return perms >= self.read_perms
     
     def can_write(self, perms: int):
         return perms >= self.write_perms
