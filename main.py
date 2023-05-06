@@ -6,8 +6,10 @@ import bancho
 import config
 
 def main():
+    factory = BanchoFactory()
+
     for port in config.PORTS:
-        reactor.listenTCP(port, BanchoFactory())
+        reactor.listenTCP(port, factory)
         bancho.services.logger.info(f'Reactor listening on port: {port}')
 
     reactor.run()
