@@ -180,7 +180,7 @@ class DBChannel(Base):
     name              = Column('name', String, primary_key=True)
     topic             = Column('topic', String)
     read_permissions  = Column('read_permissions', Integer, default=1)
-    write_permissions = Column('wrrite_permissions', Integer, default=1)
+    write_permissions = Column('write_permissions', Integer, default=1)
 
 class DBMessage(Base):
     __tablename__ = "messages"
