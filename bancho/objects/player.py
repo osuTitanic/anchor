@@ -158,3 +158,29 @@ class Player(BanchoProtocol):
         # Send user id
         self.handler.enqueue_login_reply(self.id)
 
+        # Notify other clients
+        bancho.services.players.append(self)
+
+        # Privileges
+        self.handler.enqueue_privileges()
+
+        # Presence and stats
+        self.handler.enqueue_presence(self)
+        self.handler.enqueue_stats(self)
+
+        # TODO: Remaining silence
+
+        self.handler.enqueue_friends()
+
+        # TODO: Enqueue online players
+
+        for channel in bancho.services.channels:
+            if (
+                channel.can_read(Permissions.pack(self.permissions)) and
+                channel.public
+               ):
+                self.handler.enqueue_channel(channel)
+
+        self.handler.enqueue_channel_info_end()
+
+        # TODO: Ping thread
