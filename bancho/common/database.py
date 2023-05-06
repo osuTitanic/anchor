@@ -1,10 +1,11 @@
 
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
-from sqlalchemy     import create_engine, func
+from sqlalchemy     import create_engine
 
-from typing import Optional, Generator
+from typing import Optional, Generator, List
 
 from .objects import (
+    DBChannel,
     DBUser,
     Base
 )
@@ -46,3 +47,6 @@ class Postgres:
     
     def user_by_id(self, id: int) -> Optional[DBUser]:
         return self.session.query(DBUser).filter(DBUser.id == id).first()
+    
+    def channels(self) -> List[DBChannel]:
+        return self.session.query(DBChannel).all()
