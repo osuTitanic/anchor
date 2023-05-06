@@ -100,7 +100,7 @@ class b20130606(BaseHandler):
         stream.u8((Permissions.pack(player.permissions) | (player.status.mode.value << 5)))
         stream.float(player.client.ip.longitude)
         stream.float(player.client.ip.latitude)
-        stream.u32(player.stats.rank)
+        stream.u32(player.current_stats.rank)
 
         self.player.sendPacket(
             ResponsePacket.USER_PRESENCE,
@@ -112,12 +112,12 @@ class b20130606(BaseHandler):
 
         stream.s32(player.id)
         stream.status(player)
-        stream.u64(player.stats.rscore)
-        stream.float(player.stats.acc)
-        stream.u32(player.stats.playcount)
-        stream.u64(player.stats.tscore)
-        stream.u32(player.stats.rank)
-        stream.u16(round(player.stats.pp))
+        stream.u64(player.current_stats.rscore)
+        stream.float(player.current_stats.acc)
+        stream.u32(player.current_stats.playcount)
+        stream.u64(player.current_stats.tscore)
+        stream.u32(player.current_stats.rank)
+        stream.u16(round(player.current_stats.pp))
 
         self.player.sendPacket(
             ResponsePacket.USER_STATS,

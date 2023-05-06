@@ -99,6 +99,10 @@ class Player(BanchoProtocol):
     def friends(self) -> List[int]:
         return [rel.target_id for rel in self.object.relationships]
     
+    @property
+    def current_stats(self) -> DBStats:
+        return self.stats[self.status.mode.value]
+    
     def enqueue(self, data: bytes):
         self.logger.debug(f'{data} -> {self}')
         self.transport.write(data)
@@ -151,7 +155,6 @@ class Player(BanchoProtocol):
         self.closeConnection()
 
     def loginSuccess(self):
+        # Send user id
         self.handler.enqueue_login_reply(self.id)
 
-    def announce(self, message: str):
-        self.handler.enqueue_announce(message)
