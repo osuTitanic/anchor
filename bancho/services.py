@@ -15,3 +15,8 @@ database = Postgres(
     config.POSTGRES_HOST,
     config.POSTGRES_PORT
 )
+
+from .objects.collections import Players, Channels
+
+players = Players()
+channels = Channels()

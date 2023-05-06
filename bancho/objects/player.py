@@ -2,6 +2,8 @@
 from dataclasses import dataclass, field
 from typing      import List, Optional
 
+from ..streams import StreamIn
+
 from ..protocol import BanchoProtocol, IPAddress
 
 from ..handlers.b20130606 import b20130606
@@ -16,6 +18,7 @@ from ..common.objects import (
 
 from ..constants import (
     ResponsePacket,
+    RequestPacket,
     ClientStatus,
     Permissions,
     Mode,
@@ -54,11 +57,28 @@ class Player(BanchoProtocol):
     name = ""
     pw   = ""
 
+    away_message: Optional[str] = None
+
     handler: Optional[BaseHandler] = None
 
     def __init__(self, address: IPAddress) -> None:
         self.address = address
         self.logger  = logging.getLogger(self.address.host)
+
+        from .collections import Players
+
+        self.spectating: Optional[Player] = None
+        self.spectators: Players = Players()
+
+        self.in_lobby = False
+        self.match    = None
+
+    def __repr__(self) -> str:
+        return f'<Player ({self.id})>'
+    
+    @property
+    def silenced(self) -> bool:
+        return False # TODO
 
     @property
     def permissions(self) -> Optional[List[Permissions]]:
@@ -66,10 +86,22 @@ class Player(BanchoProtocol):
             return
         
         return Permissions.list(self.object.permissions)
+    
+    @property
+    def restricted(self) -> bool:
+        return self.object.restricted
+    
+    def enqueue(self, data: bytes):
+        self.logger.debug(f'{data} -> {self}')
+        self.transport.write(data)
+    
+    def packetReceived(self, packet_id: int, stream: StreamIn):
+        return self.handler.handle(packet_id, stream)
 
     def loginReceived(self, username: str, md5: str, client: OsuClient):
         self.client = client
 
+        # Set client version
         if self.client.version.date in Handlers:
             self.version = self.client.version.date
 
@@ -103,10 +135,15 @@ class Player(BanchoProtocol):
         self.name   = user.name
         self.stats  = user.stats
         self.pw     = user.bcrypt
-        
-        self.handler.login_success()
+
+        self.loginSuccess()
         
     def loginFailed(self, reason: int = -5, message = ""):
         self.sendError(reason, message)
         self.closeConnection()
 
+    def loginSuccess(self):
+        self.handler.login_reply(self.id)
+
+    def announce(self, message: str):
+        self.handler.announce(message)
