@@ -101,6 +101,6 @@ class Channel:
             users = {user for user in self.users if user != sender}
 
             for user in users:
-                user.handler.send_message(sender, message, self.display_name)
+                user.handler.enqueue_message(sender, message, self.display_name)
         else:
             sender.logger.warning(f'Failed to send message: "{message}".')
