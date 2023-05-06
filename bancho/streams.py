@@ -1,5 +1,6 @@
 
 from .constants import ResponsePacket
+from typing		import List
 
 import struct
 
@@ -64,6 +65,10 @@ class StreamOut:
 	def header(self, packet: ResponsePacket, size: int):
 		self.write(struct.pack(self.endian + 'HxI', packet.value, size))
 
+	def intlist(self, numbers: List[int]):
+		self.s16(len(numbers))
+		[self.s32(num) for num in numbers]
+
 	def uleb128(self, value):
 		l = []
 		v = abs(value)
@@ -86,6 +91,14 @@ class StreamOut:
 		self.s8(0x0b)
 		self.uleb128(length)
 		self.write(string)
+
+	def status(self, player):
+		self.u8(player.status.action.value)
+		self.string(player.status.text)
+		self.string(player.status.checksum)
+		self.u32(sum(mod.value for mod in player.status.mods))
+		self.u8(player.status.mode.value)
+		self.u32(player.status.beatmap)
 
 class StreamIn:
 	def __init__(self, data: bytes, endian="<"):
