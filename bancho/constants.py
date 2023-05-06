@@ -613,16 +613,22 @@ class SubmissionStatus(Enum):
         }[value]
 
 class Rankings(Enum):
-  XH = 0
-  SH = 1
-  X = 2
-  S = 3
-  A = 4
-  B = 5
-  C = 6
-  D = 7
-  F = 8
-  N = 9
+    XH = 0
+    SH = 1
+    X = 2
+    S = 3
+    A = 4
+    B = 5
+    C = 6
+    D = 7
+    F = 8
+    N = 9
+
+
+class PresenceFilter(Enum):
+    NoPlayers = 0
+    All       = 1
+    Friends   = 2
 
 WEB_RESPONSE = '''
 <pre>
