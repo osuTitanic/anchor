@@ -5,6 +5,7 @@ from sqlalchemy     import create_engine
 from typing import Optional, Generator, List
 
 from .objects import (
+    DBRelationship,
     DBChannel,
     DBStats,
     DBUser,
@@ -54,3 +55,27 @@ class Postgres:
     
     def stats(self, user_id: int, mode: int) -> Optional[DBStats]:
         return self.session.query(DBStats).filter(DBStats.user_id == user_id).filter(DBStats.mode == mode).first()
+    
+    def relationships(self, user_id: int) -> List[DBStats]:
+        return self.session.query(DBRelationship).filter(DBRelationship.user_id == user_id).all()
+    
+    def add_relationship(self, user_id: int, target_id: int, friend: bool = True) -> DBRelationship:
+        instance = self.session
+        instance.add(
+            rel := DBRelationship(
+                user_id,
+                target_id,
+                int(not friend)
+            )
+        )
+        instance.commit()
+
+        return rel
+    
+    def remove_relationship(self, user_id: int, target_id: int, status: int = 0):
+        instance = self.session
+        rel = instance.query(DBRelationship).filter(DBRelationship.user_id == user_id).filter(DBRelationship.target_id == target_id).filter(DBRelationship.status == status)
+
+        if rel.first():
+            rel.delete()
+            instance.commit()
