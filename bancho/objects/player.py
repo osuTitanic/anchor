@@ -1,4 +1,6 @@
 
+from twisted.internet.address import IPv4Address
+
 from dataclasses import dataclass, field
 from typing      import List, Optional
 from datetime    import datetime
@@ -62,6 +64,7 @@ class Player(BanchoProtocol):
 
     away_message: Optional[str] = None
     handler: Optional[BaseHandler] = None
+    channels = []
 
     def __init__(self, address: IPAddress) -> None:
         self.address = address
@@ -80,6 +83,21 @@ class Player(BanchoProtocol):
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
+    
+    @classmethod
+    def bot_player(cls):
+        player = Player(
+            IPv4Address('TCP', '127.0.0.1', 1337)
+        )
+        player.object = bancho.services.database.user_by_id(1)
+        player.handler = BaseHandler(player)
+        player.client = OsuClient.empty()
+
+        player.id     = player.object.id
+        player.name   = player.object.name
+        player.stats  = player.object.stats
+
+        return player
     
     @property
     def silenced(self) -> bool:
@@ -104,9 +122,12 @@ class Player(BanchoProtocol):
     def current_stats(self) -> DBStats:
         return self.stats[self.status.mode.value]
     
-    def enqueue(self, data: bytes):
-        self.logger.debug(f'{data} -> {self}')
-        self.transport.write(data)
+    def connectionLost(self, reason = ...):
+        bancho.services.players.remove(self)
+        for channel in self.channels:
+            channel.remove(self)
+
+        super().connectionLost(reason)
     
     def packetReceived(self, packet_id: int, stream: StreamIn):
         return self.handler.handle(packet_id, stream)
@@ -168,6 +189,9 @@ class Player(BanchoProtocol):
         self.handler.enqueue_privileges()
 
         # Enqueue presence and stats        
+        self.handler.enqueue_presence(self)
+        self.handler.enqueue_stats(self)
+
         bancho.services.players.append(self)
 
         # Friends
@@ -188,3 +212,11 @@ class Player(BanchoProtocol):
         self.handler.enqueue_channel_info_end()
 
         # TODO: Ping thread
+
+    def update_stats(self):
+        self.stats = bancho.services.database.stats(
+            self.id,
+            self.status.mode.value
+        )
+
+        bancho.services.players.update(self)
