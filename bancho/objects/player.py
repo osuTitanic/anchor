@@ -19,6 +19,7 @@ from ..common.objects import (
 
 from ..constants import (
     ResponsePacket,
+    PresenceFilter,
     RequestPacket,
     ClientStatus,
     Permissions,
@@ -60,7 +61,6 @@ class Player(BanchoProtocol):
     pw   = ""
 
     away_message: Optional[str] = None
-
     handler: Optional[BaseHandler] = None
 
     def __init__(self, address: IPAddress) -> None:
@@ -68,6 +68,7 @@ class Player(BanchoProtocol):
         self.logger  = logging.getLogger(self.address.host)
 
         self.last_response = datetime.now()
+        self.filter = PresenceFilter.All
 
         from .collections import Players
 
@@ -119,6 +120,11 @@ class Player(BanchoProtocol):
 
         self.handler = Handlers[self.version](self)
 
+        self.sendPacket(
+            ResponsePacket.PROTOCOL_VERSION,
+            int(21).to_bytes(4, 'little')
+        )
+
         if not (user := bancho.services.database.user_by_name(username)):
             self.loginFailed(-1) # User does not exist
             return
@@ -158,21 +164,19 @@ class Player(BanchoProtocol):
         # Send user id
         self.handler.enqueue_login_reply(self.id)
 
-        # Notify other clients
-        bancho.services.players.append(self)
-
         # Privileges
         self.handler.enqueue_privileges()
 
-        # Presence and stats
-        self.handler.enqueue_presence(self)
-        self.handler.enqueue_stats(self)
+        # Enqueue presence and stats        
+        bancho.services.players.append(self)
 
-        # TODO: Remaining silence
-
+        # Friends
         self.handler.enqueue_friends()
 
-        # TODO: Enqueue online players
+        # All players that are online right now
+        self.handler.enqueue_players(bancho.services.players)
+
+        # TODO: Remaining silence
 
         for channel in bancho.services.channels:
             if (
