@@ -153,6 +153,11 @@ class DBRelationship(Base):
 
     user = relationship('DBUser', back_populates='relationships')
 
+    def __init__(self, user: int, target: int, status: int) -> None:
+        self.user_id = user
+        self.target_id = target
+        self.status = status
+
 class DBComment(Base):
     __tablename__ = "comments"
 
