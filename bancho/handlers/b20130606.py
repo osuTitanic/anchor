@@ -195,7 +195,7 @@ class b20130606(BaseHandler):
         if self.player.status.action == ClientStatus.Submitting:
             # Update stats on submit
             threading.Timer(
-                function=self.player.update_stats,
+                function=self.player.update,
                 interval=6
             ).start()
 
@@ -264,7 +264,6 @@ class b20130606(BaseHandler):
         )
 
     def handle_exit(self, stream: StreamIn):
-        bancho.services.players.remove(self.player)
         update_avaliable = stream.bool()
 
     def handle_request_status(self, stream: StreamIn):
@@ -339,13 +338,47 @@ class b20130606(BaseHandler):
         pass
 
     def handle_add_friend(self, stream: StreamIn):
-        pass
+        if not (target := bancho.services.players.by_id(stream.s32())):
+            return
+        
+        if target.id in self.player.friends:
+            return
+        
+        bancho.services.database.add_relationship(
+            self.player.id,
+            target.id,
+            friend=True
+        )
+        
+        # Reload relationships
+        self.player.reload_object()
+
+        # Enqueue friends to client
+        self.enqueue_friends()
 
     def handle_remove_friend(self, stream: StreamIn):
-        pass
+        if not (target := bancho.services.players.by_id(stream.s32())):
+            return
+
+        if target.id not in self.player.friends:
+            return
+
+        bancho.services.database.remove_relationship(
+            self.player.id,
+            target.id
+        )
+
+        # Reload relationships
+        self.player.reload_object()
+
+        # Enqueue friends to client
+        self.enqueue_friends()
 
     def handle_set_away_message(self, stream: StreamIn):
-        pass
+        sender                   = stream.string()
+        self.player.away_message = stream.string()
+        target                   = stream.string()
+        sender_id                = stream.s32()
 
     def handle_change_friendonly_dms(self, stream: StreamIn):
-        pass
+        self.player.client.friendonly_dms = bool(stream.s32())
