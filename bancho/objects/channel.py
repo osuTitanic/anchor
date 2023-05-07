@@ -72,6 +72,8 @@ class Channel:
         
         if self.can_read(Permissions.pack(player.permissions)):
             self.users.append(player)
+            
+            player.channels.append(self)
 
             self.update()
 
@@ -84,6 +86,8 @@ class Channel:
             self.users.remove(player)
         except ValueError:
             pass
+        
+        player.channels.remove(self)
 
         self.update()
     
