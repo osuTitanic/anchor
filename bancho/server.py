@@ -21,12 +21,25 @@ class BanchoFactory(Factory):
                 Channel.from_db(channel)
             )
 
+        bancho.services.logger.info('Loading bot...')
+
+        # Load bot player
+        bancho.services.players.append(
+            bot_player := Player.bot_player()
+        )
+
+        bancho.services.logger.info(f'- {bot_player.name}')
+
+        # Load jobs
+        bancho.services.logger.info('Loading jobs')
+
+        from .jobs.pings import ping
+
         bancho.services.logger.info(f'Starting factory: {self}')
 
     def stopFactory(self):
         bancho.services.logger.warning(f'Stopping factory: {self}')
-
-        # TODO: Disconnect all players
+        bancho.services.jobs.shutdown(cancel_futures=True)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)
