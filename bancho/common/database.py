@@ -6,6 +6,7 @@ from typing import Optional, Generator, List
 
 from .objects import (
     DBChannel,
+    DBStats,
     DBUser,
     Base
 )
@@ -50,3 +51,6 @@ class Postgres:
     
     def channels(self) -> List[DBChannel]:
         return self.session.query(DBChannel).all()
+    
+    def stats(self, user_id: int, mode: int) -> Optional[DBStats]:
+        return self.session.query(DBStats).filter(DBStats.user_id == user_id).filter(DBStats.mode == mode).first()
