@@ -1,6 +1,7 @@
 
 from .common.database import Postgres
 from .logging import ConsoleHandler
+from .jobs import Jobs
 
 import logging
 import config
@@ -18,5 +19,6 @@ database = Postgres(
 
 from .objects.collections import Players, Channels
 
+jobs = Jobs(max_workers=4, thread_name_prefix='job')
 players = Players()
 channels = Channels()
