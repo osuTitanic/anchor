@@ -96,7 +96,7 @@ class StreamOut:
 		self.u8(player.status.action.value)
 		self.string(player.status.text)
 		self.string(player.status.checksum)
-		self.u32(sum(mod.value for mod in player.status.mods))
+		self.u32(sum([mod.value for mod in player.status.mods]))
 		self.u8(player.status.mode.value)
 		self.s32(player.status.beatmap)
 
@@ -186,3 +186,6 @@ class StreamIn:
 		
 		size = self.uleb128()
 		return self.read(size).decode()
+
+	def intlist(self):
+		return [self.s32() for num in range(self.s16())]
