@@ -53,7 +53,7 @@ class BanchoProtocol(Protocol):
     def dataReceived(self, data: bytes):
         # For login data only
         # If client logged in, we will switch to _dataReceived
-        
+
         if self.busy:
             self.buffer += data
             return
@@ -62,34 +62,32 @@ class BanchoProtocol(Protocol):
             self.busy = True
             self.buffer += data
 
-            while self.buffer:
-                if self.buffer.startswith(b'GET /'):
-                    print(self.buffer)
-                    self.handleWeb()
-                    return
+            if self.buffer.startswith(b'GET /'):
+                print(self.buffer)
+                self.handleWeb()
+                return
 
-                if self.buffer.count(b'\r\n') >= 3:
-                    # Login received:
-                    # <username>\r\n<md5_password>\r\n<client_data>\r\n
+            if self.buffer.count(b'\r\n') >= 3:
+                # Login received:
+                # <username>\r\n<md5_password>\r\n<client_data>\r\n
 
-                    username, password, client, self.buffer = self.buffer.split(b'\r\n', 3)
+                username, password, client, self.buffer = self.buffer.split(b'\r\n', 3)
 
-                    client = OsuClient.from_string(
-                        client.decode(),
-                        self.address.host
-                    )
+                client = OsuClient.from_string(
+                    client.decode(),
+                    self.address.host
+                )
 
-                    bancho.services.logger.info(f'<{self.address.host}> -> Login attempt as "{username.decode()}" with {client.version.string}.')
+                bancho.services.logger.info(f'<{self.address.host}> -> Login attempt as "{username.decode()}" with {client.version.string}.')
 
-                    self.loginReceived(
-                        username.decode(), 
-                        password.decode(), 
-                        client
-                    )
+                self.loginReceived(
+                    username.decode(), 
+                    password.decode(), 
+                    client
+                )
 
-                    # We now expect packets from the client
-                    self.dataReceived = self.packetDataReceived
-                    break
+                # We now expect packets from the client
+                self.dataReceived = self.packetDataReceived
 
         except Exception as e:
             traceback.print_exc()
@@ -154,6 +152,14 @@ class BanchoProtocol(Protocol):
             bancho.services.logger.info(f'Closing connection -> <{self.address.host}>')
 
         self.transport.loseConnection()
+    
+    def enqueue(self, data: bytes):
+        try:
+            self.transport.write(data)
+        except AttributeError as e:
+            bancho.services.logger.error(
+                f'Could not write to transport layer: {e}'
+            )
 
     def sendError(self, reason = -5, message = ""):
         if message:
@@ -188,7 +194,7 @@ class BanchoProtocol(Protocol):
             ])
         )
 
-        self.transport.write(stream.get())
+        self.enqueue(stream.get())
 
     def handleWeb(self):
         # This will send a http response and close the connection after that
