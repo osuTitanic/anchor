@@ -116,14 +116,19 @@ class Player(BanchoProtocol):
     
     @property
     def friends(self) -> List[int]:
-        return [rel.target_id for rel in self.object.relationships]
+        return [rel.target_id for rel in self.object.relationships if rel.status == 0]
     
     @property
     def current_stats(self) -> DBStats:
         return self.stats[self.status.mode.value]
     
+    def reload_object(self) -> DBUser:
+        self.object = bancho.services.database.user_by_id(self.id)
+        return self.object
+
     def connectionLost(self, reason = ...):
         bancho.services.players.remove(self)
+
         for channel in self.channels:
             channel.remove(self)
 
@@ -213,10 +218,6 @@ class Player(BanchoProtocol):
 
         # TODO: Ping thread
 
-    def update_stats(self):
-        self.stats = bancho.services.database.stats(
-            self.id,
-            self.status.mode.value
-        )
-
+    def update(self):
+        self.reload_object()
         bancho.services.players.update(self)
