@@ -1,6 +1,14 @@
 
-from bancho.constants import RequestPacket, ResponsePacket, Permissions
 from bancho.streams   import StreamIn, StreamOut
+from bancho.constants import (
+    PresenceFilter,
+    ResponsePacket,
+    RequestPacket,
+    ClientStatus,
+    Permissions,
+    Mode,
+    Mod
+)
 
 from . import BaseHandler
 
@@ -91,6 +99,13 @@ class b20130606(BaseHandler):
         )
 
     def enqueue_presence(self, player):
+        if self.player.filter == PresenceFilter.NoPlayers:
+            return
+        
+        if self.player.filter == PresenceFilter.Friends:
+            if player.id not in self.player.friends:
+                return
+
         stream = StreamOut()
 
         stream.s32(player.id)
@@ -108,6 +123,13 @@ class b20130606(BaseHandler):
         )
 
     def enqueue_stats(self, player):
+        if self.player.filter == PresenceFilter.NoPlayers:
+            return
+        
+        if self.player.filter == PresenceFilter.Friends:
+            if player.id not in self.player.friends:
+                return
+
         stream = StreamOut()
 
         stream.s32(player.id)
@@ -123,3 +145,151 @@ class b20130606(BaseHandler):
             ResponsePacket.USER_STATS,
             stream.get()
         )
+
+    def enqueue_players(self, players):
+        if self.player.filter == PresenceFilter.NoPlayers:
+            return
+
+        if self.player.filter == PresenceFilter.Friends:
+            players = list(
+                filter(lambda p: p is not None, [
+                        players.by_id(id) for id in self.player.friends
+                    ]
+                )
+            )
+
+        n = max(1, 32000)
+
+        # Split players into chunks to avoid any buffer overflows
+        for chunk in (players[i:i+n] for i in range(0, len(players), n)):
+            stream = StreamOut()
+            stream.intlist([p.id for p in chunk])
+
+            self.player.sendPacket(
+                ResponsePacket.USER_PRESENCE_BUNDLE,
+                stream.get()
+            )
+        
+    def enqueue_channel_revoked(self, target):
+        stream = StreamOut()
+        stream.string(target)
+
+        self.player.sendPacket(
+            ResponsePacket.CHANNEL_REVOKED,
+            stream.get()
+        )
+
+    def handle_change_status(self, stream: StreamIn):
+        self.player.status.action   = ClientStatus(stream.u8())
+        self.player.status.text     = stream.string()
+        self.player.status.checksum = stream.string()
+        self.player.status.mods     = Mod.list(stream.u32())
+        self.player.status.mode     = Mode(stream.u8())
+        self.player.status.beatmap  = stream.s32()
+
+        # TODO: Reload stats
+
+        bancho.services.players.update(self.player)
+
+    def handle_send_message(self, stream: StreamIn):
+        sender    = stream.string()
+        message   = stream.string()
+        target    = stream.string()
+        sender_id = stream.s32()
+
+        if target.startswith('#multiplayer'):
+            # TODO
+            pass
+
+        if target.startswith('#spectator'):
+            target = f'#spect_{self.player.id}'
+
+        if not (channel := bancho.services.channels.by_name(target)):
+            return
+        
+        # TODO: Commands
+        
+        channel.send_message(self.player, message)
+
+    def handle_send_private_message(self, stream: StreamIn):
+        sender    = stream.string()
+        message   = stream.string()
+        target    = stream.string()
+        sender_id = stream.s32()
+
+        if not (player := bancho.services.players.by_name(target)):
+            self.enqueue_channel_revoked(target)
+
+        if self.player.silenced:
+            return
+
+        if player.silenced:
+            return
+
+        if player.client.friendonly_dms and Permissions.Admin not in self.player.permissions:
+            # TODO: Enqueue friendonly dms
+            return
+
+        if len(message) > 127:
+            message = message[:124] + '...'
+
+        if player.status.action == ClientStatus.Afk and player.away_message:
+            self.enqueue_message(target, player.away_message, target)
+
+        # TODO: Commands
+
+        player.handler.enqueue_message(
+            self,
+            message,
+            self.player.name
+        )
+
+    def handle_exit(self, stream: StreamIn):
+        bancho.services.players.remove(self.player)
+        update_avaliable = stream.bool()
+
+    def handle_request_status(self, stream: StreamIn):
+        self.enqueue_presence(self.player)
+        self.enqueue_stats(self.player)
+
+    def handle_join_lobby(self, stream: StreamIn):
+        self.player.in_lobby = True
+
+    def handle_part_lobby(self, stream: StreamIn):
+        self.player.in_lobby = False
+
+    def handle_join_channel(self, stream: StreamIn):
+        name = stream.string()
+
+        if not (channel := bancho.services.channels.by_name(name)):
+            success = False
+        else:
+            success = channel.add(self.player)
+
+        stream = StreamOut()
+        stream.string(channel.display_name)
+
+        if success:
+            self.player.sendPacket(
+                ResponsePacket.CHANNEL_JOIN_SUCCESS,
+                stream.get()
+            )
+        else:
+            self.player.sendPacket(
+                ResponsePacket.CHANNEL_REVOKED,
+                stream.get()
+            )
+
+    def handle_receive_updates(self, stream: StreamIn):
+        self.player.filter = PresenceFilter(stream.u32())
+
+        self.enqueue_players(bancho.services.players)
+
+    def handle_stats_request(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        players = [bancho.services.players.by_id(id) for id in stream.intlist()]
+
+        for player in players:
+            self.enqueue_stats(player)
