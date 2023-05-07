@@ -55,18 +55,17 @@ class Players(List[Player]):
         return {p for p in self if not p.restricted}
 
     def append(self, player: Player) -> None:
-        # TODO: User join
+        self.update(player)
         return super().append(player)
     
     def remove(self, player: Player) -> None:
-        # TODO: User quit
+        self.exit(player)
         return super().remove(player)
     
     def enqueue(self, data: bytes, immune = []) -> None:
         for p in self:
             if p not in immune:
-                # TODO: Enqueue
-                print(f'enqueue({p.id})')
+                p.enqueue(data)
     
     def by_id(self, id: int) -> Optional[Player]:
         for p in self:
@@ -83,8 +82,14 @@ class Players(List[Player]):
     def update(self, player: Player):
         if not player.restricted:
             for p in self:
+                p.handler.enqueue_presence(p)
+                p.handler.enqueue_stats(p)
+
+    def exit(self, player: Player):
+        if not player.restricted:
+            for p in self:
                 # TODO
-                print(f'enqueue_stats({p.id})')
+                pass
     
     def enqueue_channel(self, channel):
         for p in self:
