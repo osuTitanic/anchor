@@ -53,5 +53,16 @@ class OsuClient:
             display_city = display_city == "1",
             friendonly_dms = friendonly_dms == "1"
         )
+    
+    @classmethod
+    def empty(cls):
+        return OsuClient(
+            IPAddress('127.0.0.1'),
+            ClientVersion('b', 1337),
+            '',
+            0,
+            True,
+            False
+        )
 
 
