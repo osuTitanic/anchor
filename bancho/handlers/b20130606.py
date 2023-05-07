@@ -12,6 +12,7 @@ from bancho.constants import (
 
 from . import BaseHandler
 
+import threading
 import bancho
 
 class b20130606(BaseHandler):
@@ -147,24 +148,12 @@ class b20130606(BaseHandler):
         )
 
     def enqueue_players(self, players):
-        if self.player.filter == PresenceFilter.NoPlayers:
-            return
-
-        if self.player.filter == PresenceFilter.Friends:
-            players = list(
-                filter(lambda p: p is not None, [
-                        players.by_id(id) for id in self.player.friends
-                    ]
-                )
-            )
-
         n = max(1, 32000)
 
         # Split players into chunks to avoid any buffer overflows
         for chunk in (players[i:i+n] for i in range(0, len(players), n)):
             stream = StreamOut()
-            stream.intlist([p.id for p in chunk])
-
+            stream.intlist([p.id for p in chunk if p != self.player])
             self.player.sendPacket(
                 ResponsePacket.USER_PRESENCE_BUNDLE,
                 stream.get()
@@ -179,6 +168,22 @@ class b20130606(BaseHandler):
             stream.get()
         )
 
+    def enqueue_exit(self, player):
+        stream = StreamOut()
+        stream.s32(player.id)
+        stream.u8(0) # Quit State (Only useful for irc)
+
+        self.player.sendPacket(
+            ResponsePacket.USER_QUIT,
+            stream.get()
+        )
+
+    def enqueue_player(self, player):
+        self.player.sendPacket(
+            ResponsePacket.USER_PRESENCE_SINGLE,
+            int(player.id).to_bytes(4, 'little')
+        )
+
     def handle_change_status(self, stream: StreamIn):
         self.player.status.action   = ClientStatus(stream.u8())
         self.player.status.text     = stream.string()
@@ -187,7 +192,12 @@ class b20130606(BaseHandler):
         self.player.status.mode     = Mode(stream.u8())
         self.player.status.beatmap  = stream.s32()
 
-        # TODO: Reload stats
+        if self.player.status.action == ClientStatus.Submitting:
+            # Update stats on submit
+            threading.Timer(
+                function=self.player.update_stats,
+                interval=6
+            ).start()
 
         bancho.services.players.update(self.player)
 
@@ -227,7 +237,16 @@ class b20130606(BaseHandler):
             return
 
         if player.client.friendonly_dms and Permissions.Admin not in self.player.permissions:
-            # TODO: Enqueue friendonly dms
+            stream = StreamOut()
+            stream.string('')
+            stream.string('')
+            stream.string(player.name)
+            stream.s32(-1)
+
+            self.player.sendPacket(
+                ResponsePacket.USER_DM_BLOCKED,
+                stream.get()
+            )
             return
 
         if len(message) > 127:
@@ -239,7 +258,7 @@ class b20130606(BaseHandler):
         # TODO: Commands
 
         player.handler.enqueue_message(
-            self,
+            self.player,
             message,
             self.player.name
         )
@@ -253,9 +272,11 @@ class b20130606(BaseHandler):
         self.enqueue_stats(self.player)
 
     def handle_join_lobby(self, stream: StreamIn):
+        # TODO: Bancho_Lobbyjoin
         self.player.in_lobby = True
 
     def handle_part_lobby(self, stream: StreamIn):
+        # TODO: Bancho_Lobbypart
         self.player.in_lobby = False
 
     def handle_join_channel(self, stream: StreamIn):
@@ -280,6 +301,14 @@ class b20130606(BaseHandler):
                 stream.get()
             )
 
+    def handle_leave_channel(self, stream: StreamIn):
+        name = stream.string()
+
+        if not (channel := bancho.services.channels.by_name(name)):
+            return
+        
+        channel.remove(self.player)
+
     def handle_receive_updates(self, stream: StreamIn):
         self.player.filter = PresenceFilter(stream.u32())
 
@@ -293,3 +322,30 @@ class b20130606(BaseHandler):
 
         for player in players:
             self.enqueue_stats(player)
+
+    def handle_presence_request(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        players = [bancho.services.players.by_id(id) for id in stream.intlist()]
+
+        for player in players:
+            self.enqueue_presence(player)
+
+    def handle_presence_request_all(self, stream: StreamIn):
+        self.enqueue_players(bancho.services.players)
+
+    def handle_beatmap_info(self, stream: StreamIn):
+        pass
+
+    def handle_add_friend(self, stream: StreamIn):
+        pass
+
+    def handle_remove_friend(self, stream: StreamIn):
+        pass
+
+    def handle_set_away_message(self, stream: StreamIn):
+        pass
+
+    def handle_change_friendonly_dms(self, stream: StreamIn):
+        pass
