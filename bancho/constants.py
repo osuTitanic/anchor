@@ -612,8 +612,22 @@ class SubmissionStatus(Enum):
             3:  SubmissionStatus.Ranked,          # Qualified
             4:  SubmissionStatus.Approved         # Loved
         }[value]
+    
+class Ranked(Enum):
+    NotSubmitted = -1
+    Pending  	 = 0
+    Ranked	 	 = 1
+    Approved 	 = 2
 
-class Rankings(Enum):
+    @classmethod
+    def from_status(cls, status: int):
+        if status ==  1: return Ranked.NotSubmitted
+        if status ==  2: return Ranked.Pending
+        if status ==  4: return Ranked.Ranked
+        if status ==  5: return Ranked.Approved
+        return Ranked.Pending
+
+class Grade(Enum):
     XH = 0
     SH = 1
     X = 2
