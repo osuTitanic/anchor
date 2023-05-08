@@ -233,6 +233,15 @@ class b20130606(BaseHandler):
         )
 
     def handle_change_status(self, stream: StreamIn):
+        # Check previous status
+        if self.player.status.action == ClientStatus.Submitting:
+            # Update stats on submit
+            threading.Timer(
+                function=self.player.update,
+                interval=1
+            ).start()
+
+        # Update to new status
         self.player.status.action   = ClientStatus(stream.s8())
         self.player.status.text     = stream.string()
         self.player.status.checksum = stream.string()
@@ -240,13 +249,7 @@ class b20130606(BaseHandler):
         self.player.status.mode     = Mode(stream.u8())
         self.player.status.beatmap  = stream.s32()
 
-        if self.player.status.action == ClientStatus.Submitting:
-            # Update stats on submit
-            threading.Timer(
-                function=self.player.update,
-                interval=6
-            ).start()
-
+        # Enqueue to other clients
         bancho.services.players.enqueue_stats(self.player)
 
     def handle_send_message(self, stream: StreamIn):
