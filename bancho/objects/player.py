@@ -127,6 +127,11 @@ class Player(BanchoProtocol):
     def current_stats(self) -> DBStats:
         return self.stats[self.status.mode.value]
     
+    @property
+    def is_bot(self) -> bool:
+        # TODO: Maybe there is a better way of doing this
+        return type(self.handler) == BaseHandler
+    
     def reload_object(self) -> DBUser:
         self.object = bancho.services.database.user_by_id(self.id)
         return self.object
@@ -138,6 +143,10 @@ class Player(BanchoProtocol):
             channel.remove(self)
 
         super().connectionLost(reason)
+
+    def closeConnection(self, error: Optional[Exception] = None):
+        self.connectionLost()
+        super().closeConnection(error)
     
     def packetReceived(self, packet_id: int, stream: StreamIn):
         return self.handler.handle(packet_id, stream)
