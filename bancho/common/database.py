@@ -6,7 +6,9 @@ from typing import Optional, Generator, List
 
 from .objects import (
     DBRelationship,
+    DBBeatmap,
     DBChannel,
+    DBScore,
     DBStats,
     DBUser,
     Base
@@ -49,6 +51,12 @@ class Postgres:
     
     def user_by_id(self, id: int) -> Optional[DBUser]:
         return self.session.query(DBUser).filter(DBUser.id == id).first()
+    
+    def beatmap_by_file(self, filename: str) -> Optional[DBBeatmap]:
+        return self.session.query(DBBeatmap).filter(DBBeatmap.filename == filename).first()
+    
+    def personal_best(self, beatmap_id: int, user_id: int) -> Optional[DBScore]:
+        return self.session.query(DBScore).filter(DBScore.beatmap_id == beatmap_id).filter(DBScore.user_id == user_id).filter(DBScore.status == 3).first()
     
     def channels(self) -> List[DBChannel]:
         return self.session.query(DBChannel).all()
