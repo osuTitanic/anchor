@@ -126,7 +126,7 @@ class b20130606(BaseHandler):
     def enqueue_stats(self, player):
         if self.player.filter == PresenceFilter.NoPlayers:
             return
-        
+
         if self.player.filter == PresenceFilter.Friends:
             if player.id not in self.player.friends:
                 return
@@ -134,12 +134,21 @@ class b20130606(BaseHandler):
         stream = StreamOut()
 
         stream.s32(player.id)
-        stream.status(player)
-        stream.u64(player.current_stats.rscore)
+
+        # Status
+        stream.u8(player.status.action.value)
+        stream.string(player.status.text)
+        stream.string(player.status.checksum)
+        stream.u32(sum([mod.value for mod in player.status.mods]))
+        stream.s8(player.status.mode.value)
+        stream.s32(player.status.beatmap)
+
+        # Stats
+        stream.s64(player.current_stats.rscore)
         stream.float(player.current_stats.acc)
-        stream.u32(player.current_stats.playcount)
-        stream.u64(player.current_stats.tscore)
-        stream.u32(player.current_stats.rank)
+        stream.s32(player.current_stats.playcount)
+        stream.s64(player.current_stats.tscore)
+        stream.s32(player.current_stats.rank)
         stream.u16(round(player.current_stats.pp))
 
         self.player.sendPacket(
@@ -185,7 +194,7 @@ class b20130606(BaseHandler):
         )
 
     def handle_change_status(self, stream: StreamIn):
-        self.player.status.action   = ClientStatus(stream.u8())
+        self.player.status.action   = ClientStatus(stream.s8())
         self.player.status.text     = stream.string()
         self.player.status.checksum = stream.string()
         self.player.status.mods     = Mod.list(stream.u32())
@@ -199,7 +208,7 @@ class b20130606(BaseHandler):
                 interval=6
             ).start()
 
-        bancho.services.players.update(self.player)
+        bancho.services.players.enqueue_stats(self.player)
 
     def handle_send_message(self, stream: StreamIn):
         sender    = stream.string()
@@ -253,7 +262,7 @@ class b20130606(BaseHandler):
             message = message[:124] + '...'
 
         if player.status.action == ClientStatus.Afk and player.away_message:
-            self.enqueue_message(target, player.away_message, target)
+            self.enqueue_message(player, player.away_message, target)
 
         # TODO: Commands
 
@@ -267,7 +276,6 @@ class b20130606(BaseHandler):
         update_avaliable = stream.bool()
 
     def handle_request_status(self, stream: StreamIn):
-        self.enqueue_presence(self.player)
         self.enqueue_stats(self.player)
 
     def handle_join_lobby(self, stream: StreamIn):

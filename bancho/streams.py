@@ -92,14 +92,6 @@ class StreamOut:
 		self.uleb128(length)
 		self.write(string)
 
-	def status(self, player):
-		self.u8(player.status.action.value)
-		self.string(player.status.text)
-		self.string(player.status.checksum)
-		self.u32(sum([mod.value for mod in player.status.mods]))
-		self.u8(player.status.mode.value)
-		self.s32(player.status.beatmap)
-
 class StreamIn:
 	def __init__(self, data: bytes, endian="<"):
 		self.endian = endian
