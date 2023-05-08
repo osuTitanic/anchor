@@ -32,6 +32,10 @@ class Channels(List[Channel]):
         if c: return super().append(c)
 
     def remove(self, c: Channel) -> None:
+        # Revoke channel to all users
+        for p in c.users:
+            p.handler.enqueue_channel_revoked(c.display_name)
+
         if c: return super().remove(c)
 
     def extend(self, channels: Iterable[Channel]) -> None:
