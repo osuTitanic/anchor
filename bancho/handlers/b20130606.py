@@ -232,6 +232,79 @@ class b20130606(BaseHandler):
             stream.get()
         )
 
+    def enqueue_spectator(self, player):
+        self.player.sendPacket(
+            ResponsePacket.SPECTATOR_JOINED,
+            int(player.id).to_bytes(4, 'little')
+        )
+
+    def enqueue_spectator_left(self, player):
+        self.player.sendPacket(
+            ResponsePacket.SPECTATOR_LEFT,
+            int(player.id).to_bytes(4, 'little')
+        )
+    
+    def enqueue_fellow_spectator(self, player):
+        self.player.sendPacket(
+            ResponsePacket.FELLOW_SPECTATOR_JOINED,
+            int(player.id).to_bytes(4, 'little')
+        )
+
+    def enqueue_fellow_spectator_left(self, player):
+        self.player.sendPacket(
+            ResponsePacket.FELLOW_SPECTATOR_LEFT,
+            int(player.id).to_bytes(4, 'little')
+        )
+
+    def enqueue_frames(self, frames: bytes):
+        self.player.sendPacket(
+            ResponsePacket.SPECTATE_FRAMES,
+            frames
+        )
+
+    def enqueue_cant_spectate(self, player):
+        self.player.sendPacket(
+            ResponsePacket.CANT_SPECTATE,
+            int(player.id).to_bytes(4, 'little')
+        )
+
+    def join_channel(self, name: str) -> bool:
+        if not (channel := bancho.services.channels.by_name(name)):
+            success = False
+        else:
+            success = channel.add(self.player)
+
+        if name.startswith('#spec'):
+            name = '#spectator'
+
+        stream = StreamOut()
+        stream.string(channel.display_name if success else name)
+
+        if success:
+            self.player.sendPacket(
+                ResponsePacket.CHANNEL_JOIN_SUCCESS,
+                stream.get()
+            )
+        else:
+            self.player.sendPacket(
+                ResponsePacket.CHANNEL_REVOKED,
+                stream.get()
+            )
+
+        return success
+    
+    def leave_channel(self, name: str, kick=False):
+        if not (channel := bancho.services.channels.by_name(name)):
+            return
+        
+        try:
+            channel.remove(self.player)
+        except ValueError:
+            pass
+
+        if kick:
+            self.enqueue_channel_revoked(channel.display_name)
+
     def handle_change_status(self, stream: StreamIn):
         # Check previous status
         if self.player.status.action == ClientStatus.Submitting:
@@ -263,7 +336,14 @@ class b20130606(BaseHandler):
             pass
 
         if target.startswith('#spectator'):
-            target = f'#spect_{self.player.id}'
+            if self.player.spectating:
+                target = f'#spec_{self.player.spectating.id}'
+            
+            elif self.player.spectators:
+                target = f'#spec_{self.player.id}'
+
+            else:
+                return
 
         if not (channel := bancho.services.channels.by_name(target)):
             return
@@ -331,32 +411,32 @@ class b20130606(BaseHandler):
     def handle_join_channel(self, stream: StreamIn):
         name = stream.string()
 
-        if not (channel := bancho.services.channels.by_name(name)):
-            success = False
-        else:
-            success = channel.add(self.player)
+        if name.startswith('#spectator'):
+            if self.player.spectating:
+                name = f'#spec_{self.player.spectating.id}'
+            
+            elif self.player.spectators:
+                name = f'#spec_{self.player.id}'
 
-        stream = StreamOut()
-        stream.string(channel.display_name)
+            else:
+                return
 
-        if success:
-            self.player.sendPacket(
-                ResponsePacket.CHANNEL_JOIN_SUCCESS,
-                stream.get()
-            )
-        else:
-            self.player.sendPacket(
-                ResponsePacket.CHANNEL_REVOKED,
-                stream.get()
-            )
+        self.join_channel(name)
 
     def handle_leave_channel(self, stream: StreamIn):
         name = stream.string()
 
-        if not (channel := bancho.services.channels.by_name(name)):
-            return
-        
-        channel.remove(self.player)
+        if name.startswith('#spectator'):
+            if self.player.spectating:
+                name = f'#spec_{self.player.spectating.id}'
+            
+            elif self.player.spectators:
+                name = f'#spec_{self.player.id}'
+
+            else:
+                return
+
+        self.leave_channel(name)
 
     def handle_receive_updates(self, stream: StreamIn):
         self.player.filter = PresenceFilter(stream.u32())
@@ -444,3 +524,74 @@ class b20130606(BaseHandler):
             ))
 
         self.enqueue_beatmaps(beatmaps)
+
+    def handle_start_spectating(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+        
+        if not (target := bancho.services.players.by_id(stream.s32())):
+            return
+        
+        self.player.spectating = target
+
+        # Join their channel
+        self.enqueue_channel(target.spectator_channel)
+        self.join_channel(f'#spec_{target.id}')
+
+        # Enqueue to other spectators
+        for p in target.spectators:
+            p.handler.enqueue_fellow_spectator(self.player)
+
+        target.spectators.append(self.player)
+
+        target.handler.enqueue_spectator(self.player)
+        target.handler.enqueue_channel(target.spectator_channel)
+
+        if target not in target.spectator_channel.users:
+            target.handler.join_channel(f'#spec_{target.id}')
+
+    def handle_stop_spectating(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        # Leave spectator channel        
+        self.leave_channel(
+            '#spectator', kick=True
+        )
+
+        self.player.spectating.spectators.remove(self.player)
+
+        # Enqueue to other spectators
+        for p in self.player.spectating.spectators:
+            p.handler.enqueue_fellow_spectator_left(self.player)
+
+        # Enqueue to target
+        self.player.spectating.handler.enqueue_spectator_left(self.player)
+
+        # If target has no spectators anymore
+        # kick them from the spectator channel
+        if not self.player.spectating.spectators:
+            self.player.spectating.handler.leave_channel(
+                '#spectator', kick=True
+            )
+
+        self.player.spectating = None
+
+    def handle_send_frames(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+        
+        for p in self.player.spectators:
+            p.handler.enqueue_frames(stream.readall())
+
+    def handle_cant_spectate(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+        
+        if not self.player.spectating:
+            return
+        
+        self.player.spectating.handler.enqueue_cant_spectate(self.player)
+
+        for p in self.player.spectating.spectators:
+            p.handler.enqueue_cant_spectate(self.player)
