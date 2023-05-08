@@ -186,6 +186,7 @@ class Player(BanchoProtocol):
             return
         
         # TODO: Check if user is online already
+        # TODO: Tourney clients
         # TODO: Test builds
 
         self.object = user
