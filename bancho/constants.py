@@ -573,8 +573,9 @@ class Mod(Enum):
     Key8           = 524288
     keyMod         = 1015808
     FadeIn         = 1048576
-    LastMod        = 2097152
-    FreeModAllowed = 1049659
+    Random         = 2097152
+    LastMod        = 4194304
+    FreeModAllowed = 2077883
 
     @classmethod
     def pack(cls, values: List[Enum]):
