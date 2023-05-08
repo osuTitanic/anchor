@@ -1,11 +1,16 @@
 
-from bancho.streams   import StreamIn, StreamOut
-from bancho.constants import (
+from typing import List, Tuple
+
+from bancho.streams        import StreamIn, StreamOut
+from bancho.common.objects import DBBeatmap
+from bancho.constants      import (
     PresenceFilter,
     ResponsePacket,
     RequestPacket,
     ClientStatus,
     Permissions,
+    Ranked,
+    Grade,
     Mode,
     Mod
 )
@@ -196,6 +201,37 @@ class b20130606(BaseHandler):
             int(player.id).to_bytes(4, 'little')
         )
 
+    def enqueue_beatmaps(self, beatmaps: List[Tuple[int, DBBeatmap]]):
+        stream = StreamOut()
+        stream.s32(len(beatmaps))
+
+        for index, beatmap in beatmaps:
+            personal_best = bancho.services.database.personal_best(beatmap.id, self.player.id)
+
+            stream.s16(-1) # NOTE: We could use the index here, but I like it better this way
+            stream.s32(beatmap.id)
+            stream.s32(beatmap.set_id)
+            stream.s32(beatmap.set_id) # TODO: Thread ID
+            stream.u8(Ranked.from_status(beatmap.status).value)
+
+            if not personal_best:
+                stream.u8(Grade.N.value)
+                stream.u8(Grade.N.value)
+                stream.u8(Grade.N.value)
+                stream.u8(Grade.N.value)
+            else:
+                stream.u8(Grade(personal_best.grade).value if personal_best.mode == 0 else 9)
+                stream.u8(Grade(personal_best.grade).value if personal_best.mode == 1 else 9)
+                stream.u8(Grade(personal_best.grade).value if personal_best.mode == 2 else 9)
+                stream.u8(Grade(personal_best.grade).value if personal_best.mode == 3 else 9)
+
+            stream.string(beatmap.md5)
+
+        self.player.sendPacket(
+            ResponsePacket.BEATMAP_INFO_REPLY,
+            stream.get()
+        )
+
     def handle_change_status(self, stream: StreamIn):
         self.player.status.action   = ClientStatus(stream.s8())
         self.player.status.text     = stream.string()
@@ -345,9 +381,6 @@ class b20130606(BaseHandler):
     def handle_presence_request_all(self, stream: StreamIn):
         self.enqueue_players(bancho.services.players)
 
-    def handle_beatmap_info(self, stream: StreamIn):
-        pass
-
     def handle_add_friend(self, stream: StreamIn):
         if not (target := bancho.services.players.by_id(stream.s32())):
             return
@@ -393,3 +426,18 @@ class b20130606(BaseHandler):
 
     def handle_change_friendonly_dms(self, stream: StreamIn):
         self.player.client.friendonly_dms = bool(stream.s32())
+
+    def handle_beatmap_info(self, stream: StreamIn):
+        beatmaps: List[Tuple[int, DBBeatmap]] = []
+
+        for index in range(stream.s32()):
+            # Filenames
+            if not (beatmap := bancho.services.database.beatmap_by_file(stream.string())):
+                continue
+
+            beatmaps.append((
+                index,
+                beatmap
+            ))
+
+        self.enqueue_beatmaps(beatmaps)
