@@ -84,6 +84,16 @@ class Player(BanchoProtocol):
         self.in_lobby = False
         self.match    = None
 
+        from .channel import Channel
+
+        self.spectator_channel = Channel(
+            f'#spec_{self.id}',
+            f"{self.name}'s spectator channel",
+            1, 1,
+            public=False
+        )
+        bancho.services.channels.append(self.spectator_channel)
+
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
     
