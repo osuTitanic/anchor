@@ -35,6 +35,7 @@ import bcrypt
 
 Handlers = {
     20130606: b20130606, # Latest supported version
+    20130303: b20130606,
     -1: b20130606        # Default version
 }
 
@@ -51,22 +52,22 @@ class Status:
         return f'<Status ({self.action})>'
 
 class Player(BanchoProtocol):
-    version = -1
-
-    client: Optional[OsuClient] = None
-    object: Optional[DBUser]    = None
-    stats:  Optional[DBStats]   = None
-    status = Status()
-
-    id   = -1
-    name = ""
-    pw   = ""
-
-    away_message: Optional[str] = None
-    handler: Optional[BaseHandler] = None
-    channels = []
-
     def __init__(self, address: IPAddress) -> None:
+        self.version = -1
+
+        self.client: Optional[OsuClient] = None
+        self.object: Optional[DBUser]    = None
+        self.stats:  Optional[DBStats]   = None
+        self.status = Status()
+
+        self.id   = -1
+        self.name = ""
+        self.pw   = ""
+
+        self.away_message: Optional[str] = None
+        self.handler: Optional[BaseHandler] = None
+        self.channels = []
+
         self.address = address
         self.logger  = logging.getLogger(self.address.host)
 
@@ -89,6 +90,7 @@ class Player(BanchoProtocol):
         player = Player(
             IPv4Address('TCP', '127.0.0.1', 1337)
         )
+
         player.object = bancho.services.database.user_by_id(1)
         player.handler = BaseHandler(player)
         player.client = OsuClient.empty()
@@ -112,6 +114,9 @@ class Player(BanchoProtocol):
     
     @property
     def restricted(self) -> bool:
+        if not self.object:
+            return False
+
         return self.object.restricted
     
     @property
@@ -216,8 +221,6 @@ class Player(BanchoProtocol):
 
         self.handler.enqueue_channel_info_end()
 
-        # TODO: Ping thread
-
     def update(self):
         self.reload_object()
-        bancho.services.players.update(self)
+        bancho.services.players.enqueue_stats(self)
