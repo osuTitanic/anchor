@@ -84,15 +84,7 @@ class Player(BanchoProtocol):
         self.in_lobby = False
         self.match    = None
 
-        from .channel import Channel
-
-        self.spectator_channel = Channel(
-            f'#spec_{self.id}',
-            f"{self.name}'s spectator channel",
-            1, 1,
-            public=False
-        )
-        bancho.services.channels.append(self.spectator_channel)
+        self.spectator_channel = None
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
@@ -154,6 +146,8 @@ class Player(BanchoProtocol):
         for channel in self.channels:
             channel.remove(self)
 
+        bancho.services.channels.remove(self.spectator_channel)
+
         super().connectionLost(reason)
 
     def closeConnection(self, error: Optional[Exception] = None):
@@ -214,6 +208,16 @@ class Player(BanchoProtocol):
         self.closeConnection()
 
     def loginSuccess(self):
+        from .channel import Channel
+
+        self.spectator_channel = Channel(
+            f'#spec_{self.id}',
+            f"{self.name}'s spectator channel",
+            1, 1,
+            public=False
+        )
+        bancho.services.channels.append(self.spectator_channel)
+
         # Send user id
         self.handler.enqueue_login_reply(self.id)
 
