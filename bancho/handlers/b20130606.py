@@ -124,6 +124,9 @@ class b20130606(BaseHandler):
         )
 
     def enqueue_stats(self, player):
+        if not player:
+            return
+
         if self.player.filter == PresenceFilter.NoPlayers:
             return
 
