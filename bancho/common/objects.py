@@ -248,6 +248,9 @@ class DBBeatmap(Base):
     scores     = relationship('DBScore', back_populates='beatmap')
     plays      = relationship('DBPlay', back_populates='beatmap')
 
+    def __repr__(self) -> str:
+        return f'<Beatmap ({self.id}) {self.beatmapset.artist} - {self.beatmapset.title} [{self.version}]>'
+
     @property
     def submission_status(self):
         raise NotImplementedError # TODO
