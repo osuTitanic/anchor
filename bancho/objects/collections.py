@@ -73,23 +73,24 @@ class Players(List[Player]):
             if p.id == id:
                 return p
         return None
-    
+
     def by_name(self, name: str) -> Optional[Player]:
         for p in self:
             if p.name == name:
                 return p
         return None
-    
-    def update(self, player: Player):
-        if not player.restricted:
-            for p in self:
-                p.handler.enqueue_presence(p)
-                p.handler.enqueue_stats(p)
 
     def exit(self, player: Player):
         if not player.restricted:
             for p in self:
                 p.handler.enqueue_exit(player)
+
+    def enqueue_stats(self, player: Player):
+        if player.restricted:
+            return
+        
+        for p in self:
+            p.handler.enqueue_stats(player)
 
     def enqueue_player(self, player: Player):
         for p in self:
