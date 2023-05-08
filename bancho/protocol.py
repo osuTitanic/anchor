@@ -63,7 +63,6 @@ class BanchoProtocol(Protocol):
             self.buffer += data
 
             if self.buffer.startswith(b'GET /'):
-                print(self.buffer)
                 self.handleWeb()
                 return
 
