@@ -1,5 +1,7 @@
 
+from twisted.internet.error   import ConnectionDone
 from twisted.internet.address import IPv4Address
+from twisted.python.failure   import Failure
 
 from dataclasses import dataclass, field
 from typing      import List, Optional
@@ -136,7 +138,7 @@ class Player(BanchoProtocol):
         self.object = bancho.services.database.user_by_id(self.id)
         return self.object
 
-    def connectionLost(self, reason = ...):
+    def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         bancho.services.players.remove(self)
 
         for channel in self.channels:
