@@ -92,6 +92,9 @@ class Channel:
         self.update()
     
     def send_message(self, sender, message: str, ignore_privs=False):
+        if sender not in self.users:
+            sender.handler.enqueue_channel_revoked(self.display_name)
+
         if (self.can_write(Permissions.pack(sender.permissions)) and not sender.silenced) or not ignore_privs:
             # Message can only be 128 characters long
             # because of the uleb128 size limit
