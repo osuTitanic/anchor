@@ -1,8 +1,10 @@
 
 from typing      import Optional, List
+from datetime    import datetime
 from ..constants import Countries
 
 import requests
+import pytz
 
 class IPAddress:
 
@@ -18,6 +20,7 @@ class IPAddress:
     latitude: float  = 0.0
     longitude: float = 0.0
     timezone: str    = 'Unknown/Unknown'
+    utc_offset: int  = 0
 
     isp: str = 'Unknown'
     org: str = 'Unknown'
@@ -27,7 +30,7 @@ class IPAddress:
         self.host = ip
 
         if self.is_local:
-            return
+            self.host = ''
         
         self.parse_request(
             self.do_request()
@@ -51,7 +54,7 @@ class IPAddress:
     
     @property
     def country_name(self) -> str:
-        return Countries[self.country_code]
+        return Countries.values()[self.country_code]
     
     @property
     def country_num(self) -> int:
@@ -79,6 +82,12 @@ class IPAddress:
         self.isp       = response[10]
         self.org       = response[11]
         self.ans       = response[12]
+
+        self.utc_offset = int(
+            datetime.now(
+                pytz.timezone(self.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
     
     def do_request(self) -> Optional[list]:
         response = requests.get(
