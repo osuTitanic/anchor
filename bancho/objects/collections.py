@@ -64,7 +64,6 @@ class Players(List[Player]):
         if player not in self: return super().append(player)
     
     def remove(self, player: Player) -> None:
-        self.exit(player)
         if player in self: return super().remove(player)
 
     def enqueue(self, data: bytes, immune = []) -> None:
