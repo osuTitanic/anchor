@@ -28,6 +28,8 @@ class BanchoFactory(Factory):
             bot_player := Player.bot_player()
         )
 
+        bancho.services.bot_player = bot_player
+
         bancho.services.logger.info(f'- {bot_player.name}')
 
         # Load jobs

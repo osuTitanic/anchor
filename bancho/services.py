@@ -17,6 +17,8 @@ database = Postgres(
     config.POSTGRES_PORT
 )
 
+bot_player = None
+
 from .objects.collections import Players, Channels
 
 jobs = Jobs(max_workers=4, thread_name_prefix='job')
