@@ -111,12 +111,18 @@ class b20130606(BaseHandler):
         if self.player.filter == PresenceFilter.Friends:
             if player.id not in self.player.friends:
                 return
+            
+        utc = (
+            player.client.ip.utc_offset 
+            if player.client.ip.utc_offset 
+            else player.client.utc_offset
+        )
 
         stream = StreamOut()
 
         stream.s32(player.id)
         stream.string(player.name)
-        stream.u8(player.client.utc_offset + 24)
+        stream.u8(utc + 24)
         stream.u8(player.client.ip.country_num)
         stream.u8((Permissions.pack(player.permissions) | (player.status.mode.value << 5)))
         stream.float(player.client.ip.longitude)
@@ -171,6 +177,7 @@ class b20130606(BaseHandler):
         for chunk in (players[i:i+n] for i in range(0, len(players), n)):
             stream = StreamOut()
             stream.intlist([p.id for p in chunk if p != self.player])
+            
             self.player.sendPacket(
                 ResponsePacket.USER_PRESENCE_BUNDLE,
                 stream.get()
