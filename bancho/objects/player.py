@@ -237,6 +237,10 @@ class Player(BanchoProtocol):
         # All players that are online right now
         self.handler.enqueue_players(bancho.services.players)
 
+        # Enqueue presence of bot
+        self.handler.enqueue_presence(bancho.services.bot_player)
+        self.handler.enqueue_stats(bancho.services.bot_player)
+
         # TODO: Remaining silence
 
         for channel in bancho.services.channels:
