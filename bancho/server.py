@@ -33,7 +33,7 @@ class BanchoFactory(Factory):
         bancho.services.logger.info(f'- {bot_player.name}')
 
         # Load jobs
-        bancho.services.logger.info('Loading jobs')
+        bancho.services.logger.info('Loading jobs...')
 
         from .jobs.pings import ping
 
