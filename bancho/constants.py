@@ -630,11 +630,42 @@ class Grade(Enum):
     F = 8
     N = 9
 
-
 class PresenceFilter(Enum):
     NoPlayers = 0
     All       = 1
     Friends   = 2
+
+class MatchType(Enum):
+    Standard  = 0
+    Powerplay = 1
+
+class MatchScoringTypes(Enum):
+    Score    = 0
+    Accuracy = 1
+    Combo    = 2
+
+class MatchTeamTypes(Enum):
+    HeadToHead = 0
+    TagCoop    = 1
+    TeamVs     = 2
+    TagTeamVs  = 3
+
+class SlotStatus(Enum):
+    Open      = 1
+    Locked    = 2
+    NotReady  = 4
+    Ready     = 8
+    NoMap     = 16
+    Playing   = 32
+    Complete  = 64
+    Quit      = 128
+
+    HasPlayer = NotReady | Ready | NoMap | Playing | Complete
+
+class SlotTeam(Enum):
+    Neutral = 0
+    Blue    = 1
+    Red     = 2
 
 WEB_RESPONSE = '''
 <pre>
