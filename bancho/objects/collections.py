@@ -103,3 +103,37 @@ class Players(List[Player]):
     def enqueue_channel(self, channel):
         for p in self:
             p.handler.enqueue_channel(channel)
+
+from .multiplayer import Match
+
+class Matches(List[Optional[Match]]):
+    def __init__(self) -> None:
+        super().__init__([None] * 64)
+
+    def __iter__(self) -> Iterator[Match]:
+        return super().__iter__()
+
+    def __repr__(self) -> str:
+        return f'[{", ".join(match.name for match in self if match)}]'
+
+    def get_free(self) -> Optional[int]:
+        for index, match in enumerate(self):
+            if match is None:
+                return index
+        return None
+
+    def append(self, match: Match) -> bool:
+        if (free := self.get_free()) is not None:
+            # Add match to list if free slot was found
+            match.id = free
+            self[free] = match
+
+            return True
+        else:
+            return False
+
+    def remove(self, match: Match) -> None:
+        for index, _match in enumerate(self):
+            if match is _match:
+                self[index] = None
+                break

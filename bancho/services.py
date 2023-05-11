@@ -19,8 +19,9 @@ database = Postgres(
 
 bot_player = None
 
-from .objects.collections import Players, Channels
+from .objects.collections import Players, Channels, Matches
 
 jobs = Jobs(max_workers=4, thread_name_prefix='job')
 players = Players()
+matches = Matches()
 channels = Channels()
