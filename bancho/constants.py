@@ -667,6 +667,8 @@ class SlotTeam(Enum):
     Blue    = 1
     Red     = 2
 
+SPEED_MODS = [Mod.DoubleTime, Mod.HalfTime, Mod.Nightcore]
+
 WEB_RESPONSE = '''
 <pre>
         _-_
