@@ -1,14 +1,20 @@
 
 from typing import List, Tuple
 
-from bancho.streams        import StreamIn, StreamOut
-from bancho.common.objects import DBBeatmap
-from bancho.constants      import (
+from bancho.streams             import StreamIn, StreamOut
+from bancho.common.objects      import DBBeatmap
+from bancho.objects.channel     import Channel
+from bancho.constants           import (
+    SPEED_MODS,
+    MatchScoringTypes,
+    MatchTeamTypes,
     PresenceFilter,
     ResponsePacket,
-    RequestPacket,
     ClientStatus,
     Permissions,
+    SlotStatus,
+    MatchType,
+    SlotTeam,
     Ranked,
     Grade,
     Mode,
@@ -275,6 +281,72 @@ class b20130606(BaseHandler):
             int(player.id).to_bytes(4, 'little')
         )
 
+    def enqueue_match(self, match, send_password=False, update=False):
+        stream = StreamOut()
+
+        self.write_match(match, stream, send_password)
+
+        self.player.sendPacket(
+            ResponsePacket.NEW_MATCH
+            if not update else
+            ResponsePacket.UPDATE_MATCH,
+            stream.get()
+        )
+
+    def enqueue_match_disband(self, match_id: int):
+        self.player.sendPacket(
+            ResponsePacket.DISBAND_MATCH,
+            int(match_id).to_bytes(4, 'little')
+        )
+
+    def enqueue_match_player_failed(self, slot_id: int):
+        self.player.sendPacket(
+            ResponsePacket.MATCH_PLAYER_FAILED,
+            int(slot_id).to_bytes(4, 'little')
+        )
+
+    def enqueue_match_player_skipped(self, slot_id: int):
+        self.player.sendPacket(
+            ResponsePacket.MATCH_PLAYER_SKIPPED,
+            int(slot_id).to_bytes(4, 'little')
+        )
+
+    def enqueue_match_all_players_loaded(self):
+        self.player.sendPacket(ResponsePacket.MATCH_ALL_PLAYERS_LOADED)
+
+    def enqueue_match_complete(self):
+        self.player.sendPacket(ResponsePacket.MATCH_COMPLETE)
+
+    def enqueue_match_transferhost(self):
+        self.player.sendPacket(ResponsePacket.MATCH_TRANSFER_HOST)
+
+    def enqueue_match_skip(self):
+        self.player.sendPacket(ResponsePacket.MATCH_SKIP)
+
+    def enqueue_matchjoin_success(self, match):
+        stream = StreamOut()
+        self.write_match(match, stream, send_password=True)
+
+        self.player.sendPacket(
+            ResponsePacket.MATCH_JOIN_SUCCESS,
+            stream.get()
+        )
+
+    def enqueue_match_start(self, match):
+        stream = StreamOut()
+        self.write_match(
+            match,
+            stream
+        )
+
+        self.player.sendPacket(
+            ResponsePacket.MATCH_START,
+            stream.get()
+        )
+
+    def enqueue_matchjoin_fail(self):
+        self.player.sendPacket(ResponsePacket.MATCH_JOIN_FAIL)
+
     def join_channel(self, name: str) -> bool:
         if not (channel := bancho.services.channels.by_name(name)):
             success = False
@@ -283,6 +355,8 @@ class b20130606(BaseHandler):
 
         if name.startswith('#spec'):
             name = '#spectator'
+        elif name.startswith('#multi'):
+            name = '#multiplayer'
 
         stream = StreamOut()
         stream.string(channel.display_name if success else name)
@@ -312,6 +386,85 @@ class b20130606(BaseHandler):
         if kick:
             self.enqueue_channel_revoked(channel.display_name)
 
+    def join_match(self, match, password: str) -> bool:
+        if self.player.restricted:
+            return False
+        
+        if self.player.match:
+            self.enqueue_matchjoin_fail()
+            return False
+
+        if self is not match.host:
+            if password != match.password and Permissions.Admin not in self.player.permissions:
+                # Invalid password
+                self.enqueue_matchjoin_fail()
+                return False
+            
+            if (slot_id := match.get_free()) is None:
+                # Match is full
+                self.enqueue_matchjoin_fail()
+                return False
+        else:
+            # Player is creating a match
+            slot_id = 0
+
+        if not self.join_channel(match.chat.name):
+            self.enqueue_matchjoin_fail()
+            return False
+
+        self.leave_channel('#lobby')
+
+        slot = match.slots[0 if slot_id == -1 else slot_id]
+
+        if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
+            slot.team = SlotTeam.Red
+
+        slot.status = SlotStatus.NotReady
+        slot.player = self.player
+
+        self.player.match = match
+
+        self.enqueue_matchjoin_success(match)
+        match.update()
+
+        return True
+    
+    def leave_match(self):
+        if self.player.restricted:
+            return
+        
+        if not self.player.match:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        if slot.status == SlotStatus.Locked:
+            status = SlotStatus.Locked
+        else:
+            status = SlotStatus.Open
+
+        slot.reset(status)
+        self.leave_channel(self.player.match.chat, kick=True)
+
+        if all(slot.empty for slot in self.player.match.slots):
+            # Match is empty
+            bancho.services.matches.remove(self.player.match)
+
+            for player in bancho.services.players.in_lobby:
+                player.handler.enqueue_match_disband(self.player.match.id)
+        else:
+            if self.player is self.player.match.host:
+                # Player was host, transfer to next player
+                for slot in self.player.match.slots:
+                    if slot.status.value & SlotStatus.HasPlayer.value:
+                        self.player.match.host = slot.player
+                        self.player.match.host.handler.enqueue_match_transferhost()
+
+            self.player.match.update()
+
+        self.player.match = None
+
     def handle_change_status(self, stream: StreamIn):
         # Check previous status
         if self.player.status.action == ClientStatus.Submitting:
@@ -339,8 +492,10 @@ class b20130606(BaseHandler):
         sender_id = stream.s32()
 
         if target.startswith('#multiplayer'):
-            # TODO
-            pass
+            if self.player.match:
+                target = self.player.match.chat.name
+            else:
+                return
 
         if target.startswith('#spectator'):
             if self.player.spectating:
@@ -408,12 +563,26 @@ class b20130606(BaseHandler):
         self.enqueue_stats(self.player)
 
     def handle_join_lobby(self, stream: StreamIn):
-        # TODO: Bancho_Lobbyjoin
+        if self.player.restricted:
+            return
+
+        for player in bancho.services.players.in_lobby:
+            player.handler.enqueue_lobby_join(self.player.id)
+
+        for match in bancho.services.matches:
+            if match is not None:
+                self.enqueue_match(match)
+
         self.player.in_lobby = True
 
     def handle_part_lobby(self, stream: StreamIn):
-        # TODO: Bancho_Lobbypart
+        if self.player.restricted:
+            return
+
         self.player.in_lobby = False
+
+        for player in bancho.services.players.in_lobby:
+            player.handler.enqueue_lobby_part(self.player.id)
 
     def handle_join_channel(self, stream: StreamIn):
         name = stream.string()
@@ -421,11 +590,17 @@ class b20130606(BaseHandler):
         if name.startswith('#spectator'):
             if self.player.spectating:
                 name = f'#spec_{self.player.spectating.id}'
-            
             elif self.player.spectators:
                 name = f'#spec_{self.player.id}'
-
             else:
+                self.enqueue_channel_revoked('#spectator')
+                return
+        
+        elif name.startswith('#multiplayer'):
+            if self.player.match:
+                name = self.player.match.chat.name
+            else:
+                self.enqueue_channel_revoked('#multiplayer')
                 return
 
         self.join_channel(name)
@@ -602,3 +777,463 @@ class b20130606(BaseHandler):
 
         for p in self.player.spectating.spectators:
             p.handler.enqueue_cant_spectate(self.player)
+
+    def read_match(self, stream: StreamIn):
+        
+        from ..objects.multiplayer import Match
+
+        match_id = stream.s16()
+
+        in_progress = stream.bool()
+        match_type = MatchType(stream.u8())
+        mods = Mod.list(stream.u32())
+
+        name = stream.string()
+        password = stream.string()
+
+        beatmap_name = stream.string()
+        beatmap_id   = stream.s32()
+        beatmap_hash = stream.string()
+
+        slot_status = [stream.u8()   for _ in range(8)]
+        slot_team   = [stream.u8()   for _ in range(8)]
+        slot_id     = [stream.s32()  for i in range(8) if slot_status[i] & SlotStatus.HasPlayer.value]
+
+        host = bancho.services.players.by_id(stream.s32())
+        mode = Mode(stream.u8())
+
+        match_scoring_type = MatchScoringTypes(stream.u8())
+        match_team_type    = MatchTeamTypes(stream.u8())
+        freemod            = stream.bool()
+
+        m = Match(
+            match_id,
+            name,
+            password,
+            host,
+            beatmap_id,
+            beatmap_name,
+            beatmap_hash,
+            mode
+        )
+
+        m.in_progress  = in_progress
+        m.type         = match_type
+        m.mods         = mods
+        m.scoring_type = match_scoring_type
+        m.team_type    = match_team_type
+        m.freemod      = freemod
+
+        for index, slot in enumerate(m.slots):
+            slot.status = SlotStatus(slot_status[index])
+            slot.team   = SlotTeam(slot_team[index])
+
+        if freemod:
+            for i in range(8):
+                m.slots[i].mods = Mod.list(stream.u32())
+
+        return m
+    
+    def write_match(self, match, stream: StreamOut, send_password: bool = False):
+        stream.u16(match.id)
+        stream.bool(match.in_progress)
+        stream.u8(match.type.value)
+        stream.u32(Mod.pack(match.mods))
+        stream.string(match.name)
+
+        if send_password:
+            stream.string(match.password)
+        else:
+            if match.password:
+                stream.write(b'\x0b\x00')
+            else:
+                stream.write(b'\x00')
+
+        stream.string(match.beatmap_name)
+        stream.s32(match.beatmap_id)
+        stream.string(match.beatmap_hash)
+
+        [stream.u8(slot.status.value) for slot in match.slots]
+        [stream.u8(slot.team.value)   for slot in match.slots]
+        [stream.s32(slot.player.id)   for slot in match.slots if slot.has_player]
+
+        stream.s32(match.host.id)
+        stream.u8(match.mode.value)
+        stream.u8(match.scoring_type.value)
+        stream.u8(match.team_type.value)
+        stream.u8(int(match.freemod))
+
+        if match.freemod:
+            [stream.s32(Mod.pack(slot.mods)) for slot in match.slots]
+
+        return stream
+
+    def handle_create_match(self, stream: StreamIn):
+
+        match = self.read_match(stream)
+
+        if not self.player.in_lobby:
+            self.enqueue_matchjoin_fail()
+            return
+        
+        if self.player.restricted or self.player.silenced:
+            self.enqueue_matchjoin_fail()
+            return
+        
+        if not bancho.services.matches.append(match):
+            self.enqueue_matchjoin_fail()
+            return
+        
+        bancho.services.channels.append(
+            c := Channel(
+                name=f'#multi_{match.id}',
+                topic=match.name,
+                read_perms=1,
+                write_perms=1,
+                public=False
+            )
+        )
+        match.chat = c
+
+        self.join_match(match, match.password)
+
+    def handle_join_match(self, stream: StreamIn):
+        match_id = stream.s32()
+        password = stream.string()
+
+        if not (match := bancho.services.matches[match_id]):
+            self.enqueue_matchjoin_fail()
+            self.enqueue_match_disband(match_id)
+            return
+
+        self.join_match(match, password)
+
+    def handle_leave_match(self, stream: StreamIn):
+        self.leave_match()
+
+    def handle_match_change_slot(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        slot_id = stream.s32()
+
+        if not 0 <= slot_id < 8:
+            return
+        
+        if self.player.match.slots[slot_id].status != SlotStatus.Open:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        self.player.match.slots[slot_id].copy_from(slot)
+        slot.reset()
+
+        self.player.match.update()
+
+    def handle_match_ready(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        slot.status = SlotStatus.Ready
+        self.player.match.update()
+
+    def handle_match_not_ready(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        slot.status = SlotStatus.NotReady
+        self.player.match.update()
+
+    def handle_match_no_beatmap(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        slot.status = SlotStatus.NoMap
+        self.player.match.update()
+
+    def handle_match_has_beatmap(self, stream: StreamIn):
+        self.handle_match_not_ready(stream)
+
+    def handle_match_lock(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+
+        if self.player is not self.player.match.host:
+            return
+        
+        slot_id = stream.s32()
+        
+        if not 0 <= slot_id < 8:
+            return
+        
+        slot = self.player.match.slots[slot_id]
+
+        if slot.status == SlotStatus.Locked:
+            slot.status = SlotStatus.Open
+        else:
+            if slot.player is self.player:
+                # Players can't kick themselves
+                return
+            
+            slot.status = SlotStatus.Locked
+
+        self.player.match.update()
+
+    def handle_match_change_settings(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+
+        if self.player is not self.player.match.host:
+            return
+
+        self.player.match.change_settings(
+            self.read_match(stream)
+        )
+
+    def handle_match_change_mods(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        mods = Mod.list(stream.u32())
+
+        if self.player.match.freemod:
+            # TODO: What is "FreeModAllowed"?
+
+            if self.player is self.player.match.host:
+                self.player.match.mods = [mod for mod in mods if mod in SPEED_MODS and mod != Mod.FreeModAllowed]
+
+            slot = self.player.match.get_slot(self.player)
+            assert slot is not None
+
+            slot.mods = [mod for mod in mods if mod not in SPEED_MODS and mod != Mod.FreeModAllowed]
+        else:
+            if self.player is not self.player.match.host:
+                return
+            
+            self.player.match.mods = [mod for mod in mods if mod != Mod.FreeModAllowed]
+
+        self.player.match.remove_invalid_mods()
+        self.player.match.update()
+
+    def handle_match_change_team(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.ffa:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        if slot.team == SlotTeam.Blue:
+            slot.team = SlotTeam.Red
+        else:
+            slot.team = SlotTeam.Blue
+
+        self.player.match.update()
+
+    def handle_match_start(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if self.player is not self.player.match.host:
+            return
+        
+        self.player.match.start()
+
+    def handle_match_score_update(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.in_progress:
+            return
+        
+        slot, id = self.player.match.get_slot_with_id(self.player)
+        assert slot is not None
+
+        if not slot.is_playing:
+            return
+        
+        score_frame = bytearray(stream.readall())
+        score_frame[4] = id
+
+        self.player.match.enqueue_score_update(bytes(score_frame))
+
+    def handle_match_complete(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.in_progress:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        slot.status = SlotStatus.Complete
+
+        if any([slot.is_playing for slot in self.player.match.slots]):
+            return
+        
+        # Players that have been playing this round
+        players = [
+            slot.player for slot in self.player.match.slots
+            if slot.status.value & SlotStatus.Complete.value
+            and slot.has_player
+        ]
+
+        self.player.match.unready_players(SlotStatus.Complete)
+        self.player.match.in_progress = False
+
+        for player in players:
+            player.handler.enqueue_match_complete()
+
+        self.player.match.update()
+
+    def handle_match_load_complete(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.in_progress:
+            return
+        
+        slot = self.player.match.get_slot(self.player)
+        assert slot is not None
+
+        slot.loaded = True
+
+        if all(
+                [
+                    slot.is_playing
+                    for slot in self.player.match.slots
+                    if slot.has_player and slot.player in self.player.match.players_withmap
+                ]
+            ):
+            for player in self.player.match.players_withmap:
+                player.handler.enqueue_match_all_players_loaded()
+
+            self.player.match.update()
+
+    def handle_match_skip(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.in_progress:
+            return
+        
+        slot, id = self.player.match.get_slot_with_id(self.player)
+        assert slot is not None
+
+        slot.skipped = True
+        self.player.match.enqueue_player_skipped(id)
+
+        for slot in self.player.match.slots:
+            if slot.status == SlotStatus.Playing and not slot.skipped:
+                return
+            
+        self.player.match.enqueue_skip()
+
+    def handle_match_failed(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if not self.player.match.in_progress:
+            return
+        
+        slot_id = self.player.match.get_slot_id(self.player)
+        assert slot_id is not None
+
+        self.player.match.enqueue_player_failed(slot_id)
+
+    def handle_match_transfer_host(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not self.player.match:
+            return
+        
+        if self.player is not self.player.match.host:
+            return
+        
+        slot_id = stream.s32()
+
+        if not 0 <= slot_id < 8:
+            return
+        
+        if not (target := self.player.match.slots[slot_id].player):
+            # Tried to transfer host into empty slot
+            return
+        
+        self.player.match.host = target
+        self.player.match.host.handler.enqueue_match_transferhost()
+
+        self.player.match.update()
+
+    def handle_match_change_password(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+
+        if not (match := self.player.match):
+            return
+        
+        if self.player is not self.player.match.host:
+            return
+        
+        match.password = self.read_match(stream).password
+
+        self.player.match.update()
+
+    def handle_match_invite(self, stream: StreamIn):
+        # TODO
+        pass

@@ -29,14 +29,14 @@ class Channels(List[Channel]):
         return None
     
     def append(self, c: Channel) -> None:
-        if c: return super().append(c)
+        if c not in self: return super().append(c)
 
     def remove(self, c: Channel) -> None:
         # Revoke channel to all users
         for p in c.users:
             p.handler.enqueue_channel_revoked(c.display_name)
 
-        if c: return super().remove(c)
+        if c in self: return super().remove(c)
 
     def extend(self, channels: Iterable[Channel]) -> None:
         return super().extend(channels)
@@ -58,6 +58,10 @@ class Players(List[Player]):
     @property
     def unrestricted(self) -> Set[Player]:
         return {p for p in self if not p.restricted}
+    
+    @property
+    def in_lobby(self) -> Set[Player]:
+        return {p for p in self if p.in_lobby}
 
     def append(self, player: Player) -> None:
         self.enqueue_player(player)
@@ -103,6 +107,20 @@ class Players(List[Player]):
     def enqueue_channel(self, channel):
         for p in self:
             p.handler.enqueue_channel(channel)
+
+    def enqueue_match(self, match, send_password=False):
+
+        """Update a match to players"""
+
+        for p in self:
+            p.handler.enqueue_match(match, send_password, update=True)
+
+    def enqueue_matchdisband(self, match_id: int):
+
+        """Delete a match from players in lobby"""
+
+        for p in self:
+            p.handler.enqueue_match_disband(match_id)
 
 from .multiplayer import Match
 
