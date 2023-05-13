@@ -77,12 +77,13 @@ class Player(BanchoProtocol):
         self.filter = PresenceFilter.All
 
         from .collections import Players
+        from .multiplayer import Match
 
         self.spectating: Optional[Player] = None
         self.spectators: Players = Players()
 
-        self.in_lobby = False
-        self.match    = None
+        self.match: Optional[Match] = None
+        self.in_lobby               = False
 
         self.spectator_channel = None
 
