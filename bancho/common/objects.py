@@ -252,6 +252,10 @@ class DBBeatmap(Base):
         return f'<Beatmap ({self.id}) {self.beatmapset.artist} - {self.beatmapset.title} [{self.version}]>'
 
     @property
+    def full_name(self):
+        return f'{self.beatmapset.artist} - {self.beatmapset.title} [{self.version}]'
+
+    @property
     def submission_status(self):
         raise NotImplementedError # TODO
 
