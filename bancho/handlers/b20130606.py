@@ -1256,3 +1256,19 @@ class b20130606(BaseHandler):
             ResponsePacket.INVITE,
             stream.get()
         )
+
+    def handle_tournament_match_info(self, stream: StreamIn):
+        if self.player.restricted:
+            return
+        
+        # TODO: Check privileges and client
+        
+        match_id = stream.s32()
+
+        if not 0 <= match_id < 64:
+            return
+        
+        if not (match := bancho.services.matches[match_id]):
+            return
+        
+        self.enqueue_match(match, update=True)
