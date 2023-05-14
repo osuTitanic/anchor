@@ -1235,5 +1235,24 @@ class b20130606(BaseHandler):
         self.player.match.update()
 
     def handle_match_invite(self, stream: StreamIn):
-        # TODO
-        pass
+        if self.player.restricted:
+            return
+
+        if not (match := self.player.match):
+            return
+        
+        if not (target := bancho.services.players.by_id(stream.s32())):
+            return
+        
+        bot = bancho.services.bot_player
+        
+        stream = StreamOut()
+        stream.string(bot.name)
+        stream.string(f'{self.player.name} invited you to a match: "{match.embed}"')
+        stream.string(target.name)
+        stream.s32(bot.id)
+
+        target.sendPacket(
+            ResponsePacket.INVITE,
+            stream.get()
+        )
