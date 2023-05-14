@@ -1,6 +1,6 @@
 
 from .common.database import Postgres
-from .logging import ConsoleHandler
+from .logging import Console, File
 from .jobs import Jobs
 
 import logging
@@ -8,7 +8,8 @@ import config
 
 logger = logging.getLogger('anchor')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(ConsoleHandler)
+logger.addHandler(Console)
+logger.addHandler(File)
 
 database = Postgres(
     config.POSTGRES_USER,

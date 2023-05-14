@@ -1,5 +1,7 @@
 
-from logging import Formatter, StreamHandler
+from datetime import datetime
+
+from logging import Formatter, StreamHandler, FileHandler
 from logging import (
     CRITICAL,
     WARNING,
@@ -8,7 +10,9 @@ from logging import (
     INFO
 )
 
-class CustomFormatter(Formatter):
+import os
+
+class ColorFormatter(Formatter):
 
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
@@ -33,6 +37,16 @@ class CustomFormatter(Formatter):
         formatter = Formatter(log_fmt)
         return formatter.format(record)
 
-ConsoleHandler = StreamHandler()
-ConsoleHandler.setLevel(DEBUG)
-ConsoleHandler.setFormatter(CustomFormatter())
+os.makedirs('logs', exist_ok=True)
+
+Console = StreamHandler()
+Console.setLevel(DEBUG)
+Console.setFormatter(ColorFormatter())
+
+File = FileHandler(f'logs/{datetime.now().strftime("%Y-%m-%d")}.log', mode='a')
+File.setLevel(INFO)
+File.setFormatter(
+    Formatter(
+        '[%(asctime)s] - <%(name)s> %(levelname)s: %(message)s'
+    )
+)
