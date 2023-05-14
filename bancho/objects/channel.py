@@ -101,7 +101,6 @@ class Channel:
             if len(message) > 127:
                 message = message[:124] + '...'
 
-            # TODO: DB Logs
             bancho.services.logger.info(f'{sender.name} {self}: {message}')
 
             # Filter out sender

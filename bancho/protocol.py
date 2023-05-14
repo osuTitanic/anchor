@@ -28,7 +28,7 @@ class BanchoProtocol(Protocol):
 
     buffer  = b""
     busy    = False
-    proxied = False # TODO
+    proxied = False
     handler = None
 
     def __init__(self, address: IPAddress) -> None:
