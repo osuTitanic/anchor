@@ -74,8 +74,8 @@ class ResponsePacket(Enum):
     UPDATE_MATCH                    = 26
     NEW_MATCH                       = 27
     DISBAND_MATCH                   = 28
-    LOBBY_JOIN                      = 34 # Unused
-    LOBBY_PART                      = 35 # Unused
+    LOBBY_JOIN                      = 34 # Only used in older clients
+    LOBBY_PART                      = 35 # Only used in older clients
     MATCH_JOIN_SUCCESS              = 36
     MATCH_JOIN_FAIL                 = 37
     FELLOW_SPECTATOR_JOINED         = 42

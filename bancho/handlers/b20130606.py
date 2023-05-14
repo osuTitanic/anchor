@@ -347,6 +347,20 @@ class b20130606(BaseHandler):
     def enqueue_matchjoin_fail(self):
         self.player.sendPacket(ResponsePacket.MATCH_JOIN_FAIL)
 
+    def enqueue_lobby_join(self, user_id: int):
+        for player in bancho.services.players.in_lobby:
+            player.sendPacket(
+                ResponsePacket.LOBBY_JOIN,
+                int(user_id).to_bytes(4, 'little')
+            )
+
+    def enqueue_lobby_part(self, user_id: int):
+        for player in bancho.services.players.in_lobby:
+            player.sendPacket(
+                ResponsePacket.LOBBY_PART,
+                int(user_id).to_bytes(4, 'little')
+            )
+
     def join_channel(self, name: str) -> bool:
         if not (channel := bancho.services.channels.by_name(name)):
             success = False
@@ -684,10 +698,10 @@ class b20130606(BaseHandler):
         self.enqueue_friends()
 
     def handle_set_away_message(self, stream: StreamIn):
-        sender                   = stream.string()
-        self.player.away_message = stream.string()
-        target                   = stream.string()
-        sender_id                = stream.s32()
+        _            = stream.string()
+        away_message = stream.string()
+
+        self.player.away_message = away_message
 
     def handle_change_friendonly_dms(self, stream: StreamIn):
         self.player.client.friendonly_dms = bool(stream.s32())
@@ -1272,3 +1286,6 @@ class b20130606(BaseHandler):
             return
         
         self.enqueue_match(match, update=True)
+
+    def handle_error_report(self, stream: StreamIn):
+        pass
