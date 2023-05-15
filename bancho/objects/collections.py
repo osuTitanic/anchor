@@ -109,16 +109,10 @@ class Players(List[Player]):
             p.handler.enqueue_channel(channel)
 
     def enqueue_match(self, match, send_password=False):
-
-        """Update a match to players"""
-
         for p in self:
             p.handler.enqueue_match(match, send_password, update=True)
 
     def enqueue_matchdisband(self, match_id: int):
-
-        """Delete a match from players in lobby"""
-
         for p in self:
             p.handler.enqueue_match_disband(match_id)
 

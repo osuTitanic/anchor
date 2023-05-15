@@ -35,6 +35,7 @@ class BanchoFactory(Factory):
         # Load jobs
         bancho.services.logger.info('Loading jobs...')
 
+        # This will automatically load the ping job
         from .jobs.pings import ping
 
         bancho.services.logger.info(f'Starting factory: {self}')

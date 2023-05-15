@@ -44,6 +44,7 @@ class OsuClient:
         build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
 
         # TODO: Parse and validate client hash
+        # TODO: Tournament clients
 
         return OsuClient(
             IPAddress(ip),

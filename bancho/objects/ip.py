@@ -30,6 +30,8 @@ class IPAddress:
         self.host = ip
 
         if self.is_local:
+            # This will use the public ip address of this machine
+            # Useful for BanchoBot
             self.host = ''
         
         self.parse_request(
