@@ -8,6 +8,9 @@ PING_INTERVAL = 30
 TIMEOUT_SECS  = 45
 
 def ping():
+    # This will send out a ping packet to every 
+    # client, to avoid them from disconnecting
+
     while True:
         next_ping = datetime.now().timestamp() - PING_INTERVAL
 
@@ -23,7 +26,7 @@ def ping():
 
             # Check timeout
             if datetime.now().timestamp() - player.last_response.timestamp() >= TIMEOUT_SECS:
-                player.logger.warning('Client timed out.')
+                player.logger.warning('Client timed out')
                 player.closeConnection()
 
         if bancho.services.jobs._shutdown:

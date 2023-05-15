@@ -35,7 +35,7 @@ class BanchoProtocol(Protocol):
         self.address = address
 
     def connectionMade(self):
-        bancho.services.logger.debug(
+        bancho.services.logger.info(
             f'-> <{self.address.host}:{self.address.port}>'
         )
 
@@ -63,6 +63,7 @@ class BanchoProtocol(Protocol):
             self.buffer += data
 
             if self.buffer.startswith(b'GET /'):
+                # Client made a web request
                 self.handleWeb()
                 return
 
@@ -76,8 +77,6 @@ class BanchoProtocol(Protocol):
                     client.decode(),
                     self.address.host
                 )
-
-                bancho.services.logger.info(f'<{self.address.host}> -> Login attempt as "{username.decode()}" with {client.version.string}.')
 
                 self.loginReceived(
                     username.decode(), 
@@ -196,7 +195,7 @@ class BanchoProtocol(Protocol):
         self.enqueue(stream.get())
 
     def handleWeb(self):
-        # This will send a http response and close the connection after that
+        # This will simulate a simple http response
         self.transport.write(
             '\n'.join([
                 'HTTP/2 200 OK',

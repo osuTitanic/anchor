@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from typing      import List, Optional
 from datetime    import datetime
 
-from ..streams import StreamIn
-
 from ..protocol import BanchoProtocol, IPAddress
+from ..streams import StreamIn
+from ..logging import Console, File
 
 from ..handlers.b20130606 import b20130606
 from ..handlers import BaseHandler
@@ -51,7 +51,7 @@ class Status:
     beatmap: int = -1
 
     def __repr__(self) -> str:
-        return f'<Status ({self.action})>'
+        return f"<[{self.action.name}] mode='{self.mode.name}' mods={self.mods} text='{self.text}' md5='{self.checksum}' beatmap={self.beatmap}>"
 
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
@@ -69,9 +69,12 @@ class Player(BanchoProtocol):
         self.away_message: Optional[str] = None
         self.handler: Optional[BaseHandler] = None
         self.channels = []
-
         self.address = address
+
         self.logger  = logging.getLogger(self.address.host)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(Console)
+        self.logger.addHandler(File)
 
         self.last_response = datetime.now()
         self.filter = PresenceFilter.All
@@ -134,7 +137,7 @@ class Player(BanchoProtocol):
     
     @property
     def is_bot(self) -> bool:
-        # TODO: Maybe there is a better way of doing this
+        # Maybe there is a better way of doing this?
         return type(self.handler) == BaseHandler
     
     def reload_object(self) -> DBUser:
@@ -160,36 +163,47 @@ class Player(BanchoProtocol):
         return self.handler.handle(packet_id, stream)
 
     def loginReceived(self, username: str, md5: str, client: OsuClient):
+        self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
+
         self.client = client
 
         # Set client version
-        if self.client.version.date in Handlers:
-            self.version = self.client.version.date
+        self.version = self.client.version.date
 
-        self.handler = Handlers[self.version](self)
+        # If the client date was not found
+        # take the handler, that is closest to it
+        self.handler = Handlers[
+            min(Handlers.keys(), key=lambda x:abs(x-self.version))
+        ](self)
 
+        # Send protocol version
         self.sendPacket(
             ResponsePacket.PROTOCOL_VERSION,
             int(21).to_bytes(4, 'little')
         )
 
         if not (user := bancho.services.database.user_by_name(username)):
+            self.logger.warning('Login failed: -1')
             self.loginFailed(-1) # User does not exist
             return
 
         if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
+            self.logger.warning('Login failed: -1')
             self.loginFailed(-1) # Password check failed
             return
 
         if self.client.version.date != self.version:
+            self.logger.warning('Login failed: -2')
             self.loginFailed(-2) # Update needed
             return
 
         if user.restricted:
+            self.logger.warning('Login failed: -3')
             self.loginFailed(-3) # User is banned
             return
 
         if not user.activated:
+            self.logger.warning('Login failed: -4')
             self.loginFailed(-4) # User is not yet activated
             return
         

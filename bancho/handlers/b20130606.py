@@ -246,12 +246,14 @@ class b20130606(BaseHandler):
         )
 
     def enqueue_spectator(self, player):
+        self.player.logger.info(f'Spectator joined: {player.name}')
         self.player.sendPacket(
             ResponsePacket.SPECTATOR_JOINED,
             int(player.id).to_bytes(4, 'little')
         )
 
     def enqueue_spectator_left(self, player):
+        self.player.logger.info(f'Spectator left: {player.name}')
         self.player.sendPacket(
             ResponsePacket.SPECTATOR_LEFT,
             int(player.id).to_bytes(4, 'little')
@@ -496,6 +498,8 @@ class b20130606(BaseHandler):
         self.player.status.mode     = Mode(stream.u8())
         self.player.status.beatmap  = stream.s32()
 
+        self.player.logger.info(f'Changed status: {self.player.status}')
+
         # Enqueue to other clients
         bancho.services.players.enqueue_stats(self.player)
 
@@ -563,6 +567,8 @@ class b20130606(BaseHandler):
             self.enqueue_message(player, player.away_message, target)
 
         # TODO: Commands
+
+        self.player.logger.info(f'[PM -> {player.name}]: {message}')
 
         player.handler.enqueue_message(
             self.player,
@@ -672,6 +678,8 @@ class b20130606(BaseHandler):
             target.id,
             friend=True
         )
+
+        self.player.logger.info(f'Added {target.name} as their friend')
         
         # Reload relationships
         self.player.reload_object()
@@ -690,6 +698,8 @@ class b20130606(BaseHandler):
             self.player.id,
             target.id
         )
+
+        self.player.logger.info(f'Removed {target.name} as their friend')
 
         # Reload relationships
         self.player.reload_object()
@@ -909,6 +919,8 @@ class b20130606(BaseHandler):
         )
         match.chat = c
 
+        self.player.logger.info(f'Created match: "{match.name}"')
+
         self.join_match(match, match.password)
 
     def handle_join_match(self, stream: StreamIn):
@@ -1051,11 +1063,15 @@ class b20130606(BaseHandler):
             assert slot is not None
 
             slot.mods = [mod for mod in mods if mod not in SPEED_MODS and mod != Mod.FreeModAllowed]
+
+            self.player.logger.info(f'{self.player.name} changed their mods to: {"".join([mod.short for mod in mods])}')
         else:
             if self.player is not self.player.match.host:
                 return
             
             self.player.match.mods = [mod for mod in mods if mod != Mod.FreeModAllowed]
+
+            self.player.logger.info(f'Changed mods to: {"".join([mod.short for mod in mods])}')
 
         self.player.match.remove_invalid_mods()
         self.player.match.update()
@@ -1143,6 +1159,8 @@ class b20130606(BaseHandler):
 
         for player in players:
             player.handler.enqueue_match_complete()
+
+        self.player.match.logger.info('Match finished')
 
         self.player.match.update()
 
@@ -1232,6 +1250,8 @@ class b20130606(BaseHandler):
         self.player.match.host = target
         self.player.match.host.handler.enqueue_match_transferhost()
 
+        self.player.match.logger.info(f'Changed host to {target.name}')
+
         self.player.match.update()
 
     def handle_match_change_password(self, stream: StreamIn):
@@ -1288,4 +1308,5 @@ class b20130606(BaseHandler):
         self.enqueue_match(match, update=True)
 
     def handle_error_report(self, stream: StreamIn):
-        pass
+        # TODO: Better error handling
+        self.player.logger.warning(stream.string())

@@ -1,6 +1,7 @@
 
 from typing import List, Optional, Tuple
 
+from bancho.logging import Console, File
 from bancho.constants import (
     SPEED_MODS,
     ResponsePacket,
@@ -16,6 +17,7 @@ from bancho.constants import (
 from .channel import Channel
 from .player  import Player
 
+import logging
 import bancho
 
 class Slot:
@@ -82,6 +84,11 @@ class Match:
 
         self.chat: Optional[Channel] = None
 
+        self.logger = logging.getLogger(f'multi_{self.id}')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(Console)
+        self.logger.addHandler(File)
+
     @property
     def host_slot(self) -> Optional[Slot]:
         for slot in self.slots:
@@ -104,31 +111,32 @@ class Match:
 
     @property
     def slots_nomap(self) -> List[Slot]:
-        slots: List[Slot] = []
-        for slot in self.slots:
-            if slot.has_player:
-                if slot.status == SlotStatus.NoMap:
-                    slots.append(slot)
-        return slots
+        """Return the slots with no maps"""
+        return [slot for slot in self.slots if slot.has_player and slot.status == SlotStatus.NoMap]
 
     @property
     def slots_withmap(self) -> List[Slot]:
+        """Return the slots that have a map"""
         return [slot for slot in self.slots if slot not in self.slots_nomap and slot.has_player]
 
     @property
     def players(self) -> List[Player]:
+        """Return all players"""
         return [slot.player for slot in self.player_slots]
 
     @property
     def players_withmap(self) -> List[Player]:
+        """Return all players with a map"""
         return [slot.player for slot in self.slots_withmap]
 
     @property
-    def url(self):
+    def url(self) -> str:
+        """Url, used to join a match"""
         return f'osump://{self.id}/{self.password}'
 
     @property
-    def embed(self):
+    def embed(self) -> str:
+        """Embed that will be sent on invite"""
         return f'[{self.url} {self.name}]'
     
     def enqueue_player_failed(self, slot_id: int):
@@ -211,8 +219,10 @@ class Match:
 
         self.in_progress = True
 
-        for player in self.players_withmap:
+        for player in self.players:
             player.handler.enqueue_match_start(self)
+
+        self.logger.info('Match started')
 
         self.update()
 
@@ -247,6 +257,7 @@ class Match:
         if self.freemod != new_match.freemod:
             # Freemod state has been changed
             self.freemod = new_match.freemod
+            self.logger.info(f'Freemod: {self.freemod}')
 
             if self.freemod:
                 for slot in self.slots:
@@ -266,6 +277,7 @@ class Match:
 
         if new_match.beatmap_id == -1:
             # Host is selecting new map, unready players
+            self.logger.info('Host is selecting map...')
 
             self.unready_players()
             self.previous_id = self.beatmap_id
@@ -279,6 +291,7 @@ class Match:
             if self.previous_id != new_match.beatmap_id:
                 # New map has been chosen
                 self.chat.send_message(bancho.services.bot_player, f'Selected: {new_match.beatmap_name}')
+                self.logger.info(f'Selected: {new_match.beatmap_name}')
 
             # Lookup beatmap in database
             beatmap = bancho.services.database.beatmap_by_checksum(new_match.beatmap_hash)
@@ -310,14 +323,19 @@ class Match:
 
             self.team_type = new_match.team_type
 
+            self.logger.info(f'Team type: {self.team_type.name}')
+
         if self.scoring_type != new_match.scoring_type:
             # Changed scoring type
             self.scoring_type = new_match.scoring_type
+            self.logger.info(f'Scoring type: {self.scoring_type.name}')
 
         if self.mode != new_match.mode:
             self.mode = new_match.mode
+            self.logger.info(f'Mode: {self.mode.formatted}')
 
         if self.name != new_match.name:
             self.name = new_match.name
+            self.logger.info(f'Name: {self.name}')
 
         self.update()
