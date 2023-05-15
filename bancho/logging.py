@@ -40,7 +40,7 @@ class ColorFormatter(Formatter):
 os.makedirs('logs', exist_ok=True)
 
 Console = StreamHandler()
-Console.setLevel(DEBUG)
+Console.setLevel(INFO)
 Console.setFormatter(ColorFormatter())
 
 File = FileHandler(f'logs/{datetime.now().strftime("%Y-%m-%d")}.log', mode='a')
