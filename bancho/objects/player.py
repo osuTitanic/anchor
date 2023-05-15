@@ -37,8 +37,7 @@ import bcrypt
 
 Handlers = {
     20130606: b20130606, # Latest supported version
-    20130303: b20130606,
-    -1: b20130606        # Default version
+                         # TODO: Implement more clients
 }
 
 @dataclass
