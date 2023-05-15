@@ -144,13 +144,20 @@ class Player(BanchoProtocol):
         return self.object
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
+        # Notify clients
         bancho.services.players.remove(self)
         bancho.services.players.exit(self)
 
+        # Remove them from all channels
         for channel in self.channels:
             channel.remove(self)
 
+        # Remove their spectator channel
         bancho.services.channels.remove(self.spectator_channel)
+
+        # Remove player from any match
+        if self.match:
+            self.handler.leave_match()
 
         super().connectionLost(reason)
 
