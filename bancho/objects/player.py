@@ -243,6 +243,7 @@ class Player(BanchoProtocol):
         self.handler.enqueue_presence(self)
         self.handler.enqueue_stats(self)
 
+        # Append to player collection
         bancho.services.players.append(self)
 
         # Friends
@@ -257,6 +258,7 @@ class Player(BanchoProtocol):
 
         # TODO: Remaining silence
 
+        # Enqueue all public channels
         for channel in bancho.services.channels:
             if (
                 channel.can_read(Permissions.pack(self.permissions)) and
@@ -267,5 +269,7 @@ class Player(BanchoProtocol):
         self.handler.enqueue_channel_info_end()
 
     def update(self):
+        # Reload database object
         self.reload_object()
+        # Enqueue to players
         bancho.services.players.enqueue_stats(self)
