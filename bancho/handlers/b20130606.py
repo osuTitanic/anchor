@@ -738,6 +738,9 @@ class b20130606(BaseHandler):
         if not (target := bancho.services.players.by_id(stream.s32())):
             return
         
+        if target == bancho.services.bot_player:
+            return
+
         self.player.spectating = target
 
         # Join their channel
@@ -760,7 +763,10 @@ class b20130606(BaseHandler):
         if self.player.restricted:
             return
 
-        # Leave spectator channel        
+        if not self.player.spectating:
+            return
+
+        # Leave spectator channel
         self.leave_channel(
             '#spectator', kick=True
         )
@@ -786,17 +792,17 @@ class b20130606(BaseHandler):
     def handle_send_frames(self, stream: StreamIn):
         if self.player.restricted:
             return
-        
+
         for p in self.player.spectators:
             p.handler.enqueue_frames(stream.readall())
 
     def handle_cant_spectate(self, stream: StreamIn):
         if self.player.restricted:
             return
-        
+
         if not self.player.spectating:
             return
-        
+
         self.player.spectating.handler.enqueue_cant_spectate(self.player)
 
         for p in self.player.spectating.spectators:
