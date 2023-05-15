@@ -521,6 +521,17 @@ class Mode(Enum):
     Fruits   = 2
     OsuMania = 3
 
+    @property
+    def formatted(self):
+        if self == Mode.Osu:
+            return 'osu!'
+        elif self == Mode.Taiko:
+            return 'osu!taiko'
+        elif self == Mode.Fruits:
+            return 'osu!ctb'
+        else:
+            return 'osu!mania'
+
 class Permissions(Enum):
     NoPermissions = 0
     Normal        = 1
@@ -540,6 +551,33 @@ class Permissions(Enum):
     @classmethod
     def list(cls, values: int) -> List[Enum]:
         return [pm for pm in Permissions if cls.check_active(values, pm.value)]
+
+class ModShort(str, Enum):
+    NM   		   = "NoMod"
+    NF   		   = "NoFail"
+    EZ   		   = "Easy"
+    HD   		   = "Hidden"
+    HR   		   = "HardRock"
+    SD   		   = "SuddenDeath"
+    DT   		   = "DoubleTime"
+    RX   		   = "Relax"
+    HT   		   = "HalfTime"
+    NC   		   = "Nightcore"
+    FL   		   = "Flashlight"
+    AT   		   = "Autoplay"
+    SO   		   = "SpunOut"
+    AP   		   = "Relax2"
+    PF   		   = "Perfect"
+    Key4           = "Key4"
+    Key5           = "Key5"
+    Key6           = "Key6"
+    Key7           = "Key7"
+    Key8           = "Key8"
+    keyMod         = "keyMod"
+    FadeIn         = "FadeIn"
+    Random         = "Random"
+    LastMod        = "LastMod"
+    FreeModAllowed = "FreeModAllowed"
 
 class Mod(Enum):
     NoMod          = 0
@@ -567,6 +605,13 @@ class Mod(Enum):
     Random         = 2097152
     LastMod        = 4194304
     FreeModAllowed = 2077883
+
+    @property
+    def short(self) -> str:
+        if self == Mod.FreeModAllowed:
+            return ""
+        
+        return ModShort(self.name).name
 
     @classmethod
     def pack(cls, values: List[Enum]):
