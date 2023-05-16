@@ -224,7 +224,7 @@ class Player(BanchoProtocol):
         # Enqueue to client
         self.handler.enqueue_silence_info(0)
 
-    def restrict(self, reason: str = None):
+    def restrict(self, reason: str = None, autoban=False):
         self.object.restricted = True
         self.object.permissions = 0
 
@@ -245,12 +245,12 @@ class Player(BanchoProtocol):
         instance.commit()
 
         if reason:
-            self.handler.enqueue_announce(f'Reason: "{reason}"')
+            self.handler.enqueue_announce(f'You have been restricted for:\n{reason}')
 
         # Update client
         self.handler.enqueue_login_reply(LoginError.BANNED.value)
 
-        self.logger.warning(f'{self.name} got restricted. Reason: {reason}')
+        self.logger.warning(f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}')
 
         # Close connection
         self.closeConnection()

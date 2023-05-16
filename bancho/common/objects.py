@@ -86,7 +86,7 @@ class DBScore(Base):
     nGeki          = Column('ngeki', Integer)
     nKatu          = Column('nkatu', Integer)
     grade          = Column('grade', String, default='N')
-    status         = Column('status', SmallInteger)
+    status         = Column('status', SmallInteger, default=-1)
     submitted_at   = Column('submitted_at', DateTime, default=datetime.now())
 
     replay         = Column('replay',     BINARY, nullable=True)

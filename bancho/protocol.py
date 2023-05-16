@@ -98,7 +98,7 @@ class BanchoProtocol(Protocol):
 
     def packetDataReceived(self, data: bytes):
         # For bancho packets only
-        # Will be used after login
+        # will be used after login
         
         if self.busy:
             self.buffer += data
