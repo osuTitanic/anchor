@@ -58,9 +58,9 @@ class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
         self.version = -1
 
-        self.client: Optional[OsuClient] = None
-        self.object: Optional[DBUser]    = None
-        self.stats:  Optional[DBStats]   = None
+        self.client: Optional[OsuClient]     = None
+        self.object: Optional[DBUser]        = None
+        self.stats:  Optional[List[DBStats]] = None
         self.status = Status()
 
         self.id   = -1
@@ -224,6 +224,7 @@ class Player(BanchoProtocol):
 
     def reload_object(self) -> DBUser:
         self.object = bancho.services.database.user_by_id(self.id)
+        self.stats = self.object.stats
         return self.object
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
@@ -314,6 +315,10 @@ class Player(BanchoProtocol):
         self.stats  = user.stats
         self.pw     = user.bcrypt
 
+        if not self.stats:
+            self.create_stats()
+            self.reload_object()
+
         self.loginSuccess()
         
     def loginFailed(self, reason: int = -5, message = ""):
@@ -373,3 +378,13 @@ class Player(BanchoProtocol):
         self.reload_object()
         # Enqueue to players
         bancho.services.players.enqueue_stats(self)
+
+    def create_stats(self):
+        instance = bancho.services.database.session
+
+        for mode in range(4):
+            instance.add(
+                DBStats(self.id, mode)
+            )
+
+        instance.commit()
