@@ -65,6 +65,9 @@ class Channel:
             self.users.enqueue_channel(self)
     
     def add(self, player) -> bool:
+        # Update player's silence duration
+        player.silenced
+
         if (
             not player.spectators
             and not player.spectating
