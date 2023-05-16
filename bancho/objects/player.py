@@ -281,10 +281,11 @@ class Player(BanchoProtocol):
             self.loginFailed(-1) # Password check failed
             return
 
-        if self.client.version.date != self.version:
-            self.logger.warning('Login failed: -2')
-            self.loginFailed(-2) # Update needed
-            return
+        # TODO: List of disallowed clients
+        # if self.client.version.date != self.version:
+        #     self.logger.warning('Login failed: -2')
+        #     self.loginFailed(-2) # Update needed
+        #     return
 
         if user.restricted:
             self.logger.warning('Login failed: -3')
@@ -299,14 +300,13 @@ class Player(BanchoProtocol):
         if bancho.services.players.by_id(user.id):
             # User is already online
             self.logger.warning('Login failed: Already online')
-            self.sendError(
+            self.loginFailed(
                 reason=-1,
                 message='It seems that a player with your account is already online.\nPlease contact an admin immediately if you think this is an error!'
             )
             return
 
         # TODO: Tourney clients
-        # TODO: Test builds
 
         self.object = user
         self.id     = user.id
@@ -331,13 +331,13 @@ class Player(BanchoProtocol):
         )
         bancho.services.channels.append(self.spectator_channel)
 
-        # Send user id
+        # User ID
         self.handler.enqueue_login_reply(self.id)
 
         # Privileges
         self.handler.enqueue_privileges()
 
-        # Enqueue presence and stats        
+        # Presence and stats        
         self.handler.enqueue_presence(self)
         self.handler.enqueue_stats(self)
 
@@ -350,13 +350,15 @@ class Player(BanchoProtocol):
         # All players that are online right now
         self.handler.enqueue_players(bancho.services.players)
 
-        # Enqueue presence of bot
+        # Bot presence
         self.handler.enqueue_presence(bancho.services.bot_player)
         self.handler.enqueue_stats(bancho.services.bot_player)
 
-        # TODO: Remaining silence
+        # Remaining silence
+        if self.silenced:
+            self.handler.enqueue_silence_info(self.remaining_silence)
 
-        # Enqueue all public channels
+        # All public channels
         for channel in bancho.services.channels:
             if (
                 channel.can_read(Permissions.pack(self.permissions)) and
