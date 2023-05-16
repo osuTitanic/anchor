@@ -3,9 +3,9 @@ from twisted.internet.error   import ConnectionDone
 from twisted.internet.address import IPv4Address
 from twisted.python.failure   import Failure
 
+from datetime    import datetime, timedelta
 from dataclasses import dataclass, field
 from typing      import List, Optional
-from datetime    import datetime
 
 from ..protocol import BanchoProtocol, IPAddress
 from ..streams import StreamIn
@@ -31,9 +31,11 @@ from ..constants import (
     Mod
 )
 
+import timeago
 import logging
 import bancho
 import bcrypt
+import config
 
 Handlers = {
     20130606: b20130606, # Latest supported version
@@ -110,7 +112,54 @@ class Player(BanchoProtocol):
     
     @property
     def silenced(self) -> bool:
-        return False # TODO
+        if self.object.silence_end:
+            if self.remaining_silence > 0:
+                return True
+            else:
+                # User is not silenced anymore
+                self.unsilence()
+                return False
+        return False
+
+    @property
+    def remaining_silence(self):
+        if self.object.silence_end:
+            return int(self.object.silence_end.timestamp() - datetime.now().timestamp())
+        return 0
+    
+    @property
+    def supporter(self):
+        if config.FREE_SUPPORTER:
+            return True
+
+        if self.object.supporter_end:
+            # Check remaining supporter
+            if self.remaining_supporter > 0:
+                return True
+            else:
+                # Remove supporter
+                self.object.supporter_end = None
+                self.permissions.remove(Permissions.Subscriber)
+
+                # Update database
+                instance = bancho.services.database.session
+                instance.query(DBUser).filter(DBUser.id == self.id).update(
+                    {
+                        'supporter_end': None,
+                        'permissions': Permissions.pack(self.permissions)
+                    }
+                )
+                instance.commit()
+
+                # Update client
+                # NOTE: Client will exit after it notices a permission change
+                self.handler.enqueue_privileges()
+
+    @property
+    def remaining_supporter(self):
+        if self.object.supporter_end:
+            return self.object.supporter_end.timestamp() - datetime.now().timestamp()
+        return 0
 
     @property
     def permissions(self) -> Optional[List[Permissions]]:
@@ -139,6 +188,40 @@ class Player(BanchoProtocol):
         # Maybe there is a better way of doing this?
         return type(self.handler) == BaseHandler
     
+    def silence(self, duration_sec: int, reason: str):
+        duration = timedelta(seconds=duration_sec)
+
+        if not self.object.silence_end:
+            self.object.silence_end = datetime.now() + duration
+        else:
+            # Append duration, if user has been silenced already
+            self.object.silence_end += duration
+        
+        # Update database
+        instance = bancho.services.database.session
+        instance.query(DBUser).filter(DBUser.id == self.id).update(
+            {'silence_end': self.object.silence_end}
+        )
+        instance.commit()
+
+        # Enqueue to client
+        self.handler.enqueue_silence_info(duration_sec)
+
+        self.logger.info(f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. Reason: "{reason}"')
+
+    def unsilence(self):
+        self.object.silence_end = None
+
+        # Update database
+        instance = bancho.services.database.session
+        instance.query(DBUser).filter(DBUser.id == self.id).update(
+            {'silence_end': None}
+        )
+        instance.commit()
+
+        # Enqueue to client
+        self.handler.enqueue_silence_info(0)
+
     def reload_object(self) -> DBUser:
         self.object = bancho.services.database.user_by_id(self.id)
         return self.object
