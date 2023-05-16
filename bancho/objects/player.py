@@ -213,7 +213,15 @@ class Player(BanchoProtocol):
             self.loginFailed(-4) # User is not yet activated
             return
         
-        # TODO: Check if user is online already
+        if bancho.services.players.by_id(user.id):
+            # User is already online
+            self.logger.warning('Login failed: Already online')
+            self.sendError(
+                reason=-1,
+                message='It seems that a player with your account is already online.\nPlease contact an admin immediately if you think this is an error!'
+            )
+            return
+
         # TODO: Tourney clients
         # TODO: Test builds
 
