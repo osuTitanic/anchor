@@ -15,3 +15,6 @@ PORTS = [13381, 13382]
 # Example: https://osu.ppy.sh/ss/18600390/1055
 MENUICON_IMAGE=""
 MENUICON_URL=""
+
+# This will give every player supporter permissions
+FREE_SUPPORTER=True
