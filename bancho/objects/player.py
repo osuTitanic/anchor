@@ -18,6 +18,7 @@ from .client import OsuClient
 
 from ..common.objects import (
     DBStats,
+    DBScore,
     DBUser
 )
 
@@ -222,6 +223,37 @@ class Player(BanchoProtocol):
 
         # Enqueue to client
         self.handler.enqueue_silence_info(0)
+
+    def restrict(self, reason: str = None):
+        self.object.restricted = True
+        self.object.permissions = 0
+
+        # Update user
+        instance = bancho.services.database.session
+        instance.query(DBUser).filter(DBUser.id == self.id).update(
+            {
+                'restricted': True,
+                'permissions': 0
+            }
+        )
+        # Remove stats
+        instance.query(DBStats).filter(DBStats.user_id == self.id).delete()
+        # Hide scores
+        instance.query(DBScore).filter(DBScore.user_id == self.id).update(
+            {'status': -1}
+        )
+        instance.commit()
+
+        if reason:
+            self.handler.enqueue_announce(f'Reason: "{reason}"')
+
+        # Update client
+        self.handler.enqueue_login_reply(LoginError.BANNED.value)
+
+        self.logger.warning(f'{self.name} got restricted. Reason: {reason}')
+
+        # Close connection
+        self.closeConnection()
 
     def reload_object(self) -> DBUser:
         self.object = bancho.services.database.user_by_id(self.id)
