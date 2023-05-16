@@ -27,6 +27,7 @@ from ..constants import (
     RequestPacket,
     ClientStatus,
     Permissions,
+    LoginError,
     Mode,
     Mod
 )
@@ -273,36 +274,36 @@ class Player(BanchoProtocol):
         )
 
         if not (user := bancho.services.database.user_by_name(username)):
-            self.logger.warning('Login failed: -1')
-            self.loginFailed(-1) # User does not exist
+            self.logger.warning('Login failed: Authentication Error')
+            self.loginFailed(LoginError.AUTHENTICATION) # User does not exist
             return
 
         if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
-            self.logger.warning('Login failed: -1')
-            self.loginFailed(-1) # Password check failed
+            self.logger.warning('Login failed: Authentication Error')
+            self.loginFailed(LoginError.AUTHENTICATION) # Password check failed
             return
 
         # TODO: List of disallowed clients
         # if self.client.version.date != self.version:
-        #     self.logger.warning('Login failed: -2')
-        #     self.loginFailed(-2) # Update needed
+        #     self.logger.warning('Login failed: Update Needed')
+        #     self.loginFailed(LoginError.UPDATE_NEEDED) # Update needed
         #     return
 
         if user.restricted:
-            self.logger.warning('Login failed: -3')
-            self.loginFailed(-3) # User is banned
+            self.logger.warning('Login failed: Restricted')
+            self.loginFailed(LoginError.BANNED) # User is banned
             return
 
         if not user.activated:
-            self.logger.warning('Login failed: -4')
-            self.loginFailed(-4) # User is not yet activated
+            self.logger.warning('Login failed: Not Activated')
+            self.loginFailed(LoginError.NOT_ACTIVATED) # User is not yet activated
             return
         
         if bancho.services.players.by_id(user.id):
             # User is already online
-            self.logger.warning('Login failed: Already online')
+            self.logger.warning('Login failed: Already Online')
             self.loginFailed(
-                reason=-1,
+                reason=LoginError.AUTHENTICATION,
                 message='It seems that a player with your account is already online.\nPlease contact an admin immediately if you think this is an error!'
             )
             return
@@ -321,8 +322,8 @@ class Player(BanchoProtocol):
 
         self.loginSuccess()
         
-    def loginFailed(self, reason: int = -5, message = ""):
-        self.sendError(reason, message)
+    def loginFailed(self, reason = LoginError.SERVER_ERROR, message = ""):
+        self.sendError(reason.value, message)
         self.closeConnection()
 
     def loginSuccess(self):

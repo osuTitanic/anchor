@@ -714,6 +714,14 @@ class SlotTeam(Enum):
 
 SPEED_MODS = [Mod.DoubleTime, Mod.HalfTime, Mod.Nightcore]
 
+class LoginError(Enum):
+    AUTHENTICATION = -1
+    UPDATE_NEEDED  = -2
+    BANNED         = -3
+    NOT_ACTIVATED  = -4
+    SERVER_ERROR   = -5
+    TEST_BUILD     = -6
+
 WEB_RESPONSE = '''
 <pre>
         _-_
