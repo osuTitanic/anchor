@@ -92,6 +92,10 @@ class Players(List[Player]):
             for p in self:
                 p.handler.enqueue_exit(player)
 
+    def announce(self, message: str):
+        for p in self:
+            p.handler.enqueue_announce(message)
+
     def enqueue_stats(self, player: Player):
         if player.restricted:
             return
