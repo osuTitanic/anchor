@@ -526,10 +526,25 @@ class b20130606(BaseHandler):
                 return
 
         if not (channel := bancho.services.channels.by_name(target)):
+            # Channel was not found
             return
         
-        # TODO: Commands
+        from bancho import commands
         
+        # Check for commands
+        if (command := commands.get_command(self.player, channel, message)):
+            # A command was executed
+            if command.hidden:
+                # Command will only be shown to the player
+                for line in command.response:
+                    self.enqueue_message(bancho.services.bot_player, line, channel.display_name)
+            else:
+                channel.send_message(self.player, message)
+
+                for line in command.response:
+                    channel.send_message(bancho.services.bot_player, line)
+            return
+
         channel.send_message(self.player, message)
 
     def handle_send_private_message(self, stream: StreamIn):
