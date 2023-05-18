@@ -352,6 +352,9 @@ class Player(BanchoProtocol):
             self.create_stats()
             self.reload_object()
 
+            # This will allow the user to play again after they got banned
+            self.handler.enqueue_silence_info(-1)
+
         self.loginSuccess()
         
     def loginFailed(self, reason = LoginError.SERVER_ERROR, message = ""):
