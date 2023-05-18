@@ -29,9 +29,15 @@ class Channels(List[Channel]):
         return None
     
     def append(self, c: Channel) -> None:
+        if not c:
+            return
+
         if c not in self: return super().append(c)
 
     def remove(self, c: Channel) -> None:
+        if not c:
+            return
+
         # Revoke channel to all users
         for p in c.users:
             p.handler.enqueue_channel_revoked(c.display_name)
