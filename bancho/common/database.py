@@ -7,10 +7,12 @@ from typing import Optional, Generator, List
 from .objects import (
     DBRelationship,
     DBBeatmap,
+    DBMessage,
     DBChannel,
     DBScore,
     DBStats,
     DBUser,
+    DBLog,
     Base
 )
 
@@ -90,3 +92,25 @@ class Postgres:
         if rel.first():
             rel.delete()
             instance.commit()
+    
+    def submit_log(self, message: str, level: str, log_type: str):
+        instance = self.session
+        instance.add(
+            DBLog(
+                message,
+                level,
+                log_type
+            )
+        )
+        instance.commit()
+    
+    def submit_message(self, sender: str, target: str, message: str):
+        instance = self.session
+        instance.add(
+            DBMessage(
+                sender,
+                target,
+                message
+            )
+        )
+        instance.commit()

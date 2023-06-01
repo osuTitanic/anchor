@@ -179,6 +179,11 @@ class DBLog(Base):
     message = Column('message', String)
     time    = Column('time', DateTime, default=datetime.now())
 
+    def __init__(self, message: str, level: str, type: str) -> None:
+        self.message = message
+        self.level   = level
+        self.type    = type
+
 class DBChannel(Base):
     __tablename__ = "channels"
 
@@ -195,6 +200,11 @@ class DBMessage(Base):
     target  = Column('target', String) # Either channel or username
     message = Column('message', String)
     time    = Column('time', DateTime, default=datetime.now())
+
+    def __init__(self, sender: str, target: str, message: str) -> None:
+        self.message = message
+        self.sender  = sender
+        self.target  = target
 
 class DBBeatmapset(Base):
     __tablename__ = "beatmapsets"
