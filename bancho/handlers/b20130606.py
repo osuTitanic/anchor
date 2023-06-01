@@ -61,8 +61,6 @@ class b20130606(BaseHandler):
                     url if url else ''
                 ])
             )
-        
-        print(stream.get())
 
         self.player.sendPacket(
             ResponsePacket.MENU_ICON,
