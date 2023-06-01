@@ -4,7 +4,7 @@ from typing import List
 from enum import Enum
 
 # These are the packet types, used in the latest clients
-# They will be different in some older clients
+# They will be different in older clients
 
 class RequestPacket(Enum):
     CHANGE_STATUS         = 0

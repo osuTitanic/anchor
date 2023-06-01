@@ -7,8 +7,7 @@ from typing import (
     Set
 )
 
-from ..constants import ResponsePacket
-from .channel    import Channel
+from .channel import Channel
 
 class Channels(List[Channel]):
     def __iter__(self) -> Iterator[Channel]:
