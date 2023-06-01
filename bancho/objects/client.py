@@ -73,9 +73,6 @@ class OsuClient:
     def from_string(cls, line: str, ip: str):
         build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
 
-        # TODO: Parse and validate client hash
-        # TODO: Tournament clients
-
         return OsuClient(
             IPAddress(ip),
             ClientVersion.from_string(build_version),
