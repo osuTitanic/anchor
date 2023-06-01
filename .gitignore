@@ -16,3 +16,6 @@ venv.bak/
 .VSCodeCounter
 
 logs/
+
+config.py
+TODO.txt
