@@ -18,9 +18,6 @@ POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT'))
 POSTGRES_USER = os.environ.get('POSTGRES_USER')
 POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
 
-REDIS_HOST = os.environ.get('REDIS_HOST')
-REDIS_PORT = int(os.environ.get('REDIS_PORT'))
-
 PORTS = eval(os.environ.get('BANCHO_PORTS'))
 
 MENUICON_IMAGE = os.environ.get('BANCHO_MENUICON_IMAGE')
