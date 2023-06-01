@@ -2,6 +2,8 @@ pytimeparse
 sqlalchemy
 psycopg2
 requests
+timeago
 twisted
+bcrypt
 geoip2
 pytz
