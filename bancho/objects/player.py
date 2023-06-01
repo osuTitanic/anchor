@@ -320,12 +320,12 @@ class Player(BanchoProtocol):
         required_hash = config.CLIENT_HASHES[version]
 
         if required_hash and client.hash.md5 != required_hash:
-                self.logger.warning('Login failed: Modified Client')
-                self.loginFailed(
-                    LoginError.UPDATE_NEEDED,
-                    'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
-                )
-                return
+            self.logger.warning('Login failed: Modified Client')
+            self.loginFailed(
+                LoginError.UPDATE_NEEDED,
+                'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+            )
+            return
 
         if not (user := bancho.services.database.user_by_name(username)):
             self.logger.warning('Login failed: Authentication Error')
