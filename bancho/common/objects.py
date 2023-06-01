@@ -175,7 +175,7 @@ class DBLog(Base):
 
     id      = Column('id', Integer, primary_key=True, autoincrement=True)
     level   = Column('level', String)
-    logger  = Column('logger', String)
+    type    = Column('type', String)
     message = Column('message', String)
     time    = Column('time', DateTime, default=datetime.now())
 
