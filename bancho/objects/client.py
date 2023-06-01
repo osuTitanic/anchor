@@ -8,10 +8,13 @@ class ClientVersion:
         self.subversion = subversion
         self.stream     = stream
         self.date       = date
+    
+    def __repr__(self) -> str:
+        return self.string        
 
     @property
     def string(self) -> str:
-        return f'{self.stream}{self.date}{self.subversion}'
+        return f'{self.stream}{self.date}{f".{self.subversion}" if self.subversion else ""}'
     
     @classmethod
     def from_string(cls, string: str):
@@ -30,12 +33,39 @@ class ClientVersion:
             subversion
         )
 
+class ClientHash:
+    def __init__(self, md5, adapters, adapters_md5, uninstall_id, diskdrive_signature) -> None:
+        self.diskdrive_signature = diskdrive_signature
+        self.uninstall_id = uninstall_id
+        self.adapters_md5 = adapters_md5
+        self.adapters = adapters
+        self.md5 = md5
+    
+    def __repr__(self) -> str:
+        return self.string
+
+    @property
+    def string(self) -> str:
+        return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
+    
+    @classmethod
+    def from_string(cls, string: str):
+        md5, adapters, adapters_md5, uninstall_id, diskdrive_signature = string.split(':')
+
+        return ClientHash(
+            md5,
+            adapters,
+            adapters_md5,
+            uninstall_id,
+            diskdrive_signature
+        )
+
 class OsuClient:
-    def __init__(self, ip: IPAddress, version: ClientVersion, client_hash: str, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
+    def __init__(self, ip: IPAddress, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
         self.ip = ip
+        self.hash = client_hash
         self.version = version
         self.utc_offset = utc_offset
-        self.client_hash = client_hash
         self.display_city = display_city
         self.friendonly_dms = friendonly_dms
 
@@ -49,7 +79,7 @@ class OsuClient:
         return OsuClient(
             IPAddress(ip),
             ClientVersion.from_string(build_version),
-            client_hash,
+            ClientHash.from_string(client_hash),
             int(utc_offset),
             display_city = display_city == "1",
             friendonly_dms = friendonly_dms == "1"
@@ -60,7 +90,7 @@ class OsuClient:
         return OsuClient(
             IPAddress('127.0.0.1'),
             ClientVersion('b', 1337),
-            '',
+            ClientHash('', '', '', '', ''),
             0,
             True,
             False
