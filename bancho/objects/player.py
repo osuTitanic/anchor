@@ -33,6 +33,7 @@ from ..constants import (
     Mod
 )
 
+import hashlib
 import timeago
 import logging
 import bancho
@@ -325,6 +326,11 @@ class Player(BanchoProtocol):
                 LoginError.UPDATE_NEEDED,
                 'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
             )
+            return
+        
+        if hashlib.md5(client.hash.adapters.encode()).hexdigest() != client.hash.adapters_md5:
+            self.transport.write('no.\r\n')
+            self.closeConnection()
             return
 
         if not (user := bancho.services.database.user_by_name(username)):
