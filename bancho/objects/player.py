@@ -375,6 +375,9 @@ class Player(BanchoProtocol):
         # User ID
         self.handler.enqueue_login_reply(self.id)
 
+        # Menu Icon
+        self.handler.enqueue_menu_icon(config.MENUICON_IMAGE, config.MENUICON_URL)
+
         # Privileges
         self.handler.enqueue_privileges()
 
