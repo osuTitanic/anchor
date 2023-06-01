@@ -1,5 +1,5 @@
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from bancho.streams             import StreamIn, StreamOut
 from bancho.common.objects      import DBBeatmap
@@ -46,6 +46,26 @@ class b20130606(BaseHandler):
 
         self.player.sendPacket(
             ResponsePacket.ANNOUNCE,
+            stream.get()
+        )
+
+    def enqueue_menu_icon(self, image: Optional[str], url: Optional[str]):
+        stream = StreamOut()
+
+        if not image:
+            stream.string('')
+        else:
+            stream.string(
+                '|'.join([
+                    image,
+                    url if url else ''
+                ])
+            )
+        
+        print(stream.get())
+
+        self.player.sendPacket(
+            ResponsePacket.MENU_ICON,
             stream.get()
         )
 
@@ -498,7 +518,7 @@ class b20130606(BaseHandler):
         self.player.status.mode     = Mode(stream.u8())
         self.player.status.beatmap  = stream.s32()
 
-        self.player.logger.info(f'Changed status: {self.player.status}')
+        self.player.logger.debug(f'Changed status: {self.player.status}')
 
         # Enqueue to other clients
         bancho.services.players.enqueue_stats(self.player)

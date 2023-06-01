@@ -119,12 +119,13 @@ class BanchoProtocol(Protocol):
                     )
                 )
 
-                bancho.services.logger.debug(
-                    '\n'.join([
-                        f'<{self.address.host}> -> "{packet}"',
-                        f'"""\n{payload.get()}\n"""'
-                    ])
-                )
+                # TODO: Verbose logging?
+                # bancho.services.logger.debug(
+                #     '\n'.join([
+                #         f'<{self.address.host}> -> "{packet}"',
+                #         f'"""\n{payload.get()}\n"""'
+                #     ])
+                # )
 
                 self.packetReceived(
                     packet,
@@ -185,12 +186,13 @@ class BanchoProtocol(Protocol):
         stream.header(packet_type, len(payload))
         stream.write(payload)
 
-        bancho.services.logger.debug(
-            '\n'.join([
-                f'<{self.address.host}> Sending packet -> {packet_type.name}',
-                f'"""\n{payload}\n"""'
-            ])
-        )
+        # TODO: Verbose logging?
+        # bancho.services.logger.debug(
+        #     '\n'.join([
+        #         f'<{self.address.host}> Sending packet -> {packet_type.name}',
+        #         f'"""\n{payload}\n"""'
+        #     ])
+        # )
 
         self.enqueue(stream.get())
 
