@@ -547,8 +547,10 @@ class b20130606(BaseHandler):
             # Channel was not found
             return
         
+        bancho.services.database.submit_message(self.player.name, target, message)
+
         from bancho import commands
-        
+
         # Check for commands
         if (command := commands.get_command(self.player, channel, message)):
             # A command was executed
@@ -597,12 +599,14 @@ class b20130606(BaseHandler):
         if len(message) > 512:
             message = message[:512] + '... (truncated)'
 
+        self.player.logger.info(f'[PM -> {player.name}]: {message}')
+
+        bancho.services.database.submit_message(self.player.name, target, message)
+
         if player.status.action == ClientStatus.Afk and player.away_message:
             self.enqueue_message(player, player.away_message, target)
 
         # TODO: Commands
-
-        self.player.logger.info(f'[PM -> {player.name}]: {message}')
 
         player.handler.enqueue_message(
             self.player,
