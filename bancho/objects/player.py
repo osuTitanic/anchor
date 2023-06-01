@@ -305,6 +305,28 @@ class Player(BanchoProtocol):
             int(21).to_bytes(4, 'little')
         )
 
+        version = str(client.version)
+
+        # Validate client
+        if version not in config.CLIENT_HASHES.keys():
+            self.logger.warning('Login failed: Invalid Client')
+            self.loginFailed(
+                LoginError.UPDATE_NEEDED,
+                'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
+            )
+            return
+
+        # Check client hash
+        required_hash = config.CLIENT_HASHES[version]
+
+        if required_hash and client.hash.md5 != required_hash:
+                self.logger.warning('Login failed: Modified Client')
+                self.loginFailed(
+                    LoginError.UPDATE_NEEDED,
+                    'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+                )
+                return
+
         if not (user := bancho.services.database.user_by_name(username)):
             self.logger.warning('Login failed: Authentication Error')
             self.loginFailed(LoginError.AUTHENTICATION) # User does not exist
@@ -314,12 +336,6 @@ class Player(BanchoProtocol):
             self.logger.warning('Login failed: Authentication Error')
             self.loginFailed(LoginError.AUTHENTICATION) # Password check failed
             return
-
-        # TODO: List of disallowed clients
-        # if self.client.version.date != self.version:
-        #     self.logger.warning('Login failed: Update Needed')
-        #     self.loginFailed(LoginError.UPDATE_NEEDED) # Update needed
-        #     return
 
         if user.restricted:
             self.logger.warning('Login failed: Restricted')
