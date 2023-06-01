@@ -18,3 +18,9 @@ MENUICON_URL=""
 
 # This will give every player supporter permissions
 FREE_SUPPORTER=True
+
+# You can configure all allowed clients here
+# If you don't want to validate the hash, you can leave the value empty
+CLIENT_HASHES = {
+    'b20130606.1': 'f84642c6251bda9b40a3ad3b5ee1a984'
+}
