@@ -24,3 +24,5 @@ FREE_SUPPORTER=True
 CLIENT_HASHES = {
     'b20130606.1': 'f84642c6251bda9b40a3ad3b5ee1a984'
 }
+
+IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"

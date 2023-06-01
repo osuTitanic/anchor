@@ -3,8 +3,14 @@ from typing      import Optional, List
 from datetime    import datetime
 from ..constants import Countries
 
+from geoip2.errors   import AddressNotFoundError
+from geoip2.database import Reader
+
 import requests
+import bancho
+import config
 import pytz
+import time
 
 class IPAddress:
 
@@ -28,15 +34,16 @@ class IPAddress:
 
     def __init__(self, ip: str) -> None:
         self.host = ip
-
-        if self.is_local:
-            # This will use the public ip address of this machine
-            # Useful for BanchoBot
-            self.host = ''
         
-        self.parse_request(
-            self.do_request()
-        )
+        if not self.from_database():
+            if self.is_local:
+                # This will use the public ip address of this machine
+                # Useful for BanchoBot
+                self.host = ''
+
+            self.parse_request(
+                self.do_request()
+            )
 
     def __repr__(self) -> str:
         return self.host
@@ -45,13 +52,13 @@ class IPAddress:
     def is_local(self) -> bool:
         if self.host.startswith('192.168') or self.host.startswith('127.0.0.1'):
             return True
-        
+
         if self.host.startswith('172'):
             octets = self.host.split('.')
 
             if int(octets[1]) in range(16, 31):
                 return True
-        
+
         return False
     
     @property
@@ -62,13 +69,61 @@ class IPAddress:
     def country_num(self) -> int:
         return list(Countries.keys()).index(self.country_code)
 
+    @classmethod
+    def download_gopip_database(cls):
+        bancho.services.logger.info('Downloading geolite database...')
+
+        response = requests.get(config.IP_DATABASE_URL)
+
+        if not response.ok:
+            bancho.services.logger.error(f'Download failed. ({response.status_code})')
+            bancho.services.logger.warning('Skipping...')
+            return
+        
+        with open('./.data/geolite.mmdb', 'wb') as f:
+            f.write(response.content)
+    
+    def from_database(self) -> bool:
+        try:
+            with Reader('./.data/geolite.mmdb') as reader:
+                response = reader.city(self.host)
+
+                self.country = response.country.name
+                self.country_code = response.country.iso_code
+                self.city = response.city.name
+
+                self.latitude  = response.location.latitude
+                self.longitude = response.location.longitude
+                self.timezone  = response.location.time_zone
+
+                if not self.latitude or not self.longitude:
+                    return False
+
+                if not self.timezone:
+                    return False
+
+                self.utc_offset = int(
+                    datetime.now(
+                        pytz.timezone(self.timezone)
+                    ).utcoffset().total_seconds() / 60 / 60
+                )
+
+                return True
+        except AddressNotFoundError:
+            pass
+        except Exception as e:
+            print(e.args)
+            bancho.services.logger.warning(e)
+        
+        return False
+
     def parse_request(self, response: List[str]):
         self.status = response[0]
         self.host = response[-1]
-        
+
         if self.status != 'success':
             return
-        
+
         self.country      = response[1]
         self.country_code = response[2]
         self.region       = response[3]
@@ -90,7 +145,7 @@ class IPAddress:
                 pytz.timezone(self.timezone)
             ).utcoffset().total_seconds() / 60 / 60
         )
-    
+
     def do_request(self) -> Optional[list]:
         response = requests.get(
             f'http://ip-api.com/line/{self.host}',
@@ -98,7 +153,7 @@ class IPAddress:
                 'User-Agent': 'anchor'
             }
         )
-        
+
         if not response.ok:
             return None
 
