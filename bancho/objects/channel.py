@@ -108,10 +108,9 @@ class Channel:
             sender.handler.enqueue_channel_revoked(self.display_name)
 
         if (self.can_write(Permissions.pack(sender.permissions)) and not sender.silenced) or not ignore_privs:
-            # Message can only be 128 characters long, because of the uleb128 size limit
-            # If its over that length, then the client will disconnect and spit out an error
-            if len(message) > 127:
-                message = message[:124] + '...'
+            # Limit message size
+            if len(message) > 512:
+                message = message[:512] + '... (truncated)'
 
             self.logger.info(f'[{sender.name}]: {message}')
 

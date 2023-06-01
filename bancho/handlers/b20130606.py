@@ -575,8 +575,9 @@ class b20130606(BaseHandler):
             )
             return
 
-        if len(message) > 127:
-            message = message[:124] + '...'
+        # Limit message size
+        if len(message) > 512:
+            message = message[:512] + '... (truncated)'
 
         if player.status.action == ClientStatus.Afk and player.away_message:
             self.enqueue_message(player, player.away_message, target)

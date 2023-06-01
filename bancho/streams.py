@@ -70,15 +70,18 @@ class StreamOut:
 		[self.s32(num) for num in numbers]
 
 	def uleb128(self, value):
-		l = []
-		v = abs(value)
+		if value == 0:
+			return b'\x00'
+		
+		ret = bytearray()
 
-		while v >= 128:
-			l.append((v | 128) & 0xFF)
-			v >>= 7
+		while value != 0:
+			ret.append(value & 0x7F)
+			value >>= 7
+			if value != 0:
+				ret[-1] |= 0x80
 
-		l.append(v & 0xFF)
-		self.write(''.join(chr(char) for char in l).encode())
+		self.write(bytes(ret))
 
 	def string(self, value: str):
 		string = value.encode()
@@ -159,16 +162,18 @@ class StreamIn:
 	def wchar(self): return chr(self.u16())
 
 	def uleb128(self) -> int:
-		num = 0
-		num2 = 0
+		num = shift = 0
 
-		while num2 != 32:
-			b = self.s8()
-			num |= int(b & 127) << num2
-			num2 += 7
+		while True:
+			byte = self.u8()
 
-			if ((b & 128) == 0):
-				return num
+			num |= (byte & 0x7F) << shift
+			if (byte & 0x80) == 0:
+				break
+
+			shift += 7
+
+		return num
 			
 	def string(self) -> str:
 		empty = self.s8() == 0x00
