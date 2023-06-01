@@ -11,6 +11,9 @@ import os
 def setup():
     os.makedirs('.data', exist_ok=True)
 
+    if not config.IP_DATABASE_URL:
+        return
+
     if not os.path.isfile('./.data/geolite.mmdb'):
         IPAddress.download_gopip_database()
 
