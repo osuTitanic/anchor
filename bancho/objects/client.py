@@ -34,7 +34,7 @@ class ClientVersion:
         )
 
 class ClientHash:
-    def __init__(self, md5, adapters, adapters_md5, uninstall_id, diskdrive_signature) -> None:
+    def __init__(self, md5: str, adapters: str, adapters_md5: str, uninstall_id: str, diskdrive_signature: str) -> None:
         self.diskdrive_signature = diskdrive_signature
         self.uninstall_id = uninstall_id
         self.adapters_md5 = adapters_md5
