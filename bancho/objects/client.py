@@ -4,8 +4,9 @@ from typing import Optional
 from .ip import IPAddress
 
 class ClientVersion:
-    def __init__(self, stream: str, date: int, subversion: Optional[str] = None) -> None:
+    def __init__(self, stream: str, date: int, subversion: Optional[str] = None, tourney: bool = False) -> None:
         self.subversion = subversion
+        self.tourney    = tourney
         self.stream     = stream
         self.date       = date
     
@@ -18,6 +19,9 @@ class ClientVersion:
     
     @classmethod
     def from_string(cls, string: str):
+        tourney_client = 'tourney' in string
+        string = string.replace('tourney', '')
+
         stream = string[:1]
         version = string[1:].split('.')
 
@@ -30,7 +34,8 @@ class ClientVersion:
         return ClientVersion(
             stream,
             date,
-            subversion
+            subversion,
+            tourney_client
         )
 
 class ClientHash:
