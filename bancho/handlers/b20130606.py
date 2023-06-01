@@ -518,8 +518,8 @@ class b20130606(BaseHandler):
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
 
-        # Enqueue to other clients
-        bancho.services.players.enqueue_stats(self.player)
+        # Enqueue to spectators
+        self.player.spectators.enqueue_stats(self.player)
 
     def handle_send_message(self, stream: StreamIn):
         sender    = stream.string()
