@@ -356,10 +356,7 @@ class Player(BanchoProtocol):
         if bancho.services.players.by_id(user.id):
             # User is already online
             self.logger.warning('Login failed: Already Online')
-            self.loginFailed(
-                reason=LoginError.AUTHENTICATION,
-                message='It seems that a player with your account is already online.\nPlease contact an admin immediately if you think this is an error!'
-            )
+            self.closeConnection()
             return
 
         # TODO: Tourney clients
