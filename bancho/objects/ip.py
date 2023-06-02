@@ -34,19 +34,28 @@ class IPAddress:
 
     def __init__(self, ip: str) -> None:
         self.host = ip
-        
+
+        if self.from_cache():
+            return
+
         if not self.from_database():
             if self.is_local:
-                # This will use the public ip address of this machine
-                # Useful for BanchoBot
                 self.host = ''
 
             self.parse_request(
                 self.do_request()
             )
 
+        bancho.services.ip_cache.add(self)
+
     def __repr__(self) -> str:
-        return self.host
+        return f'<{self.host} ({self.country_name})>'
+
+    def __hash__(self) -> int:
+        return int(self.host.encode().hex(), 16)
+
+    def __eq__(self, ip: object) -> bool:
+        return ip.host == self.host
     
     @property
     def is_local(self) -> bool:
@@ -63,7 +72,7 @@ class IPAddress:
     
     @property
     def country_name(self) -> str:
-        return Countries.values()[self.country_code]
+        return Countries[self.country_code]
     
     @property
     def country_num(self) -> int:
@@ -82,6 +91,15 @@ class IPAddress:
         
         with open('./.data/geolite.mmdb', 'wb') as f:
             f.write(response.content)
+    
+    def from_cache(self):
+        for ip in bancho.services.ip_cache:
+            if self.host == ip.host:
+                self.__dict__ = ip.__dict__.copy()
+
+                return True
+
+        return False
     
     def from_database(self) -> bool:
         try:
@@ -112,7 +130,6 @@ class IPAddress:
         except AddressNotFoundError:
             pass
         except Exception as e:
-            print(e.args)
             bancho.services.logger.warning(e)
         
         return False
