@@ -626,7 +626,7 @@ class b20130606(BaseHandler):
         )
 
     def handle_exit(self, stream: StreamIn):
-        update_avaliable = stream.bool()
+        update_avaliable = stream.s32() == 1
 
     def handle_request_status(self, stream: StreamIn):
         self.enqueue_stats(self.player)
