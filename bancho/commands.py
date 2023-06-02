@@ -291,7 +291,10 @@ def get_command(
 ) -> Optional[CommandResponse]:
     # Check for prefix
     if not message.strip().startswith('!'):
-        return None
+        if target != bancho.services.bot_player:
+            return None
+
+        message = f'!{message}'
 
     # Parse command    
     trigger, *args = message.strip()[1:].split(' ')

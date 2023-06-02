@@ -411,7 +411,7 @@ class b20130606(BaseHandler):
     def leave_channel(self, name: str, kick=False):
         if not (channel := bancho.services.channels.by_name(name)):
             return
-        
+
         try:
             channel.remove(self.player)
         except ValueError:
@@ -423,7 +423,7 @@ class b20130606(BaseHandler):
     def join_match(self, match, password: str) -> bool:
         if self.player.restricted:
             return False
-        
+
         if self.player.match:
             self.enqueue_matchjoin_fail()
             return False
@@ -433,7 +433,7 @@ class b20130606(BaseHandler):
                 # Invalid password
                 self.enqueue_matchjoin_fail()
                 return False
-            
+
             if (slot_id := match.get_free()) is None:
                 # Match is full
                 self.enqueue_matchjoin_fail()
@@ -462,14 +462,14 @@ class b20130606(BaseHandler):
         match.update()
 
         return True
-    
+
     def leave_match(self):
         if self.player.restricted:
             return
-        
+
         if not self.player.match:
             return
-        
+
         slot = self.player.match.get_slot(self.player)
         assert slot is not None
 
@@ -603,10 +603,21 @@ class b20130606(BaseHandler):
 
         bancho.services.database.submit_message(self.player.name, target, message)
 
+        from bancho import commands
+
+        # Check for commands
+        if (command := commands.get_command(self.player, player, message)):
+            # A command was executed
+            for line in command.response:
+                self.enqueue_message(
+                    bancho.services.bot_player,
+                    line,
+                    player.name
+                )
+            return
+
         if player.status.action == ClientStatus.Afk and player.away_message:
             self.enqueue_message(player, player.away_message, target)
-
-        # TODO: Commands
 
         player.handler.enqueue_message(
             self.player,
