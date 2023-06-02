@@ -85,9 +85,6 @@ class Match:
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(Console)
-        self.logger.addHandler(File)
 
     @property
     def host_slot(self) -> Optional[Slot]:

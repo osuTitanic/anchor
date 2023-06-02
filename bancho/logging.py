@@ -40,11 +40,9 @@ class ColorFormatter(Formatter):
 os.makedirs('logs', exist_ok=True)
 
 Console = StreamHandler()
-Console.setLevel(INFO)
 Console.setFormatter(ColorFormatter())
 
 File = FileHandler(f'logs/{datetime.now().strftime("%Y-%m-%d")}.log', mode='a')
-File.setLevel(INFO)
 File.setFormatter(
     Formatter(
         '[%(asctime)s] - <%(name)s> %(levelname)s: %(message)s'

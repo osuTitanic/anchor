@@ -2,11 +2,18 @@
 from twisted.internet import reactor
 
 from bancho.objects.ip import IPAddress
-from bancho import BanchoFactory
+from bancho.logging    import Console, File
+from bancho            import BanchoFactory
 
+import logging
 import bancho
 import config
 import os
+
+logging.basicConfig(
+    handlers=[Console, File],
+    level=logging.INFO
+)
 
 def setup():
     os.makedirs('.data', exist_ok=True)

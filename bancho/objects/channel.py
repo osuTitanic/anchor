@@ -21,9 +21,6 @@ class Channel:
         self.users = Players()
 
         self.logger = logging.getLogger(self.name)
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(Console)
-        self.logger.addHandler(File)
 
     def __repr__(self) -> str:
         return f'[{self.name}]'

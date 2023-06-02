@@ -76,9 +76,6 @@ class Player(BanchoProtocol):
         self.address = address
 
         self.logger  = logging.getLogger(self.address.host)
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(Console)
-        self.logger.addHandler(File)
 
         self.last_response = datetime.now()
         self.filter = PresenceFilter.All

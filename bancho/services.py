@@ -7,9 +7,6 @@ import logging
 import config
 
 logger = logging.getLogger('anchor')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(Console)
-logger.addHandler(File)
 
 database = Postgres(
     config.POSTGRES_USER,
