@@ -516,6 +516,10 @@ class b20130606(BaseHandler):
         self.player.status.mode     = Mode(stream.u8())
         self.player.status.beatmap  = stream.s32()
 
+        # Remove "FreeModAllowed"
+        if Mod.FreeModAllowed in self.player.status.mods:
+            self.player.status.mods.remove(Mod.FreeModAllowed)
+
         self.player.logger.debug(f'Changed status: {self.player.status}')
 
         # Enqueue to spectators
