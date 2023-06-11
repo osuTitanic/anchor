@@ -12,6 +12,7 @@ from ..streams import StreamIn
 from ..logging import Console, File
 
 from ..handlers.b20130606 import b20130606
+from ..handlers.b20130329 import b20130329
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -42,7 +43,11 @@ import config
 
 Handlers = {
     20130606: b20130606, # Latest supported version
-                         # TODO: Implement more clients
+    20130513: b20130606,
+    20130418: b20130606,
+    20130329: b20130329, # Version 17
+    20130319: b20130329,
+    20130303: b20130329
 }
 
 @dataclass
@@ -300,7 +305,7 @@ class Player(BanchoProtocol):
         # Send protocol version
         self.sendPacket(
             ResponsePacket.PROTOCOL_VERSION,
-            int(21).to_bytes(4, 'little')
+            int(self.handler.protocol_version).to_bytes(4, 'little')
         )
 
         version = str(client.version)

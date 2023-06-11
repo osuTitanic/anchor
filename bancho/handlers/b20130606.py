@@ -846,8 +846,14 @@ class b20130606(BaseHandler):
         if self.player.restricted:
             return
 
+        frames = stream.readall()
+
         for p in self.player.spectators:
-            p.handler.enqueue_frames(stream.readall())
+            p.handler.enqueue_frames(
+                frames[4:]
+                if p.handler.protocol_version < 18 else
+                frames
+            )
 
     def handle_cant_spectate(self, stream: StreamIn):
         if self.player.restricted:
