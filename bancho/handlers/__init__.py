@@ -13,6 +13,7 @@ class BaseHandler(ABC):
     """
 
     packets = RequestPacket
+    protocol_version = 18
 
     def __init__(self, player) -> None:
         from bancho.objects.player import Player
