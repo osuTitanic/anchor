@@ -261,6 +261,10 @@ class Match:
                     if slot.status.value & SlotStatus.HasPlayer.value:
                         # Set current mods to every player inside the match, if they are not speed mods
                         slot.mods = [mod for mod in self.mods if mod not in SPEED_MODS]
+
+                        # Fix for older clients without freemod support
+                        if slot.player.handler.protocol_version <= 15:
+                            slot.mods = []
                 
                 # The speedmods are kept in the match mods
                 self.mods = [mod for mod in self.mods if mod in SPEED_MODS]

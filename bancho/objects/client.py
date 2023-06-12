@@ -76,7 +76,12 @@ class OsuClient:
 
     @classmethod
     def from_string(cls, line: str, ip: str):
-        build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
+        try:
+            build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
+        except ValueError:
+            # Workaround for older clients
+            build_version, utc_offset, display_city, client_hash = line.split('|')
+            friendonly_dms = False
 
         return OsuClient(
             IPAddress(ip),

@@ -13,6 +13,7 @@ from ..logging import Console, File
 
 from ..handlers.b20130606 import b20130606
 from ..handlers.b20130329 import b20130329
+from ..handlers.b20121223 import b20121223
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -47,7 +48,8 @@ Handlers = {
     20130418: b20130606,
     20130329: b20130329, # Version 17
     20130319: b20130329,
-    20130303: b20130329
+    20130303: b20130329,
+    20121223: b20121223
 }
 
 @dataclass

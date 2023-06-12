@@ -531,7 +531,7 @@ class b20130606(BaseHandler):
         sender    = stream.string()
         message   = stream.string()
         target    = stream.string()
-        sender_id = stream.s32()
+        # sender_id = stream.s32()
 
         if target.startswith('#multiplayer'):
             if self.player.match:
@@ -578,7 +578,7 @@ class b20130606(BaseHandler):
         sender    = stream.string()
         message   = stream.string()
         target    = stream.string()
-        sender_id = stream.s32()
+        # sender_id = stream.s32()
 
         if not (player := bancho.services.players.by_name(target)):
             self.enqueue_channel_revoked(target)
@@ -903,7 +903,11 @@ class b20130606(BaseHandler):
 
         match_scoring_type = MatchScoringTypes(stream.u8())
         match_team_type    = MatchTeamTypes(stream.u8())
-        freemod            = stream.bool()
+
+        try:
+            freemod = stream.bool()
+        except OverflowError:
+            freemod = False
 
         m = Match(
             match_id,
@@ -960,10 +964,12 @@ class b20130606(BaseHandler):
         stream.u8(match.mode.value)
         stream.u8(match.scoring_type.value)
         stream.u8(match.team_type.value)
-        stream.u8(int(match.freemod))
 
-        if match.freemod:
-            [stream.s32(Mod.pack(slot.mods)) for slot in match.slots]
+        if self.protocol_version > 15:
+            stream.u8(int(match.freemod))
+    
+            if match.freemod:
+                [stream.s32(Mod.pack(slot.mods)) for slot in match.slots]
 
         return stream
 
