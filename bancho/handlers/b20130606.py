@@ -209,7 +209,7 @@ class b20130606(BaseHandler):
                 stream.get()
             )
         
-    def enqueue_channel_revoked(self, target):
+    def enqueue_channel_revoked(self, target: str):
         stream = StreamOut()
         stream.string(target)
 
@@ -537,20 +537,21 @@ class b20130606(BaseHandler):
             if self.player.match:
                 target = self.player.match.chat.name
             else:
+                self.enqueue_channel_revoked('#multiplayer')
                 return
 
         if target.startswith('#spectator'):
             if self.player.spectating:
                 target = f'#spec_{self.player.spectating.id}'
-            
             elif self.player.spectators:
                 target = f'#spec_{self.player.id}'
-
             else:
+                self.enqueue_channel_revoked('#spectator')
                 return
 
         if not (channel := bancho.services.channels.by_name(target)):
             # Channel was not found
+            self.enqueue_channel_revoked(target)
             return
         
         bancho.services.database.submit_message(self.player.name, target, message)
@@ -581,6 +582,7 @@ class b20130606(BaseHandler):
 
         if not (player := bancho.services.players.by_name(target)):
             self.enqueue_channel_revoked(target)
+            return
 
         if self.player.silenced:
             return
