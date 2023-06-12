@@ -672,13 +672,13 @@ class b20130606(BaseHandler):
             else:
                 self.enqueue_channel_revoked('#spectator')
                 return
-        
+
         elif name.startswith('#multiplayer'):
-            if self.player.match:
-                name = self.player.match.chat.name
-            else:
+            if not self.player.match:
                 self.enqueue_channel_revoked('#multiplayer')
                 return
+
+            name = self.player.match.chat.name
 
         self.join_channel(name)
 
@@ -688,17 +688,17 @@ class b20130606(BaseHandler):
         if name.startswith('#spectator'):
             if self.player.spectating:
                 name = f'#spec_{self.player.spectating.id}'
-            
+
             elif self.player.spectators:
                 name = f'#spec_{self.player.id}'
 
             else:
                 return
-        
+
         elif name.startswith('#muliplayer'):
             if not self.player.match:
                 return
-            
+
             name = self.player.match.chat._name
 
         self.leave_channel(name)
