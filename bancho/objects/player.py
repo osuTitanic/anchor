@@ -14,6 +14,7 @@ from ..logging import Console, File
 from ..handlers.b20130606 import b20130606
 from ..handlers.b20130329 import b20130329
 from ..handlers.b20121223 import b20121223
+from ..handlers.b20121119 import b20121119
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -27,7 +28,6 @@ from ..common.objects import (
 from ..constants import (
     ResponsePacket,
     PresenceFilter,
-    RequestPacket,
     ClientStatus,
     Permissions,
     LoginError,
@@ -46,10 +46,12 @@ Handlers = {
     20130606: b20130606, # Latest supported version
     20130513: b20130606,
     20130418: b20130606,
-    20130329: b20130329, # Version 17
+    20130329: b20130329,
     20130319: b20130329,
     20130303: b20130329,
-    20121223: b20121223
+    20121223: b20121223,
+    20121203: b20121223,
+    20121119: b20121119
 }
 
 @dataclass

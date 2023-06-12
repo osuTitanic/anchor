@@ -722,6 +722,11 @@ class LoginError(Enum):
     SERVER_ERROR   = -5
     TEST_BUILD     = -6
 
+class AvatarExtension(Enum):
+    NONE = 0
+    PNG  = 1
+    JPG  = 2
+
 WEB_RESPONSE = '''
 <pre>
         _-_

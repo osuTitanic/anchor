@@ -15,22 +15,22 @@ import time
 class IPAddress:
 
     status: str  = 'fail'
-    country: str = 'Unknown'
-    country_code: str = 'XX'
+    country: str = ''
+    country_code: str = ''
 
     region: int = 0
-    region_name: str = 'Unknown'
-    city: str = 'Unknown'
+    region_name: str = ''
+    city: str = ''
     zip: int  = 0
 
     latitude: float  = 0.0
     longitude: float = 0.0
-    timezone: str    = 'Unknown/Unknown'
+    timezone: str    = ''
     utc_offset: int  = 0
 
-    isp: str = 'Unknown'
-    org: str = 'Unknown'
-    ans: str = 'Unknown'
+    isp: str = ''
+    org: str = ''
+    ans: str = ''
 
     def __init__(self, ip: str) -> None:
         self.host = ip
