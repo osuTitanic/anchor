@@ -5,7 +5,7 @@ from threading import Thread
 
 class b20121223(b20130329):
 
-    protocol_version = 11
+    protocol_version = 13
 
     def enqueue_players(self, players):
         def enqueue(players):
