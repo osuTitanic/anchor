@@ -694,6 +694,12 @@ class b20130606(BaseHandler):
 
             else:
                 return
+        
+        elif name.startswith('#muliplayer'):
+            if not self.player.match:
+                return
+            
+            name = self.player.match.chat._name
 
         self.leave_channel(name)
 
@@ -736,8 +742,8 @@ class b20130606(BaseHandler):
             friend=True
         )
 
-        self.player.logger.info(f'Added {target.name} as their friend')
-        
+        self.player.logger.info(f'{self.player.name} is now friends with {target.name}.')
+
         # Reload relationships
         self.player.reload_object()
 
@@ -756,7 +762,7 @@ class b20130606(BaseHandler):
             target.id
         )
 
-        self.player.logger.info(f'Removed {target.name} as their friend')
+        self.player.logger.info(f'{self.player.name} is no longer friends with {target.name}.')
 
         # Reload relationships
         self.player.reload_object()
@@ -791,10 +797,10 @@ class b20130606(BaseHandler):
     def handle_start_spectating(self, stream: StreamIn):
         if self.player.restricted:
             return
-        
+
         if not (target := bancho.services.players.by_id(stream.s32())):
             return
-        
+
         if target == bancho.services.bot_player:
             return
 
@@ -926,7 +932,7 @@ class b20130606(BaseHandler):
                 m.slots[i].mods = Mod.list(stream.u32())
 
         return m
-    
+
     def write_match(self, match, stream: StreamOut, send_password: bool = False):
         stream.u16(match.id)
         stream.bool(match.in_progress)
@@ -962,21 +968,20 @@ class b20130606(BaseHandler):
         return stream
 
     def handle_create_match(self, stream: StreamIn):
-
         match = self.read_match(stream)
 
         if not self.player.in_lobby:
             self.enqueue_matchjoin_fail()
             return
-        
+
         if self.player.restricted or self.player.silenced:
             self.enqueue_matchjoin_fail()
             return
-        
+
         if not bancho.services.matches.append(match):
             self.enqueue_matchjoin_fail()
             return
-        
+
         bancho.services.channels.append(
             c := Channel(
                 name=f'#multi_{match.id}',
