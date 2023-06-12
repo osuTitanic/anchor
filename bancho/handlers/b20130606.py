@@ -27,6 +27,9 @@ import threading
 import bancho
 
 class b20130606(BaseHandler):
+
+    protocol_version = 18
+
     def enqueue_ping(self):
         self.player.sendPacket(ResponsePacket.PING)
 
@@ -51,16 +54,15 @@ class b20130606(BaseHandler):
 
     def enqueue_menu_icon(self, image: Optional[str], url: Optional[str]):
         stream = StreamOut()
+        content = ''
 
-        if not image:
-            stream.string('')
-        else:
-            stream.string(
-                '|'.join([
-                    image,
-                    url if url else ''
-                ])
-            )
+        if image:
+            content = '|'.join([
+                image,
+                url if url else ''
+            ])
+
+        stream.string(content)
 
         self.player.sendPacket(
             ResponsePacket.MENU_ICON,
