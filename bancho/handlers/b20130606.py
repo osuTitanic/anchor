@@ -804,6 +804,16 @@ class b20130606(BaseHandler):
 
         if target == bancho.services.bot_player:
             return
+        
+        if target.status.mode == Mode.OsuMania:
+            if not self.player.mania_support:
+                self.enqueue_announce(
+                    '\n'.join([
+                        'Your version of osu! does not support mania.',
+                        'Please upgrade to version 20121003 or higher!'
+                    ])
+                )
+                return
 
         self.player.spectating = target
 

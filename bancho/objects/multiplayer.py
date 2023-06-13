@@ -210,14 +210,27 @@ class Match:
         if self.player_count <= 1:
             # Player tries to start map with only himself
             return
-        
-        for slot in self.slots_withmap:
-            slot.status = SlotStatus.Playing
 
         self.in_progress = True
 
-        for player in self.players:
-            player.handler.enqueue_match_start(self)
+        for slot in self.slots:
+            if not slot.has_player:
+                continue
+
+            if self.mode == Mode.OsuMania and not slot.player.mania_support:
+                slot.player.handler.enqueue_announce(
+                    '\n'.join([
+                        'Your version of osu! does not support mania.',
+                        'Please upgrade to version 20121003 or higher!'
+                    ])
+                )
+                slot.status = SlotStatus.NoMap
+                continue
+
+            slot.player.handler.enqueue_match_start(self)
+
+            if slot.status != SlotStatus.NoMap:
+                slot.status = SlotStatus.Playing
 
         self.logger.info('Match started')
 
@@ -319,7 +332,7 @@ class Match:
                 new_team = SlotTeam.Red
 
             for slot in self.slots:
-                if slot.status.value & SlotStatus.HasPlayer.value:
+                if slot.has_player:
                     slot.team = new_team
 
             self.team_type = new_match.team_type
@@ -334,6 +347,20 @@ class Match:
         if self.mode != new_match.mode:
             self.mode = new_match.mode
             self.logger.info(f'Mode: {self.mode.formatted}')
+
+            for slot in self.slots:
+                if not slot.has_player:
+                    continue
+
+                if slot.player.mania_support:
+                    continue
+
+                slot.player.handler.enqueue_announce(
+                    '\n'.join([
+                        'Your version of osu! does not support mania.',
+                        'Please upgrade to version b20121003 or higher!'
+                    ])
+                )
 
         if self.name != new_match.name:
             self.name = new_match.name

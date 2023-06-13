@@ -198,6 +198,10 @@ class Player(BanchoProtocol):
         # Maybe there is a better way of doing this?
         return type(self.handler) == BaseHandler
 
+    @property
+    def mania_support(self) -> bool:
+        return self.client.version.date >= 20121003
+
     def get_handler(self, version: int) -> BaseHandler:
         return Handlers[
             min(Handlers.keys(), key=lambda x:abs(x-self.version))
@@ -319,24 +323,24 @@ class Player(BanchoProtocol):
         version = str(client.version)
 
         # Validate client
-        if version not in config.CLIENT_HASHES.keys():
-            self.logger.warning('Login failed: Invalid Client')
-            self.loginFailed(
-                LoginError.UPDATE_NEEDED,
-                'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
-            )
-            return
-
-        # Check client hash
-        required_hash = config.CLIENT_HASHES[version]
-
-        if required_hash and client.hash.md5 != required_hash:
-            self.logger.warning('Login failed: Modified Client')
-            self.loginFailed(
-                LoginError.UPDATE_NEEDED,
-                'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
-            )
-            return
+        # if version not in config.CLIENT_HASHES.keys():
+        #     self.logger.warning('Login failed: Invalid Client')
+        #     self.loginFailed(
+        #         LoginError.UPDATE_NEEDED,
+        #         'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
+        #     )
+        #     return
+# 
+        # # Check client hash
+        # required_hash = config.CLIENT_HASHES[version]
+# 
+        # if required_hash and client.hash.md5 != required_hash:
+        #     self.logger.warning('Login failed: Modified Client')
+        #     self.loginFailed(
+        #         LoginError.UPDATE_NEEDED,
+        #         'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+        #     )
+        #     return
         
         if hashlib.md5(client.hash.adapters.encode()).hexdigest() != client.hash.adapters_md5:
             self.transport.write('no.\r\n')
