@@ -196,6 +196,11 @@ class Player(BanchoProtocol):
     def is_bot(self) -> bool:
         # Maybe there is a better way of doing this?
         return type(self.handler) == BaseHandler
+
+    def get_handler(self, version: int) -> BaseHandler:
+        return Handlers[
+            min(Handlers.keys(), key=lambda x:abs(x-self.version))
+        ](self)
     
     def silence(self, duration_sec: int, reason: str):
         duration = timedelta(seconds=duration_sec)
@@ -302,9 +307,7 @@ class Player(BanchoProtocol):
 
         # If the client date was not found
         # take the handler, that is closest to it
-        self.handler = Handlers[
-            min(Handlers.keys(), key=lambda x:abs(x-self.version))
-        ](self)
+        self.handler = self.get_handler(self.version)
 
         # Send protocol version
         self.sendPacket(
