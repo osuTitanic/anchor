@@ -1,41 +1,43 @@
 
+from bancho.common.regexes import OSU_VERSION
 from typing import Optional
 
 from .ip import IPAddress
 
+import re
+
 class ClientVersion:
-    def __init__(self, stream: str, date: int, subversion: Optional[str] = None, tourney: bool = False) -> None:
-        self.subversion = subversion
-        self.tourney    = tourney
-        self.stream     = stream
-        self.date       = date
-    
+    def __init__(self, match: re.Match, date: int, revision: Optional[int] = None, stream: Optional[str] = None, name: Optional[str] = None) -> None:
+        self.revision = revision
+        self.stream   = stream
+        self.match    = match
+        self.date     = date
+        self.name     = name
+
     def __repr__(self) -> str:
-        return self.string        
+        return self.string
 
     @property
     def string(self) -> str:
-        return f'{self.stream}{self.date}{f".{self.subversion}" if self.subversion else ""}'
-    
+        return self.match.string
+
     @classmethod
     def from_string(cls, string: str):
-        tourney_client = 'tourney' in string
-        string = string.replace('tourney', '')
+        match = OSU_VERSION.match(string)
 
-        stream = string[:1]
-        version = string[1:].split('.')
+        assert match is not None
 
-        date = int(version[0])
-        subversion = None
-
-        if len(version) > 1:
-            subversion = version[1]
+        date = match.group('date')
+        revision = match.group('revision')
+        stream = match.group('stream')
+        name = match.group('name')
 
         return ClientVersion(
+            match,
+            int(date),
+            int(revision) if revision else None,
             stream,
-            date,
-            subversion,
-            tourney_client
+            name
         )
 
 class ClientHash:
@@ -96,7 +98,7 @@ class OsuClient:
     def empty(cls):
         return OsuClient(
             IPAddress('127.0.0.1'),
-            ClientVersion('b', 1337),
+            ClientVersion(OSU_VERSION.match('b1337'), 1337),
             ClientHash('', '', '', '', ''),
             0,
             True,
