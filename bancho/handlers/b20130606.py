@@ -524,8 +524,9 @@ class b20130606(BaseHandler):
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
 
-        # Enqueue to spectators
-        self.player.spectators.enqueue_stats(self.player)
+        # Enqueue to other players
+        # (This needs to be done for older clients)
+        bancho.services.players.enqueue_stats(self.player)
 
     def handle_send_message(self, stream: StreamIn):
         sender    = stream.string()
