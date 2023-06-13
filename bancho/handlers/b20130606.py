@@ -370,18 +370,16 @@ class b20130606(BaseHandler):
         self.player.sendPacket(ResponsePacket.MATCH_JOIN_FAIL)
 
     def enqueue_lobby_join(self, user_id: int):
-        for player in bancho.services.players.in_lobby:
-            player.sendPacket(
-                ResponsePacket.LOBBY_JOIN,
-                int(user_id).to_bytes(4, 'little')
-            )
+        self.player.sendPacket(
+            ResponsePacket.LOBBY_JOIN,
+            int(user_id).to_bytes(4, 'little')
+        )
 
     def enqueue_lobby_part(self, user_id: int):
-        for player in bancho.services.players.in_lobby:
-            player.sendPacket(
-                ResponsePacket.LOBBY_PART,
-                int(user_id).to_bytes(4, 'little')
-            )
+        self.player.sendPacket(
+            ResponsePacket.LOBBY_PART,
+            int(user_id).to_bytes(4, 'little')
+        )
 
     def join_channel(self, name: str) -> bool:
         if not (channel := bancho.services.channels.by_name(name)):
@@ -644,8 +642,9 @@ class b20130606(BaseHandler):
         if self.player.restricted:
             return
 
-        for player in bancho.services.players.in_lobby:
-            player.handler.enqueue_lobby_join(self.player.id)
+        for player in bancho.services.players:
+            if player is not self.player:
+                player.handler.enqueue_lobby_join(self.player.id)
 
         for match in bancho.services.matches:
             if match is not None:
@@ -659,8 +658,9 @@ class b20130606(BaseHandler):
 
         self.player.in_lobby = False
 
-        for player in bancho.services.players.in_lobby:
-            player.handler.enqueue_lobby_part(self.player.id)
+        for player in bancho.services.players:
+            if player is not self.player:
+                player.handler.enqueue_lobby_part(self.player.id)
 
     def handle_join_channel(self, stream: StreamIn):
         name = stream.string()
