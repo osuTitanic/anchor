@@ -15,6 +15,7 @@ from ..handlers.b20130606 import b20130606
 from ..handlers.b20130329 import b20130329
 from ..handlers.b20121223 import b20121223
 from ..handlers.b20121119 import b20121119
+from ..handlers.b20120812 import b20120812
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -44,14 +45,14 @@ import config
 
 Handlers = {
     20130606: b20130606, # Latest supported version
-    20130513: b20130606,
     20130418: b20130606,
     20130329: b20130329,
-    20130319: b20130329,
     20130303: b20130329,
     20121223: b20121223,
     20121203: b20121223,
-    20121119: b20121119
+    20121119: b20121119,
+    20120916: b20121119,
+    20120812: b20120812
 }
 
 @dataclass
