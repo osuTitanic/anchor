@@ -1,4 +1,5 @@
 
+from bancho.constants import MANIA_NOT_SUPPORTED, Mode
 from bancho.streams import StreamIn
 
 from .b20130606 import b20130606
@@ -18,6 +19,19 @@ class b20130329(b20130606):
             extra = int(
                 self.player.spectating.id
             ).to_bytes(4, 'little')
+
+        if self.player.status.mode == Mode.OsuMania:
+            for p in self.player.spectators:
+                if not p.mania_support:
+                    p.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                    continue
+
+                p.handler.enqueue_frames(
+                    extra + frames
+                    if p.handler.protocol_version >= 18 else
+                    frames
+                )
+            return
 
         for p in self.player.spectators:
             p.handler.enqueue_frames(

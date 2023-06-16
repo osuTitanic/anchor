@@ -747,3 +747,8 @@ WEB_RESPONSE = '''
 anchor: <a href="https://github.com/Lekuruu/titanic">https://github.com/Lekuruu/titanic</a>
 </pre>
 '''
+
+MANIA_NOT_SUPPORTED = '\n'.join([
+    'Your version of osu! does not support mania.',
+    'Please upgrade to version 20121003 or higher!'
+])

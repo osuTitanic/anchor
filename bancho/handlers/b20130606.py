@@ -6,6 +6,7 @@ from bancho.common.objects      import DBBeatmap
 from bancho.objects.channel     import Channel
 from bancho.constants           import (
     SPEED_MODS,
+    MANIA_NOT_SUPPORTED,
     MatchScoringTypes,
     MatchTeamTypes,
     PresenceFilter,
@@ -208,7 +209,7 @@ class b20130606(BaseHandler):
                 ResponsePacket.USER_PRESENCE_BUNDLE,
                 stream.get()
             )
-        
+
     def enqueue_channel_revoked(self, target: str):
         stream = StreamOut()
         stream.string(target)
@@ -804,15 +805,10 @@ class b20130606(BaseHandler):
 
         if target == bancho.services.bot_player:
             return
-        
+
         if target.status.mode == Mode.OsuMania:
             if not self.player.mania_support:
-                self.enqueue_announce(
-                    '\n'.join([
-                        'Your version of osu! does not support mania.',
-                        'Please upgrade to version 20121003 or higher!'
-                    ])
-                )
+                self.enqueue_announce(MANIA_NOT_SUPPORTED)
                 return
 
         self.player.spectating = target
@@ -868,6 +864,19 @@ class b20130606(BaseHandler):
             return
 
         frames = stream.readall()
+
+        if self.player.status.mode == Mode.OsuMania:
+            for p in self.player.spectators:
+                if not p.mania_support:
+                    p.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                    continue
+
+                p.handler.enqueue_frames(
+                    frames[4:]
+                    if p.handler.protocol_version < 18 else
+                    frames
+                )
+            return
 
         for p in self.player.spectators:
             p.handler.enqueue_frames(

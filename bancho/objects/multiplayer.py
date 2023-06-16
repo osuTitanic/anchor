@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 from bancho.logging import Console, File
 from bancho.constants import (
+    MANIA_NOT_SUPPORTED,
     SPEED_MODS,
     ResponsePacket,
     MatchScoringTypes,
@@ -218,12 +219,7 @@ class Match:
                 continue
 
             if self.mode == Mode.OsuMania and not slot.player.mania_support:
-                slot.player.handler.enqueue_announce(
-                    '\n'.join([
-                        'Your version of osu! does not support mania.',
-                        'Please upgrade to version 20121003 or higher!'
-                    ])
-                )
+                slot.player.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
                 slot.status = SlotStatus.NoMap
                 continue
 
@@ -354,12 +350,7 @@ class Match:
                     if slot.player.mania_support:
                         continue
                     
-                    slot.player.handler.enqueue_announce(
-                        '\n'.join([
-                            'Your version of osu! does not support mania.',
-                            'Please upgrade to version b20121003 or higher!'
-                        ])
-                    )
+                    slot.player.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
 
         if self.name != new_match.name:
             self.name = new_match.name
