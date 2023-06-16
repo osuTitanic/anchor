@@ -118,6 +118,9 @@ class Player(BanchoProtocol):
         player.name   = player.object.name
         player.stats  = player.object.stats
 
+        player.client.ip.country_code = "OC"
+        player.client.ip.city = "w00t p00t!"
+
         return player
     
     @property
