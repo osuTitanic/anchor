@@ -1,7 +1,7 @@
 
 from .b20120704 import b20120704
 
-class b1815(b20120704):
+class b1821(b20120704):
 
     protocol_version = 7
 
