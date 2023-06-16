@@ -111,21 +111,16 @@ class BanchoProtocol(Protocol):
             while self.buffer:
                 stream = StreamIn(self.buffer)
 
-                packet = stream.u16()
-                compression = stream.bool() # unused?
-                payload = StreamIn(
-                    stream.read(
-                        stream.u32()
+                try:
+                    packet = stream.u16()
+                    compression = stream.bool() # TODO: Implement gzip compression
+                    payload = StreamIn(
+                        stream.read(
+                            stream.u32()
+                        )
                     )
-                )
-
-                # TODO: Verbose logging?
-                # bancho.services.logger.debug(
-                #     '\n'.join([
-                #         f'<{self.address.host}> -> "{packet}"',
-                #         f'"""\n{payload.get()}\n"""'
-                #     ])
-                # )
+                except OverflowError:
+                    break
 
                 self.packetReceived(
                     packet,
