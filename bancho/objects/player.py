@@ -18,6 +18,7 @@ from ..handlers.b20121119 import b20121119
 from ..handlers.b20120812 import b20120812
 from ..handlers.b20120725 import b20120725
 from ..handlers.b20120704 import b20120704
+from ..handlers.b1815 import b1815
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -56,7 +57,9 @@ Handlers = {
     20120916: b20121119,
     20120812: b20120812,
     20120725: b20120725,
-    20120704: b20120704
+    20120704: b20120704,
+    20120522: b20120704,
+    1815: b1815
 }
 
 @dataclass
@@ -211,7 +214,7 @@ class Player(BanchoProtocol):
 
     def get_handler(self, version: int) -> BaseHandler:
         return Handlers[
-            min(Handlers.keys(), key=lambda x:abs(x-self.version))
+            min(Handlers.keys(), key=lambda x:abs(x-version))
         ](self)
     
     def silence(self, duration_sec: int, reason: str):
