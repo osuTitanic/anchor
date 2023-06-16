@@ -17,6 +17,7 @@ from ..handlers.b20121223 import b20121223
 from ..handlers.b20121119 import b20121119
 from ..handlers.b20120812 import b20120812
 from ..handlers.b20120725 import b20120725
+from ..handlers.b20120704 import b20120704
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -54,7 +55,8 @@ Handlers = {
     20121119: b20121119,
     20120916: b20121119,
     20120812: b20120812,
-    20120725: b20120725
+    20120725: b20120725,
+    20120704: b20120704
 }
 
 @dataclass
