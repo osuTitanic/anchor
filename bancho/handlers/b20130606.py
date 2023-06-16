@@ -382,6 +382,12 @@ class b20130606(BaseHandler):
             int(user_id).to_bytes(4, 'little')
         )
 
+    def enqueue_protocol_version(self):
+        self.player.sendPacket(
+            ResponsePacket.PROTOCOL_VERSION,
+            int(self.protocol_version).to_bytes(4, 'little')
+        )
+
     def join_channel(self, name: str) -> bool:
         if not (channel := bancho.services.channels.by_name(name)):
             success = False

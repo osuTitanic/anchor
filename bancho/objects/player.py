@@ -326,10 +326,7 @@ class Player(BanchoProtocol):
         self.handler = self.get_handler(self.version)
 
         # Send protocol version
-        self.sendPacket(
-            ResponsePacket.PROTOCOL_VERSION,
-            int(self.handler.protocol_version).to_bytes(4, 'little')
-        )
+        self.handler.enqueue_protocol_version()
 
         version = str(client.version)
 
