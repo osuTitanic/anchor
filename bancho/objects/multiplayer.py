@@ -293,19 +293,17 @@ class Match:
             # Host is selecting new map, unready players
             self.logger.info('Host is selecting map...')
 
-            self.unready_players()
-            self.previous_id = self.beatmap_id
-
             self.beatmap_id = -1
             self.beatmap_hash = ""
             self.beatmap_name = ""
+            self.previous_id = self.beatmap_id
 
-        elif self.beatmap_id == -1:
-            # Player is still selecting map
+        else:
             if self.previous_id != new_match.beatmap_id:
                 # New map has been chosen
                 self.chat.send_message(bancho.services.bot_player, f'Selected: {new_match.beatmap_name}')
                 self.logger.info(f'Selected: {new_match.beatmap_name}')
+                self.unready_players()
 
             # Lookup beatmap in database
             beatmap = bancho.services.database.beatmap_by_checksum(new_match.beatmap_hash)
