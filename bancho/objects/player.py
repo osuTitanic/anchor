@@ -16,6 +16,7 @@ from ..handlers.b20130329 import b20130329
 from ..handlers.b20121223 import b20121223
 from ..handlers.b20121119 import b20121119
 from ..handlers.b20120812 import b20120812
+from ..handlers.b20120725 import b20120725
 from ..handlers import BaseHandler
 
 from .client import OsuClient
@@ -52,7 +53,8 @@ Handlers = {
     20121203: b20121223,
     20121119: b20121119,
     20120916: b20121119,
-    20120812: b20120812
+    20120812: b20120812,
+    20120725: b20120725
 }
 
 @dataclass
@@ -326,24 +328,24 @@ class Player(BanchoProtocol):
         version = str(client.version)
 
         # Validate client
-        # if version not in config.CLIENT_HASHES.keys():
-        #     self.logger.warning('Login failed: Invalid Client')
-        #     self.loginFailed(
-        #         LoginError.UPDATE_NEEDED,
-        #         'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
-        #     )
-        #     return
-# 
-        # # Check client hash
-        # required_hash = config.CLIENT_HASHES[version]
-# 
-        # if required_hash and client.hash.md5 != required_hash:
-        #     self.logger.warning('Login failed: Modified Client')
-        #     self.loginFailed(
-        #         LoginError.UPDATE_NEEDED,
-        #         'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
-        #     )
-        #     return
+        if version not in config.CLIENT_HASHES.keys():
+            self.logger.warning('Login failed: Invalid Client')
+            self.loginFailed(
+                LoginError.UPDATE_NEEDED,
+                'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
+            )
+            return
+
+        # Check client hash
+        required_hash = config.CLIENT_HASHES[version]
+
+        if required_hash and client.hash.md5 != required_hash:
+            self.logger.warning('Login failed: Modified Client')
+            self.loginFailed(
+                LoginError.UPDATE_NEEDED,
+                'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+            )
+            return
         
         if hashlib.md5(client.hash.adapters.encode()).hexdigest() != client.hash.adapters_md5:
             self.transport.write('no.\r\n')

@@ -4,6 +4,7 @@ from typing import Optional
 
 from .ip import IPAddress
 
+import hashlib
 import re
 
 class ClientVersion:
@@ -57,7 +58,23 @@ class ClientHash:
     
     @classmethod
     def from_string(cls, string: str):
-        md5, adapters, adapters_md5, uninstall_id, diskdrive_signature = string.split(':')
+        try:
+            md5, adapters, adapters_md5, uninstall_id, diskdrive_signature = string.split(':')
+        except ValueError:
+            args = string.split(':')
+
+            md5 = args[0]
+            adapters = args[1]
+            adapters_md5 = args[2]
+
+            diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
+            uninstall_id = hashlib.md5(b'unknown').hexdigest()
+
+            try:
+                uninstall_id = args[3]
+                diskdrive_signature = args[4]
+            except IndexError:
+                pass
 
         return ClientHash(
             md5,
