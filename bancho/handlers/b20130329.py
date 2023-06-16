@@ -23,7 +23,7 @@ class b20130329(b20130606):
         if self.player.status.mode == Mode.OsuMania:
             for p in self.player.spectators:
                 if not p.mania_support:
-                    p.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                    p.handler.enqueue_announcement(MANIA_NOT_SUPPORTED)
                     continue
 
                 p.handler.enqueue_frames(

@@ -99,7 +99,7 @@ class Players(List[Player]):
 
     def announce(self, message: str):
         for p in self:
-            p.handler.enqueue_announce(message)
+            p.handler.enqueue_announcement(message)
 
     def enqueue_stats(self, player: Player):
         if player.restricted:

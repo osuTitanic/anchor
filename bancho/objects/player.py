@@ -273,7 +273,7 @@ class Player(BanchoProtocol):
         instance.commit()
 
         if reason:
-            self.handler.enqueue_announce(f'You have been restricted for:\n{reason}')
+            self.handler.enqueue_announcement(f'You have been restricted for:\n{reason}')
 
         # Update client
         self.handler.enqueue_login_reply(LoginError.BANNED.value)

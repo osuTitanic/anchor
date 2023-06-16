@@ -161,7 +161,7 @@ def alertuser(ctx: Context) -> Optional[List]:
     if not (player := bancho.services.players.by_name(username)):
         return ['Could not find user.']
     
-    player.handler.enqueue_announce(' '.join(ctx.args[1:]))
+    player.handler.enqueue_announcement(' '.join(ctx.args[1:]))
 
     return [f'Alert was sent to {player.name}.']
 

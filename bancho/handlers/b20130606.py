@@ -44,7 +44,7 @@ class b20130606(BaseHandler):
             )
         )
 
-    def enqueue_announce(self, message: str):
+    def enqueue_announcement(self, message: str):
         stream = StreamOut()
         stream.string(message)
 
@@ -808,7 +808,7 @@ class b20130606(BaseHandler):
 
         if target.status.mode == Mode.OsuMania:
             if not self.player.mania_support:
-                self.enqueue_announce(MANIA_NOT_SUPPORTED)
+                self.enqueue_announcement(MANIA_NOT_SUPPORTED)
                 return
 
         self.player.spectating = target
@@ -868,7 +868,7 @@ class b20130606(BaseHandler):
         if self.player.status.mode == Mode.OsuMania:
             for p in self.player.spectators:
                 if not p.mania_support:
-                    p.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                    p.handler.enqueue_announcement(MANIA_NOT_SUPPORTED)
                     continue
 
                 p.handler.enqueue_frames(

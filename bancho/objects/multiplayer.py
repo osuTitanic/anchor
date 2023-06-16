@@ -219,7 +219,7 @@ class Match:
                 continue
 
             if self.mode == Mode.OsuMania and not slot.player.mania_support:
-                slot.player.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                slot.player.handler.enqueue_announcement(MANIA_NOT_SUPPORTED)
                 slot.status = SlotStatus.NoMap
                 continue
 
@@ -350,7 +350,7 @@ class Match:
                     if slot.player.mania_support:
                         continue
                     
-                    slot.player.handler.enqueue_announce(MANIA_NOT_SUPPORTED)
+                    slot.player.handler.enqueue_announcement(MANIA_NOT_SUPPORTED)
 
         if self.name != new_match.name:
             self.name = new_match.name
