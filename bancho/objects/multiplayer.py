@@ -348,19 +348,20 @@ class Match:
             self.mode = new_match.mode
             self.logger.info(f'Mode: {self.mode.formatted}')
 
-            for slot in self.slots:
-                if not slot.has_player:
-                    continue
-
-                if slot.player.mania_support:
-                    continue
-
-                slot.player.handler.enqueue_announce(
-                    '\n'.join([
-                        'Your version of osu! does not support mania.',
-                        'Please upgrade to version b20121003 or higher!'
-                    ])
-                )
+            if self.mode == Mode.OsuMania:
+                for slot in self.slots:
+                    if not slot.has_player:
+                        continue
+                    
+                    if slot.player.mania_support:
+                        continue
+                    
+                    slot.player.handler.enqueue_announce(
+                        '\n'.join([
+                            'Your version of osu! does not support mania.',
+                            'Please upgrade to version b20121003 or higher!'
+                        ])
+                    )
 
         if self.name != new_match.name:
             self.name = new_match.name
