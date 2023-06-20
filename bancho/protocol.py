@@ -113,18 +113,14 @@ class BanchoProtocol(Protocol):
 
                 try:
                     packet = stream.u16()
-                    compression = stream.bool() # TODO: Implement gzip compression
-                    payload = StreamIn(
-                        stream.read(
-                            stream.u32()
-                        )
-                    )
+                    compression = stream.bool() # GZip compression is only used in very old clients
+                    payload = stream.read(stream.u32())
                 except OverflowError:
                     break
 
                 self.packetReceived(
-                    packet,
-                    payload
+                    packet_id=packet,
+                    stream=StreamIn(payload)
                 )
 
                 self.buffer = stream.readall()
@@ -180,14 +176,6 @@ class BanchoProtocol(Protocol):
         stream = StreamOut()
         stream.header(packet_type, len(payload))
         stream.write(payload)
-
-        # TODO: Verbose logging?
-        # bancho.services.logger.debug(
-        #     '\n'.join([
-        #         f'<{self.address.host}> Sending packet -> {packet_type.name}',
-        #         f'"""\n{payload}\n"""'
-        #     ])
-        # )
 
         self.enqueue(stream.get())
 
