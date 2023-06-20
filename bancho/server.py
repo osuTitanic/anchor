@@ -27,15 +27,10 @@ class BanchoFactory(Factory):
         bancho.services.players.append(
             bot_player := Player.bot_player()
         )
-
         bancho.services.bot_player = bot_player
-
         bancho.services.logger.info(f'- {bot_player.name}')
 
-        # Load jobs
         bancho.services.logger.info('Loading jobs...')
-
-        # This will automatically load the ping job
         from .jobs.pings import ping
 
         bancho.services.logger.info(f'Starting factory: {self}')
