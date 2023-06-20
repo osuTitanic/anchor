@@ -1,6 +1,8 @@
 
-import dotenv
-import os
+POSTGRES_HOST = '127.0.0.1'
+POSTGRES_PASSWORD = 'examplePassword'
+POSTGRES_USER = 'bancho'
+POSTGRES_PORT = 5432
 
 # You can configure all allowed clients here, including one or more hash(es) of the executable
 # If you don't want to verify a hash, then set it to 'None'
@@ -12,16 +14,11 @@ CLIENT_HASHES = {
 # This is optional, but it will improve performance
 IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
 
-dotenv.load_dotenv(override=False)
+PORTS = [13381, 13382, 13383]
 
-POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
-POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
-POSTGRES_USER = os.environ.get('POSTGRES_USER')
-POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+# This will be visible inside the menu
+# Example: https://osu.ppy.sh/ss/18600390/1055
+MENUICON_IMAGE = ''
+MENUICON_URL = ''
 
-PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381]'))
-
-MENUICON_IMAGE = os.environ.get('BANCHO_MENUICON_IMAGE')
-MENUICON_URL = os.environ.get('BANCHO_MENUICON_URL')
-
-FREE_SUPPORTER = os.environ.get('FREE_SUPPORTER', 'True').lower() == 'true'
+FREE_SUPPORTER = True
