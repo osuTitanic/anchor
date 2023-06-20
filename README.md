@@ -15,7 +15,7 @@ Apply this [migration file](https://github.com/lekuru-static/download/raw/main/b
 
 Clone this repository onto your machine:
 ```shell
-git clone https://github.com/Lekuruu/titanic-anchor.git
+git clone https://github.com/Lekuruu/anchor.git
 ```
 
 Install the requirements for python:
