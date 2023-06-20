@@ -330,23 +330,23 @@ class Player(BanchoProtocol):
 
         version = str(client.version)
 
-        # Validate client
-        if version not in config.CLIENT_HASHES.keys():
-            self.logger.warning('Login failed: Invalid Client')
-            self.loginFailed(
-                LoginError.UPDATE_NEEDED,
-                'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
-            )
-            return
-
-        if (hashes := config.CLIENT_HASHES[version]):
-            if client.hash.md5 not in hashes:
-                self.logger.warning('Login failed: Modified Client')
+        if not config.DISABLE_CLIENT_VERIFICATION:
+            if version not in config.CLIENT_HASHES.keys():
+                self.logger.warning('Login failed: Invalid Client')
                 self.loginFailed(
                     LoginError.UPDATE_NEEDED,
-                    'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+                    'This version of osu! is not compatible with bancho. Please contact an administrator if you want to use this version!'
                 )
                 return
+    
+            if (hashes := config.CLIENT_HASHES[version]):
+                if client.hash.md5 not in hashes:
+                    self.logger.warning('Login failed: Modified Client')
+                    self.loginFailed(
+                        LoginError.UPDATE_NEEDED,
+                        'You are using a modified version of osu!. If this was not intentional, please contact an administrator!'
+                    )
+                    return
         
         if hashlib.md5(client.hash.adapters.encode()).hexdigest() != client.hash.adapters_md5:
             self.transport.write('no.\r\n')
