@@ -2,10 +2,11 @@
 import dotenv
 import os
 
-# You can configure all allowed clients here
-# If you don't want to validate the hash, you can leave the value empty
+# You can configure all allowed clients here, including one or more hash(es) of the executable
+# If you don't want to verify a hash, then set it to 'None'
 CLIENT_HASHES = {
-    'b20130606.1': '93f0c72fdb32fc2cbc8fdf253b741a27'
+    'b20130606.1': ['d9aa83c11aedf14cbecbd2cf7efa472b'],
+    'b20130303': None
 }
 
 # This is optional, but it will improve performance
