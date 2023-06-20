@@ -14,12 +14,12 @@ from bancho.constants import (
     Mod
 )
 
-from .b20121119 import b20121119
+from .b20121030 import b20121030
 
 import threading
 import bancho
 
-class b20120812(b20121119):
+class b20120812(b20121030):
     
     protocol_version = 10
 

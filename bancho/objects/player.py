@@ -8,13 +8,13 @@ from dataclasses import dataclass, field
 from typing      import List, Optional
 
 from ..protocol import BanchoProtocol, IPAddress
-from ..streams import StreamIn
-from ..logging import Console, File
+from ..streams  import StreamIn
 
 from ..handlers.b20130606 import b20130606
 from ..handlers.b20130329 import b20130329
 from ..handlers.b20121223 import b20121223
 from ..handlers.b20121119 import b20121119
+from ..handlers.b20121030 import b20121030
 from ..handlers.b20120812 import b20120812
 from ..handlers.b20120725 import b20120725
 from ..handlers.b20120704 import b20120704
@@ -30,7 +30,6 @@ from ..common.objects import (
 )
 
 from ..constants import (
-    ResponsePacket,
     PresenceFilter,
     ClientStatus,
     Permissions,
@@ -54,6 +53,7 @@ Handlers = {
     20121223: b20121223,
     20121203: b20121223,
     20121119: b20121119,
+    20121030: b20121030,
     20120916: b20121119,
     20120812: b20120812,
     20120725: b20120725,

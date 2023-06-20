@@ -1,18 +1,13 @@
 
 from .b20121223 import b20121223
 
-from ..streams import StreamOut, StreamIn
+from ..streams import StreamOut
 from ..constants import (
     AvatarExtension,
     ResponsePacket,
     PresenceFilter,
-    ClientStatus,
-    Permissions,
-    Mode,
-    Mod
+    Permissions
 )
-
-import threading
 
 class b20121119(b20121223):
     
