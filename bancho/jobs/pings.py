@@ -19,9 +19,7 @@ def ping():
                 continue
             
             # Enqueue ping if needed
-            if (
-                next_ping > player.last_response.timestamp()
-               ):
+            if (next_ping > player.last_response.timestamp()):
                 player.handler.enqueue_ping()
 
             # Check timeout

@@ -750,5 +750,5 @@ anchor: <a href="https://github.com/Lekuruu/titanic">https://github.com/Lekuruu/
 
 MANIA_NOT_SUPPORTED = '\n'.join([
     'Your version of osu! does not support mania.',
-    'Please upgrade to version 20121003 or higher!'
+    'Please update to version b20121003 or higher!'
 ])

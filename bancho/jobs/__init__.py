@@ -4,7 +4,7 @@ from concurrent.futures       import ThreadPoolExecutor
 from typing                   import Any, Callable
 
 class Jobs(ThreadPoolExecutor):
-    def __init__(self, max_workers = None, thread_name_prefix: str = "", initializer = None, initargs: tuple[Any, ...] = ...) -> None:
+    def __init__(self, max_workers = None, thread_name_prefix: str = "job", initializer = None, initargs: tuple[Any, ...] = ...) -> None:
         super().__init__(max_workers, thread_name_prefix, initializer, initargs)
 
         from bancho.services import logger
