@@ -44,6 +44,8 @@ Inside the `users` table, you will need to create a new row, with these attribut
 - pw (bcrypt)
 - activated (true)
 
+The password should be a bcrypt hash of a md5 hash in hex form :D
+
 ## Contributing
 
 If you want to clean up the mess that I made, then feel free to make a pull request.
