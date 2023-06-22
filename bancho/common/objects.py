@@ -55,7 +55,6 @@ class DBStats(Base):
     b_count   = Column('b_count', Integer, default=0)
     c_count   = Column('c_count', Integer, default=0)
     d_count   = Column('d_count', Integer, default=0)
-    f_count   = Column('f_count', Integer, default=0)
 
     user = relationship('DBUser', back_populates='stats')
 
