@@ -41,6 +41,7 @@ from ..constants import (
 import hashlib
 import timeago
 import logging
+import clients
 import bancho
 import bcrypt
 import config
@@ -331,7 +332,7 @@ class Player(BanchoProtocol):
         version = str(client.version)
 
         if not config.DISABLE_CLIENT_VERIFICATION:
-            if version not in config.CLIENT_HASHES.keys():
+            if version not in clients.CLIENT_HASHES.keys():
                 self.logger.warning('Login failed: Invalid Client')
                 self.loginFailed(
                     LoginError.UPDATE_NEEDED,
@@ -339,7 +340,7 @@ class Player(BanchoProtocol):
                 )
                 return
     
-            if (hashes := config.CLIENT_HASHES[version]):
+            if (hashes := clients.CLIENT_HASHES[version]):
                 if client.hash.md5 not in hashes:
                     self.logger.warning('Login failed: Modified Client')
                     self.loginFailed(
