@@ -18,7 +18,7 @@ logging.basicConfig(
 def setup():
     os.makedirs('.data', exist_ok=True)
 
-    if not config.IP_DATABASE_URL:
+    if config.SKIP_IP_DATABASE:
         return
 
     if not os.path.isfile('./.data/geolite.mmdb'):

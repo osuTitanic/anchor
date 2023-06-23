@@ -23,7 +23,9 @@ Install the requirements for python:
 python -m pip install -r requirements.txt
 ```
 
-Rename the `config.example.py` to `config.py` and edit it.
+Rename the `.example_env` to `.env` and edit it.
+
+Configure your clients inside `clients.py`.
 
 Start the server:
 ```shell
