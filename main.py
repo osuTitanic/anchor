@@ -27,8 +27,6 @@ def setup():
 def main():
     factory = BanchoFactory()
 
-    setup()
-
     for port in config.PORTS:
         reactor.listenTCP(port, factory)
         bancho.services.logger.info(f'Reactor listening on port: {port}')
@@ -36,4 +34,5 @@ def main():
     reactor.run()
 
 if __name__ == "__main__":
+    setup()
     main()
