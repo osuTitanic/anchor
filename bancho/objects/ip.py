@@ -10,7 +10,6 @@ import requests
 import bancho
 import config
 import pytz
-import time
 
 class IPAddress:
 
@@ -56,7 +55,7 @@ class IPAddress:
 
     def __eq__(self, ip: object) -> bool:
         return ip.host == self.host
-    
+
     @property
     def is_local(self) -> bool:
         if self.host.startswith('192.168') or self.host.startswith('127.0.0.1'):
@@ -69,11 +68,11 @@ class IPAddress:
                 return True
 
         return False
-    
+
     @property
     def country_name(self) -> str:
         return Countries[self.country_code]
-    
+
     @property
     def country_num(self) -> int:
         return list(Countries.keys()).index(self.country_code)
@@ -88,10 +87,10 @@ class IPAddress:
             bancho.services.logger.error(f'Download failed. ({response.status_code})')
             bancho.services.logger.warning('Skipping...')
             return
-        
-        with open('./.data/geolite.mmdb', 'wb') as f:
+
+        with open(f'{config.DATA_PATH}/geolite.mmdb', 'wb') as f:
             f.write(response.content)
-    
+
     def from_cache(self):
         for ip in bancho.services.ip_cache:
             if self.host == ip.host:
@@ -100,10 +99,10 @@ class IPAddress:
                 return True
 
         return False
-    
+
     def from_database(self) -> bool:
         try:
-            with Reader('./.data/geolite.mmdb') as reader:
+            with Reader(f'{config.DATA_PATH}/geolite.mmdb') as reader:
                 response = reader.city(self.host)
 
                 self.country = response.country.name

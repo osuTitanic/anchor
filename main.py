@@ -16,12 +16,12 @@ logging.basicConfig(
 )
 
 def setup():
-    os.makedirs('.data', exist_ok=True)
+    os.makedirs(config.DATA_PATH, exist_ok=True)
 
     if config.SKIP_IP_DATABASE:
         return
 
-    if not os.path.isfile('./.data/geolite.mmdb'):
+    if not os.path.isfile(f'{config.DATA_PATH}/geolite.mmdb'):
         IPAddress.download_gopip_database()
 
 def main():
