@@ -163,6 +163,8 @@ class b20120812(b20121030):
         if Mod.FreeModAllowed in self.player.status.mods:
             self.player.status.mods.remove(Mod.FreeModAllowed)
 
+        bancho.services.cache.update_user(self.player)
+
         self.player.logger.debug(f'Changed status: {self.player.status}')
 
         # Enqueue to other players

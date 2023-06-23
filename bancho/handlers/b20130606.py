@@ -468,6 +468,8 @@ class b20130606(BaseHandler):
         self.enqueue_matchjoin_success(match)
         match.update()
 
+        bancho.services.cache.update_user(self.player)
+
         return True
 
     def leave_match(self):
@@ -506,6 +508,8 @@ class b20130606(BaseHandler):
 
         self.player.match = None
 
+        bancho.services.cache.update_user(self.player)
+
     def handle_change_status(self, stream: StreamIn):
         # Check previous status
         if self.player.status.action == ClientStatus.Submitting:
@@ -526,6 +530,8 @@ class b20130606(BaseHandler):
         # Remove "FreeModAllowed"
         if Mod.FreeModAllowed in self.player.status.mods:
             self.player.status.mods.remove(Mod.FreeModAllowed)
+
+        bancho.services.cache.update_user(self.player)
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
 

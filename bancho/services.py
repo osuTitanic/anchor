@@ -1,6 +1,6 @@
 
 from .common.database import Postgres
-from .logging import Console, File
+from .common.users import UserCache
 from .jobs import Jobs
 
 import logging
@@ -14,6 +14,8 @@ database = Postgres(
     config.POSTGRES_HOST,
     config.POSTGRES_PORT
 )
+
+cache = UserCache()
 
 bot_player = None
 
