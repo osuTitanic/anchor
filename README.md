@@ -11,7 +11,7 @@ If you have any questions, feel free to contact me on discord: `lekuru`
 
 To get started you will need to install python and set up a postgres database.
 
-Apply this [migration file](https://github.com/lekuru-static/download/raw/main/base.sql) to your postgres instance.
+Apply this [migration file](https://github.com/lekuruu/anchor/raw/main/.github/base.sql) to your postgres instance.
 
 Clone this repository onto your machine:
 ```shell
