@@ -6,6 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     SmallInteger,
+    LargeBinary,
     ForeignKey,
     BigInteger,
     DateTime,
@@ -14,7 +15,6 @@ from sqlalchemy import (
     Column,
     String,
     Float,
-    BINARY
 )
 
 Base = declarative_base()
@@ -88,9 +88,9 @@ class DBScore(Base):
     status         = Column('status', SmallInteger, default=-1)
     submitted_at   = Column('submitted_at', DateTime, default=datetime.now())
 
-    replay         = Column('replay',     BINARY, nullable=True)
+    replay         = Column('replay',     LargeBinary, nullable=True)
     replay_md5     = Column('replay_md5', String, nullable=True)
-    screenshot     = Column('screenshot', BINARY, nullable=True)
+    screenshot     = Column('screenshot', LargeBinary, nullable=True)
     processes      = Column('processes',  String, nullable=True)
     failtime       = Column('failtime',  Integer, nullable=True)
 
@@ -139,7 +139,7 @@ class DBScreenshot(Base):
     user_id    = Column('user_id', ForeignKey('users.id'))
     created_at = Column('created_at', DateTime, default=datetime.now())
     hidden     = Column('hidden', Boolean, default=False)
-    content    = Column('content', BINARY)
+    content    = Column('content', LargeBinary)
 
     user = relationship('DBUser', back_populates='screenshots')
 
