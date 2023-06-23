@@ -61,17 +61,17 @@ As far as I know, [b2013606.1](https://osekai.net/snapshots/?version=179) is the
 
 You will need to find a line inside `osu.Online.BanchoClient` that looks something like this:
 
-![unpatched](https://raw.githubusercontent.com/lekuru-static/download/main/patched.png)
+![unpatched](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/unpatched.png)
 
 and edit the ip address to match your setup:
 
-![patched](https://raw.githubusercontent.com/lekuru-static/download/main/patched.png)
+![patched](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/patched.png)
 
 Remember to update the client hash inside your config!
 
 ## Screenshots
 
-![sanic](https://raw.githubusercontent.com/lekuru-static/download/main/screenshot005.jpg)
-![cool](https://raw.githubusercontent.com/lekuru-static/download/main/screenshot003.jpg)
-![nice](https://raw.githubusercontent.com/lekuru-static/download/main/screenshot007.jpg)
-![multiplayer](https://raw.githubusercontent.com/lekuru-static/download/main/screenshot008.jpg)
+![sanic](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot001.jpg)
+![cool](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot002.jpg)
+![nice](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot003.jpg)
+![multiplayer](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot004.jpg)
