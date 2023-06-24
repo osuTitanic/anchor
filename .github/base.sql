@@ -143,8 +143,6 @@ CREATE TABLE scores
     grade character varying(2) NOT NULL DEFAULT 'N',
     status smallint NOT NULL,
     submitted_at timestamp with time zone NOT NULL DEFAULT now(),
-    replay bytea,
-    screenshot bytea,
     processes character varying,
     failtime int
 );
