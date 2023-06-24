@@ -96,8 +96,9 @@ class Player(BanchoProtocol):
 
         self.logger  = logging.getLogger(self.address.host)
 
-        self.last_response = datetime.now()
         self.filter = PresenceFilter.All
+        self.last_response = datetime.now()
+        self.login_time = datetime.now()
 
         from .collections import Players
         from .multiplayer import Match
@@ -287,6 +288,9 @@ class Player(BanchoProtocol):
     def reload_object(self) -> DBUser:
         self.object = bancho.services.database.user_by_id(self.id)
         self.stats = self.object.stats
+
+        bancho.services.cache.update_leaderboards(self.current_stats)
+
         return self.object
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
@@ -304,6 +308,9 @@ class Player(BanchoProtocol):
         # Remove player from any match
         if self.match:
             self.handler.leave_match()
+
+        # Remove from cache
+        bancho.services.cache.remove_user(self.id)
 
         super().connectionLost(reason)
 
@@ -394,6 +401,9 @@ class Player(BanchoProtocol):
 
             # This will allow the user to play again after they got banned
             self.handler.enqueue_silence_info(-1)
+        
+        bancho.services.cache.update_leaderboards(self.current_stats)
+        bancho.services.cache.update_user(self)
 
         self.loginSuccess()
         
