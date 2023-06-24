@@ -139,7 +139,6 @@ class DBScreenshot(Base):
     user_id    = Column('user_id', ForeignKey('users.id'))
     created_at = Column('created_at', DateTime, default=datetime.now())
     hidden     = Column('hidden', Boolean, default=False)
-    content    = Column('content', LargeBinary)
 
     user = relationship('DBUser', back_populates='screenshots')
 
