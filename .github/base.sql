@@ -116,8 +116,7 @@ CREATE TABLE screenshots
     id bigserial NOT NULL PRIMARY KEY,
     user_id int NOT NULL REFERENCES users (id),
     created_at time without time zone NOT NULL DEFAULT now(),
-    hidden boolean NOT NULL DEFAULT false,
-    content bytea NOT NULL
+    hidden boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE scores
