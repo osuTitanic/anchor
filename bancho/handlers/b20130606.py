@@ -387,6 +387,9 @@ class b20130606(BaseHandler):
             ResponsePacket.PROTOCOL_VERSION,
             int(self.protocol_version).to_bytes(4, 'little')
         )
+    
+    def enqueue_monitor(self):
+        self.player.sendPacket(ResponsePacket.MONITOR)
 
     def join_channel(self, name: str) -> bool:
         if not (channel := bancho.services.channels.by_name(name)):

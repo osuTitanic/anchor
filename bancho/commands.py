@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 from bancho.common.objects import DBUser, DBScore, DBStats
 
+from .constants import Permissions, ResponsePacket
 from .objects.channel import Channel
 from .objects.player import Player
-from .constants import Permissions
 
 import traceback
 import random
@@ -144,7 +144,7 @@ def alert(ctx: Context) -> Optional[List]:
 
     if not ctx.args:
         return [f'Invalid syntax: !{ctx.trigger} <message>']
-    
+
     bancho.services.players.announce(' '.join(ctx.args))
 
     return [f'Alert was sent to {len(bancho.services.players)} players.']
@@ -280,6 +280,22 @@ def unsilence(ctx: Context) -> Optional[List]:
         instance.commit()
     
     return [f'{player.name} was unsilenced.']
+
+@command(['monitor'], Permissions.Admin, hidden=True)
+def monitor(ctx: Context) -> Optional[List]:
+    """<name>"""
+    
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name>']
+
+    name = ctx.args[0].replace('_', ' ')
+    
+    if not (player := bancho.services.players.by_name(name)):
+        return ['Player was not found.']
+    
+    player.handler.enqueue_monitor()
+    
+    return ['Player has been monitored.']
 
 # TODO: !mp ...
 # TODO: !bm ...
