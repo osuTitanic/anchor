@@ -208,6 +208,7 @@ CREATE TABLE comments
     comment character varying(80) NOT NULL,
     format character varying(10),
     mode smallint NOT NULL DEFAULT 0,
+	color character varying(8),
     CONSTRAINT comments_pkey PRIMARY KEY (id)
 );
 
