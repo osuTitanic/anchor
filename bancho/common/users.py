@@ -39,6 +39,7 @@ class UserCache:
                 'login_time': player.login_time.timestamp(),
                 'match': player.match.id if player.match else -1,
                 'version': player.client.version.string,
+                'version_hash': player.client.hash,
                 'country': player.object.country,
                 'action': player.status.action.value,
                 'text': player.status.text,
