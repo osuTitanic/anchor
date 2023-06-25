@@ -143,6 +143,7 @@ CREATE TABLE scores
     grade character varying(2) NOT NULL DEFAULT 'N',
     status smallint NOT NULL,
     submitted_at timestamp with time zone NOT NULL DEFAULT now(),
+	replay_md5 CHARACTER(32),
     processes character varying,
     failtime int
 );
