@@ -203,8 +203,11 @@ class Player(BanchoProtocol):
         return [rel.target_id for rel in self.object.relationships if rel.status == 0]
     
     @property
-    def current_stats(self) -> DBStats:
-        return self.stats[self.status.mode.value]
+    def current_stats(self) -> Optional[DBStats]:
+        for stats in self.stats:
+            if stats.mode == self.status.mode.value:
+                return stats
+        return None
     
     @property
     def is_bot(self) -> bool:
@@ -394,6 +397,8 @@ class Player(BanchoProtocol):
         self.name   = user.name
         self.stats  = user.stats
         self.pw     = user.bcrypt
+
+        self.status.mode = Mode(self.object.preferred_mode)
 
         if not self.stats:
             self.create_stats()
