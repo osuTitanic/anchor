@@ -17,6 +17,12 @@ def bot_message(message: str, target: str):
 
     channel.send_message(bancho.services.bot_player, message)
 
+def restrict(user_id: int, reason: str):
+    if not (player := bancho.services.players.by_id(user_id)):
+        return
+
+    player.restrict(reason, autoban=True)
+
 def queue_updates():
     while True:
         tasks = bancho.services.cache.redis.lrange(
