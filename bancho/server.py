@@ -31,6 +31,8 @@ class BanchoFactory(Factory):
         bancho.services.logger.info(f'- {bot_player.name}')
 
         bancho.services.logger.info('Loading jobs...')
+
+        from .jobs.queue import queue_updates
         from .jobs.pings import ping
 
         bancho.services.logger.info(f'Starting factory: {self}')
