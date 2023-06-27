@@ -514,14 +514,6 @@ class b20130606(BaseHandler):
         bancho.services.cache.update_user(self.player)
 
     def handle_change_status(self, stream: StreamIn):
-        # Check previous status
-        if self.player.status.action == ClientStatus.Submitting:
-            # Update stats on submit
-            threading.Timer(
-                function=self.player.update,
-                interval=1
-            ).start()
-
         # Update to new status
         self.player.status.action   = ClientStatus(stream.s8())
         self.player.status.text     = stream.string()
