@@ -16,22 +16,22 @@ class UserCache:
     """
 
     def __init__(self) -> None:
-        self.cache = Redis(
+        self.redis = Redis(
             config.REDIS_HOST,
             config.REDIS_PORT
         )
 
     def user_exists(self, id: int) -> bool:
-        return bool(self.cache.exists(f'users:{id}'))
+        return bool(self.redis.exists(f'users:{id}'))
 
     def remove_user(self, id: int) -> bool:
-        return bool(self.cache.delete(f'users:{id}'))
+        return bool(self.redis.delete(f'users:{id}'))
 
     def get_user(self, id: int) -> dict:
-        return self.cache.hgetall(f'users:{id}')
+        return self.redis.hgetall(f'users:{id}')
 
     def update_user(self, player: Player) -> str:
-        return self.cache.hmset(
+        return self.redis.hmset(
             name=f'users:{player.id}',
             mapping={
                 'id': player.id,
@@ -53,75 +53,75 @@ class UserCache:
 
     def update_leaderboards(self, stats: DBStats):
         if stats.pp > 0:
-            self.cache.zadd(
+            self.redis.zadd(
                 f'bancho:performance:{stats.mode}',
                 {stats.user_id: stats.pp}
             )
 
-            self.cache.zadd(
+            self.redis.zadd(
                 f'bancho:performance:{stats.mode}:{stats.user.country}',
                 {stats.user_id: stats.pp}
             )
 
-            self.cache.zadd(
+            self.redis.zadd(
                 f'bancho:rscore:{stats.mode}',
                 {stats.user_id: stats.rscore}
             )
 
     def remove_from_leaderboards(self, user_id: int, country: str):
         for mode in range(4):
-            self.cache.zrem(
+            self.redis.zrem(
                 f'bancho:performance:{mode}',
                 user_id
             )
 
-            self.cache.zrem(
+            self.redis.zrem(
                 f'bancho:performance:{mode}:{country}',
                 user_id
             )
 
-            self.cache.zrem(
+            self.redis.zrem(
                 f'bancho:rscore:{mode}',
                 user_id
             )
 
     def get_global_rank(self, user_id: int, mode: int) -> int:
-        rank = self.cache.zrevrank(
+        rank = self.redis.zrevrank(
             f'bancho:performance:{mode}',
             user_id
         )
         return (rank + 1 if rank is not None else 0)
 
     def get_country_rank(self, user_id: int, mode: int, country: str) -> int:
-        rank = self.cache.zrevrank(
+        rank = self.redis.zrevrank(
             f'bancho:performance:{mode}:{country}',
             user_id
         )
         return (rank + 1 if rank is not None else 0)
 
     def get_score_rank(self, user_id: int, mode: int) -> int:
-        rank = self.cache.zrevrank(
+        rank = self.redis.zrevrank(
             f'bancho:rscore:{mode}',
             user_id
         )
         return (rank + 1 if rank is not None else 0)
 
     def get_performance(self, user_id: int, mode: int) -> int:
-        pp = self.cache.zscore(
+        pp = self.redis.zscore(
             f'bancho:performace:{mode}',
             user_id
         )
         return pp if pp is not None else 0
 
     def get_score(self, user_id: int, mode: int) -> int:
-        pp = self.cache.zscore(
+        pp = self.redis.zscore(
             f'bancho:rscore:{mode}',
             user_id
         )
         return pp if pp is not None else 0
 
     def get_leaderboard(self, mode, offset, range=50, type='performance', country=None) -> List[Tuple[int, float]]:
-        players = self.cache.zrevrange(
+        players = self.redis.zrevrange(
             f'bancho:{type}:{mode}{f":{country}" if country else ""}',
             offset,
             range,
@@ -133,12 +133,12 @@ class UserCache:
     def get_above(self, user_id, mode, type='performance'):
         """Get information about player ranked above another player"""
 
-        position = self.cache.zrevrank(
+        position = self.redis.zrevrank(
             f'bancho:{type}:{mode}', 
             user_id
         )
         
-        score = self.cache.zscore(
+        score = self.redis.zscore(
             f'bancho:{type}:{mode}',
             user_id
         )
@@ -149,7 +149,7 @@ class UserCache:
                 'next_user': ''
             }
 
-        above = self.cache.zrevrange(
+        above = self.redis.zrevrange(
             f'bancho:{type}:{mode}',
             position-1,
             position,
