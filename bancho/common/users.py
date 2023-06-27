@@ -137,7 +137,7 @@ class UserCache:
             f'bancho:{type}:{mode}', 
             user_id
         )
-        
+
         score = self.redis.zscore(
             f'bancho:{type}:{mode}',
             user_id
@@ -155,7 +155,7 @@ class UserCache:
             position,
             withscores=True
         )[0]
-        
+
         return {
             'difference': int(above[1]) - int(score),
             'next_user': bancho.services.database.user_by_id(int(above[0].decode())).name
