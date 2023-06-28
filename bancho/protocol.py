@@ -34,10 +34,15 @@ class BanchoProtocol(Protocol):
     def __init__(self, address: IPAddress) -> None:
         self.address = address
 
+    @property
+    def is_local(self) -> bool:
+        return self.address.host.startswith('127.0.0.1')
+
     def connectionMade(self):
-        bancho.services.logger.info(
-            f'-> <{self.address.host}:{self.address.port}>'
-        )
+        if not self.is_local:
+            bancho.services.logger.info(
+                f'-> <{self.address.host}:{self.address.port}>'
+            )
 
     def connectionLost(self, reason: Failure = ...):
         if reason.type != ConnectionDone:
@@ -45,10 +50,11 @@ class BanchoProtocol(Protocol):
                 f'<{self.address.host}> -> Lost connection: "{reason.getErrorMessage()}".'
             )
             return
-        
-        bancho.services.logger.info(
-            f'<{self.address.host}> -> Connection done.'
-        )
+
+        if not self.is_local:
+            bancho.services.logger.info(
+                f'<{self.address.host}> -> Connection done.'
+            )
 
     def dataReceived(self, data: bytes):
         # For login data only
@@ -135,11 +141,12 @@ class BanchoProtocol(Protocol):
             self.busy = False
 
     def closeConnection(self, error: Optional[Exception] = None):
-        if error:
-            self.sendError()
-            bancho.services.logger.warning(f'Closing connection -> <{self.address.host}>')
-        else:
-            bancho.services.logger.info(f'Closing connection -> <{self.address.host}>')
+        if not self.is_local:
+            if error:
+                self.sendError()
+                bancho.services.logger.warning(f'Closing connection -> <{self.address.host}>')
+            else:
+                bancho.services.logger.info(f'Closing connection -> <{self.address.host}>')
 
         self.transport.loseConnection()
     
@@ -185,13 +192,14 @@ class BanchoProtocol(Protocol):
             '\n'.join([
                 'HTTP/2 200 OK',
                 'Server: anchor',
-                'Content-Type: text/html'
+                'Content-Type: text/html',
                 '',
                 WEB_RESPONSE
             ]).encode()
         )
 
-        bancho.services.logger.info(f'<{self.address.host}> -> Got web request.')
+        if not self.is_local:
+            bancho.services.logger.info(f'<{self.address.host}> -> Got web request.')
 
         self.closeConnection()
 
