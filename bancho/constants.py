@@ -744,7 +744,7 @@ WEB_RESPONSE = '''
     \,__.|.__,/
         (_)
 
-anchor: <a href="https://github.com/Lekuruu/titanic">https://github.com/Lekuruu/titanic</a>
+anchor: <a href="https://github.com/Lekuruu/anchor">https://github.com/lekuruu/anchor</a>
 </pre>
 '''
 
