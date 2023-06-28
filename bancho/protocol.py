@@ -36,7 +36,18 @@ class BanchoProtocol(Protocol):
 
     @property
     def is_local(self) -> bool:
-        return self.address.host.startswith('127.0.0.1')
+        host = self.address.host
+
+        if host.startswith('192.168') or host.startswith('127.0.0.1'):
+            return True
+
+        if host.startswith('172'):
+            octets = host.split('.')
+
+            if int(octets[1]) in range(16, 31):
+                return True
+
+        return False
 
     def connectionMade(self):
         if not self.is_local:
