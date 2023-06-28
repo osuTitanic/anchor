@@ -254,10 +254,10 @@ class b20130606(BaseHandler):
                 stream.s8(Grade.N.value)
                 stream.s8(Grade.N.value)
             else:
-                stream.s8(Grade(personal_best.grade).value if personal_best.mode == 0 else 9)
-                stream.s8(Grade(personal_best.grade).value if personal_best.mode == 1 else 9)
-                stream.s8(Grade(personal_best.grade).value if personal_best.mode == 2 else 9)
-                stream.s8(Grade(personal_best.grade).value if personal_best.mode == 3 else 9)
+                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 0 else 9)
+                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 1 else 9)
+                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 2 else 9)
+                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 3 else 9)
 
             stream.string(beatmap.md5)
 
