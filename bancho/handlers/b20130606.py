@@ -161,16 +161,17 @@ class b20130606(BaseHandler):
             stream.get()
         )
 
-    def enqueue_stats(self, player):
+    def enqueue_stats(self, player, force=False):
         if not player:
             return
 
-        if self.player.filter == PresenceFilter.NoPlayers:
-            return
-
-        if self.player.filter == PresenceFilter.Friends:
-            if player.id not in self.player.friends:
+        if not force:
+            if self.player.filter == PresenceFilter.NoPlayers:
                 return
+
+            if self.player.filter == PresenceFilter.Friends:
+                if player.id not in self.player.friends:
+                    return
 
         stream = StreamOut()
 

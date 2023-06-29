@@ -471,7 +471,10 @@ class Player(BanchoProtocol):
         # Reload database object
         self.reload_object()
         # Enqueue to players
-        bancho.services.players.enqueue_stats(self)
+        bancho.services.players.enqueue_stats(
+            player=self,
+            force=True
+        )
 
     def create_stats(self):
         instance = bancho.services.database.session

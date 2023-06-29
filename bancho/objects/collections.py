@@ -101,10 +101,13 @@ class Players(List[Player]):
         for p in self:
             p.handler.enqueue_announcement(message)
 
-    def enqueue_stats(self, player: Player):
+    def enqueue_stats(self, player: Player, force: bool = False):
         if player.restricted:
             return
-        
+
+        if force:
+            player.handler.enqueue_stats(player, force=True)
+
         for p in self:
             p.handler.enqueue_stats(player)
 
