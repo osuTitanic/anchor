@@ -241,24 +241,24 @@ class b20130606(BaseHandler):
         stream.s32(len(beatmaps))
 
         for index, beatmap in beatmaps:
-            personal_best = bancho.services.database.personal_best(beatmap.id, self.player.id)
-
             stream.s16(-1) # NOTE: We could use the index here, but the client should handle this automatically
             stream.s32(beatmap.id)
             stream.s32(beatmap.set_id)
             stream.s32(beatmap.set_id) # TODO: Thread ID
             stream.s8(Ranked.from_status(beatmap.status).value)
 
-            if not personal_best:
-                stream.s8(Grade.N.value)
-                stream.s8(Grade.N.value)
-                stream.s8(Grade.N.value)
-                stream.s8(Grade.N.value)
-            else:
-                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 0 else 9)
-                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 1 else 9)
-                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 2 else 9)
-                stream.s8(Grade[personal_best.grade].value if personal_best.mode == 3 else 9)
+            for mode in range(4):
+                personal_best = bancho.services.database.personal_best(
+                    beatmap.id,
+                    self.player.id,
+                    mode
+                )
+
+                if not personal_best:
+                    stream.s8(Grade.N.value)
+                    continue
+
+                stream.s8(Grade[personal_best.grade].value)
 
             stream.string(beatmap.md5)
 

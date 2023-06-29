@@ -68,10 +68,11 @@ class Postgres:
                 .filter(DBBeatmap.md5 == md5) \
                 .first()
     
-    def personal_best(self, beatmap_id: int, user_id: int) -> Optional[DBScore]:
+    def personal_best(self, beatmap_id: int, user_id: int, mode: int) -> Optional[DBScore]:
         return self.session.query(DBScore) \
                 .filter(DBScore.beatmap_id == beatmap_id) \
                 .filter(DBScore.user_id == user_id) \
+                .filter(DBScore.mode == mode) \
                 .filter(DBScore.status == 3) \
                 .first()
     
