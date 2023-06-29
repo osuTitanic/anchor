@@ -129,34 +129,3 @@ class UserCache:
         )
 
         return [(int(id), score) for id, score in players]
-
-    def get_above(self, user_id, mode, type='performance'):
-        """Get information about player ranked above another player"""
-
-        position = self.redis.zrevrank(
-            f'bancho:{type}:{mode}', 
-            user_id
-        )
-
-        score = self.redis.zscore(
-            f'bancho:{type}:{mode}',
-            user_id
-        )
-
-        if position is None or position <= 0:
-            return {
-                'difference': 0,
-                'next_user': ''
-            }
-
-        above = self.redis.zrevrange(
-            f'bancho:{type}:{mode}',
-            position-1,
-            position,
-            withscores=True
-        )[0]
-
-        return {
-            'difference': int(above[1]) - int(score),
-            'next_user': bancho.services.database.user_by_id(int(above[0].decode())).name
-        }
