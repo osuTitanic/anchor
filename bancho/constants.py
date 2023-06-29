@@ -626,27 +626,23 @@ class Mod(Enum):
         return [mod for mod in Mod if cls.check_active(values, mod.value)]
 
 class SubmissionStatus(Enum):
-    Unknown = 0
-    NotSubmitted = 1
-    Pending = 2
-    EditableCutoff = 3
-    Ranked = 4
-    Approved = 5
-
-    @property
-    def beatmap_info(self) -> int:
-        return self.value - 3
+    NotSubmitted   = -1
+    Pending        = 0
+    Unknown        = 1
+    EditableCutoff = 2
+    Approved       = 3
+    Ranked         = 4
 
     @classmethod
-    def from_status(cls, value: int) -> Enum:
+    def from_db(cls, value: int):
         return {
-            -2: SubmissionStatus.Pending,         # Graveyard
-            -1: SubmissionStatus.EditableCutoff,  # WIP
-            0:  SubmissionStatus.Pending,         # Pending
-            1:  SubmissionStatus.Ranked,          # Ranked
-            2:  SubmissionStatus.Approved,        # Approved
-            3:  SubmissionStatus.Ranked,          # Qualified
-            4:  SubmissionStatus.Approved         # Loved
+            -2: SubmissionStatus.Pending,        # Graveyard
+            -1: SubmissionStatus.EditableCutoff, # WIP
+            0:  SubmissionStatus.Pending,        # Pending
+            1:  SubmissionStatus.Ranked,         # Ranked
+            2:  SubmissionStatus.Approved,       # Approved
+            3:  SubmissionStatus.Ranked,         # Qualified
+            4:  SubmissionStatus.Approved        # Loved
         }[value]
     
 class Ranked(Enum):
@@ -657,11 +653,15 @@ class Ranked(Enum):
 
     @classmethod
     def from_status(cls, status: int):
-        if status ==  1: return Ranked.NotSubmitted
-        if status ==  2: return Ranked.Pending
-        if status ==  4: return Ranked.Ranked
-        if status ==  5: return Ranked.Approved
-        return Ranked.Pending
+        return {
+            -2: Ranked.Pending,
+            -1: Ranked.Pending,
+            0: Ranked.Pending,
+            1: Ranked.Ranked,
+            2: Ranked.Approved,
+            3: Ranked.Approved,
+            4: Ranked.Approved
+        }[status]
 
 class Grade(Enum):
     XH = 0
