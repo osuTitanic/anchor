@@ -1,77 +1,27 @@
 # Anchor
 
 Anchor is a bancho server designed for older osu! clients.
-My goal was to gain deeper insights into the inner workings of bancho and how it changed over the years.
+It currently supports clients from b1807 to b2013716 and I will try to expand support in the future.
 
-It currently supports clients from b1807 to b2013606 and I will try to expand support in the future.
+Please view [this repository](https://github.com/Lekuruu/titanic) for setup instructions!
 
-If you have any questions, feel free to contact me on discord: `lekuru`
+If you have any questions, feel free to contact me: [@Lekuru/Levi](https://github.com/lekuruu)
 
-## Quick start
+## What works?
 
-To get started you will need to install python and set up a postgres database.
+- [x] Friends
+- [x] Spectating
+- [x] Multiplayer
+- [x] Announcements
+- [x] Chat messages
+- [x] Basic commands
+- [x] User stats/presence
+- [x] Support for multiple clients at once
 
-Apply this [migration file](https://github.com/lekuruu/anchor/raw/main/.github/base.sql) to your postgres instance.
+What is left to do?
 
-Clone this repository onto your machine:
-```shell
-git clone https://github.com/Lekuruu/anchor.git
-```
-
-Install the requirements for python:
-```shell
-python -m pip install -r requirements.txt
-```
-
-Rename the `.example_env` to `.env` and edit it.
-
-Configure your clients inside `clients.py`.
-
-Start the server:
-```shell
-python main.py
-```
-
-and hope that nothing goes wrong 😅
-
-## Creating a user
-
-To create a user you will need to edit the database manually, because the old clients don't support registrations.
-
-Inside the `users` table, you will need to create a new row, with these attributes:
-
-- name
-- safe_name
-- email
-- pw (bcrypt)
-- activated (true)
-
-The password should be a bcrypt hash of a md5 hash in hex form :D
-
-## Contributing
-
-If you want to clean up the mess that I made, then feel free to make a pull request.
-
-## Patching the client
-
-To actually use the client, you will need to patch it, and I would recommend using [dnspy](https://github.com/dnSpy/dnSpy) for that.
-
-Also, some older clients may be obfuscated.
-As far as I know, [b2013606.1](https://osekai.net/snapshots/?version=179) is the latest non-obfuscated version that will work with this server.
-
-You will need to find a line inside `osu.Online.BanchoClient` that looks something like this:
-
-![unpatched](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/unpatched.png)
-
-and edit the ip address to match your setup:
-
-![patched](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/patched.png)
-
-Remember to update the client hash inside your config!
-
-## Screenshots
-
-![sanic](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot001.jpg)
-![cool](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot002.jpg)
-![nice](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot003.jpg)
-![multiplayer](https://raw.githubusercontent.com/lekuruu/anchor/main/.github/images/screenshot004.jpg)
+- [ ] Support for b1700 and below
+- [ ] Login verification/email
+- [ ] Tourney clients
+- [ ] More commands
+- [ ] (IRC Server)
