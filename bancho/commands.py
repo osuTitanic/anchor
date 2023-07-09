@@ -135,8 +135,35 @@ def roll(ctx: Context) -> Optional[List]:
 @command(['report'], hidden=True)
 def report(ctx: Context) -> Optional[List]:
     """<username> <reason>"""
-    # TODO
-    pass
+    if len(ctx.args) < 2:
+        return [f'Invalid syntax: !{ctx.trigger} <username> <reason>']
+
+    username = ctx.args[0].replace('_', ' ')
+
+    if not (player := bancho.services.database.user_by_name(username)):
+        return ['Could not find user.']
+
+    reason = ' '.join(ctx.args[1:])
+    message = f'{ctx.player.name} reported {player.name} for: "{reason}".'
+
+    if (player := bancho.services.players.by_id(player.id)):
+        player.handler.enqueue_monitor()
+
+    bancho.services.database.submit_log(
+        message,
+        'info',
+        'reports'
+    )
+
+    channel = bancho.services.channels.by_name('#admin')
+
+    if channel:
+        channel.send_message(
+            bancho.services.bot_player,
+            message
+        )
+
+    return ['Player was reported.']
 
 @command(['alert', 'announce', 'broadcast'], Permissions.Admin, hidden=True)
 def alert(ctx: Context) -> Optional[List]:
