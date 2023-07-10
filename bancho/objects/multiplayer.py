@@ -236,10 +236,13 @@ class Match:
         return all(mod in self.mods for mod in mods)
 
     def remove_invalid_mods(self):
-        # There is a bug, where NC and DT are enabled at the same time
+        # NOTE: There is a bug, where NC/DT and HD/FadeIn are enabled at the same time
+
         if self.check_mods([Mod.DoubleTime, Mod.Nightcore]):
-            # It's most likely nightcore, that just got added
             self.mods.remove(Mod.DoubleTime)
+
+        if self.check_mods([Mod.Hidden, Mod.FadeIn]):
+            self.mods.remove(Mod.Hidden)
 
         if self.check_mods([Mod.Easy, Mod.HardRock]):
             self.mods.remove(Mod.HardRock)
@@ -253,10 +256,10 @@ class Match:
         if self.check_mods([Mod.NoFail, Mod.SuddenDeath]): 
             self.mods.remove(Mod.SuddenDeath)
 
-        if self.check_mods([Mod.NoFail and Mod.Perfect]): 
+        if self.check_mods([Mod.NoFail, Mod.Perfect]):
             self.mods.remove(Mod.Perfect)
 
-        if self.check_mods([Mod.Relax and Mod.Relax2]): 
+        if self.check_mods([Mod.Relax, Mod.Relax2]):
             self.mods.remove(Mod.Relax2)
 
     def change_settings(self, new_match):
