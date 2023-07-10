@@ -241,6 +241,8 @@ class Match:
             # It's most likely nightcore, that just got added
             self.mods.remove(Mod.DoubleTime)
 
+        # TODO: The same applies to Hidden/Fadein and the Key mods on mania
+
         if self.check_mods([Mod.Easy, Mod.HardRock]):
             self.mods.remove(Mod.HardRock)
 
