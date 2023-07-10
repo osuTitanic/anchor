@@ -22,7 +22,9 @@ import bancho
 class Postgres:
     def __init__(self, username: str, password: str, host: str, port: int) -> None:
         self.engine = create_engine(
-            f'postgresql://{username}:{password}@{host}:{port}/{username}', 
+            f'postgresql://{username}:{password}@{host}:{port}/{username}',
+            max_overflow=30,
+            pool_size=15,
             echo=False
         )
 
