@@ -23,6 +23,9 @@ def restrict(user_id: int, reason: str = ''):
 
     player.restrict(reason, autoban=True)
 
+def announcement(message: str):
+    bancho.services.players.announce(message)
+
 def queue_updates():
     while True:
         tasks = bancho.services.cache.redis.lrange(
@@ -33,7 +36,6 @@ def queue_updates():
         for data in tasks:
             try:
                 task = json.loads(data.decode())
-
                 func = eval(task['type'])
 
                 Thread(
