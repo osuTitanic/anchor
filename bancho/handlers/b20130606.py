@@ -1162,22 +1162,29 @@ class b20130606(BaseHandler):
         mods = Mod.list(stream.u32())
 
         if self.player.match.freemod:
-            # TODO: What is "FreeModAllowed"?
-
             if self.player is self.player.match.host:
                 self.player.match.mods = [mod for mod in mods if mod in SPEED_MODS and mod != Mod.FreeModAllowed]
 
             slot = self.player.match.get_slot(self.player)
             assert slot is not None
 
-            slot.mods = [mod for mod in mods if mod not in SPEED_MODS and mod != Mod.FreeModAllowed]
+            slot.mods = [
+                mod for mod in mods if
+                mod not in SPEED_MODS and
+                mod != Mod.FreeModAllowed and
+                mod != Mod.keyMod
+            ]
 
             self.player.logger.info(f'{self.player.name} changed their mods to: {"".join([mod.short for mod in mods])}')
         else:
             if self.player is not self.player.match.host:
                 return
             
-            self.player.match.mods = [mod for mod in mods if mod != Mod.FreeModAllowed]
+            self.player.match.mods = [
+                mod for mod in mods if
+                mod != Mod.FreeModAllowed and
+                mod != Mod.keyMod
+            ]
 
             self.player.logger.info(f'Changed mods to: {"".join([mod.short for mod in mods])}')
 
