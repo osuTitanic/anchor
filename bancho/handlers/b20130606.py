@@ -2,7 +2,7 @@
 from typing import List, Tuple, Optional
 
 from bancho.streams             import StreamIn, StreamOut
-from bancho.common.objects      import DBBeatmap
+from bancho.common.objects      import DBBeatmap, DBStats
 from bancho.objects.channel     import Channel
 from bancho.constants           import (
     SPEED_MODS,
@@ -172,6 +172,24 @@ class b20130606(BaseHandler):
             if self.player.filter == PresenceFilter.Friends:
                 if player.id not in self.player.friends:
                     return
+
+        cached_rank = bancho.services.cache.get_global_rank(
+            player.id,
+            player.current_stats.mode
+        )
+
+        if cached_rank != player.current_stats.rank:
+            # Update rank in database
+            instance = bancho.services.database.session
+            instance.query(DBStats) \
+                    .filter(DBStats.mode == player.current_stats.mode) \
+                    .filter(DBStats.user_id == player.id) \
+                    .update({
+                        "rank": cached_rank
+                    })
+            instance.commit()
+
+            player.current_stats.rank = cached_rank
 
         stream = StreamOut()
 
