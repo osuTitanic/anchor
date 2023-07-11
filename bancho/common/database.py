@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy     import create_engine
 
 from typing import Optional, Generator, List
+from threading import Timer
 
 from .objects import (
     DBRelationship,
@@ -22,7 +23,9 @@ import bancho
 class Postgres:
     def __init__(self, username: str, password: str, host: str, port: int) -> None:
         self.engine = create_engine(
-            f'postgresql://{username}:{password}@{host}:{port}/{username}', 
+            f'postgresql://{username}:{password}@{host}:{port}/{username}',
+            max_overflow=30,
+            pool_size=15,
             echo=False
         )
 
@@ -46,7 +49,10 @@ class Postgres:
             bancho.services.logger.critical(f'Transaction failed: "{e}". Performing rollback...')
             session.rollback()
         finally:
-            session.close()
+            Timer(
+                interval=10,
+                function=session.close
+            ).start()
 
     def user_by_name(self, name: str) -> Optional[DBUser]:
         return self.session.query(DBUser) \
