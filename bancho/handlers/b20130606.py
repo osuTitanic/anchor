@@ -173,26 +173,7 @@ class b20130606(BaseHandler):
                 if player.id not in self.player.friends:
                     return
 
-        cached_rank = bancho.services.cache.get_global_rank(
-            player.id,
-            player.current_stats.mode
-        )
-
-        if cached_rank != player.current_stats.rank:
-            # Update rank in database
-            instance = bancho.services.database.session
-            instance.query(DBStats) \
-                    .filter(DBStats.mode == player.current_stats.mode) \
-                    .filter(DBStats.user_id == player.id) \
-                    .update({
-                        "rank": cached_rank
-                    })
-            instance.commit()
-
-            player.current_stats.rank = cached_rank
-
         stream = StreamOut()
-
         stream.s32(player.id)
 
         # Status
@@ -548,6 +529,7 @@ class b20130606(BaseHandler):
         bancho.services.cache.update_user(self.player)
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
+        self.player.update_rank()
 
         # Enqueue to other players
         # (This needs to be done for older clients)
@@ -663,6 +645,7 @@ class b20130606(BaseHandler):
         update_avaliable = stream.s32() == 1
 
     def handle_request_status(self, stream: StreamIn):
+        self.player.update_rank()
         self.enqueue_stats(self.player)
 
     def handle_join_lobby(self, stream: StreamIn):
@@ -743,6 +726,7 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            player.update_rank()
             self.enqueue_stats(player)
 
     def handle_presence_request(self, stream: StreamIn):
@@ -752,6 +736,7 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            player.update_rank()
             self.enqueue_presence(player)
 
     def handle_presence_request_all(self, stream: StreamIn):
@@ -837,6 +822,9 @@ class b20130606(BaseHandler):
                 self.enqueue_announcement(MANIA_NOT_SUPPORTED)
                 return
 
+        if (self.player.spectating) or (self.player in target.spectators):
+            self.handle_stop_spectating(None)
+
         self.player.spectating = target
 
         # Join their channel
@@ -855,7 +843,7 @@ class b20130606(BaseHandler):
         if target not in target.spectator_channel.users:
             target.handler.join_channel(f'#spec_{target.id}')
 
-    def handle_stop_spectating(self, stream: StreamIn):
+    def handle_stop_spectating(self, stream: Optional[StreamIn]):
         if self.player.restricted:
             return
 

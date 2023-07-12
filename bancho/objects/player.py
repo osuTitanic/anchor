@@ -437,6 +437,7 @@ class Player(BanchoProtocol):
         self.handler.enqueue_privileges()
 
         # Presence and stats        
+        self.update_rank()
         self.handler.enqueue_presence(self)
         self.handler.enqueue_stats(self)
 
@@ -475,6 +476,25 @@ class Player(BanchoProtocol):
             player=self,
             force=True
         )
+
+    def update_rank(self):
+        cached_rank = bancho.services.cache.get_global_rank(
+            self.id,
+            self.current_stats.mode
+        )
+
+        if cached_rank != self.current_stats.rank:
+            # Update rank in database
+            instance = bancho.services.database.session
+            instance.query(DBStats) \
+                    .filter(DBStats.mode == self.current_stats.mode) \
+                    .filter(DBStats.user_id == self.id) \
+                    .update({
+                        "rank": cached_rank
+                    })
+            instance.commit()
+
+            self.current_stats.rank = cached_rank
 
     def create_stats(self):
         instance = bancho.services.database.session

@@ -105,6 +105,8 @@ class Players(List[Player]):
         if player.restricted:
             return
 
+        player.update_rank()
+
         if force:
             player.handler.enqueue_stats(player, force=True)
 

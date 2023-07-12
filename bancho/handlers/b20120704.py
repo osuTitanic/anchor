@@ -23,26 +23,7 @@ class b20120704(b20120725):
                 if player.id not in self.player.friends:
                     return
 
-        cached_rank = bancho.services.cache.get_global_rank(
-            player.id,
-            player.current_stats.mode
-        )
-
-        if cached_rank != player.current_stats.rank:
-            # Update rank in database
-            instance = bancho.services.database.session
-            instance.query(DBStats) \
-                    .filter(DBStats.mode == player.current_stats.mode) \
-                    .filter(DBStats.user_id == player.id) \
-                    .update({
-                        "rank": cached_rank
-                    })
-            instance.commit()
-
-            player.current_stats.rank = cached_rank
-
         stream = StreamOut()
-
         stream.s32(player.id)
 
         # Status
