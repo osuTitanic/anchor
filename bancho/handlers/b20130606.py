@@ -822,6 +822,9 @@ class b20130606(BaseHandler):
                 self.enqueue_announcement(MANIA_NOT_SUPPORTED)
                 return
 
+        if (self.player.spectating) or (self.player in target.spectators):
+            self.handle_stop_spectating(None)
+
         self.player.spectating = target
 
         # Join their channel
@@ -840,7 +843,7 @@ class b20130606(BaseHandler):
         if target not in target.spectator_channel.users:
             target.handler.join_channel(f'#spec_{target.id}')
 
-    def handle_stop_spectating(self, stream: StreamIn):
+    def handle_stop_spectating(self, stream: Optional[StreamIn]):
         if self.player.restricted:
             return
 
