@@ -27,6 +27,8 @@ class b20121119(b20121223):
             else player.client.utc_offset
         )
 
+        player.update_rank()
+
         stream = StreamOut()
 
         stream.s32(player.id)
