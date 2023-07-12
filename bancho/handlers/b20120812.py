@@ -36,8 +36,6 @@ class b20120812(b20121030):
                 if player.id not in self.player.friends:
                     return
 
-        player.update_rank()
-
         stream = StreamOut()
         stream.s32(player.id)
 
@@ -161,6 +159,7 @@ class b20120812(b20121030):
         bancho.services.cache.update_user(self.player)
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
+        self.player.update_rank()
 
         # Enqueue to other players
         # (This needs to be done for older clients)

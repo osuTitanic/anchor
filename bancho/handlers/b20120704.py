@@ -23,8 +23,6 @@ class b20120704(b20120725):
                 if player.id not in self.player.friends:
                     return
 
-        player.update_rank()
-
         stream = StreamOut()
         stream.s32(player.id)
 

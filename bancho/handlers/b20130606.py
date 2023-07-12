@@ -173,8 +173,6 @@ class b20130606(BaseHandler):
                 if player.id not in self.player.friends:
                     return
 
-        player.update_rank()
-
         stream = StreamOut()
         stream.s32(player.id)
 
@@ -531,6 +529,7 @@ class b20130606(BaseHandler):
         bancho.services.cache.update_user(self.player)
 
         self.player.logger.debug(f'Changed status: {self.player.status}')
+        self.player.update_rank()
 
         # Enqueue to other players
         # (This needs to be done for older clients)
@@ -646,6 +645,7 @@ class b20130606(BaseHandler):
         update_avaliable = stream.s32() == 1
 
     def handle_request_status(self, stream: StreamIn):
+        self.player.update_rank()
         self.enqueue_stats(self.player)
 
     def handle_join_lobby(self, stream: StreamIn):
@@ -726,6 +726,7 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            player.update_rank()
             self.enqueue_stats(player)
 
     def handle_presence_request(self, stream: StreamIn):
