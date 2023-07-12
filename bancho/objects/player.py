@@ -476,6 +476,25 @@ class Player(BanchoProtocol):
             force=True
         )
 
+    def update_rank(self):
+        cached_rank = bancho.services.cache.get_global_rank(
+            self.id,
+            self.current_stats.mode
+        )
+
+        if cached_rank != self.current_stats.rank:
+            # Update rank in database
+            instance = bancho.services.database.session
+            instance.query(DBStats) \
+                    .filter(DBStats.mode == self.current_stats.mode) \
+                    .filter(DBStats.user_id == self.id) \
+                    .update({
+                        "rank": cached_rank
+                    })
+            instance.commit()
+
+            self.current_stats.rank = cached_rank
+
     def create_stats(self):
         instance = bancho.services.database.session
 
