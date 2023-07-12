@@ -437,6 +437,7 @@ class Player(BanchoProtocol):
         self.handler.enqueue_privileges()
 
         # Presence and stats        
+        self.update_rank()
         self.handler.enqueue_presence(self)
         self.handler.enqueue_stats(self)
 

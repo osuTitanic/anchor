@@ -145,8 +145,6 @@ class b20130606(BaseHandler):
             else player.client.utc_offset
         )
 
-        player.update_rank()
-
         stream = StreamOut()
 
         stream.s32(player.id)
@@ -737,6 +735,7 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            player.update_rank()
             self.enqueue_presence(player)
 
     def handle_presence_request_all(self, stream: StreamIn):

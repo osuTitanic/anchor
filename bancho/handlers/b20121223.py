@@ -10,6 +10,7 @@ class b20121223(b20130329):
     def enqueue_players(self, players):
         def enqueue(players):
             for player in players:
+                player.update_rank()
                 self.enqueue_presence(player)
 
         Thread(
@@ -19,5 +20,6 @@ class b20121223(b20130329):
         ).start()
 
     def enqueue_player(self, player):
+        player.update_rank()
         self.enqueue_presence(player)
         self.enqueue_stats(player)
