@@ -101,7 +101,7 @@ class BanchoProtocol(Protocol):
                     client
                 )
 
-                # We now expect packets from the client
+                # We now expect bancho packets from the client
                 self.dataReceived = self.packetDataReceived
 
         except Exception as e:
@@ -132,7 +132,8 @@ class BanchoProtocol(Protocol):
                     packet = stream.u16()
                     compression = stream.bool() # GZip compression is only used in very old clients
                     payload = stream.read(stream.u32())
-                except OverflowError:
+                except OverflowError as e:
+                    bancho.services.logger.error(f"Error while parsing packet: {e}")
                     break
 
                 self.packetReceived(
@@ -164,7 +165,7 @@ class BanchoProtocol(Protocol):
     def enqueue(self, data: bytes):
         try:
             self.transport.write(data)
-        except AttributeError as e:
+        except Exception as e:
             bancho.services.logger.error(
                 f'Could not write to transport layer: {e}'
             )
@@ -210,7 +211,9 @@ class BanchoProtocol(Protocol):
         )
 
         if not self.is_local:
-            bancho.services.logger.info(f'<{self.address.host}> -> Got web request.')
+            bancho.services.logger.info(
+                f'<{self.address.host}> -> Got web request.'
+            )
 
         self.closeConnection()
 

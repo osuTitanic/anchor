@@ -14,7 +14,6 @@ class BanchoFactory(Factory):
     def startFactory(self):
         bancho.services.logger.info('Loading channels...')
 
-        # Loading channels
         for channel in bancho.services.database.channels():
             bancho.services.logger.info(f'- {channel.name}')
             bancho.services.channels.append(
@@ -23,7 +22,6 @@ class BanchoFactory(Factory):
 
         bancho.services.logger.info('Loading bot...')
 
-        # Load bot player
         bancho.services.players.append(
             bot_player := Player.bot_player()
         )
