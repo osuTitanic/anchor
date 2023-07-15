@@ -68,8 +68,7 @@ class BanchoProtocol(Protocol):
             )
 
     def dataReceived(self, data: bytes):
-        # For login data only
-        # If client logged in, we will switch to _dataReceived
+        """For login data only. If client logged in, we will switch to _dataReceived"""
 
         if self.busy:
             self.buffer += data
@@ -114,13 +113,12 @@ class BanchoProtocol(Protocol):
             self.busy = False
 
     def packetDataReceived(self, data: bytes):
-        # For bancho packets only
-        # will be used after login
-        
+        """For bancho packets only and will be used after login"""
+
         if self.busy:
             self.buffer += data
             return
-        
+
         try:
             self.busy = True
             self.buffer += data
@@ -132,8 +130,8 @@ class BanchoProtocol(Protocol):
                     packet = stream.u16()
                     compression = stream.bool() # GZip compression is only used in very old clients
                     payload = stream.read(stream.u32())
-                except OverflowError as e:
-                    bancho.services.logger.error(f"Error while parsing packet: {e}")
+                except OverflowError:
+                    # Wait for next buffer
                     break
 
                 self.packetReceived(
