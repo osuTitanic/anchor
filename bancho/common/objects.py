@@ -318,6 +318,16 @@ class DBPlayHistory(Base):
 
     user = relationship('DBUser', back_populates='play_history')
 
+class DBReplayHistory(Base):
+    __tablename__ = "profile_replay_history"
+
+    user_id      = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+    year         = Column('year', Integer, primary_key=True)
+    month        = Column('month', Integer, primary_key=True)
+    replay_views = Column('replay_views', Integer, default=0)
+
+    user = relationship('DBUser', back_populates='replay_history')
+
 class DBUser(Base):
     __tablename__ = "users"
 
@@ -339,16 +349,17 @@ class DBUser(Base):
     userpage_content = Column('userpage_content', String, nullable=True)
     userpage_title   = Column('userpage_title',   String, nullable=True)
 
-    relationships = relationship('DBRelationship', back_populates='user')
-    rank_history  = relationship('DBRankHistory', back_populates='user')
-    play_history  = relationship('DBPlayHistory', back_populates='user')
-    achievements  = relationship('DBAchievement', back_populates='user')
-    screenshots   = relationship('DBScreenshot', back_populates='user')
-    favourites    = relationship('DBFavourite', back_populates='user')
-    activity      = relationship('DBActivity', back_populates='user')
-    ratings       = relationship('DBRating', back_populates='user')
-    scores        = relationship('DBScore', back_populates='user')
-    stats         = relationship('DBStats', back_populates='user')
-    badges        = relationship('DBBadge', back_populates='user')
-    names         = relationship('DBName', back_populates='user')
-    plays         = relationship('DBPlay', back_populates='user')
+    replay_history = relationship('DBReplayHistory', back_populates='user')
+    relationships  = relationship('DBRelationship', back_populates='user')
+    rank_history   = relationship('DBRankHistory', back_populates='user')
+    play_history   = relationship('DBPlayHistory', back_populates='user')
+    achievements   = relationship('DBAchievement', back_populates='user')
+    screenshots    = relationship('DBScreenshot', back_populates='user')
+    favourites     = relationship('DBFavourite', back_populates='user')
+    activity       = relationship('DBActivity', back_populates='user')
+    ratings        = relationship('DBRating', back_populates='user')
+    scores         = relationship('DBScore', back_populates='user')
+    stats          = relationship('DBStats', back_populates='user')
+    badges         = relationship('DBBadge', back_populates='user')
+    names          = relationship('DBName', back_populates='user')
+    plays          = relationship('DBPlay', back_populates='user')
