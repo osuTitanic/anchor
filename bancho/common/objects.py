@@ -332,7 +332,7 @@ class DBPlayHistory(Base):
     __tablename__ = "profile_play_history"
 
     user_id = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
-    mode    = Column('mode', SmallInteger)
+    mode    = Column('mode', SmallInteger, primary_key=True)
     year    = Column('year', Integer, primary_key=True)
     month   = Column('month', Integer, primary_key=True)
     plays   = Column('plays', Integer, default=0)
@@ -343,7 +343,7 @@ class DBReplayHistory(Base):
     __tablename__ = "profile_replay_history"
 
     user_id      = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
-    mode         = Column('mode', SmallInteger)
+    mode         = Column('mode', SmallInteger, primary_key=True)
     year         = Column('year', Integer, primary_key=True)
     month        = Column('month', Integer, primary_key=True)
     replay_views = Column('replay_views', Integer, default=0)
