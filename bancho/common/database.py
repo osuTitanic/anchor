@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy     import create_engine
 
 from typing import Optional, Generator, List
+from datetime import datetime
 from threading import Timer
 
 from .objects import (
@@ -140,4 +141,13 @@ class Postgres:
                 message
             )
         )
+        instance.commit()
+
+    def update_latest_activity(self, user_id: int):
+        instance = self.session
+        instance.query(DBUser) \
+                .filter(DBUser.id == user_id) \
+                .update({
+                    'latest_activity': datetime.now()
+                })
         instance.commit()
