@@ -469,6 +469,8 @@ class Player(BanchoProtocol):
 
         self.handler.enqueue_channel_info_end()
 
+        bancho.services.database.update_latest_activity(self.id)
+
     def update(self):
         # Reload database object
         self.reload_object()

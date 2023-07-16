@@ -531,6 +531,8 @@ class b20130606(BaseHandler):
         self.player.logger.debug(f'Changed status: {self.player.status}')
         self.player.update_rank()
 
+        bancho.services.database.update_latest_activity(self.player.id)
+
         # Enqueue to other players
         # (This needs to be done for older clients)
         bancho.services.players.enqueue_stats(self.player)
@@ -563,6 +565,7 @@ class b20130606(BaseHandler):
             return
         
         bancho.services.database.submit_message(self.player.name, target, message)
+        bancho.services.database.update_latest_activity(self.player.id)
 
         from bancho import commands
 
@@ -618,6 +621,7 @@ class b20130606(BaseHandler):
         self.player.logger.info(f'[PM -> {player.name}]: {message}')
 
         bancho.services.database.submit_message(self.player.name, target, message)
+        bancho.services.database.update_latest_activity(self.player.id)
 
         from bancho import commands
 
@@ -643,6 +647,7 @@ class b20130606(BaseHandler):
 
     def handle_exit(self, stream: StreamIn):
         update_avaliable = stream.s32() == 1
+        bancho.services.database.update_latest_activity(self.player.id)
 
     def handle_request_status(self, stream: StreamIn):
         self.player.update_rank()

@@ -161,6 +161,8 @@ class b20120812(b20121030):
         self.player.logger.debug(f'Changed status: {self.player.status}')
         self.player.update_rank()
 
+        bancho.services.database.update_latest_activity(self.player.id)
+
         # Enqueue to other players
         # (This needs to be done for older clients)
         bancho.services.players.enqueue_stats(self.player)
