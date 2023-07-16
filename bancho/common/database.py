@@ -1,5 +1,6 @@
 
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
+from sqlalchemy.exc import ResourceClosedError
 from sqlalchemy     import create_engine
 
 from typing import Optional, Generator, List
@@ -20,10 +21,12 @@ from .objects import (
 )
 
 import traceback
+import logging
 import bancho
 
 class Postgres:
     def __init__(self, username: str, password: str, host: str, port: int) -> None:
+        self.logger = logging.getLogger('postgres')
         self.engine = create_engine(
             f'postgresql://{username}:{password}@{host}:{port}/{username}',
             max_overflow=30,
@@ -48,13 +51,24 @@ class Postgres:
             yield session
         except Exception as e:
             traceback.print_exc()
-            bancho.services.logger.critical(f'Transaction failed: "{e}". Performing rollback...')
+            self.logger.critical(f'Transaction failed: "{e}". Performing rollback...')
             session.rollback()
         finally:
             Timer(
-                interval=10,
-                function=session.close
+                interval=15,
+                function=self.close_session,
+                args=[session]
             ).start()
+
+    def close_session(self, session: Session) -> None:
+        try:
+            session.close()
+        except AttributeError:
+            pass
+        except ResourceClosedError:
+            pass
+        except Exception as exc:
+            self.logger.error(f'Failed to close session: {exc}')
 
     def user_by_name(self, name: str) -> Optional[DBUser]:
         return self.session.query(DBUser) \
