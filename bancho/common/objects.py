@@ -279,6 +279,7 @@ class DBActivity(Base):
     id             = Column('id', Integer, primary_key=True, autoincrement=True)
     user_id        = Column('user_id', Integer, ForeignKey('users.id'))
     time           = Column('time', DateTime, default=datetime.now())
+    mode           = Column('mode', SmallInteger)
     activity_text  = Column('activity_text', String)
     activity_args  = Column('activity_args', String, nullable=True)
     activity_links = Column('activity_links', String, nullable=True)
@@ -300,6 +301,7 @@ class DBRankHistory(Base):
 
     user_id      = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
     time         = Column('time', DateTime, default=datetime.now(), primary_key=True)
+    mode         = Column('mode', SmallInteger)
     rscore       = Column('rscore', BigInteger)
     pp           = Column('pp', Integer)
     global_rank  = Column('global_rank', Integer)
@@ -312,6 +314,7 @@ class DBPlayHistory(Base):
     __tablename__ = "profile_play_history"
 
     user_id = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+    mode    = Column('mode', SmallInteger)
     year    = Column('year', Integer, primary_key=True)
     month   = Column('month', Integer, primary_key=True)
     plays   = Column('plays', Integer, default=0)
@@ -322,6 +325,7 @@ class DBReplayHistory(Base):
     __tablename__ = "profile_replay_history"
 
     user_id      = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+    mode         = Column('mode', SmallInteger)
     year         = Column('year', Integer, primary_key=True)
     month        = Column('month', Integer, primary_key=True)
     replay_views = Column('replay_views', Integer, default=0)
