@@ -295,6 +295,19 @@ class DBName(Base):
 
     user = relationship('DBUser', back_populates='names')
 
+class DBRankHistory(Base):
+    __tablename__ = "profile_rank_history"
+
+    user_id      = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+    time         = Column('time', DateTime, default=datetime.now(), primary_key=True)
+    rscore       = Column('rscore', BigInteger)
+    pp           = Column('pp', Integer)
+    global_rank  = Column('global_rank', Integer)
+    country_rank = Column('country_rank', Integer)
+    score_rank   = Column('score_rank', Integer)
+
+    user = relationship('DBUser', back_populates='rank_history')
+
 class DBUser(Base):
     __tablename__ = "users"
 
@@ -317,6 +330,7 @@ class DBUser(Base):
     userpage_title   = Column('userpage_title',   String, nullable=True)
 
     relationships = relationship('DBRelationship', back_populates='user')
+    rank_history  = relationship('DBRankHistory', back_populates='user')
     achievements  = relationship('DBAchievement', back_populates='user')
     screenshots   = relationship('DBScreenshot', back_populates='user')
     favourites    = relationship('DBFavourite', back_populates='user')
