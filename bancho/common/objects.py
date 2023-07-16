@@ -261,6 +261,18 @@ class DBBeatmap(Base):
     def full_name(self):
         return f'{self.beatmapset.artist} - {self.beatmapset.title} [{self.version}]'
 
+class DBBadge(Base):
+    __tablename__ = "profile_badges"
+
+    id                = Column('id', Integer, primary_key=True, autoincrement=True)
+    user_id           = Column('user_id', Integer, ForeignKey('users.id'))
+    created           = Column('created', DateTime, default=datetime.now())
+    badge_icon        = Column('badge_icon', String)
+    badge_url         = Column('badge_url', String, nullable=True)
+    badge_description = Column('badge_description', String, nullable=True)
+
+    user = relationship('DBUser', back_populates='badges')
+
 class DBUser(Base):
     __tablename__ = "users"
 
@@ -288,4 +300,5 @@ class DBUser(Base):
     ratings       = relationship('DBRating', back_populates='user')
     scores        = relationship('DBScore', back_populates='user')
     stats         = relationship('DBStats', back_populates='user')
+    badges        = relationship('DBBadge', back_populates='user')
     plays         = relationship('DBPlay', back_populates='user')
