@@ -19,8 +19,10 @@ def ping():
             if (next_ping > player.last_response.timestamp()):
                 player.handler.enqueue_ping()
 
+            last_response = datetime.now().timestamp() - player.last_response.timestamp()
+
             # Check timeout
-            if datetime.now().timestamp() - player.last_response.timestamp() >= TIMEOUT_SECS:
+            if last_response >= TIMEOUT_SECS:
                 player.logger.warning('Client timed out')
                 player.closeConnection()
 

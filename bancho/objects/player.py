@@ -47,7 +47,7 @@ import bcrypt
 import config
 
 Handlers = {
-    20130606: b20130606, # Latest supported version
+    20130606: b20130606,
     20130418: b20130606,
     20130329: b20130329,
     20130303: b20130329,
@@ -289,6 +289,7 @@ class Player(BanchoProtocol):
         self.closeConnection()
 
     def reload_object(self) -> DBUser:
+        """Reload player stats from database"""
         self.object = bancho.services.database.user_by_id(self.id)
         self.stats = self.object.stats
 
@@ -468,6 +469,8 @@ class Player(BanchoProtocol):
 
         self.handler.enqueue_channel_info_end()
 
+        bancho.services.database.update_latest_activity(self.id)
+
     def update(self):
         # Reload database object
         self.reload_object()
@@ -478,6 +481,7 @@ class Player(BanchoProtocol):
         )
 
     def update_rank(self):
+        """Reload and update rank from cache"""
         cached_rank = bancho.services.cache.get_global_rank(
             self.id,
             self.current_stats.mode
@@ -495,6 +499,8 @@ class Player(BanchoProtocol):
             instance.commit()
 
             self.current_stats.rank = cached_rank
+
+            bancho.services.database.update_rank_history(self.current_stats)
 
     def create_stats(self):
         instance = bancho.services.database.session

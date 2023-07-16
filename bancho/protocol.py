@@ -68,8 +68,7 @@ class BanchoProtocol(Protocol):
             )
 
     def dataReceived(self, data: bytes):
-        # For login data only
-        # If client logged in, we will switch to _dataReceived
+        """For login data only. If client logged in, we will switch to _dataReceived"""
 
         if self.busy:
             self.buffer += data
@@ -101,7 +100,7 @@ class BanchoProtocol(Protocol):
                     client
                 )
 
-                # We now expect packets from the client
+                # We now expect bancho packets from the client
                 self.dataReceived = self.packetDataReceived
 
         except Exception as e:
@@ -114,13 +113,12 @@ class BanchoProtocol(Protocol):
             self.busy = False
 
     def packetDataReceived(self, data: bytes):
-        # For bancho packets only
-        # will be used after login
-        
+        """For bancho packets only and will be used after login"""
+
         if self.busy:
             self.buffer += data
             return
-        
+
         try:
             self.busy = True
             self.buffer += data
@@ -133,6 +131,7 @@ class BanchoProtocol(Protocol):
                     compression = stream.bool() # GZip compression is only used in very old clients
                     payload = stream.read(stream.u32())
                 except OverflowError:
+                    # Wait for next buffer
                     break
 
                 self.packetReceived(
@@ -164,7 +163,7 @@ class BanchoProtocol(Protocol):
     def enqueue(self, data: bytes):
         try:
             self.transport.write(data)
-        except AttributeError as e:
+        except Exception as e:
             bancho.services.logger.error(
                 f'Could not write to transport layer: {e}'
             )
@@ -210,7 +209,9 @@ class BanchoProtocol(Protocol):
         )
 
         if not self.is_local:
-            bancho.services.logger.info(f'<{self.address.host}> -> Got web request.')
+            bancho.services.logger.info(
+                f'<{self.address.host}> -> Got web request.'
+            )
 
         self.closeConnection()
 

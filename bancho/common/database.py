@@ -3,10 +3,12 @@ from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy     import create_engine
 
 from typing import Optional, Generator, List
+from datetime import datetime
 from threading import Timer
 
 from .objects import (
     DBRelationship,
+    DBRankHistory,
     DBBeatmap,
     DBMessage,
     DBChannel,
@@ -138,6 +140,37 @@ class Postgres:
                 sender,
                 target,
                 message
+            )
+        )
+        instance.commit()
+
+    def update_latest_activity(self, user_id: int):
+        instance = self.session
+        instance.query(DBUser) \
+                .filter(DBUser.id == user_id) \
+                .update({
+                    'latest_activity': datetime.now()
+                })
+        instance.commit()
+
+    def update_rank_history(self, stats: DBStats):
+        country_rank = bancho.services.cache.get_country_rank(stats.user_id, stats.mode, stats.user.country)
+        global_rank = bancho.services.cache.get_global_rank(stats.user_id, stats.mode)
+        score_rank = bancho.services.cache.get_score_rank(stats.user_id, stats.mode)
+
+        if global_rank <= 0:
+            return
+
+        instance = self.session
+        instance.add(
+            DBRankHistory(
+                stats.user_id,
+                stats.mode,
+                stats.rscore,
+                stats.pp,
+                global_rank,
+                country_rank,
+                score_rank
             )
         )
         instance.commit()
