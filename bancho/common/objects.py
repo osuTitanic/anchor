@@ -369,6 +369,7 @@ class DBUser(Base):
     preferred_mode   = Column('preferred_mode',   Integer, default=0)
     playstyle        = Column('playstyle',        Integer, default=0)
     userpage_content = Column('userpage_content', String, nullable=True)
+    userpage_banner  = Column('userpage_banner',  String, nullable=True)
     userpage_title   = Column('userpage_title',   String, nullable=True)
 
     replay_history = relationship('DBReplayHistory', back_populates='user')
