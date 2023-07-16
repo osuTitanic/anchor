@@ -273,6 +273,16 @@ class DBBadge(Base):
 
     user = relationship('DBUser', back_populates='badges')
 
+class DBName(Base):
+    __tablename__ = "name_history"
+
+    id         = Column('id', Integer, primary_key=True, autoincrement=True)
+    user_id    = Column('user_id', Integer, ForeignKey('users.id'))
+    changed_at = Column('changed_at', DateTime, default=datetime.now())
+    name       = Column('name', String)
+
+    user = relationship('DBUser', back_populates='names')
+
 class DBUser(Base):
     __tablename__ = "users"
 
@@ -301,4 +311,5 @@ class DBUser(Base):
     scores        = relationship('DBScore', back_populates='user')
     stats         = relationship('DBStats', back_populates='user')
     badges        = relationship('DBBadge', back_populates='user')
+    names         = relationship('DBName', back_populates='user')
     plays         = relationship('DBPlay', back_populates='user')
