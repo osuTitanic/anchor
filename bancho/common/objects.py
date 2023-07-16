@@ -273,6 +273,18 @@ class DBBadge(Base):
 
     user = relationship('DBUser', back_populates='badges')
 
+class DBActivity(Base):
+    __tablename__ = "profile_activity"
+
+    id             = Column('id', Integer, primary_key=True, autoincrement=True)
+    user_id        = Column('user_id', Integer, ForeignKey('users.id'))
+    time           = Column('time', DateTime, default=datetime.now())
+    activity_text  = Column('activity_text', String)
+    activity_args  = Column('activity_args', String, nullable=True)
+    activity_links = Column('activity_links', String, nullable=True)
+
+    user = relationship('DBUser', back_populates='activity')
+
 class DBName(Base):
     __tablename__ = "name_history"
 
@@ -308,6 +320,7 @@ class DBUser(Base):
     achievements  = relationship('DBAchievement', back_populates='user')
     screenshots   = relationship('DBScreenshot', back_populates='user')
     favourites    = relationship('DBFavourite', back_populates='user')
+    activity      = relationship('DBActivity', back_populates='user')
     ratings       = relationship('DBRating', back_populates='user')
     scores        = relationship('DBScore', back_populates='user')
     stats         = relationship('DBStats', back_populates='user')
