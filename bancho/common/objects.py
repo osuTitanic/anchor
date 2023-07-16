@@ -308,6 +308,16 @@ class DBRankHistory(Base):
 
     user = relationship('DBUser', back_populates='rank_history')
 
+class DBPlayHistory(Base):
+    __tablename__ = "profile_play_history"
+
+    user_id = Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+    year    = Column('year', Integer, primary_key=True)
+    month   = Column('month', Integer, primary_key=True)
+    plays   = Column('plays', Integer, default=0)
+
+    user = relationship('DBUser', back_populates='play_history')
+
 class DBUser(Base):
     __tablename__ = "users"
 
@@ -331,6 +341,7 @@ class DBUser(Base):
 
     relationships = relationship('DBRelationship', back_populates='user')
     rank_history  = relationship('DBRankHistory', back_populates='user')
+    play_history  = relationship('DBPlayHistory', back_populates='user')
     achievements  = relationship('DBAchievement', back_populates='user')
     screenshots   = relationship('DBScreenshot', back_populates='user')
     favourites    = relationship('DBFavourite', back_populates='user')
