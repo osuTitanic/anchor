@@ -500,6 +500,8 @@ class Player(BanchoProtocol):
 
             self.current_stats.rank = cached_rank
 
+            bancho.services.database.update_rank_history(self.current_stats)
+
     def create_stats(self):
         instance = bancho.services.database.session
 
