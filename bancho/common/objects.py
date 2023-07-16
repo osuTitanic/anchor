@@ -310,6 +310,24 @@ class DBRankHistory(Base):
 
     user = relationship('DBUser', back_populates='rank_history')
 
+    def __init__(
+        self,
+        user_id: int,
+        mode: int,
+        rscore: int,
+        pp: int,
+        global_rank: int,
+        country_rank: int,
+        score_rank: int
+    ) -> None:
+        self.user_id = user_id
+        self.mode = mode
+        self.rscore = rscore
+        self.pp = pp
+        self.global_rank = global_rank
+        self.country_rank = country_rank
+        self.score_rank = score_rank
+
 class DBPlayHistory(Base):
     __tablename__ = "profile_play_history"
 
