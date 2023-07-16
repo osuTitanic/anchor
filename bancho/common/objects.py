@@ -302,6 +302,7 @@ class DBUser(Base):
     preferred_mode   = Column('preferred_mode',   Integer, default=0)
     playstyle        = Column('playstyle',        Integer, default=0)
     userpage_content = Column('userpage_content', String, nullable=True)
+    userpage_title   = Column('userpage_title',   String, nullable=True)
 
     relationships = relationship('DBRelationship', back_populates='user')
     achievements  = relationship('DBAchievement', back_populates='user')
