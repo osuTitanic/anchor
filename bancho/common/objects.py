@@ -180,6 +180,7 @@ class DBLog(Base):
         self.message = message
         self.level   = level
         self.type    = type
+        self.time    = datetime.now()
 
 class DBChannel(Base):
     __tablename__ = "channels"
@@ -202,6 +203,7 @@ class DBMessage(Base):
         self.message = message
         self.sender  = sender
         self.target  = target
+        self.time    = datetime.now()
 
 class DBBeatmapset(Base):
     __tablename__ = "beatmapsets"
@@ -328,6 +330,7 @@ class DBRankHistory(Base):
         self.global_rank = global_rank
         self.country_rank = country_rank
         self.score_rank = score_rank
+        self.time = datetime.now()
 
 class DBPlayHistory(Base):
     __tablename__ = "profile_play_history"
