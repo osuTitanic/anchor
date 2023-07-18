@@ -731,6 +731,9 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            if not player:
+                continue
+
             player.update_rank()
             self.enqueue_stats(player)
 
@@ -741,6 +744,9 @@ class b20130606(BaseHandler):
         players = [bancho.services.players.by_id(id) for id in stream.intlist()]
 
         for player in players:
+            if not player:
+                continue
+
             player.update_rank()
             self.enqueue_presence(player)
 

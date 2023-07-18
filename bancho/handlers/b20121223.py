@@ -10,6 +10,9 @@ class b20121223(b20130329):
     def enqueue_players(self, players):
         def enqueue(players):
             for player in players:
+                if not player:
+                    continue
+
                 player.update_rank()
                 self.enqueue_presence(player)
 
