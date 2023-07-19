@@ -12,27 +12,21 @@ import config
 import pytz
 
 class IPAddress:
-
-    status: str  = 'fail'
-    country: str = ''
-    country_code: str = ''
-
-    region: int = 0
-    region_name: str = ''
-    city: str = ''
-    zip: int  = 0
-
-    latitude: float  = 0.0
-    longitude: float = 0.0
-    timezone: str    = ''
-    utc_offset: int  = 0
-
-    isp: str = ''
-    org: str = ''
-    ans: str = ''
-
     def __init__(self, ip: str) -> None:
         self.host = ip
+
+        self.status: str  = 'fail'
+        self.country: str = 'Unknown'
+        self.country_code: str = 'XX'
+
+        self.region: int = 0
+        self.region_name: str = ''
+        self.city: str = ''
+
+        self.latitude: float  = 0.0
+        self.longitude: float = 0.0
+        self.timezone: str    = ''
+        self.utc_offset: int  = 0
 
         if self.from_cache():
             return
@@ -41,9 +35,10 @@ class IPAddress:
             if self.is_local:
                 self.host = ''
 
-            self.parse_request(
-                self.do_request()
-            )
+            # IP was not found inside database
+            # Make request to ip-api.com
+
+            self.parse_request(self.do_request())
 
         bancho.services.ip_cache.add(self)
 
@@ -105,8 +100,8 @@ class IPAddress:
             with Reader(f'{config.DATA_PATH}/geolite.mmdb') as reader:
                 response = reader.city(self.host)
 
-                self.country = response.country.name
                 self.country_code = response.country.iso_code
+                self.country = response.country.name
                 self.city = response.city.name
 
                 self.latitude  = response.location.latitude
@@ -146,15 +141,9 @@ class IPAddress:
         self.region_name  = response[4]
         self.city         = response[5]
 
-        if response[6]:
-            self.zip = int(response[6])
-
         self.latitude  = float(response[7])
         self.longitude = float(response[8])
         self.timezone  = response[9]
-        self.isp       = response[10]
-        self.org       = response[11]
-        self.ans       = response[12]
 
         self.utc_offset = int(
             datetime.now(
