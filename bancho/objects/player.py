@@ -6,6 +6,7 @@ from twisted.python.failure   import Failure
 from datetime    import datetime, timedelta
 from dataclasses import dataclass, field
 from typing      import List, Optional
+from threading   import Timer
 
 from ..protocol import BanchoProtocol, IPAddress
 from ..streams  import StreamIn
@@ -403,7 +404,13 @@ class Player(BanchoProtocol):
 
         if not self.stats:
             self.create_stats()
-            self.reload_object()
+
+            # On some devices, postgresql does not create the stats immediately,
+            # so I decided to create a small delay for that
+            Timer(
+                function=self.reload_object,
+                interval=1
+            ).start()
 
             # This will allow the user to play again after they got banned
             self.handler.enqueue_silence_info(-1)
@@ -505,9 +512,9 @@ class Player(BanchoProtocol):
     def create_stats(self):
         instance = bancho.services.database.session
 
-        for mode in range(4):
-            instance.add(
-                DBStats(self.id, mode)
-            )
+        self.stats = [DBStats(self.id, mode) for mode in range(4)]
+
+        for mode in self.stats:
+            instance.add(mode)
 
         instance.commit()
