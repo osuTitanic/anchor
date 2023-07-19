@@ -174,8 +174,8 @@ class Postgres:
                 })
         instance.commit()
 
-    def update_rank_history(self, stats: DBStats):
-        country_rank = bancho.services.cache.get_country_rank(stats.user_id, stats.mode, stats.user.country)
+    def update_rank_history(self, stats: DBStats, country: str):
+        country_rank = bancho.services.cache.get_country_rank(stats.user_id, stats.mode, country)
         global_rank = bancho.services.cache.get_global_rank(stats.user_id, stats.mode)
         score_rank = bancho.services.cache.get_score_rank(stats.user_id, stats.mode)
 
