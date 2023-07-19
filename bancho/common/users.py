@@ -52,6 +52,9 @@ class UserCache:
         )
 
     def update_leaderboards(self, stats: DBStats):
+        if not stats:
+            return
+
         if stats.pp > 0:
             self.redis.zadd(
                 f'bancho:performance:{stats.mode}',
