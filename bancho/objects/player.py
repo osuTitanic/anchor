@@ -125,7 +125,7 @@ class Player(BanchoProtocol):
         player.handler = BaseHandler(player)
         player.client = OsuClient.empty()
 
-        player.id     = player.object.id
+        player.id     = 0 - (player.object.id) # Negative user id -> IRC Player
         player.name   = player.object.name
         player.stats  = player.object.stats
 
