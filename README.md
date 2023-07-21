@@ -18,10 +18,4 @@ If you have any questions, feel free to contact me: [@Lekuru/Levi](https://githu
 - [x] User stats/presence
 - [x] Support for multiple clients at once
 
-What is left to do?
-
-- [ ] Support for b1700 and below
-- [ ] Login verification/email
-- [ ] Tourney clients
-- [ ] More commands
-- [ ] (IRC Server)
+You can view the todo's [here](https://github.com/users/Lekuruu/projects/2).
