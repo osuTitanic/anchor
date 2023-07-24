@@ -237,6 +237,35 @@ def restrict(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was restricted.']
 
+@command(['unrestrict', 'unban'], Permissions.Admin)
+def unrestrict(ctx: Context) -> Optional[List]:
+    """<name>"""
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name>']
+    
+    username = ctx.args[0].replace('_', ' ')
+
+    if not (player := bancho.services.database.user_by_name(username)):
+        return [f'Player "{username}" was not found.']
+    
+    if not player.restricted:
+        return [f'Player "{username}" is not restricted.']
+
+    bancho.services.database.restore_hidden_scores(player.id)
+    bancho.services.database.restore_stats(player.id)
+
+    instance = bancho.services.database.session
+    instance.query(DBUser) \
+            .filter(DBUser.id == player.id) \
+            .update({
+                'restricted': False,
+                'permissions': 1
+            })
+    instance.commit()
+
+    return [f'Player "{username}" was unrestricted.']
+
 @command(['silence', 'mute'], Permissions.Admin)
 def silence(ctx: Context) -> Optional[List]:
     """<name> <duration> (<reason>)"""

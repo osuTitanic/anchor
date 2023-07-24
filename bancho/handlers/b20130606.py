@@ -240,7 +240,7 @@ class b20130606(BaseHandler):
         stream.s32(len(beatmaps))
 
         for index, beatmap in beatmaps:
-            stream.s16(-1) # NOTE: We could use the index here, but the client should handle this automatically
+            stream.s16(index)
             stream.s32(beatmap.id)
             stream.s32(beatmap.set_id)
             stream.s32(beatmap.set_id) # TODO: Thread ID
@@ -813,6 +813,16 @@ class b20130606(BaseHandler):
 
             beatmaps.append((
                 index,
+                beatmap
+            ))
+
+        for id in range(stream.s32()):
+            # IDs
+            if not (beatmap := bancho.services.database.beatmap_by_id(stream.s32())):
+                continue
+
+            beatmaps.append((
+                -1,
                 beatmap
             ))
 

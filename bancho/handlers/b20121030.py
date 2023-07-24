@@ -19,7 +19,7 @@ class b20121030(b20121119):
         stream.s32(len(beatmaps))
 
         for index, beatmap in beatmaps:
-            stream.s16(-1) # NOTE: We could use the index here, but the client should handle this automatically
+            stream.s16(index)
             stream.s32(beatmap.id)
             stream.s32(beatmap.set_id)
             stream.s32(beatmap.set_id) # TODO: Thread ID

@@ -179,6 +179,8 @@ class Player(BanchoProtocol):
                 # NOTE: Client will exit after it notices a permission change
                 self.handler.enqueue_privileges()
 
+        return False
+
     @property
     def remaining_supporter(self):
         if self.object.supporter_end:
