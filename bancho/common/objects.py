@@ -88,6 +88,8 @@ class DBScore(Base):
     grade          = Column('grade', String, default='N')
     status         = Column('status', SmallInteger, default=-1)
     submitted_at   = Column('submitted_at', DateTime, server_default=func.now())
+    bad_flags      = Column('bad_flags', Integer, default=0)
+    ac_flags       = Column('ac_flags', Integer, default=0)
 
     replay_md5     = Column('replay_md5', String, nullable=True)
     processes      = Column('processes',  String, nullable=True)
