@@ -1,7 +1,7 @@
 
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.exc import ResourceClosedError
-from sqlalchemy     import create_engine
+from sqlalchemy     import create_engine, func
 
 from typing import Optional, Generator, List, Dict
 from threading import Timer, Thread
@@ -196,13 +196,117 @@ class Postgres:
         )
         instance.commit()
 
+    def restore_stats(self, user_id: int):
+        instance = self.session_factory()
+
+        # Recreate stats
+        all_stats = [DBStats(user_id, mode) for mode in range(4)]
+
+        # Get best scores
+        best_scores = instance.query(DBScore) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.status == 3) \
+                    .all()
+
+        for mode in range(4):
+            score_count = instance.query(DBScore) \
+                        .filter(DBScore.user_id == user_id) \
+                        .filter(DBScore.mode == mode) \
+                        .count()
+
+            combo_score = instance.query(DBScore) \
+                        .filter(DBScore.user_id == user_id) \
+                        .filter(DBScore.mode == mode) \
+                        .order_by(DBScore.max_combo.desc()) \
+                        .first()
+            
+            if combo_score:
+                max_combo = combo_score.max_combo
+            else:
+                max_combo = 0
+
+            total_score = instance.query(
+                        func.sum(DBScore.total_score)) \
+                        .filter(DBScore.user_id == user_id) \
+                        .filter(DBScore.mode == mode) \
+                        .scalar()
+            
+            if total_score is None:
+                total_score = 0
+
+            top_scores = self.top_scores(
+                user_id=user_id,
+                mode=mode
+            )
+
+            stats = all_stats[mode]
+
+            if score_count > 0:
+                total_acc = 0
+                divide_total = 0
+
+                for index, s in enumerate(top_scores):
+                    add = 0.95 ** index
+                    total_acc    += s.acc * add
+                    divide_total += add
+
+                if divide_total != 0:
+                    stats.acc = total_acc / divide_total
+                else:
+                    stats.acc = 0.0
+
+                weighted_pp = sum(score.pp * 0.95**index for index, score in enumerate(top_scores))
+                bonus_pp = 416.6667 * (1 - 0.9994**score_count)
+
+                stats.pp = weighted_pp + bonus_pp
+
+            stats.playcount = score_count
+            stats.max_combo = max_combo
+            stats.tscore = total_score
+
+        for score in best_scores:
+            stats = all_stats[score.mode]
+
+            grade_count = eval(f'stats.{score.grade.lower()}_count')
+
+            if not grade_count:
+                grade_count = 0
+
+            if not stats.rscore:
+                stats.rscore = 0
+
+            if not stats.total_hits:
+                stats.total_hits = 0
+
+            stats.rscore += score.total_score
+            grade_count += 1
+
+            if stats.mode == 2:
+                # ctb
+                total_hits = score.n50 + score.n100 + score.n300 + score.nMiss + score.nKatu
+            
+            elif stats.mode == 3:
+                # mania
+                total_hits = score.n300 + score.n100 + score.n50 + score.nGeki + score.nKatu + score.nMiss
+            
+            else:
+                # standard + taiko
+                total_hits = score.n50 + score.n100 + score.n300 + score.nMiss
+
+            stats.total_hits += total_hits
+
+        for stats in all_stats:
+            instance.add(stats)
+        
+        instance.commit()
+        instance.close()
+
     def restore_hidden_scores(self, user_id: int):
-        # This will be useful for unbanning players
+        # This will restore all score status attributes
 
         self.logger.info(f'Restoring scores for user: {user_id}...')
 
         instance = self.session_factory()
-
         instance.query(DBScore) \
                     .filter(DBScore.user_id == user_id) \
                     .filter(DBScore.failtime != None) \
