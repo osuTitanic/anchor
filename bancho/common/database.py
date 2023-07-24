@@ -196,6 +196,21 @@ class Postgres:
         )
         instance.commit()
 
+    def top_scores(self, user_id: int, mode: int, exclude_approved: bool = False) -> List[DBScore]:
+        query = self.session.query(DBScore) \
+                        .filter(DBScore.user_id == user_id) \
+                        .filter(DBScore.mode == mode) \
+                        .filter(DBScore.status == 3)
+
+        if exclude_approved:
+            query = query.filter(DBBeatmap.status == 1) \
+                         .join(DBScore.beatmap)
+
+        return query.order_by(DBScore.pp.desc()) \
+                    .limit(100) \
+                    .offset(0) \
+                    .all()
+
     def restore_stats(self, user_id: int):
         instance = self.session_factory()
 
