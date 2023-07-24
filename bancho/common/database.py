@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.exc import ResourceClosedError
 from sqlalchemy     import create_engine
 
-from typing import Optional, Generator, List
+from typing import Optional, Generator, List, Dict
 from threading import Timer, Thread
 from datetime import datetime
 
@@ -195,3 +195,89 @@ class Postgres:
             )
         )
         instance.commit()
+
+    def restore_hidden_scores(self, user_id: int):
+        # This will be useful for unbanning players
+
+        self.logger.info(f'Restoring scores for user: {user_id}...')
+
+        instance = self.session_factory()
+
+        instance.query(DBScore) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.failtime != None) \
+                    .filter(DBScore.status == -1) \
+                    .update({
+                        'status': 1
+                    })
+        instance.commit()
+
+        all_scores = instance.query(DBScore) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.failtime == None) \
+                    .filter(DBScore.status == -1) \
+                    .all()
+
+        # Sort scores by beatmap
+        beatmaps: Dict[int, List[DBScore]] = {score.beatmap_id: [] for score in all_scores}
+
+        for score in all_scores:
+            beatmaps[score.beatmap_id].append(score)
+
+        for beatmap, scores in beatmaps.items():
+            scores.sort(
+                key=lambda score: score.pp,
+                reverse=True
+            )
+
+            best_score = scores[0]
+
+            instance.query(DBScore) \
+                    .filter(DBScore.id == best_score.id) \
+                    .update({
+                        'status': 3
+                    })
+            instance.commit()
+
+            # Set other scores with same mods to 'submitted'
+            instance.query(DBScore) \
+                    .filter(DBScore.beatmap_id == beatmap) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.mods == best_score.mods) \
+                    .filter(DBScore.status == -1) \
+                    .update({
+                        'status': 2
+                    })
+            instance.commit()
+
+            all_mods = [score.mods for score in scores if score.mods != best_score.mods]
+
+            for mods in all_mods:
+                # Update best score with mods
+                best_score = instance.query(DBScore) \
+                    .filter(DBScore.beatmap_id == beatmap) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.mods == mods) \
+                    .filter(DBScore.status == -1) \
+                    .order_by(DBScore.total_score) \
+                    .first()
+
+                if not best_score:
+                    continue
+
+                best_score.status = 4
+                instance.commit()
+
+                instance.query(DBScore) \
+                    .filter(DBScore.beatmap_id == beatmap) \
+                    .filter(DBScore.user_id == user_id) \
+                    .filter(DBScore.mods == mods) \
+                    .filter(DBScore.status == -1) \
+                    .update({
+                        'status': 2
+                    })
+                instance.commit()
+
+        instance.close()
+
+        self.logger.info('Scores have been restored!')
