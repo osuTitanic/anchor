@@ -79,7 +79,12 @@ class Postgres:
         return self.session.query(DBUser) \
                 .filter(DBUser.id == id) \
                 .first()
-    
+
+    def beatmap_by_id(self, id: int) -> Optional[DBBeatmap]:
+        return self.session.query(DBBeatmap) \
+                .filter(DBBeatmap.id == id) \
+                .first()
+
     def beatmap_by_file(self, filename: str) -> Optional[DBBeatmap]:
         return self.session.query(DBBeatmap) \
                 .filter(DBBeatmap.filename == filename) \
