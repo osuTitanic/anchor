@@ -74,8 +74,10 @@ class Players(List[Player]):
             return super().append(player)
     
     def remove(self, player: Player) -> None:
-        if player.id in self.ids:
+        try:
             return super().remove(player)
+        except ValueError:
+            pass
 
     def enqueue(self, data: bytes, immune = []) -> None:
         for p in self:
