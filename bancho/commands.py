@@ -84,7 +84,7 @@ def command(
         return f
     return wrapper
 
-@command(['help', 'h', ''])
+@command(['help', 'h', ''], hidden=True)
 def help(ctx: Context) -> Optional[List]:
     """- Shows this message"""
     response = []
