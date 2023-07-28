@@ -402,7 +402,7 @@ def get_command(
         
     # Command sets
     for set in sets:
-        for command in set:
+        for command in set.commands:
             if trigger in command.triggers:
                 # Check permissions
                 if command.permissions not in player.permissions:
