@@ -808,7 +808,11 @@ class b20130606(BaseHandler):
 
         for index in range(stream.s32()):
             # Filenames
-            if not (beatmap := bancho.services.database.beatmap_by_file(stream.string())):
+            filename = stream.string()
+            filename = filename.replace('\\', '')
+            filename = filename.replace("'", "\'")
+
+            if not (beatmap := bancho.services.database.beatmap_by_file(filename)):
                 continue
 
             beatmaps.append((
