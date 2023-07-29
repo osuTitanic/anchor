@@ -31,7 +31,7 @@ class b20121119(b20121223):
 
         stream.s32(player.id)
         stream.string(player.name)
-        stream.u8(AvatarExtension.NONE.value) # TODO
+        stream.u8(AvatarExtension.PNG.value) # NOTE: Client will not send request when NONE
         stream.u8(utc + 24)
         stream.u8(player.client.ip.country_num)
         stream.string(player.client.ip.city if player.client.display_city else '')
