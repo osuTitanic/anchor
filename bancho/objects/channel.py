@@ -103,7 +103,10 @@ class Channel:
         if sender not in self.users:
             # Player did not join this channel
             sender.handler.enqueue_channel_revoked(self.display_name)
-    
+            sender.logger.warning(
+                f'Failed to send message: "{message}" on {self.name}, because player did not join the channel.'
+            )
+
         can_write = self.can_write(
             Permissions.pack(sender.permissions)
         )
