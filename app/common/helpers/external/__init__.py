@@ -1,0 +1,2 @@
+
+from .beatmaps import Beatmaps
