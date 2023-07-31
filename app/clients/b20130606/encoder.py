@@ -85,10 +85,9 @@ def send_players(player_ids: List[int]):
 
 @register(ResponsePacket.USER_QUIT)
 def send_exit(user_quit: UserQuit):
-    stream = StreamOut()
-    stream.s32(user_quit.user_id)
-    stream.u8(user_quit.quit_state.value)
-    return stream.get()
+    writer = Writer()
+    writer.write_quit(user_quit)
+    return writer.stream.get()
 
 @register(ResponsePacket.SEND_MESSAGE)
 def send_message(msg: Message):
