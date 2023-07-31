@@ -26,7 +26,7 @@ class BanchoProtocol(Protocol):
     handler = None
 
     def __init__(self, address: IPAddress) -> None:
-        self.logger = logging.getLogger('protocol')
+        self.logger = logging.getLogger(address.host)
         self.client: Optional[OsuClient] = None
         self.address = address
 
@@ -85,6 +85,8 @@ class BanchoProtocol(Protocol):
             if self.buffer.count(b'\r\n') < 3:
                 return
 
+            self.logger.debug(f'-> Received login: {self.buffer}')
+
             # Login received
             username, password, client, self.buffer = self.buffer.split(b'\r\n', 3)
 
@@ -133,7 +135,7 @@ class BanchoProtocol(Protocol):
                     break
 
                 self.logger.debug(
-                    f'{self.address.host} -> {packet}: {payload}'
+                    f'-> {packet}: {payload}'
                 )
 
                 self.packetReceived(
@@ -154,6 +156,7 @@ class BanchoProtocol(Protocol):
 
     def enqueue(self, data: bytes):
         try:
+            self.logger.debug(f'<- {data}')
             self.transport.write(data)
         except Exception as e:
             self.logger.error(
