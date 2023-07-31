@@ -100,7 +100,20 @@ class Writer(BaseWriter):
         self.stream.s32(frame.time)
 
     def write_scoreframe(self, frame: ScoreFrame):
-        pass
+        self.stream.s32(frame.time)
+        self.stream.u8(frame.id)
+        self.stream.u16(frame.c300)
+        self.stream.u16(frame.c100)
+        self.stream.u16(frame.c50)
+        self.stream.u16(frame.cGeki)
+        self.stream.u16(frame.cKatu)
+        self.stream.u16(frame.cMiss)
+        self.stream.s32(frame.total_score)
+        self.stream.u16(frame.max_combo)
+        self.stream.u16(frame.current_combo)
+        self.stream.bool(frame.perfect)
+        self.stream.u8(frame.hp)
+        self.stream.u8(frame.tag_byte)
 
     def write_replayframe_bundle(self, bundle: ReplayFrameBundle):
         pass
