@@ -3,6 +3,7 @@ from app.common.streams import StreamOut
 from app.common.objects import (
     ReplayFrameBundle,
     UserPresence,
+    ScoreFrame,
     UserStats,
     UserQuit,
     Message,
@@ -209,6 +210,12 @@ def match_change_password(new_password: str):
 def match_start(match: Match):
     writer = Writer()
     writer.write_match(match)
+    return writer.stream.get()
+
+@register(ResponsePacket.MATCH_SCORE_UPDATE)
+def score_update(score_frame: ScoreFrame):
+    writer = Writer()
+    writer.write_scoreframe(score_frame)
     return writer.stream.get()
 
 @register(ResponsePacket.MATCH_JOIN_FAIL)
