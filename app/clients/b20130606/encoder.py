@@ -156,6 +156,14 @@ def fellow_spectator_left(player_id: int):
         signed=True
     )
 
+@register(ResponsePacket.LOBBY_JOIN)
+def lobby_join(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return
