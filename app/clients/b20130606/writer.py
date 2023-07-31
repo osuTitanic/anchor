@@ -65,7 +65,12 @@ class Writer(BaseWriter):
         self.stream.u16(stats.pp)
 
     def write_status(self, status: StatusUpdate):
-        pass
+        self.stream.u8(status.action.value)
+        self.stream.string(status.text)
+        self.stream.string(status.beatmap_checksum)
+        self.stream.u32(status.mods.value)
+        self.stream.u8(status.mode.value)
+        self.stream.s32(status.beatmap_id)
 
     def write_beatmap_info(self, info: BeatmapInfo):
         pass
