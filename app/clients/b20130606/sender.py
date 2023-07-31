@@ -58,3 +58,12 @@ class PacketSender(BaseSender):
             self.packets.ANNOUNCE,
             stream.get()
         )
+
+    def send_presence(self, presence: UserPresence):
+        writer = self.writer()
+        writer.write_presence(presence)
+
+        self.player.send_packet(
+            self.packets.USER_PRESENCE,
+            writer.stream.get()
+        )
