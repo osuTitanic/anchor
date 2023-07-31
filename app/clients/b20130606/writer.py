@@ -21,7 +21,7 @@ from .constants import ResponsePacket
 from ..writer import BaseWriter
 
 class Writer(BaseWriter):
-    def __init__(self, stream: StreamOut) -> None:
+    def __init__(self, stream: StreamOut = StreamOut()) -> None:
         self.stream = stream
 
     def write_header(self, packet: ResponsePacket, size: Optional[int] = None):
