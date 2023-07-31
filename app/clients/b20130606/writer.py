@@ -72,6 +72,10 @@ class Writer(BaseWriter):
         self.stream.u8(status.mode.value)
         self.stream.s32(status.beatmap_id)
 
+    def write_quit(self, state: UserQuit):
+        self.stream.s32(state.user_id)
+        self.stream.u8(state.quit_state.value)
+
     def write_beatmap_info(self, info: BeatmapInfo):
         pass
 
