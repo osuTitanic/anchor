@@ -5,6 +5,9 @@ from app.common.streams import StreamOut
 from .constants import ResponsePacket
 
 class PacketSender(BaseSender):
+
+    protocol_version = 18
+
     def send_login_reply(self, reply: int):
         self.player.send_packet(
             ResponsePacket.LOGIN_REPLY,
