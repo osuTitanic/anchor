@@ -135,3 +135,19 @@ def cant_spectate(player_id: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.FELLOW_SPECTATOR_JOINED)
+def fellow_spectator_joined(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
+@register(ResponsePacket.FELLOW_SPECTATOR_LEFT)
+def fellow_spectator_left(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
