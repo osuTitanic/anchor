@@ -222,6 +222,10 @@ def score_update(score_frame: ScoreFrame):
 def transfer_host():
     return b''
 
+@register(ResponsePacket.MATCH_ALL_PLAYERS_LOADED)
+def all_players_loaded():
+    return b''
+
 @register(ResponsePacket.MATCH_JOIN_FAIL)
 def match_join_fail():
     return b''
