@@ -1,5 +1,6 @@
 
 from app.common.streams import StreamIn
+
 from app.common.objects import (
     BeatmapInfoRequest,
     ReplayFrameBundle,
@@ -8,7 +9,21 @@ from app.common.objects import (
     ReplayFrame,
     ScoreFrame,
     Message,
-    Match
+    Match,
+    Slot
+)
+
+from app.common.constants import (
+    MatchScoringTypes,
+    MatchTeamTypes,
+    ReplayAction,
+    ClientStatus,
+    ButtonState,
+    SlotStatus,
+    MatchType,
+    SlotTeam,
+    GameMode,
+    Mods
 )
 
 from .constants import RequestPacket
@@ -30,7 +45,12 @@ class Reader(BaseReader):
         )
 
     def read_message(self) -> Message:
-        pass
+        return Message(
+            sender=self.stream.string(),
+            content=self.stream.string(),
+            target=self.stream.string(),
+            sender_id=self.stream.s32()
+        )
 
     def read_status(self) -> StatusUpdate:
         pass
