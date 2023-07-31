@@ -1,15 +1,19 @@
 
+from app.common.constants import PresenceFilter, LoginError
 from app.protocol import BanchoProtocol, IPAddress
 from app.common.database.repositories import users
 from app.common.database import DBUser, DBStats
-from app.common.constants import PresenceFilter
-from app.clients import BaseReader, BaseWriter
 from app.objects import OsuClient, Status
+from app.clients import BaseSender
+
+from typing import Optional, Callable, Tuple, List, Dict
+from enum import Enum
 
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
-from typing import Optional, List
+from app.clients.packets import PACKETS
+from app.clients import DefaultPackets
 
 import logging
 import app
@@ -28,8 +32,8 @@ class Player(BanchoProtocol):
         self.id = -1
         self.name = ""
 
-        self.reader: Optional[BaseReader] = None
-        self.writer: Optional[BaseWriter] = None
+        self.packets: Dict[Enum, Callable] = {}
+        self.sender: Optional[BaseSender] = None
 
         self.channels = set() # TODO: Add type
         self.filter = PresenceFilter.All
@@ -62,11 +66,41 @@ class Player(BanchoProtocol):
 
         return self.object
 
-    def closeConnection(self, error: Optional[Exception] = None):
+    def close_connection(self, error: Optional[Exception] = None):
         self.connectionLost()
-        super().closeConnection(error)
+        super().close_connection(error)
 
-    def loginReceived(self, username: str, md5: str, client: OsuClient):
+    def send_error(self, reason=-5, message=""):
+        if self.sender and message:
+            self.sender.send_announcement(message)
+
+        self.send_packet(
+            DefaultPackets.LOGIN_REPLY,
+            int(reason).to_bytes(
+                length=4,
+                byteorder='little',
+                signed=True
+            )
+        )
+
+    def login_failed(self, reason = LoginError.ServerError, message = ""):
+        self.send_error(reason.value, message)
+        self.close_connection()
+
+    def get_client(self, version: int) -> Tuple[Dict[Enum, Callable], BaseSender]:
+        """Figure out packet sender/decoder, closest to version of client"""
+
+        packets, sender = PACKETS[
+            min(PACKETS.keys(), key=lambda x:abs(x-version))
+        ]
+
+        return packets, sender(self)
+
+    def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
+        self.logger.name = f'Player "{username}"'
 
-        # TODO: Select packet decoder & writer
+        self.packets, self.sender = self.get_client(client.version.date)
+
+        self.login_failed(LoginError.ServerError, "Testmessage")
+        self.close_connection()

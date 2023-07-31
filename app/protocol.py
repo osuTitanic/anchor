@@ -23,7 +23,6 @@ class BanchoProtocol(Protocol):
     buffer  = b""
     busy    = False
     proxied = False
-    handler = None
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)
@@ -99,15 +98,15 @@ class BanchoProtocol(Protocol):
             self.dataReceived = self.packetDataReceived
 
             # Handle login
-            self.loginReceived(
-                username,
-                password,
+            self.login_received(
+                username.decode(),
+                password.decode(),
                 self.client
             )
         except Exception as e:
             traceback.print_exc()
             self.logger.error(f'Error on login: {e}')
-            self.closeConnection(e)
+            self.close_connection(e)
 
         finally:
             self.busy = False
@@ -138,7 +137,7 @@ class BanchoProtocol(Protocol):
                     f'-> {packet}: {payload}'
                 )
 
-                self.packetReceived(
+                self.packet_received(
                     packet_id=packet,
                     stream=StreamIn(payload)
                 )
@@ -149,7 +148,7 @@ class BanchoProtocol(Protocol):
             traceback.print_exc()
             self.logger.error(f'Error while receiving packet: {e}')
 
-            self.closeConnection(e)
+            self.close_connection(e)
 
         finally:
             self.busy = False
@@ -163,28 +162,28 @@ class BanchoProtocol(Protocol):
                 f'Could not write to transport layer: {e}'
             )
 
-    def closeConnection(self, error: Optional[Exception] = None):
+    def close_connection(self, error: Optional[Exception] = None):
         if not self.is_local:
             if error:
-                self.sendError()
+                self.send_error()
                 self.logger.warning(f'Closing connection -> <{self.address.host}>')
             else:
                 self.logger.info(f'Closing connection -> <{self.address.host}>')
 
         self.transport.loseConnection()
 
-    def sendPacket(self, packet_type: Enum, payload: bytes = b''):
+    def send_packet(self, packet_type: Enum, payload: bytes = b''):
         stream = StreamOut()
         stream.header(packet_type, len(payload))
         stream.write(payload)
 
         self.enqueue(stream.get())
 
-    def sendError(self, reason = -5, message = ""):
-        pass # TODO
-
-    def packetReceived(self, packet_id: int, stream: StreamIn):
+    def send_error(self, reason = -5, message = ""):
         ...
 
-    def loginReceived(self, username: str, md5: str, client: OsuClient):
+    def packet_received(self, packet_id: int, stream: StreamIn):
+        ...
+
+    def login_received(self, username: str, md5: str, client: OsuClient):
         ...

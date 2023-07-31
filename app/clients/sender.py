@@ -1,8 +1,6 @@
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from abc import ABC
-
-from app.objects.player import Player
 
 from app.common.constants import (
     Permissions
@@ -14,7 +12,7 @@ from app.common.objects import (
 )
 
 class BaseSender(ABC):
-    def __init__(self, player: Player) -> None:
+    def __init__(self, player) -> None:
         self.player = player
 
     def send_login_reply(self, reply: int):

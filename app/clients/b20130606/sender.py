@@ -6,7 +6,7 @@ from .constants import ResponsePacket
 
 class PacketSender(BaseSender):
     def send_login_reply(self, reply: int):
-        self.player.sendPacket(
+        self.player.send_packet(
             ResponsePacket.LOGIN_REPLY,
             int(reply).to_bytes(
                 length=4,
@@ -16,10 +16,22 @@ class PacketSender(BaseSender):
         )
 
     def send_protocol_version(self, version: int):
-        self.player.sendPacket(
+        self.player.send_packet(
             ResponsePacket.PROTOCOL_VERSION,
             int(version).to_bytes(
                 length=4,
                 byteorder='little'
             )
+        )
+
+    def send_ping(self):
+        self.player.send_packet(ResponsePacket.PING)
+
+    def send_announcement(self, message: str):
+        stream = StreamOut()
+        stream.string(message)
+
+        self.player.send_packet(
+            ResponsePacket.ANNOUNCE,
+            stream.get()
         )
