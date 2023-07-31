@@ -34,7 +34,9 @@ class Writer(BaseWriter):
         self.stream.write_to_start(header.get())
 
     def write_channel(self, channel: Channel):
-        pass
+        self.stream.string(channel.name)
+        self.stream.string(channel.topic)
+        self.stream.u16(channel.user_count)
 
     def write_message(self, msg: Message):
         pass
