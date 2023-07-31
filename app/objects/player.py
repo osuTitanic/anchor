@@ -4,7 +4,6 @@ from app.protocol import BanchoProtocol, IPAddress
 from app.common.database.repositories import users
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
-from app.clients import BaseSender
 
 from typing import Optional, Callable, Tuple, List, Dict
 from enum import Enum
@@ -13,7 +12,10 @@ from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
 from app.clients.packets import PACKETS
-from app.clients import DefaultPackets
+from app.clients import (
+    DefaultResponsePacket,
+    DefaultRequestPacket
+)
 
 import logging
 import app
@@ -32,8 +34,10 @@ class Player(BanchoProtocol):
         self.id = -1
         self.name = ""
 
-        self.packets: Dict[Enum, Callable] = {}
-        self.sender: Optional[BaseSender] = None
+        self.response_packets = DefaultResponsePacket
+        self.request_packets = DefaultRequestPacket
+        self.decoders: Dict[Enum, Callable] = {}
+        self.encoders: Dict[Enum, Callable] = {}
 
         self.channels = set() # TODO: Add type
         self.filter = PresenceFilter.All
@@ -71,40 +75,47 @@ class Player(BanchoProtocol):
         super().close_connection(error)
 
     def send_error(self, reason=-5, message=""):
-        if self.sender and message:
-            self.sender.send_announcement(message)
+        if self.encoders and message:
+            self.send_packet(
+                self.response_packets.ANNOUNCE,
+                message
+            )
 
         self.send_packet(
-            DefaultPackets.LOGIN_REPLY,
-            int(reason).to_bytes(
-                length=4,
-                byteorder='little',
-                signed=True
-            )
+            self.response_packets.LOGIN_REPLY,
+            reason
+        )
+
+    def send_packet(self, packet_type: Enum, *args):
+        return super().send_packet(
+            packet_type,
+            self.encoders,
+            *args
         )
 
     def login_failed(self, reason = LoginError.ServerError, message = ""):
         self.send_error(reason.value, message)
         self.close_connection()
 
-    def get_client(self, version: int) -> Tuple[Dict[Enum, Callable], BaseSender]:
+    def get_client(self, version: int) -> Tuple[Dict[Enum, Callable], Dict[Enum, Callable]]:
         """Figure out packet sender/decoder, closest to version of client"""
 
-        packets, sender = PACKETS[
-            min(PACKETS.keys(), key=lambda x:abs(x-version))
+        decoders, encoders = PACKETS[
+            min(
+                PACKETS.keys(),
+                key=lambda x:abs(x-version)
+            )
         ]
 
-        return packets, sender(self)
+        return decoders, encoders
 
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
 
-        self.packets, self.sender = self.get_client(client.version.date)
+        self.decoders, self.encoders = self.get_client(client.version.date)
 
-        self.sender.send_protocol_version(
-            self.sender.protocol_version
-        )
+        self.send_packet(self.response_packets.PROTOCOL_VERSION, 18)
 
         self.login_failed(LoginError.ServerError, "Testmessage")
         self.close_connection()

@@ -172,8 +172,11 @@ class BanchoProtocol(Protocol):
 
         self.transport.loseConnection()
 
-    def send_packet(self, packet_type: Enum, payload: bytes = b''):
+    def send_packet(self, packet_type: Enum, encoders, *args):
         stream = StreamOut()
+        encoder = encoders[packet_type]
+        payload = encoder(*args)
+
         stream.header(packet_type, len(payload))
         stream.write(payload)
 
