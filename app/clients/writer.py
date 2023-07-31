@@ -15,7 +15,7 @@ from app.common.objects import (
     Match
 )
 
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from abc import ABC
 
@@ -31,6 +31,9 @@ class BaseWriter(ABC):
         header.header(packet, size)
 
         self.stream.write_to_start(header.get())
+
+    def write_intlist(self, list: List[int]):
+        ...
 
     def write_channel(self, channel: Channel):
         ...

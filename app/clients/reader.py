@@ -11,6 +11,7 @@ from app.common.objects import (
     Match
 )
 
+from typing import List
 from abc import ABC
 
 class BaseReader(ABC):
@@ -18,6 +19,9 @@ class BaseReader(ABC):
         self.stream = stream
 
     def read_header(self) -> BanchoPacket:
+        ...
+
+    def read_intlist(self) -> List[int]:
         ...
 
     def read_message(self) -> Message:
