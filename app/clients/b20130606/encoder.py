@@ -94,3 +94,9 @@ def send_message(msg: Message):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
+
+@register(ResponsePacket.IRC_CHANGE_USERNAME)
+def irc_nick(previous: str, after: str):
+    stream = StreamOut()
+    stream.string(f'{previous}>>>>{after}')
+    return stream.get()
