@@ -104,3 +104,11 @@ def send_message(msg: Message):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
+
+@register(ResponsePacket.SPECTATOR_JOINED)
+def spectator_joined(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
