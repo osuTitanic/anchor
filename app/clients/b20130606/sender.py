@@ -76,3 +76,13 @@ class PacketSender(BaseSender):
             self.packets.USER_PRESENCE,
             writer.stream.get()
         )
+
+    def send_player(self, player_id: int):
+        self.player.send_packet(
+            self.packets.USER_PRESENCE_SINGLE,
+            int(player_id).to_bytes(
+                length=4,
+                byteorder='little',
+                signed=True
+            )
+        )
