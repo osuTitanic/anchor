@@ -41,7 +41,7 @@ class BaseSender(ABC):
     def send_presence(self, presence: UserPresence):
         ...
 
-    def send_stats(self, presence: UserStats):
+    def send_stats(self, stats: UserStats):
         ...
 
     def send_player(self, player_id: int):
