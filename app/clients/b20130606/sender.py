@@ -1,4 +1,5 @@
 
+from typing import Optional
 from app.clients.sender import BaseSender
 from app.common.streams import StreamOut
 
@@ -33,6 +34,20 @@ class PacketSender(BaseSender):
     def send_announcement(self, message: str):
         stream = StreamOut()
         stream.string(message)
+
+        self.player.send_packet(
+            ResponsePacket.ANNOUNCE,
+            stream.get()
+        )
+
+    def send_menu_icon(self, image: Optional[str], url: Optional[str]):
+        stream = StreamOut()
+        stream.string(
+            '|'.join([
+                f'{image if image else ""}',
+                f'{url if url else ""}'
+            ])
+        )
 
         self.player.send_packet(
             ResponsePacket.ANNOUNCE,
