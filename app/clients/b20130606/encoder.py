@@ -151,3 +151,7 @@ def fellow_spectator_left(player_id: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.VERSION_UPDATE)
+def version_update():
+    return
