@@ -47,6 +47,10 @@ def send_announcement(message: str):
     stream.string(message)
     return stream.get()
 
+@register(ResponsePacket.GET_ATTENSION)
+def open_chat():
+    return
+
 @register(ResponsePacket.MENU_ICON)
 def send_menu_icon(image: Optional[str], url: Optional[str]):
     stream = StreamOut()
