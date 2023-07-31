@@ -179,6 +179,12 @@ def new_match(match: Match):
     writer.write_match(match)
     return writer.stream.get()
 
+@register(ResponsePacket.UPDATE_MATCH)
+def update_match(match: Match):
+    writer = Writer()
+    writer.write_match(match)
+    return writer.stream.get()
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return
