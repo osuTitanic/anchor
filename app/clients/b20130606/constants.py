@@ -83,7 +83,7 @@ class ResponsePacket(IntEnum):
     MATCH_PLAYER_FAILED             = 57
     MATCH_COMPLETE                  = 58
     MATCH_SKIP                      = 61
-    UNAUTHORIZED                    = 62
+    UNAUTHORIZED                    = 62 # Only used in older clients
     CHANNEL_JOIN_SUCCESS            = 64
     CHANNEL_AVAILABLE               = 65
     CHANNEL_REVOKED                 = 66
