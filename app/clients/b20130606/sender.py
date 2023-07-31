@@ -86,3 +86,12 @@ class PacketSender(BaseSender):
                 signed=True
             )
         )
+
+    def send_players(self, player_ids: List[int]):
+        writer = self.writer()
+        writer.write_intlist(player_ids)
+
+        self.player.send_packet(
+            self.packets.USER_PRESENCE_BUNDLE,
+            writer.stream.get()
+        )
