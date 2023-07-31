@@ -15,7 +15,7 @@ from app.common.objects import (
     Match
 )
 
-from typing import Optional
+from typing import List, Optional
 
 from .constants import ResponsePacket
 from ..writer import BaseWriter
@@ -32,6 +32,10 @@ class Writer(BaseWriter):
         header.header(packet, size)
 
         self.stream.write_to_start(header.get())
+
+    def write_intlist(self, list: List[int]):
+        self.stream.s16(len(list))
+        [self.stream.s32(num) for num in list]
 
     def write_channel(self, channel: Channel):
         self.stream.string(channel.name)

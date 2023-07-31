@@ -1,4 +1,5 @@
 
+from typing import List
 from app.common.streams import StreamIn
 
 from app.common.objects import (
@@ -43,6 +44,9 @@ class Reader(BaseReader):
                 )
             )
         )
+
+    def read_intlist(self) -> List[int]:
+        return [self.stream.s32() for _ in range(self.stream.s16())]
 
     def read_message(self) -> Message:
         return Message(
