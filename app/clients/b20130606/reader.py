@@ -69,7 +69,13 @@ class Reader(BaseReader):
         )
 
     def read_replayframe(self) -> ReplayFrame:
-        pass
+        return ReplayFrame(
+            button_state=ButtonState(self.stream.u8()),
+            taiko_byte=self.stream.u8(),
+            mouse_x=self.stream.float(),
+            mouse_y=self.stream.float(),
+            time=self.stream.s32()
+        )
 
     def read_replayframe_bundle(self) -> ReplayFrameBundle:
         pass
