@@ -10,7 +10,7 @@ import app
 
 logging.basicConfig(
     handlers=[Console, File],
-    level=logging.INFO
+    level=logging.DEBUG
 )
 
 def main():
