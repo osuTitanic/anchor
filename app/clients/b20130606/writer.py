@@ -124,3 +124,31 @@ class Writer(BaseWriter):
         if bundle.score_frame:
             self.write_scoreframe(bundle.score_frame)
 
+    def write_match(self, match: Match):
+        self.stream.u16(match.id)
+
+        self.stream.bool(match.in_progress)
+        self.stream.u8(match.type.value)
+        self.stream.u32(match.mods.value)
+
+        self.stream.string(match.name)
+        self.stream.string(match.password)
+        self.stream.string(match.beatmap_text)
+        self.stream.s32(match.beatmap_id)
+        self.stream.string(match.beatmap_checksum)
+
+        [self.stream.u8(slot.status.value) for slot in match.slots]
+        [self.stream.u8(slot.team.value) for slot in match.slots]
+        [self.stream.s32(slot.player_id) for slot in match.slots]
+
+        self.stream.s32(match.host_id)
+        self.stream.u8(match.mode.value)
+        self.stream.u8(match.scoring_type.value)
+        self.stream.u8(match.team_type.value)
+
+        self.stream.bool(match.freemod)
+
+        if match.freemod:
+            [self.stream.s32(slot.mods.value) for slot in match.slots]
+
+        self.stream.s32(match.seed)
