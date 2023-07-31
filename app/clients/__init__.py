@@ -1,5 +1,5 @@
 
-from . import b20130606
+from .reader import BaseReader
+from .writer import BaseWriter
 
-from . import reader
-from . import writer
+from . import b20130606
