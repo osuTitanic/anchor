@@ -164,6 +164,14 @@ def lobby_join(player_id: int):
         signed=True
     )
 
+@register(ResponsePacket.LOBBY_PART)
+def lobby_part(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return
