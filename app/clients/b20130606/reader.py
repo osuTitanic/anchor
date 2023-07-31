@@ -96,8 +96,21 @@ class Reader(BaseReader):
         )
 
     def read_replayframe_bundle(self) -> ReplayFrameBundle:
-        pass
+        extra = self.stream.s32()
+        replay_frames = [self.read_replayframe() for f in range(self.stream.u16())]
+        action = ReplayAction(self.stream.u8())
 
+        try:
+            score_frame = self.read_scoreframe()
+        except Exception:
+            score_frame = None
+
+        return ReplayFrameBundle(
+            extra,
+            action,
+            replay_frames,
+            score_frame
+        )
 
     def read_match(self) -> Match:
         pass
