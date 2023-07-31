@@ -199,6 +199,12 @@ def match_join_success(match: Match):
     writer.write_match(match)
     return writer.stream.get()
 
+@register(ResponsePacket.MATCH_CHANGE_PASSWORD)
+def match_change_password(new_password: str):
+    stream = StreamOut()
+    stream.string(new_password)
+    return stream.get()
+
 @register(ResponsePacket.MATCH_JOIN_FAIL)
 def match_join_fail():
     return b''
