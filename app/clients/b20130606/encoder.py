@@ -205,6 +205,12 @@ def match_change_password(new_password: str):
     stream.string(new_password)
     return stream.get()
 
+@register(ResponsePacket.MATCH_START)
+def match_start(match: Match):
+    writer = Writer()
+    writer.write_match(match)
+    return writer.stream.get()
+
 @register(ResponsePacket.MATCH_JOIN_FAIL)
 def match_join_fail():
     return b''
