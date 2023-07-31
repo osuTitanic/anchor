@@ -112,3 +112,11 @@ def spectator_joined(player_id: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.SPECTATOR_LEFT)
+def spectator_left(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
