@@ -55,10 +55,14 @@ class Writer(BaseWriter):
         self.stream.s32(presence.rank)
 
     def write_stats(self, stats: UserStats):
-        pass
-
-    def write_quit(self, state: UserQuit):
-        pass
+        self.stream.s32(stats.user_id)
+        self.write_status(stats.status)
+        self.stream.u64(stats.rscore)
+        self.stream.float(stats.accuracy)
+        self.stream.s32(stats.playcount)
+        self.stream.u64(stats.tscore)
+        self.stream.s32(stats.rank)
+        self.stream.u16(stats.pp)
 
     def write_status(self, status: StatusUpdate):
         pass
