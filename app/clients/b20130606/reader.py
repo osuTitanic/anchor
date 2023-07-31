@@ -53,7 +53,14 @@ class Reader(BaseReader):
         )
 
     def read_status(self) -> StatusUpdate:
-        pass
+        return StatusUpdate(
+            status=ClientStatus(self.stream.u8()),
+            text=self.stream.string(),
+            beatmap_checksum=self.stream.string(),
+            mods=Mods(self.stream.u32()),
+            mode=GameMode(self.stream.u8()),
+            beatmap_id=self.stream.s32()
+        )
 
     def read_beatmap_request(self) -> BeatmapInfoRequest:
         pass
