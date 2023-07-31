@@ -2,6 +2,7 @@
 from .achievements import Achievement
 from .multiplayer import Match, Slot
 from .chat import Message, Channel
+from .generic import BanchoPacket
 
 from .player import (
     UserPresence,
