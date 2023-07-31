@@ -1,5 +1,6 @@
 
 from app.common.constants import PresenceFilter, LoginError
+from app.common.streams import StreamIn
 from app.protocol import BanchoProtocol, IPAddress
 from app.common.database.repositories import users
 from app.common.database import DBUser, DBStats
@@ -119,3 +120,17 @@ class Player(BanchoProtocol):
 
         self.login_failed(LoginError.ServerError, "Testmessage")
         self.close_connection()
+
+    def packet_received(self, packet_id: int, stream: StreamIn):
+        try:
+            packet = self.request_packets(packet_id)
+            decoder = self.decoders[packet]
+            decoder(stream, self)
+        except KeyError as e:
+            self.logger.error(
+                f'Could not find decoder for "{packet.name}": {e}'
+            )
+        except ValueError as e:
+            self.logger.error(
+                f'Could not find packet with id "{packet_id}": {e}'
+            )
