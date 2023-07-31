@@ -93,7 +93,11 @@ class Writer(BaseWriter):
         [self.write_beatmap_info(info) for info in reply.beatmaps]
 
     def write_replayframe(self, frame: ReplayFrame):
-        pass
+        self.stream.u8(frame.button_state.value)
+        self.stream.u8(frame.taiko_byte)
+        self.stream.float(frame.mouse_x)
+        self.stream.float(frame.mouse_y)
+        self.stream.s32(frame.time)
 
     def write_scoreframe(self, frame: ScoreFrame):
         pass
