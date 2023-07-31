@@ -11,7 +11,7 @@ from ..constants import (
 
 @dataclass
 class StatusUpdate:
-    status: ClientStatus
+    action: ClientStatus
     text: str
     mods: Mods
     mode: GameMode

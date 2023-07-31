@@ -54,7 +54,7 @@ class Reader(BaseReader):
 
     def read_status(self) -> StatusUpdate:
         return StatusUpdate(
-            status=ClientStatus(self.stream.u8()),
+            action=ClientStatus(self.stream.u8()),
             text=self.stream.string(),
             beatmap_checksum=self.stream.string(),
             mods=Mods(self.stream.u32()),
