@@ -5,7 +5,8 @@ from app.common.objects import (
     UserPresence,
     UserStats,
     UserQuit,
-    Message
+    Message,
+    Match
 )
 
 from .constants import ResponsePacket
@@ -171,6 +172,12 @@ def lobby_part(player_id: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.NEW_MATCH)
+def new_match(match: Match):
+    writer = Writer()
+    writer.write_match(match)
+    return writer.stream.get()
 
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
