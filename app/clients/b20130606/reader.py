@@ -63,7 +63,10 @@ class Reader(BaseReader):
         )
 
     def read_beatmap_request(self) -> BeatmapInfoRequest:
-        pass
+        return BeatmapInfoRequest(
+            [self.stream.string() for m in range(self.stream.s32())],
+            [self.stream.s32() for m in range(self.stream.s32())]
+        )
 
     def read_replayframe(self) -> ReplayFrame:
         pass
