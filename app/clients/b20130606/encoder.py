@@ -218,6 +218,10 @@ def score_update(score_frame: ScoreFrame):
     writer.write_scoreframe(score_frame)
     return writer.stream.get()
 
+@register(ResponsePacket.MATCH_TRANSFER_HOST)
+def transfer_host():
+    return b''
+
 @register(ResponsePacket.MATCH_JOIN_FAIL)
 def match_join_fail():
     return b''
