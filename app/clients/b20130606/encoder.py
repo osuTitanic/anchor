@@ -1,6 +1,11 @@
 
-from app.common.objects import UserPresence, UserQuit, UserStats
 from app.common.streams import StreamOut
+from app.common.objects import (
+    UserPresence,
+    UserStats,
+    UserQuit,
+    Message
+)
 
 from .constants import ResponsePacket
 from ..packets import PACKETS
@@ -84,3 +89,9 @@ def send_exit(user_quit: UserQuit):
     stream.s32(user_quit.user_id)
     stream.u8(user_quit.quit_state.value)
     return stream.get()
+
+@register(ResponsePacket.SEND_MESSAGE)
+def send_message(msg: Message):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
