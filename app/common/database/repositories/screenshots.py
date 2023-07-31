@@ -1,11 +1,11 @@
 
-from app.common.database import DBScreenshot
-from app.session import database
-
+from app.common.database.objects import DBScreenshot
 from typing import Optional
 
+import app
+
 def create(user_id: int, hidden: bool) -> DBScreenshot:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             ss := DBScreenshot(
                 user_id,
@@ -17,6 +17,6 @@ def create(user_id: int, hidden: bool) -> DBScreenshot:
     return ss
 
 def fetch_by_id(id: int) -> Optional[DBScreenshot]:
-    return database.temp_session.query(DBScreenshot) \
-        .filter(DBScreenshot.id == id) \
-        .first()
+    return app.session.database.temp_session.query(DBScreenshot) \
+            .filter(DBScreenshot.id == id) \
+            .first()

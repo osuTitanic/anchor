@@ -1,13 +1,13 @@
 
-from app.session import database
-from app.common.database import (
+from datetime import datetime
+from app.common.database.objects import (
     DBReplayHistory,
     DBPlayHistory,
     DBRankHistory,
     DBStats
 )
 
-from datetime import datetime
+import app
 
 def update_plays(
     user_id: int,
@@ -15,7 +15,7 @@ def update_plays(
 ) -> None:
     time = datetime.now()
 
-    with database.session as session:
+    with app.session.database.session as session:
         updated = session.query(DBPlayHistory) \
                 .filter(DBPlayHistory.user_id == user_id) \
                 .filter(DBPlayHistory.mode == mode) \
@@ -43,7 +43,7 @@ def update_replay_views(
 ) -> None:
     time = datetime.now()
 
-    with database.session as session:
+    with app.session.database.session as session:
         updated = session.query(DBReplayHistory) \
                     .filter(DBReplayHistory.user_id == user_id) \
                     .filter(DBReplayHistory.mode == mode) \

@@ -1,9 +1,10 @@
 
-from app.common.database import DBRating
-from app.session import database
+from app.common.database.objects import DBRating
 
 from typing import List, Optional
 from sqlalchemy import func
+
+import app
 
 def create(
     beatmap_hash: str,
@@ -11,7 +12,7 @@ def create(
     set_id: int,
     rating: int
 ) -> DBRating:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             rating := DBRating(
                 user_id,
@@ -25,7 +26,7 @@ def create(
     return rating
 
 def fetch_one(beatmap_hash: str, user_id: int) -> Optional[int]:
-    result = database.temp_session.query(DBRating.rating) \
+    result = app.session.database.temp_session.query(DBRating.rating) \
             .filter(DBRating.map_checksum == beatmap_hash) \
             .filter(DBRating.user_id == user_id) \
             .first()
@@ -35,13 +36,14 @@ def fetch_one(beatmap_hash: str, user_id: int) -> Optional[int]:
 def fetch_many(beatmap_hash) -> List[int]:
     return [
         rating[0]
-        for rating in database.temp_session.query(DBRating.rating) \
+        for rating in app.session.database.temp_session \
+            .query(DBRating.rating) \
             .filter(DBRating.map_checksum == beatmap_hash) \
             .all()
     ]
 
 def fetch_average(beatmap_hash) -> float:
-    result = database.temp_session.query(
+    result = app.session.database.temp_session.query(
         func.avg(DBRating.rating) \
             .label('average')) \
         .filter(DBRating.map_checksum == beatmap_hash) \

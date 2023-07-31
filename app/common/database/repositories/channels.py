@@ -1,8 +1,8 @@
 
-from app.common.database import DBChannel
-from app.session import database
-
+from app.common.database.objects import DBChannel
 from typing import List
+
+import app
 
 def create(
     name: str,
@@ -11,7 +11,7 @@ def create(
     write_permissions: int
     # TODO: Channel Owner
 ) -> DBChannel:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             chan := DBChannel(
                 name,
@@ -25,5 +25,6 @@ def create(
     return chan
 
 def fetch_all() -> List[DBChannel]:
-    return database.temp_session.query(DBChannel) \
-                                .all()
+    return app.session.database.temp_session \
+                      .query(DBChannel) \
+                      .all()

@@ -1,8 +1,8 @@
 
-from app.common.database import DBComment
-from app.session import database
-
+from app.common.database.objects import DBComment
 from typing import List
+
+import app
 
 def create(
     target_id: int,
@@ -14,7 +14,7 @@ def create(
     playmode: int,
     color: str
 ) -> DBComment:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             c := DBComment(
                 target_id,
@@ -35,7 +35,7 @@ def fetch_many(
     target_id: int,
     type: str
 ) -> List[DBComment]:
-    return database.temp_session.query(DBComment) \
+    return app.session.database.temp_session.query(DBComment) \
             .filter(DBComment.target_id == target_id) \
             .filter(DBComment.target_type == type) \
             .order_by(DBComment.time.asc()) \

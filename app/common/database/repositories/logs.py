@@ -1,13 +1,14 @@
 
-from app.common.database import DBLog
-from app.session import database
+from app.common.database.objects import DBLog
+
+import app
 
 def create(
     message: str,
     level: str,
     type: str
 ) -> DBLog:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             log := DBLog(
                 message,

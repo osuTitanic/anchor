@@ -1,6 +1,5 @@
 
-from app.session import database
-from app.common.database import (
+from app.common.database.objects import (
     DBBeatmap,
     DBScore,
     DBUser
@@ -9,32 +8,34 @@ from app.common.database import (
 from typing import Optional, List
 from sqlalchemy import or_, func
 
+import app
+
 def create(score: DBScore) -> DBScore:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(score)
         session.commit()
 
     return score
 
 def fetch_by_id(id: int) -> Optional[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
         .filter(DBScore.id == id) \
         .first()
 
 def fetch_by_replay_checksum(checksum: str) -> Optional[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.replay_md5 == checksum) \
             .first()
 
 def fetch_count(user_id: int, mode: int) -> int:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.user_id == user_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.status == 3) \
             .count()
 
 def fetch_top_scores(user_id: int, mode: int, exclude_approved: bool = False) -> List[DBScore]:
-    query = database.temp_session.query(DBScore) \
+    query = app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.user_id == user_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.status == 3)
@@ -55,14 +56,14 @@ def fetch_personal_best(
     mods: Optional[int] = None
 ) -> Optional[DBScore]:
     if mods == None:
-        return database.temp_session.query(DBScore) \
+        return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.beatmap_id == beatmap_id) \
             .filter(DBScore.user_id == user_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.status == 3) \
             .first()
 
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.beatmap_id == beatmap_id) \
             .filter(DBScore.user_id == user_id) \
             .filter(DBScore.mode == mode) \
@@ -76,7 +77,7 @@ def fetch_range_scores(
     offset: int = 0,
     limit: int = 5
 ) -> List[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
         .filter(DBScore.beatmap_id == beatmap_id) \
         .filter(DBScore.mode == mode) \
         .filter(DBScore.status == 3) \
@@ -91,7 +92,7 @@ def fetch_range_scores_country(
     country: str,
     limit: int = 5
 ) -> List[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.beatmap_id == beatmap_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.status == 3) \
@@ -106,7 +107,7 @@ def fetch_range_scores_friends(
     friends: List[int],
     limit: int = 5
 ) -> List[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.beatmap_id == beatmap_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.status == 3) \
@@ -120,7 +121,7 @@ def fetch_range_scores_mods(
     mods: int,
     limit: int = 5
 ) -> List[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
         .filter(DBScore.beatmap_id == beatmap_id) \
         .filter(DBScore.mode == mode) \
         .filter(or_(DBScore.status == 3, DBScore.status == 4)) \
@@ -137,7 +138,7 @@ def fetch_score_index(
     friends: Optional[List[int]] = None,
     country: Optional[str] = None
 ) -> int:
-    with database.session as session:
+    with app.session.database.session as session:
         query = session.query(DBScore.user_id, DBScore.mods, func.rank() \
                     .over(
                         order_by=DBScore.total_score.desc()
@@ -180,7 +181,7 @@ def fetch_score_index_by_id(
     mode: int,
     mods: Optional[int] = None
 ) -> int:
-    with database.session as session:
+    with app.session.database.session as session:
         query = session.query(DBScore.id, DBScore.mods, func.rank() \
                     .over(
                         order_by=DBScore.total_score.desc()
@@ -210,7 +211,7 @@ def fetch_score_above(
     mode: int,
     total_score: int
 ) -> Optional[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
             .filter(DBScore.beatmap_id == beatmap_id) \
             .filter(DBScore.mode == mode) \
             .filter(DBScore.total_score > total_score) \
@@ -223,7 +224,7 @@ def fetch_recent(
     mode: int,
     limit: int = 3
 ) -> List[DBScore]:
-    return database.temp_session.query(DBScore) \
+    return app.session.database.temp_session.query(DBScore) \
                 .filter(DBScore.user_id == user_id) \
                 .filter(DBScore.mode == mode) \
                 .order_by(DBScore.id.desc()) \

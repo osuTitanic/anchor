@@ -1,8 +1,8 @@
 
-from app.common.database import DBUser
-from app.session import database
-
+from app.common.database.objects import DBUser
 from typing import Optional
+
+import app
 
 def create(
     username: str,
@@ -10,7 +10,7 @@ def create(
     pw_bcrypt: str,
     country: str
 ) -> DBUser:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             user := DBUser(
                 username,
@@ -24,7 +24,7 @@ def create(
     return user
 
 def update(user_id: int, updates: dict) -> int:
-    with database.session as session:
+    with app.session.database.session as session:
         rows = session.query(DBUser) \
                .filter(DBUser.id == user_id) \
                .update(updates)
@@ -33,11 +33,11 @@ def update(user_id: int, updates: dict) -> int:
     return rows
 
 def fetch_by_name(username: str) -> Optional[DBUser]:
-    return database.temp_session.query(DBUser) \
+    return app.session.database.temp_session.query(DBUser) \
         .filter(DBUser.name == username) \
         .first()
 
 def fetch_by_id(id: int) -> Optional[DBUser]:
-    return database.temp_session.query(DBUser) \
+    return app.session.database.temp_session.query(DBUser) \
         .filter(DBUser.id == id) \
         .first()

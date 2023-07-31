@@ -1,6 +1,7 @@
 
-from app.common.database import DBActivity
-from app.session import database
+from app.common.database.objects import DBActivity
+
+import app
 
 def create(
     user_id: int,
@@ -9,7 +10,7 @@ def create(
     args: str,
     links: str
 ) -> DBActivity:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             ac := DBActivity(
                 user_id,

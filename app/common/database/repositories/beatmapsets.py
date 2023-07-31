@@ -1,12 +1,12 @@
 
-from app.common.database import DBBeatmapset
-from app.session import database
-
+from app.common.database.objects import DBBeatmapset
 from typing import Optional
+
+import app
 
 # TODO: create
 
 def fetch_one(id: int) -> Optional[DBBeatmapset]:
-    return database.temp_session.query(DBBeatmapset) \
+    return app.session.database.temp_session.query(DBBeatmapset) \
                 .filter(DBBeatmapset.id == id) \
                 .first()

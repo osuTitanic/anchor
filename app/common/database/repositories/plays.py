@@ -1,6 +1,7 @@
 
-from app.common.database import DBPlay
-from app.session import database
+from app.common.database.objects import DBPlay
+
+import app
 
 def create(
     beatmap_file: str,
@@ -9,7 +10,7 @@ def create(
     set_id: int,
     count: int = 1
 ) -> DBPlay:
-    with database.session as session:
+    with app.session.database.session as session:
         session.add(
             p := DBPlay(
                 user_id,
@@ -30,7 +31,7 @@ def update(
     set_id: int,
     count: int = 1
 ) -> None:
-    with database.session as session:
+    with app.session.database.session as session:
         updated = session.query(DBPlay) \
             .filter(DBPlay.beatmap_id == beatmap_id) \
             .filter(DBPlay.user_id == user_id) \
