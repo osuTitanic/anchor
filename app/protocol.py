@@ -172,15 +172,19 @@ class BanchoProtocol(Protocol):
 
         self.transport.loseConnection()
 
-    def send_packet(self, packet_type: Enum, encoders, *args):
-        stream = StreamOut()
-        encoder = encoders[packet_type]
-        payload = encoder(*args)
+    def send_packet(self, packet: Enum, encoders, *args):
+        try:
+            stream = StreamOut()
+            payload = encoders[packet](*args)
 
-        stream.header(packet_type, len(payload))
-        stream.write(payload)
+            stream.header(packet, len(payload))
+            stream.write(payload)
 
-        self.enqueue(stream.get())
+            self.enqueue(stream.get())
+        except KeyError as e:
+            self.logger.error(
+                f'Could not send packet "{packet.name}": {e}'
+            )
 
     def send_error(self, reason = -5, message = ""):
         ...
