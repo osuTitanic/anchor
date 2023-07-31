@@ -193,6 +193,12 @@ def disband_match(match_id: int):
         signed=True
     )
 
+@register(ResponsePacket.MATCH_JOIN_SUCCESS)
+def match_join_success(match: Match):
+    writer = Writer()
+    writer.write_match(match)
+    return writer.stream.get()
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return
