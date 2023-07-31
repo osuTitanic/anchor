@@ -89,10 +89,8 @@ class Writer(BaseWriter):
         self.stream.string(info.checksum)
 
     def write_beatmap_info_reply(self, reply: BeatmapInfoReply):
-        pass
-
-    def write_match(self, match: Match):
-        pass
+        self.stream.s32(len(reply.beatmaps))
+        [self.write_beatmap_info(info) for info in reply.beatmaps]
 
     def write_replayframe(self, frame: ReplayFrame):
         pass
