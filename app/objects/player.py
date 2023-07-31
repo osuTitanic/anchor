@@ -102,5 +102,9 @@ class Player(BanchoProtocol):
 
         self.packets, self.sender = self.get_client(client.version.date)
 
+        self.sender.send_protocol_version(
+            self.sender.protocol_version
+        )
+
         self.login_failed(LoginError.ServerError, "Testmessage")
         self.close_connection()
