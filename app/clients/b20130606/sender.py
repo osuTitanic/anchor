@@ -67,3 +67,12 @@ class PacketSender(BaseSender):
             self.packets.USER_PRESENCE,
             writer.stream.get()
         )
+
+    def send_stats(self, stats: UserStats):
+        writer = self.writer()
+        writer.write_stats(stats)
+
+        self.player.send_packet(
+            self.packets.USER_PRESENCE,
+            writer.stream.get()
+        )
