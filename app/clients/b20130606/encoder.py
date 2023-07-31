@@ -127,3 +127,11 @@ def spectate_frames(bundle: ReplayFrameBundle):
     writer = Writer()
     writer.write_replayframe_bundle(bundle)
     return writer.stream.get()
+
+@register(ResponsePacket.CANT_SPECTATE)
+def cant_spectate(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
