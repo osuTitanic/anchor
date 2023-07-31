@@ -40,7 +40,7 @@ def send_protocol_version(version: int):
 
 @register(ResponsePacket.PING)
 def send_ping():
-    return # bruh
+    return b'' # bruh
 
 @register(ResponsePacket.ANNOUNCE)
 def send_announcement(message: str):
@@ -50,7 +50,7 @@ def send_announcement(message: str):
 
 @register(ResponsePacket.GET_ATTENSION)
 def open_chat():
-    return
+    return b''
 
 @register(ResponsePacket.MENU_ICON)
 def send_menu_icon(image: Optional[str], url: Optional[str]):
@@ -103,7 +103,7 @@ def irc_nick(previous: str, after: str):
 
 @register(ResponsePacket.IRC_QUIT)
 def irc_quit(*args):
-    pass # TODO: Only used in older clients
+    return b'' # TODO: Only used in older clients
 
 @register(ResponsePacket.SEND_MESSAGE)
 def send_message(msg: Message):
@@ -199,6 +199,10 @@ def match_join_success(match: Match):
     writer.write_match(match)
     return writer.stream.get()
 
+@register(ResponsePacket.MATCH_JOIN_FAIL)
+def match_join_fail():
+    return b''
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
-    return
+    return b''
