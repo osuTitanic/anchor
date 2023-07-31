@@ -95,3 +95,8 @@ class PacketSender(BaseSender):
             self.packets.USER_PRESENCE_BUNDLE,
             writer.stream.get()
         )
+
+    def send_exit(self, user_quit: UserQuit):
+        stream = StreamOut()
+        stream.s32(user_quit.user_id)
+        stream.u8(user_quit.quit_state.value)
