@@ -1,6 +1,7 @@
 
 from app.common.streams import StreamOut
 from app.common.objects import (
+    ReplayFrameBundle,
     UserPresence,
     UserStats,
     UserQuit,
@@ -120,3 +121,9 @@ def spectator_left(player_id: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.SPECTATE_FRAMES)
+def spectate_frames(bundle: ReplayFrameBundle):
+    writer = Writer()
+    writer.write_replayframe_bundle(bundle)
+    return writer.stream.get()
