@@ -31,6 +31,10 @@ class StreamOut:
 		self.data[self.pos : self.pos + len(data)] = data
 		self.pos += len(data)
 
+	def write_to_start(self, data):
+		self.data[0 : 0] = data
+		self.pos += len(data)
+
 	def pad(self, num, char=b"\0"):
 		self.write(char * num)
 
