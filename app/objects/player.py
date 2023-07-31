@@ -114,6 +114,8 @@ class Player(BanchoProtocol):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
 
+        # TODO: Set packet enums
+
         self.decoders, self.encoders = self.get_client(client.version.date)
 
         self.send_packet(self.response_packets.PROTOCOL_VERSION, 18)
