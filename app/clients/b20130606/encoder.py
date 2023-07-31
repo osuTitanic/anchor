@@ -185,6 +185,14 @@ def update_match(match: Match):
     writer.write_match(match)
     return writer.stream.get()
 
+@register(ResponsePacket.DISBAND_MATCH)
+def disband_match(match_id: int):
+    return int(match_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return
