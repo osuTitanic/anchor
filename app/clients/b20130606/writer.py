@@ -39,7 +39,10 @@ class Writer(BaseWriter):
         self.stream.u16(channel.user_count)
 
     def write_message(self, msg: Message):
-        pass
+        self.stream.string(msg.sender)
+        self.stream.string(msg.content)
+        self.stream.string(msg.target)
+        self.stream.s32(msg.sender_id)
 
     def write_presence(self, presence: UserPresence):
         pass
