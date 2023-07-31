@@ -56,7 +56,7 @@ class ResponsePacket(IntEnum):
     SEND_MESSAGE                    = 7
     PING                            = 8
     IRC_CHANGE_USERNAME             = 9
-    IRC_QUIT                        = 10
+    IRC_QUIT                        = 10 # Unused (replaced by QuitState)
     USER_STATS                      = 11
     USER_QUIT                       = 12
     SPECTATOR_JOINED                = 13
