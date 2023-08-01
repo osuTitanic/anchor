@@ -323,6 +323,14 @@ def silence_info(time: int):
         signed=True
     )
 
+@register(ResponsePacket.USER_SILENCED)
+def user_silenced(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
