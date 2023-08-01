@@ -355,3 +355,10 @@ def version_update_forced():
 def switch_to_backup():
     return b''
 
+@register(ResponsePacket.RESTART)
+def restarting(retry_in_ms: int):
+    return int(retry_in_ms).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
