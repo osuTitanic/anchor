@@ -50,6 +50,12 @@ def send_permissions(permissions: Permissions):
         signed=True
     )
 
+@register(ResponsePacket.FRIENDS_LIST)
+def friends(player_id: List[int]):
+    writer = Writer()
+    writer.write_intlist(player_id)
+    return writer.stream.get()
+
 @register(ResponsePacket.PING)
 def send_ping():
     return b'' # bruh
