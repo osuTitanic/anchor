@@ -346,3 +346,8 @@ def target_silenced(msg: Message):
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
+
+@register(ResponsePacket.VERSION_UPDATE_FORCED)
+def version_update_forced():
+    return b''
+
