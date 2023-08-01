@@ -125,6 +125,12 @@ def channel_join_success(target: str):
     stream.string(target)
     return stream.get()
 
+@register(ResponsePacket.CHANNEL_REVOKED)
+def channel_revoked(target: str):
+    stream = StreamOut()
+    stream.string(target)
+    return stream.get()
+
 @register(ResponsePacket.SEND_MESSAGE)
 def send_message(msg: Message):
     writer = Writer()
