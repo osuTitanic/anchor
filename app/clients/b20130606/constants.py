@@ -50,6 +50,9 @@ class RequestPacket(IntEnum):
     PRESENCE_REQUEST_ALL  = 98
     CHANGE_FRIENDONLY_DMS = 99
 
+    def __eq__(self, other: IntEnum) -> bool:
+        return self.name == other.name
+
 class ResponsePacket(IntEnum):
     LOGIN_REPLY                     = 5
     COMMAND_ERROR                   = 6 # Unused
@@ -109,3 +112,6 @@ class ResponsePacket(IntEnum):
     TARGET_IS_SILENCED              = 101
     VERSION_UPDATE_FORCED           = 102
     SWITCH_SERVER                   = 103
+
+    def __eq__(self, other: IntEnum) -> bool:
+        return self.name == other.name
