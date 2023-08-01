@@ -84,7 +84,7 @@ def fetch_web(ip: str, is_local: bool = False) -> Optional[Geolocation]:
     index = list(COUNTRIES.keys()).index(lines[1])
 
     return Geolocation(
-        ip,
+        ip=lines[12],
         latitude=lines[6],
         longitude=lines[7],
         country_code=lines[1],
