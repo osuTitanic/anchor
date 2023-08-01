@@ -81,6 +81,10 @@ def send_menu_icon(image: Optional[str], url: Optional[str]):
     )
     return stream.get()
 
+@register(ResponsePacket.MONITOR)
+def monitor():
+    return b''
+
 @register(ResponsePacket.USER_PRESENCE)
 def send_presence(presence: UserPresence):
     writer = Writer()
