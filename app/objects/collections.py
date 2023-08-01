@@ -1,4 +1,9 @@
 
+from app.clients import (
+    DefaultResponsePacket,
+    DefaultRequestPacket
+)
+
 from typing import Set, List, Iterator, Optional
 from enum import Enum
 
@@ -25,7 +30,7 @@ class Players(List[Player]):
         return {p for p in self if p.in_lobby}
 
     def append(self, player: Player) -> None:
-        # TODO: Enqueue player to others
+        self.send_player(player)
         if player.id not in self.ids:
             return super().append(player)
     
@@ -55,6 +60,18 @@ class Players(List[Player]):
     def send_packet(self, packet: Enum, *args):
         for p in self:
             p.send_packet(packet, args)
+
+    def send_player(self, player: Player):
+        self.send_packet(
+            DefaultResponsePacket.USER_PRESENCE_SINGLE,
+            player.id
+        )
+
+    def send_player_bundle(self, players: List[Player]):
+        self.send_packet(
+            DefaultResponsePacket.USER_PRESENCE_BUNDLE,
+            [player.id for player in players]
+        )
 
 # TODO: Channels
 # TODO: IRC Players
