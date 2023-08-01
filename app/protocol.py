@@ -12,6 +12,7 @@ from app.objects import OsuClient
 
 import traceback
 import logging
+import config
 import utils
 
 IPAddress = Union[IPv4Address, IPv6Address]
@@ -81,7 +82,7 @@ class BanchoProtocol(Protocol):
                 self.client
             )
         except Exception as e:
-            traceback.print_exc()
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(f'Error on login: {e}')
             self.close_connection(e)
 
@@ -122,7 +123,7 @@ class BanchoProtocol(Protocol):
                 # Reset buffer
                 self.buffer = stream.readall()
         except Exception as e:
-            traceback.print_exc()
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(f'Error while receiving packet: {e}')
 
             self.close_connection(e)
@@ -159,7 +160,7 @@ class BanchoProtocol(Protocol):
 
             self.enqueue(stream.get())
         except Exception as e:
-            traceback.print_exc()
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}'
             )

@@ -10,6 +10,7 @@ from .objects import Base
 
 import traceback
 import logging
+import config
 
 class Postgres:
     def __init__(self, username: str, password: str, host: str, port: int) -> None:
@@ -47,7 +48,7 @@ class Postgres:
         except ResourceClosedError:
             pass
         except Exception as exc:
-            traceback.print_exc()
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Failed to close session: {exc}'
             )
