@@ -6,6 +6,7 @@ from app.logging import Console, File
 
 import logging
 import config
+import utils
 import app
 
 logging.basicConfig(
@@ -14,6 +15,8 @@ logging.basicConfig(
 )
 
 def main():
+    utils.setup()
+
     factory = BanchoFactory()
 
     for port in config.PORTS:

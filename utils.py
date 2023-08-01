@@ -1,8 +1,20 @@
 
 from app.common.database import DBScore
+from app.common.helpers import location
 from datetime import datetime
 
 import hashlib
+import config
+import os
+
+def setup():
+    os.makedirs(config.DATA_PATH, exist_ok=True)
+
+    if config.SKIP_IP_DATABASE:
+        return
+
+    if not os.path.isfile(f'{config.DATA_PATH}/geolite.mmdb'):
+        location.download_database()
 
 def get_ticks(dt) -> int:
     dt = dt.replace(tzinfo=None)
