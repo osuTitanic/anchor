@@ -1,8 +1,15 @@
 
-from app.common.constants import PresenceFilter, LoginError
-from app.common.streams import StreamIn
-from app.protocol import BanchoProtocol, IPAddress
+from app.common.constants import (
+    PresenceFilter,
+    LoginError,
+    GameMode
+)
+
 from app.common.database.repositories import users
+
+from app.protocol import BanchoProtocol, IPAddress
+from app.common.streams import StreamIn
+
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 
@@ -18,7 +25,9 @@ from app.clients import (
     DefaultRequestPacket
 )
 
+import hashlib
 import logging
+import bcrypt
 import app
 
 class Player(BanchoProtocol):
@@ -35,8 +44,8 @@ class Player(BanchoProtocol):
         self.id = -1
         self.name = ""
 
-        self.response_packets = DefaultResponsePacket
         self.request_packets = DefaultRequestPacket
+        self.packets = DefaultResponsePacket
         self.decoders: Dict[Enum, Callable] = {}
         self.encoders: Dict[Enum, Callable] = {}
 
@@ -78,12 +87,12 @@ class Player(BanchoProtocol):
     def send_error(self, reason=-5, message=""):
         if self.encoders and message:
             self.send_packet(
-                self.response_packets.ANNOUNCE,
+                self.packets.ANNOUNCE,
                 message
             )
 
         self.send_packet(
-            self.response_packets.LOGIN_REPLY,
+            self.packets.LOGIN_REPLY,
             reason
         )
 
@@ -116,12 +125,70 @@ class Player(BanchoProtocol):
 
         # TODO: Set packet enums
 
+        # Get decoders and encoders
         self.decoders, self.encoders = self.get_client(client.version.date)
 
-        self.send_packet(self.response_packets.PROTOCOL_VERSION, 18)
+        # Send protocol version
+        self.send_packet(self.packets.PROTOCOL_VERSION, 18) # TODO: Define constant
 
-        self.login_failed(LoginError.ServerError, "Testmessage")
-        self.close_connection()
+        # Check adapters md5
+        adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
+
+        if adapters_hash != client.hash.adapters_md5:
+            self.transport.write('no.\r\n')
+            self.close_connection()
+            return
+
+        if not (user := users.fetch_by_name(username)):
+            self.logger.warning('Login Failed: User not found')
+            self.login_failed(LoginError.Authentication)
+            return
+
+        if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
+            self.logger.warning('Login Failed: Authentication error')
+            self.login_failed(LoginError.Authentication)
+            return
+
+        if user.restricted:
+            # TODO: Check ban time
+            self.logger.warning('Login Failed: Restricted')
+            self.login_failed(LoginError.Banned)
+            return
+
+        if not user.activated:
+            self.logger.warning('Login Failed: Not activated')
+            self.login_failed(LoginError.NotActivated)
+            return
+
+        if app.session.players.by_id(user.id):
+            # TODO: Check connection of other user
+            self.logger.warning('Login failed: Already Online')
+            self.close_connection()
+            return
+
+        # TODO: Tournament clients
+
+        self.id = user.id
+        self.name = user.name
+        self.stats = user.stats
+        self.object = user
+
+        self.status.mode = GameMode(self.object.preferred_mode)
+
+        if not self.stats:
+            # TODO: Create stats
+                # Reload object
+                # Reset ban info
+            pass
+
+        # TODO: Update leaderboards
+
+        self.login_success()
+
+    def login_success(self):
+        # TODO: Create spectator channel
+
+        self.send_packet(self.packets.LOGIN_REPLY, self.id)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         try:
