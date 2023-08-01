@@ -106,6 +106,12 @@ def irc_nick(previous: str, after: str):
 def irc_quit(*args):
     return b'' # TODO: Only used in older clients
 
+@register(ResponsePacket.CHANNEL_JOIN_SUCCESS)
+def channel_join_success(target: str):
+    stream = StreamOut()
+    stream.string(target)
+    return stream.get()
+
 @register(ResponsePacket.SEND_MESSAGE)
 def send_message(msg: Message):
     writer = Writer()
