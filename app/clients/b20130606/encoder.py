@@ -315,6 +315,14 @@ def beatmap_info_reply(reply: BeatmapInfoReply):
     writer.write_beatmap_info_reply(reply)
     return writer.stream.get()
 
+@register(ResponsePacket.SILENCE_INFO)
+def silence_info(time: int):
+    return int(time).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
