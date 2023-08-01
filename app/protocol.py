@@ -12,8 +12,7 @@ from app.objects import OsuClient
 
 import traceback
 import logging
-import struct
-import socket
+import utils
 
 IPAddress = Union[IPv4Address, IPv6Address]
 
@@ -26,31 +25,9 @@ class BanchoProtocol(Protocol):
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)
+        self.is_local = utils.is_localip(address.host)
         self.client: Optional[OsuClient] = None
         self.address = address
-
-    @property
-    def is_local(self) -> bool:
-        private = (
-            [ 2130706432, 4278190080 ], # 127.0.0.0
-            [ 3232235520, 4294901760 ], # 192.168.0.0
-            [ 2886729728, 4293918720 ], # 172.16.0.0
-            [ 167772160,  4278190080 ], # 10.0.0.0
-        )
-
-        f = struct.unpack(
-            '!I',
-            socket.inet_pton(
-                socket.AF_INET,
-                self.address.host
-            )
-        )[0]
-
-        for net in private:
-            if (f & net[1]) == net[0]:
-                return True
-
-        return False
 
     def connectionMade(self):
         if not self.is_local:
@@ -182,6 +159,7 @@ class BanchoProtocol(Protocol):
 
             self.enqueue(stream.get())
         except Exception as e:
+            traceback.print_exc()
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}'
             )
