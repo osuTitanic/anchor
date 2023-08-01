@@ -54,7 +54,7 @@ class Writer(BaseWriter):
 
         self.stream.s32(presence.user_id)
         self.stream.string(presence.username)
-        self.stream.u8(presence.timezone - 24)
+        self.stream.u8(presence.timezone + 24)
         self.stream.u8(presence.country_code)
         self.stream.u8(presence.permissions.value | presence.mode.value << 5)
         self.stream.float(presence.longitude)
@@ -69,7 +69,7 @@ class Writer(BaseWriter):
         self.stream.s32(stats.playcount)
         self.stream.u64(stats.tscore)
         self.stream.s32(stats.rank)
-        self.stream.u16(stats.pp)
+        self.stream.u16(round(stats.pp))
 
     def write_status(self, status: StatusUpdate):
         self.stream.u8(status.action.value)
