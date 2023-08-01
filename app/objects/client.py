@@ -1,7 +1,11 @@
 
 from app.common.constants import OSU_VERSION
+from app.common.helpers import location
+
+from datetime import datetime
 from typing import Optional
 
+import pytz
 import re
 
 class ClientVersion:
@@ -82,7 +86,7 @@ class ClientHash:
         )
 
 class OsuClient:
-    def __init__(self, ip: str, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
+    def __init__(self, ip: location.Geolocation, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
         self.ip = ip
         self.hash = client_hash
         self.version = version
@@ -99,13 +103,18 @@ class OsuClient:
             build_version, utc_offset, display_city, client_hash = line.split('|')
             friendonly_dms = False
 
-        # TODO: Resolve ip address
+        geolocation = location.fetch_geolocation(ip)
+        utc_offset = int(
+            datetime.now(
+                pytz.timezone(geolocation.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
 
         return OsuClient(
-            ip,
+            geolocation,
             ClientVersion.from_string(build_version),
             ClientHash.from_string(client_hash),
-            int(utc_offset),
+            utc_offset,
             display_city = display_city == "1",
             friendonly_dms = friendonly_dms == "1"
         )
@@ -113,7 +122,7 @@ class OsuClient:
     @classmethod
     def empty(cls):
         return OsuClient(
-            '127.0.0.1',
+            location.fetch_geolocation('127.0.0.1', True),
             ClientVersion(OSU_VERSION.match('b1337'), 1337),
             ClientHash('', '', '', '', ''),
             0,
