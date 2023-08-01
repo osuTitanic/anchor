@@ -6,6 +6,7 @@ from app.common.objects import (
     ScoreFrame,
     UserStats,
     UserQuit,
+    Channel,
     Message,
     Match
 )
@@ -105,6 +106,18 @@ def irc_nick(previous: str, after: str):
 @register(ResponsePacket.IRC_QUIT)
 def irc_quit(*args):
     return b'' # TODO: Only used in older clients
+
+@register(ResponsePacket.CHANNEL_AVAILABLE)
+def channel_available(channel: Channel):
+    writer = Writer()
+    writer.write_channel(channel)
+    return writer.stream.get()
+
+@register(ResponsePacket.CHANNEL_AVAILABLE_AUTOJOIN)
+def channel_available_autojoin(channel: Channel):
+    writer = Writer()
+    writer.write_channel(channel)
+    return writer.stream.get()
 
 @register(ResponsePacket.CHANNEL_JOIN_SUCCESS)
 def channel_join_success(target: str):
