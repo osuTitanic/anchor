@@ -200,6 +200,10 @@ def match_join_success(match: Match):
     writer.write_match(match)
     return writer.stream.get()
 
+@register(ResponsePacket.MATCH_JOIN_FAIL)
+def match_join_fail():
+    return b''
+
 @register(ResponsePacket.MATCH_CHANGE_PASSWORD)
 def match_change_password(new_password: str):
     stream = StreamOut()
@@ -226,9 +230,13 @@ def transfer_host():
 def all_players_loaded():
     return b''
 
-@register(ResponsePacket.MATCH_JOIN_FAIL)
-def match_join_fail():
-    return b''
+@register(ResponsePacket.MATCH_PLAYER_FAILED)
+def match_player_failed(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
 
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
