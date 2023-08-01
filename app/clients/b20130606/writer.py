@@ -49,6 +49,9 @@ class Writer(BaseWriter):
         self.stream.s32(msg.sender_id)
 
     def write_presence(self, presence: UserPresence):
+        if presence.is_irc:
+            presence.user_id = -presence.user_id
+
         self.stream.s32(presence.user_id)
         self.stream.string(presence.username)
         self.stream.u8(presence.timezone - 24)
