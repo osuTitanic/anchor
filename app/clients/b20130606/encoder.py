@@ -303,6 +303,12 @@ def match_skip():
 def match_complete():
     return b''
 
+@register(ResponsePacket.INVITE)
+def match_invite(msg: Message):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
+
 @register(ResponsePacket.BEATMAP_INFO_REPLY)
 def beatmap_info_reply(reply: BeatmapInfoReply):
     writer = Writer()
