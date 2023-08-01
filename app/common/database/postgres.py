@@ -23,33 +23,21 @@ class Postgres:
         self.logger = logging.getLogger('postgres')
         Base.metadata.create_all(bind=self.engine)
 
-        self.session_factory = scoped_session(
-            sessionmaker(self.engine, expire_on_commit=False, autoflush=True)
-        )
-
     @property
     def session(self) -> Session:
-        return self.session_factory()
+        return Session(self.engine, expire_on_commit=True)
 
     @property
     def temp_session(self) -> Session:
-        for session in self.create_temp_session():
-            return session
+        session = Session(self.engine)
 
-    def create_temp_session(self, timeout: int = 15) -> Generator:
-        session = self.session_factory()
-        try:
-            yield session
-        except Exception as e:
-            traceback.print_exc()
-            self.logger.critical(f'Transaction failed: "{e}". Performing rollback...')
-            session.rollback()
-        finally:
-            Timer(
-                interval=timeout,
-                function=self.close_session,
-                args=[session]
-            ).start()
+        Timer(
+            interval=15,
+            function=self.close_session,
+            args=[session]
+        ).start()
+
+        return session
 
     def close_session(self, session: Session) -> None:
         try:
