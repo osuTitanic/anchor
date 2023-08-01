@@ -1,7 +1,7 @@
 
-from enum import IntEnum
+from ..packets import PacketEnum
 
-class RequestPacket(IntEnum):
+class RequestPacket(PacketEnum):
     CHANGE_STATUS         = 0
     SEND_MESSAGE          = 1
     EXIT                  = 2
@@ -50,13 +50,7 @@ class RequestPacket(IntEnum):
     PRESENCE_REQUEST_ALL  = 98
     CHANGE_FRIENDONLY_DMS = 99
 
-    def __eq__(self, other: IntEnum) -> bool:
-        return self.name == other.name
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-class ResponsePacket(IntEnum):
+class ResponsePacket(PacketEnum):
     LOGIN_REPLY                     = 5
     COMMAND_ERROR                   = 6 # Unused
     SEND_MESSAGE                    = 7
@@ -115,9 +109,3 @@ class ResponsePacket(IntEnum):
     TARGET_IS_SILENCED              = 101
     VERSION_UPDATE_FORCED           = 102
     SWITCH_SERVER                   = 103
-
-    def __eq__(self, other: IntEnum) -> bool:
-        return self.name == other.name
-
-    def __hash__(self) -> int:
-        return hash(self.name)
