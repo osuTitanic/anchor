@@ -139,6 +139,10 @@ def channel_available_autojoin(channel: Channel):
     writer.write_channel(channel)
     return writer.stream.get()
 
+@register(ResponsePacket.CHANNEL_INFO_COMPLETE)
+def channel_info_complete():
+    return b''
+
 @register(ResponsePacket.CHANNEL_JOIN_SUCCESS)
 def channel_join_success(target: str):
     stream = StreamOut()
