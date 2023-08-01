@@ -1,5 +1,6 @@
 
 from typing import Set, List, Iterator, Optional
+from enum import Enum
 
 from .player import Player
 
@@ -50,6 +51,10 @@ class Players(List[Player]):
             if p.name == name:
                 return p
         return None
+
+    def send_packet(self, packet: Enum, *args):
+        for p in self:
+            p.send_packet(packet, args)
 
 # TODO: Channels
 # TODO: IRC Players
