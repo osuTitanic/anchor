@@ -351,3 +351,7 @@ def version_update():
 def version_update_forced():
     return b''
 
+@register(ResponsePacket.SWITCH_SERVER)
+def switch_to_backup():
+    return b''
+
