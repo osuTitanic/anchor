@@ -24,7 +24,7 @@ class Players(List[Player]):
         return {p for p in self if p.in_lobby}
 
     def append(self, player: Player) -> None:
-        self.enqueue_player(player)
+        # TODO: Enqueue player to others
         if player.id not in self.ids:
             return super().append(player)
     
