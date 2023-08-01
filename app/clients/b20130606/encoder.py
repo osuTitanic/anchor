@@ -1,4 +1,5 @@
 
+from app.common.constants import Permissions
 from app.common.streams import StreamOut
 from app.common.objects import (
     ReplayFrameBundle,
@@ -36,6 +37,14 @@ def send_login_reply(reply: int):
 @register(ResponsePacket.PROTOCOL_VERSION)
 def send_protocol_version(version: int):
     return int(version).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
+@register(ResponsePacket.LOGIN_PERMISSIONS)
+def send_permissions(permissions: Permissions):
+    return int(permissions.value).to_bytes(
         length=4,
         byteorder='little',
         signed=True
