@@ -1,4 +1,5 @@
 
+from sqlalchemy.orm.exc       import DetachedInstanceError
 from twisted.internet.error   import ConnectionDone
 from twisted.internet.address import IPv4Address
 from twisted.python.failure   import Failure
@@ -39,6 +40,7 @@ from ..constants import (
     Mod
 )
 
+import traceback
 import hashlib
 import timeago
 import logging
@@ -420,7 +422,16 @@ class Player(BanchoProtocol):
         bancho.services.cache.update_leaderboards(self.current_stats)
         bancho.services.cache.update_user(self)
 
-        self.loginSuccess()
+        while True:
+            try:
+                self.loginSuccess()
+                break
+            except DetachedInstanceError:
+                self.reload_object()
+            except Exception as exc:
+                traceback.print_exc()
+                self.logger.error(f'Failed to log in: {exc}')
+                self.closeConnection(exc)
         
     def loginFailed(self, reason = LoginError.SERVER_ERROR, message = ""):
         self.sendError(reason.value, message)

@@ -6,5 +6,5 @@ OSU_VERSION = re.compile(
     r"(?:(?P<name>[\w]*))?"
     r"(\.?)"
     r"(?:(?P<revision>\d))?"
-    r"(?P<stream>dev|tourney|test)?$",
+    r"(?P<stream>dev|tourney|test|beta|arcade|peppy)?$",
 )

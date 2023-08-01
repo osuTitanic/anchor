@@ -100,10 +100,13 @@ class Channel:
         self.update()
     
     def send_message(self, sender, message: str, ignore_privs=False):
-        if sender not in self.users:
+        if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
             sender.handler.enqueue_channel_revoked(self.display_name)
-    
+            sender.logger.warning(
+                f'Failed to send message: "{message}" on {self.name}, because player did not join the channel.'
+            )
+
         can_write = self.can_write(
             Permissions.pack(sender.permissions)
         )
