@@ -1,8 +1,15 @@
 
 from app.common.constants import (
     PresenceFilter,
+    Permissions,
     LoginError,
     GameMode
+)
+
+from app.common.objects import (
+    UserPresence,
+    StatusUpdate,
+    UserStats
 )
 
 from app.common.database.repositories import users
@@ -14,6 +21,7 @@ from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, Tuple, List, Dict
+from datetime import datetime
 from enum import Enum
 
 from twisted.internet.error import ConnectionDone
@@ -27,11 +35,14 @@ from app.clients import (
 
 import hashlib
 import logging
+import config
 import bcrypt
+import utils
 import app
 
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
+        self.is_local = utils.is_localip(address.host)
         self.logger = logging.getLogger(address.host)
         self.address = address
 
@@ -62,6 +73,78 @@ class Player(BanchoProtocol):
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
+
+    # TODO: supporter
+    # TODO: silenced
+    # TODO: is_bot
+
+    @property
+    def restricted(self) -> bool:
+        if not self.object:
+            return False
+        return self.object.restricted
+
+    @property
+    def current_stats(self) -> Optional[DBStats]:
+        for stats in self.stats:
+            if stats.mode == self.status.mode.value:
+                return stats
+        return None
+
+    @property
+    def permissions(self) -> Optional[Permissions]:
+        if not self.object:
+            return
+        return Permissions(self.object.permissions)
+
+    @property
+    def friends(self) -> List[int]:
+        return [
+            rel.target_id
+            for rel in self.object.relationships
+            if rel.status == 0
+        ]
+
+    @property
+    def user_presence(self) -> Optional[UserPresence]:
+        try:
+            return UserPresence(
+                self.id,
+                False,
+                self.name,
+                self.client.utc_offset,
+                self.client.ip.country_index,
+                self.permissions,
+                self.status.mode,
+                self.client.ip.longitude,
+                self.client.ip.latitude,
+                self.current_stats.rank
+            )
+        except AttributeError:
+            return None
+
+    @property
+    def user_stats(self) -> Optional[UserStats]:
+        try:
+            return UserStats(
+                self.id,
+                StatusUpdate(
+                    self.status.action,
+                    self.status.text,
+                    self.status.mods,
+                    self.status.mode,
+                    self.status.checksum,
+                    self.status.beatmap
+                ),
+                self.current_stats.rscore,
+                self.current_stats.tscore,
+                self.current_stats.acc,
+                self.current_stats.playcount,
+                self.current_stats.rank,
+                self.current_stats.pp,
+            )
+        except AttributeError:
+            return None
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         # TODO: Remove from player collection
@@ -188,7 +271,51 @@ class Player(BanchoProtocol):
     def login_success(self):
         # TODO: Create spectator channel
 
+        # Update latest activity
+        self.update_activity()
+
+        # User ID
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
+
+        # Menu Icon
+        self.send_packet(
+            self.packets.MENU_ICON,
+            config.MENUICON_IMAGE,
+            config.MENUICON_URL
+        )
+
+        # Permissions
+        self.send_packet(
+            self.packets.LOGIN_PERMISSIONS,
+            self.permissions
+        )
+
+        # Presence
+        self.send_packet(
+            self.packets.USER_PRESENCE,
+            self.user_presence
+        )
+
+        # Stats
+        self.send_packet(
+            self.packets.USER_STATS,
+            self.user_stats
+        )
+
+        # Friends
+        self.send_packet(
+            self.packets.FRIENDS_LIST,
+            self.friends
+        )
+
+        # Append to player collection
+        app.session.players.append(self)
+
+        # Enqueue other players
+        self.enqueue_players(app.session.players)
+
+        # TODO: Remaining silence
+        # TODO: Channels
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         try:
@@ -203,3 +330,21 @@ class Player(BanchoProtocol):
             self.logger.error(
                 f'Could not find packet with id "{packet_id}": {e}'
             )
+
+    def enqueue_players(self, players):
+        n = max(1, 32000)
+
+        # Split players into chunks to avoid any buffer overflows
+        for chunk in (players[i:i+n] for i in range(0, len(players), n)):
+            self.send_packet(
+                self.packets.USER_PRESENCE_BUNDLE,
+                [player.id for player in chunk]
+            )
+
+    def update_activity(self):
+        users.update(
+            user_id=self.id,
+            updates={
+                'latest_activity': datetime.now()
+            }
+        )
