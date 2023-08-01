@@ -181,7 +181,7 @@ class BanchoProtocol(Protocol):
             stream.write(payload)
 
             self.enqueue(stream.get())
-        except KeyError as e:
+        except Exception as e:
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}'
             )
