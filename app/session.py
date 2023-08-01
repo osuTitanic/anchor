@@ -3,7 +3,8 @@ from .objects.collections import Players
 from .common.database import Postgres
 from .common.storage import Storage
 
-import requests
+from requests import Session
+
 import logging
 import config
 
@@ -16,8 +17,8 @@ database = Postgres(
 
 logger = logging.getLogger('bancho')
 
-session = requests.Session()
-session.headers = {
+requests = Session()
+requests.headers = {
     'User-Agent': f'deck-{config.VERSION}'
 }
 
