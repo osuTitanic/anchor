@@ -2,6 +2,7 @@
 from app.common.streams import StreamOut
 from app.common.objects import (
     ReplayFrameBundle,
+    BeatmapInfoReply,
     UserPresence,
     ScoreFrame,
     UserStats,
@@ -278,6 +279,12 @@ def match_skip():
 @register(ResponsePacket.MATCH_COMPLETE)
 def match_complete():
     return b''
+
+@register(ResponsePacket.BEATMAP_INFO_REPLY)
+def beatmap_info_reply(reply: BeatmapInfoReply):
+    writer = Writer()
+    writer.write_beatmap_info_reply(reply)
+    return writer.stream.get()
 
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
