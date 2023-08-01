@@ -13,7 +13,7 @@ class Status:
     action: ClientStatus = ClientStatus.Idle
     text: str = ""
     checksum: str = ""
-    mods: List[Mods] = field(default_factory=list) # = []
+    mods: Mods = Mods.NoMod
     mode: GameMode = GameMode.Osu
     beatmap: int = -1
 
