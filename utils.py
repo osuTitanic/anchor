@@ -5,6 +5,8 @@ from datetime import datetime
 
 import hashlib
 import config
+import struct
+import socket
 import os
 
 def setup():
@@ -38,3 +40,25 @@ def compute_score_checksum(score: DBScore) -> str:
             (not score.failtime) # (passed)
         ).encode()
     ).hexdigest()
+
+def is_localip(ip: str) -> bool:
+    private = (
+        [ 2130706432, 4278190080 ], # 127.0.0.0
+        [ 3232235520, 4294901760 ], # 192.168.0.0
+        [ 2886729728, 4293918720 ], # 172.16.0.0
+        [ 167772160,  4278190080 ], # 10.0.0.0
+    )
+
+    f = struct.unpack(
+        '!I',
+        socket.inet_pton(
+            socket.AF_INET,
+            ip
+        )
+    )[0]
+
+    for net in private:
+        if (f & net[1]) == net[0]:
+            return True
+
+    return False
