@@ -12,6 +12,8 @@ import app
 logging.basicConfig(
     handlers=[Console, File],
     level=logging.DEBUG
+        if config.DEBUG
+        else logging.INFO
 )
 
 def main():
