@@ -331,6 +331,12 @@ def user_silenced(player_id: int):
         signed=True
     )
 
+@register(ResponsePacket.USER_DM_BLOCKED)
+def dm_blocked(msg: Message):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
