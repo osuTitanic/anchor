@@ -337,6 +337,12 @@ def dm_blocked(msg: Message):
     writer.write_message(msg)
     return writer.stream.get()
 
+@register(ResponsePacket.TARGET_IS_SILENCED)
+def target_silenced(msg: Message):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
