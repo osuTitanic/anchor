@@ -32,6 +32,9 @@ class Postgres:
     def temp_session(self) -> Session:
         session = Session(self.engine)
 
+        # TODO: I don't like this...
+        # Maybe refactor?
+
         Timer(
             interval=15,
             function=self.close_session,
