@@ -53,6 +53,9 @@ class RequestPacket(IntEnum):
     def __eq__(self, other: IntEnum) -> bool:
         return self.name == other.name
 
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 class ResponsePacket(IntEnum):
     LOGIN_REPLY                     = 5
     COMMAND_ERROR                   = 6 # Unused
@@ -115,3 +118,6 @@ class ResponsePacket(IntEnum):
 
     def __eq__(self, other: IntEnum) -> bool:
         return self.name == other.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
