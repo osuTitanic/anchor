@@ -238,6 +238,22 @@ def match_player_failed(player_id: int):
         signed=True
     )
 
+@register(ResponsePacket.MATCH_PLAYER_SKIPPED)
+def match_player_skipped(player_id: int):
+    return int(player_id).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
+@register(ResponsePacket.MATCH_SKIP)
+def match_skip():
+    return b''
+
+@register(ResponsePacket.MATCH_COMPLETE)
+def match_complete():
+    return b''
+
 @register(ResponsePacket.VERSION_UPDATE)
 def version_update():
     return b''
