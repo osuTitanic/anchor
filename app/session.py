@@ -1,4 +1,5 @@
 
+from .objects.collections import Players
 from .common.database import Postgres
 from .common.storage import Storage
 
@@ -15,3 +16,4 @@ database = Postgres(
 logger = logging.getLogger('bancho')
 
 storage = Storage()
+players = Players()
