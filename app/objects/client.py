@@ -5,6 +5,7 @@ from app.common.helpers import location
 from datetime import datetime
 from typing import Optional
 
+import utils
 import pytz
 import re
 
@@ -103,7 +104,11 @@ class OsuClient:
             build_version, utc_offset, display_city, client_hash = line.split('|')
             friendonly_dms = False
 
-        geolocation = location.fetch_geolocation(ip)
+        geolocation = location.fetch_geolocation(
+            ip=ip,
+            is_local=utils.is_localip(ip)
+        )
+
         utc_offset = int(
             datetime.now(
                 pytz.timezone(geolocation.timezone)
