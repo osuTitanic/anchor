@@ -40,3 +40,11 @@ def stats_request(stream: StreamIn):
 @register(RequestPacket.JOIN_CHANNEL)
 def join_channel(stream: StreamIn):
     return stream.string()
+
+@register(RequestPacket.ADD_FRIEND)
+def add_friend(stream: StreamIn):
+    return stream.s32()
+
+@register(RequestPacket.REMOVE_FRIEND)
+def remove_friend(stream: StreamIn):
+    return stream.s32()
