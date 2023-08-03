@@ -65,7 +65,7 @@ class Players(List[Player]):
 
     def send_packet(self, packet: Enum, *args):
         for p in self:
-            p.send_packet(packet, args)
+            p.send_packet(packet, *args)
 
     def send_player(self, player: Player):
         self.send_packet(
