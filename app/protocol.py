@@ -133,7 +133,6 @@ class BanchoProtocol(Protocol):
 
     def enqueue(self, data: bytes):
         try:
-            self.logger.debug(f'<- {data}')
             self.transport.write(data)
         except Exception as e:
             self.logger.error(
@@ -153,10 +152,14 @@ class BanchoProtocol(Protocol):
     def send_packet(self, packet: Enum, encoders, *args):
         try:
             stream = StreamOut()
-            payload = encoders[packet](*args)
+            data = encoders[packet](*args)
 
-            stream.header(packet, len(payload))
-            stream.write(payload)
+            self.logger.debug(
+                f'<- "{packet.name}": {str(list(args)).removeprefix("[").removesuffix("]")}'
+            )
+
+            stream.header(packet, len(data))
+            stream.write(data)
 
             self.enqueue(stream.get())
         except Exception as e:
