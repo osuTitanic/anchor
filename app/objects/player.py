@@ -314,8 +314,13 @@ class Player(BanchoProtocol):
         # Enqueue other players
         self.enqueue_players(app.session.players)
 
+        for channel in app.session.channels.public:
+            if channel.can_read(self.permissions):
+                self.update_channel(channel)
+
+        self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
+
         # TODO: Remaining silence
-        # TODO: Channels
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         try:
