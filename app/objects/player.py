@@ -74,9 +74,17 @@ class Player(BanchoProtocol):
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
 
-    # TODO: supporter
-    # TODO: silenced
-    # TODO: is_bot
+    @property
+    def is_bot(self) -> bool:
+        return True if self.id == -1 else False
+
+    @property
+    def silenced(self) -> bool:
+        return False # TODO
+
+    @property
+    def supporter(self) -> bool:
+        return True # TODO
 
     @property
     def restricted(self) -> bool:
