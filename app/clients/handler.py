@@ -1,5 +1,6 @@
 
 from ..common.constants import PresenceFilter
+from ..common.objects import Message
 from .. import session
 
 from . import DefaultRequestPacket as RequestPacket
@@ -54,5 +55,8 @@ def handle_channel_leave(player, channel_name: str, kick: bool = False):
     if not (channel := session.channels.by_name(channel_name)):
         player.revoke_channel(channel_name)
         return
+
+    if kick:
+        player.revoke_channel(channel_name)
 
     channel.remove(player)
