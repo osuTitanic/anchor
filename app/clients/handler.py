@@ -1,12 +1,16 @@
 
 from . import DefaultRequestPacket as RequestPacket
 
-from .. import session
-from ..common.constants import PresenceFilter
 from ..objects.player import Player
+from .. import session
+
 from ..common.objects import (
     StatusUpdate,
     Message
+)
+
+from ..common.constants import (
+    PresenceFilter
 )
 
 from typing import Callable, List
@@ -45,6 +49,27 @@ def stats_request(player: Player, players: List[int]):
             continue
 
         player.enqueue_stats(target)
+
+@register(RequestPacket.CHANGE_STATUS)
+def change_status(player: Player, status: StatusUpdate):
+    player.status.checksum = status.beatmap_checksum
+    player.status.beatmap = status.beatmap_id
+    player.status.action = status.action
+    player.status.mods = status.mods
+    player.status.mode = status.mode
+    player.status.text = status.text
+
+    # TODO: Update rank
+
+    player.update_activity()
+
+    # (This needs to be done for older clients)
+    session.players.send_stats(player)
+
+@register(RequestPacket.REQUEST_STATUS)
+def request_status(player: Player):
+    player.enqueue_stats(player)
+    # TODO: Update rank
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):

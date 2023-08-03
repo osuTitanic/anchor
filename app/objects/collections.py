@@ -79,6 +79,18 @@ class Players(List[Player]):
             [player.id for player in players]
         )
 
+    def send_presence(self, player: Player):
+        self.send_packet(
+            DefaultResponsePacket.USER_PRESENCE,
+            player.user_presence
+        )
+
+    def send_stats(self, player: Player):
+        self.send_packet(
+            DefaultResponsePacket.USER_STATS,
+            player.user_stats
+        )
+
 from .channel import Channel
 
 class Channels(List[Channel]):
