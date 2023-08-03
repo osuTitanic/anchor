@@ -1,5 +1,5 @@
 
-from .objects.collections import Players
+from .objects.collections import Players, Channels
 from .common.database import Postgres
 from .common.storage import Storage
 
@@ -22,5 +22,6 @@ requests.headers = {
     'User-Agent': f'deck-{config.VERSION}'
 }
 
+channels = Channels()
 storage = Storage()
 players = Players()
