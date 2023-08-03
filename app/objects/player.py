@@ -469,3 +469,14 @@ class Player(BanchoProtocol):
             self.packets.CHANNEL_REVOKED,
             name
         )
+
+    def enqueue_blocked_dms(self, username: str):
+        self.send_packet(
+            self.packets.USER_DM_BLOCKED,
+            Message(
+                '',
+                '',
+                username,
+                -1
+            )
+        )
