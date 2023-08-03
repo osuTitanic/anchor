@@ -3,6 +3,7 @@ from app.common.constants import (
     PresenceFilter,
     Permissions,
     LoginError,
+    QuitState,
     GameMode
 )
 
@@ -10,6 +11,7 @@ from app.common.objects import (
     UserPresence,
     StatusUpdate,
     UserStats,
+    UserQuit,
     Message,
     Channel
 )
@@ -191,7 +193,14 @@ class Player(BanchoProtocol):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        # TODO: Notify other clients
+        app.session.players.send_packet(
+            self.packets.USER_QUIT,
+            UserQuit(
+                self.id,
+                QuitState.Gone # TODO: IRC
+            )
+        )
+
         # TODO: Remove spectator channel from collection
         # TODO: Remove from match
 
