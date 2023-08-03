@@ -65,7 +65,7 @@ class Channel:
 
         for player in app.session.players:
             if self.can_read(player.permissions):
-                player.update_channel(
+                player.enqueue_channel(
                     self,
                     autojoin=False
                 )

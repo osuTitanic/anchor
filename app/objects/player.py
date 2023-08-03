@@ -331,7 +331,7 @@ class Player(BanchoProtocol):
 
         for channel in app.session.channels.public:
             if channel.can_read(self.permissions):
-                self.update_channel(channel)
+                self.enqueue_channel(channel)
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
 
@@ -398,7 +398,7 @@ class Player(BanchoProtocol):
             message
         )
 
-    def update_channel(self, channel: Channel, autojoin: bool = False):
+    def enqueue_channel(self, channel: Channel, autojoin: bool = False):
         self.send_packet(
             self.packets.CHANNEL_AVAILABLE if not autojoin else \
             self.packets.CHANNEL_AVAILABLE_AUTOJOIN,
