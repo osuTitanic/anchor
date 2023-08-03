@@ -37,6 +37,10 @@ def presence_request(stream: StreamIn):
 def stats_request(stream: StreamIn):
     return Reader(stream).read_intlist()
 
+@register(RequestPacket.CHANGE_STATUS)
+def change_status(stream: StreamIn):
+    return Reader(stream).read_status()
+
 @register(RequestPacket.JOIN_CHANNEL)
 def join_channel(stream: StreamIn):
     return stream.string()
