@@ -70,7 +70,12 @@ class Player(BanchoProtocol):
         # TODO: Add spectator channel
         # TODO: Add spectator collection
 
+        from .collections import Players
+        from .channel import Channel
+
+        self.spectators = Players()
         self.spectating: Optional[Player] = None
+        self.spectator_chat: Optional[Channel] = None
 
         # TODO: Add current match
         self.in_lobby = False
@@ -310,7 +315,16 @@ class Player(BanchoProtocol):
         self.login_success()
 
     def login_success(self):
-        # TODO: Create spectator channel
+        from .channel import Channel
+
+        self.spectator_chat = Channel(
+            name=f'#spec_{self.id}',
+            topic=f"{self.name}'s spectator channel",
+            owner=self.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
 
         # Update latest activity
         self.update_activity()
