@@ -346,7 +346,10 @@ class Player(BanchoProtocol):
             args = decoder(stream)
 
             handler_function = app.session.handlers[packet]
-            handler_function(self, args)
+            handler_function(
+               *[self, args] if args != None else
+                [self]
+            )
         except KeyError as e:
             self.logger.error(
                 f'Could not find decoder/handler for "{packet.name}": {e}'

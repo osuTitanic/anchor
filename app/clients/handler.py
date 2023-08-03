@@ -14,7 +14,7 @@ def register(packet: RequestPacket) -> Callable:
     return wrapper
 
 @register(RequestPacket.PONG)
-def pong(player, *args):
+def pong(player):
     pass
 
 @register(RequestPacket.EXIT)
