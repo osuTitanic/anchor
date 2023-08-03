@@ -52,6 +52,8 @@ def handle_channel_join(player, channel_name: str):
     else:
         channel = session.channels.by_name(channel_name)
 
+    # TODO: Multiplayer channels
+
     if not channel:
         player.revoke_channel(channel_name)
         return
@@ -68,6 +70,8 @@ def handle_channel_leave(player, channel_name: str, kick: bool = False):
     else:
         channel = session.channels.by_name(channel_name)
 
+    # TODO: Multiplayer channels
+
     if not channel:
         player.revoke_channel(channel_name)
         return
@@ -76,3 +80,25 @@ def handle_channel_leave(player, channel_name: str, kick: bool = False):
         player.revoke_channel(channel_name)
 
     channel.remove(player)
+
+@register(RequestPacket.SEND_MESSAGE)
+def send_message(player, message: Message):
+    if message.target == '#spectator':
+        if player.spectating:
+            channel = player.spectating.spectator_chat
+        else:
+            channel = player.spectator_chat
+    else:
+        channel = session.channels.by_name(message.target)
+
+    if not channel:
+        player.revoke_channel(message.target)
+        return
+
+    player.update_activity()
+
+    # TODO: Multiplayer channels
+    # TODO: Submit message to datanase
+    # TODO: Commands
+
+    channel.send_message(player, message.content)
