@@ -21,8 +21,8 @@ from .constants import ResponsePacket
 from ..writer import BaseWriter
 
 class Writer(BaseWriter):
-    def __init__(self, stream: StreamOut = StreamOut()) -> None:
-        self.stream = stream
+    def __init__(self) -> None:
+        self.stream = StreamOut()
 
     def write_header(self, packet: ResponsePacket, size: Optional[int] = None):
         if not size:
@@ -40,7 +40,7 @@ class Writer(BaseWriter):
     def write_channel(self, channel: Channel):
         self.stream.string(channel.name)
         self.stream.string(channel.topic)
-        self.stream.u16(channel.user_count)
+        self.stream.s16(channel.user_count)
 
     def write_message(self, msg: Message):
         self.stream.string(msg.sender)
