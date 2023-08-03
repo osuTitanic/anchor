@@ -356,6 +356,14 @@ class Player(BanchoProtocol):
                 f'Could not find packet with id "{packet_id}": {e}'
             )
 
+    def update_activity(self):
+        users.update(
+            user_id=self.id,
+            updates={
+                'latest_activity': datetime.now()
+            }
+        )
+
     def enqueue_player(self, player):
         self.send_packet(
             self.packets.USER_PRESENCE_SINGLE,
@@ -384,15 +392,7 @@ class Player(BanchoProtocol):
             player.user_stats
         )
 
-    def update_activity(self):
-        users.update(
-            user_id=self.id,
-            updates={
-                'latest_activity': datetime.now()
-            }
-        )
-
-    def send_message(self, message: Message):
+    def enqueue_message(self, message: Message):
         self.send_packet(
             self.packets.SEND_MESSAGE,
             message
