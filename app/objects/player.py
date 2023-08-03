@@ -9,7 +9,9 @@ from app.common.constants import (
 from app.common.objects import (
     UserPresence,
     StatusUpdate,
-    UserStats
+    UserStats,
+    Message,
+    Channel
 )
 
 from app.common.database.repositories import users
@@ -354,6 +356,12 @@ class Player(BanchoProtocol):
                 f'Could not find packet with id "{packet_id}": {e}'
             )
 
+    def enqueue_player(self, player):
+        self.send_packet(
+            self.packets.USER_PRESENCE_SINGLE,
+            player.id
+        )
+
     def enqueue_players(self, players):
         n = max(1, 32000)
 
@@ -364,10 +372,47 @@ class Player(BanchoProtocol):
                 [player.id for player in chunk]
             )
 
+    def enqueue_presence(self, player):
+        self.send_packet(
+            self.packets.USER_PRESENCE,
+            player.user_presence
+        )
+
+    def enqueue_stats(self, player):
+        self.send_packet(
+            self.packets.USER_STATS,
+            player.user_stats
+        )
+
     def update_activity(self):
         users.update(
             user_id=self.id,
             updates={
                 'latest_activity': datetime.now()
             }
+        )
+
+    def send_message(self, message: Message):
+        self.send_packet(
+            self.packets.SEND_MESSAGE,
+            message
+        )
+
+    def update_channel(self, channel: Channel, autojoin: bool = False):
+        self.send_packet(
+            self.packets.CHANNEL_AVAILABLE if not autojoin else \
+            self.packets.CHANNEL_AVAILABLE_AUTOJOIN,
+            channel
+        )
+
+    def join_success(self, name: str):
+        self.send_packet(
+            self.packets.CHANNEL_JOIN_SUCCESS,
+            name
+        )
+
+    def revoke_channel(self, name: str):
+        self.send_packet(
+            self.packets.CHANNEL_REVOKED,
+            name
         )
