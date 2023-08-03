@@ -42,9 +42,17 @@ def stats_request(player, players: List[int]):
         player.enqueue_stats(target)
 
 @register(RequestPacket.JOIN_CHANNEL)
-def handle_channel_join(player, name: str):
-    if not (channel := session.channels.by_name(name)):
-        player.revoke_channel(name)
+def handle_channel_join(player, channel_name: str):
+    if not (channel := session.channels.by_name(channel_name)):
+        player.revoke_channel(channel_name)
         return
 
     channel.add(player)
+
+@register(RequestPacket.LEAVE_CHANNEL)
+def handle_channel_leave(player, channel_name: str, kick: bool = False):
+    if not (channel := session.channels.by_name(channel_name)):
+        player.revoke_channel(channel_name)
+        return
+
+    channel.remove(player)
