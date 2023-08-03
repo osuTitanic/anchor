@@ -23,6 +23,7 @@ from app.objects import OsuClient, Status
 from typing import Optional, Callable, Tuple, List, Dict
 from datetime import datetime
 from enum import Enum
+from copy import copy
 
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
@@ -155,11 +156,15 @@ class Player(BanchoProtocol):
             return None
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
-        # TODO: Remove from player collection
+        app.session.players.remove(self)
+
+        for channel in copy(self.channels):
+            channel.remove(self)
+
         # TODO: Notify other clients
-        # TODO: Remove from channels
         # TODO: Remove spectator channel from collection
         # TODO: Remove from match
+
         super().connectionLost(reason)
 
     def reload_object(self) -> DBUser:
