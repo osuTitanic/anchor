@@ -28,7 +28,7 @@ def pong(player: Player):
 
 @register(RequestPacket.EXIT)
 def exit(player: Player, updating: bool):
-    pass
+    player.update_activity()
 
 @register(RequestPacket.RECEIVE_UPDATES)
 def receive_updates(player: Player, filter: PresenceFilter):
