@@ -20,8 +20,8 @@ from enum import Enum
 from abc import ABC
 
 class BaseWriter(ABC):
-    def __init__(self, stream: StreamOut) -> None:
-        self.stream = stream
+    def __init__(self) -> None:
+        self.stream = StreamOut()
 
     def write_header(self, packet: Enum, size: Optional[int] = None):
         if not size:
