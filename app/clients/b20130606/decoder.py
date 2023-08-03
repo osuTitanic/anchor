@@ -41,6 +41,18 @@ def stats_request(stream: StreamIn):
 def join_channel(stream: StreamIn):
     return stream.string()
 
+@register(RequestPacket.LEAVE_CHANNEL)
+def leave_channel(stream: StreamIn):
+    return stream.string()
+
+@register(RequestPacket.SEND_MESSAGE)
+def send_message(stream: StreamIn):
+    return Reader(stream).read_message()
+
+@register(RequestPacket.SEND_PRIVATE_MESSAGE)
+def send_message_private(stream: StreamIn):
+    return Reader(stream).read_message()
+
 @register(RequestPacket.ADD_FRIEND)
 def add_friend(stream: StreamIn):
     return stream.s32()
