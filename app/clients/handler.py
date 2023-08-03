@@ -10,7 +10,8 @@ from ..common.objects import (
 )
 
 from ..common.constants import (
-    PresenceFilter
+    PresenceFilter,
+    ClientStatus
 )
 
 from typing import Callable, List
@@ -131,3 +132,51 @@ def send_message(player: Player, message: Message):
     # TODO: Commands
 
     channel.send_message(player, message.content)
+
+@register(RequestPacket.SEND_PRIVATE_MESSAGE)
+def send_private_message(sender: Player, message: Message):
+    if not (target := session.players.by_name(message.target)):
+        sender.revoke_channel(message.target)
+        return
+
+    if sender.silenced:
+        return
+
+    if target.silenced:
+        # TODO: Enqueue target silenced
+        return
+
+    if target.client.friendonly_dms:
+        if sender.id not in target.friends:
+            sender.enqueue_blocked_dms(sender.name)
+            return
+
+    # Limit message size
+    if len(message.content) > 512:
+        message.content = message.content[:512] + '... (truncated)'
+
+    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
+    sender.update_activity()
+
+    # TODO: Submit to database
+    # TODO: Check commands
+
+    if target.status.action == ClientStatus.Afk and target.away_message:
+        sender.enqueue_message(
+            Message(
+                target.name,
+                target.away_message,
+                target.name,
+                target.id
+            )
+        )
+        return
+
+    target.enqueue_message(
+        Message(
+            sender.name,
+            message.content,
+            sender.name,
+            sender.id
+        )
+    )
