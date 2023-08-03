@@ -4,8 +4,14 @@ from app.clients import (
     DefaultRequestPacket
 )
 
-from typing import Set, List, Iterator, Optional
 from enum import Enum
+from typing import (
+    Iterable,
+    Iterator,
+    Optional,
+    List,
+    Set
+)
 
 from .player import Player
 
@@ -73,6 +79,48 @@ class Players(List[Player]):
             [player.id for player in players]
         )
 
-# TODO: Channels
+from .channel import Channel
+
+class Channels(List[Channel]):
+    def __iter__(self) -> Iterator[Channel]:
+        return super().__iter__()
+
+    @property
+    def names(self) -> Set[str]:
+        return {c.display_name for c in self}
+
+    @property
+    def topics(self) -> Set[str]:
+        return {c.topic for c in self}
+
+    @property
+    def public(self) -> Set[Channel]:
+        return {c for c in self if c.public}
+
+    def by_name(self, name: str) -> Optional[Channel]:
+        for c in self:
+            if c.name == name:
+                return c
+        return None
+
+    def append(self, c: Channel) -> None:
+        if not c:
+            return
+
+        if c not in self: return super().append(c)
+
+    def remove(self, c: Channel) -> None:
+        if not c:
+            return
+
+        # Revoke channel to all users
+        for p in c.users:
+            p.revoke_channel(c.display_name)
+
+        if c in self: return super().remove(c)
+
+    def extend(self, channels: Iterable[Channel]) -> None:
+        return super().extend(channels)
+
 # TODO: IRC Players
 # TODO: Matches
