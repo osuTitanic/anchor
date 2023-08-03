@@ -1,8 +1,10 @@
 
 from .objects.collections import Players, Channels
+from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
 
+from typing import Callable, Dict
 from requests import Session
 
 import logging
@@ -21,6 +23,8 @@ requests = Session()
 requests.headers = {
     'User-Agent': f'deck-{config.VERSION}'
 }
+
+handlers: Dict[DefaultResponsePacket, Callable] = {}
 
 channels = Channels()
 storage = Storage()
