@@ -28,6 +28,7 @@ from enum import Enum
 from copy import copy
 
 from twisted.internet.error import ConnectionDone
+from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
 
 from app.clients.packets import PACKETS
@@ -76,6 +77,28 @@ class Player(BanchoProtocol):
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
+
+    @classmethod
+    def bot_player(cls):
+        player = Player(
+            IPv4Address(
+                'TCP',
+                '127.0.0.1',
+                1337
+            )
+        )
+
+        player.object = users.fetch_by_id(1)
+        player.client = OsuClient.empty()
+
+        player.id = -player.object.id # Negative user id -> IRC Player
+        player.name = player.object.name
+        player.stats  = player.object.stats
+
+        player.client.ip.country_code = "OC"
+        player.client.ip.city = "w00t p00t!"
+
+        return player
 
     @property
     def is_bot(self) -> bool:
@@ -195,6 +218,9 @@ class Player(BanchoProtocol):
         )
 
     def send_packet(self, packet_type: Enum, *args):
+        if self.is_bot:
+            return
+
         return super().send_packet(
             packet_type,
             self.encoders,
@@ -289,6 +315,9 @@ class Player(BanchoProtocol):
         # Update latest activity
         self.update_activity()
 
+        # Protocol Version
+        self.send_packet(self.packets.PROTOCOL_VERSION, 18)
+
         # User ID
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
 
@@ -306,16 +335,11 @@ class Player(BanchoProtocol):
         )
 
         # Presence
-        self.send_packet(
-            self.packets.USER_PRESENCE,
-            self.user_presence
-        )
+        self.enqueue_presence(self)
+        self.enqueue_stats(self)
 
-        # Stats
-        self.send_packet(
-            self.packets.USER_STATS,
-            self.user_stats
-        )
+        # Bot presence
+        self.enqueue_presence(app.session.bot_player)
 
         # Friends
         self.send_packet(
@@ -338,6 +362,9 @@ class Player(BanchoProtocol):
         # TODO: Remaining silence
 
     def packet_received(self, packet_id: int, stream: StreamIn):
+        if self.is_bot:
+            return
+
         try:
             packet = self.request_packets(packet_id)
             self.logger.debug(f'-> "{packet.name}": {stream.get()}')
@@ -374,7 +401,7 @@ class Player(BanchoProtocol):
         )
 
     def enqueue_players(self, players):
-        n = max(1, 32000)
+        n = max(1, 150)
 
         # Split players into chunks to avoid any buffer overflows
         for chunk in (players[i:i+n] for i in range(0, len(players), n)):

@@ -28,6 +28,14 @@ class BanchoFactory(Factory):
                 )
             )
 
+        app.session.logger.info('Loading bot...')
+
+        app.session.players.append(
+            bot_player := Player.bot_player()
+        )
+        app.session.bot_player = bot_player
+        app.session.logger.info(f'  - {bot_player.name}')
+
         app.session.logger.info(f'Starting factory: {self}')
 
     def stopFactory(self):

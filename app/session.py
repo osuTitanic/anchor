@@ -18,6 +18,7 @@ database = Postgres(
 )
 
 logger = logging.getLogger('bancho')
+bot_player = None
 
 requests = Session()
 requests.headers = {
