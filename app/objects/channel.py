@@ -127,7 +127,7 @@ class Channel:
                 # Enqueue message to every user inside this channel
                 user.enqueue_message(
                     Message(
-                        sender,
+                        sender.name,
                         message,
                         self.display_name,
                         sender.id
