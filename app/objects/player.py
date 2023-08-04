@@ -497,6 +497,23 @@ class Player(BanchoProtocol):
             )
         )
 
+    def enqueue_silenced_target(self, username: str):
+        self.send_packet(
+            self.packets.TARGET_IS_SILENCED,
+            Message(
+                '',
+                '',
+                username,
+                -1
+            )
+        )
+
+    def enqueue_silenced_user(self, user_id: int):
+        self.send_packet(
+            self.packets.USER_SILENCED,
+            user_id
+        )
+
     def enqueue_friends(self):
         self.send_packet(
             self.packets.FRIENDS_LIST,
