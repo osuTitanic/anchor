@@ -289,10 +289,10 @@ def beatmap_info(player: Player, info: BeatmapInfoRequest):
                 beatmap.set_id,
                 beatmap.set_id, # thread_id
                 ranked,
-                grades[0],
-                grades[1],
-                grades[2],
-                grades[3],
+                grades[0], # standard
+                grades[2], # fruits
+                grades[1], # taiko
+                grades[3], # mania
                 beatmap.md5
             )
         )
