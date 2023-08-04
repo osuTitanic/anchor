@@ -348,10 +348,9 @@ class Player(BanchoProtocol):
         self.status.mode = GameMode(self.object.preferred_mode)
 
         if not self.stats:
-            # TODO: Create stats
-                # Reload object
-                # Reset ban info
-            pass
+            self.create_stats()
+            self.reload_object()
+            self.enqueue_silence_info(-1)
 
         self.update_leaderboard_stats()
         self.login_success()
@@ -452,6 +451,9 @@ class Player(BanchoProtocol):
             if config.DEBUG: traceback.print_exc()
             self.logger.error(f'Failed to execute handler for packet "{packet.name}": {e}')
 
+    def create_stats(self):
+        self.stats = [stats.create(self.id, mode) for mode in range(4)]
+
     def update_activity(self):
         users.update(
             user_id=self.id,
@@ -542,6 +544,12 @@ class Player(BanchoProtocol):
         self.send_packet(
             self.packets.USER_SILENCED,
             user_id
+        )
+
+    def enqueue_silence_info(self, remaining_time: int):
+        self.send_packet(
+            self.packets.SILENCE_INFO,
+            remaining_time
         )
 
     def enqueue_friends(self):
