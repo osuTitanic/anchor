@@ -4,3 +4,4 @@ from . import database
 from . import objects
 from . import helpers
 from . import streams
+from . import cache
