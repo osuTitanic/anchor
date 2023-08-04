@@ -430,6 +430,9 @@ class Player(BanchoProtocol):
             }
         )
 
+    def enqueue_ping(self):
+        self.send_packet(self.packets.PING)
+
     def enqueue_player(self, player):
         self.send_packet(
             self.packets.USER_PRESENCE_SINGLE,

@@ -7,6 +7,8 @@ from .common.database.repositories import channels
 from .objects.channel import Channel
 from .objects.player import Player
 
+from .jobs import pings
+
 import app
 
 class BanchoFactory(Factory):
@@ -36,10 +38,14 @@ class BanchoFactory(Factory):
         app.session.bot_player = bot_player
         app.session.logger.info(f'  - {bot_player.name}')
 
+        app.session.logger.info('Loading jobs...')
+        app.session.jobs.submit(pings.ping_job)
+
         app.session.logger.info(f'Starting factory: {self}')
 
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
+        app.session.jobs.shutdown(cancel_futures=True)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)

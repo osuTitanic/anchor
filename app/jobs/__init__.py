@@ -3,6 +3,8 @@ from concurrent.futures._base import Future
 from concurrent.futures       import ThreadPoolExecutor
 from typing                   import Any, Callable, Tuple
 
+from . import pings
+
 import logging
 
 class Jobs(ThreadPoolExecutor):
