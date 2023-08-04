@@ -2,7 +2,7 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
-from ..common.database.repositories import beatmaps, scores
+from ..common.database.repositories import beatmaps, scores, relationships
 from ..common.database.objects import DBBeatmap
 from ..objects.player import Player
 from .. import session
@@ -187,6 +187,42 @@ def send_private_message(sender: Player, message: Message):
             sender.id
         )
     )
+
+@register(RequestPacket.ADD_FRIEND)
+def add_friend(player: Player, target_id: int):
+    if not (target := session.players.by_id(target_id)):
+        return
+
+    if target.id in player.friends:
+        return
+
+    relationships.create(
+        player.id,
+        target.id
+    )
+
+    session.logger.info(f'{player.name} is now friends with {target.name}.')
+
+    player.reload_object()
+    player.enqueue_friends()
+
+@register(RequestPacket.REMOVE_FRIEND)
+def remove_friend(player: Player, target_id: int):
+    if not (target := session.players.by_id(target_id)):
+        return
+
+    if target.id not in player.friends:
+        return
+
+    relationships.delete(
+        player.id,
+        target.id
+    )
+
+    session.logger.info(f'{player.name} no longer friends with {target.name}.')
+
+    player.reload_object()
+    player.enqueue_friends()
 
 @register(RequestPacket.BEATMAP_INFO)
 def beatmap_info(player: Player, info: BeatmapInfoRequest):

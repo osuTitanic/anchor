@@ -365,10 +365,7 @@ class Player(BanchoProtocol):
         self.enqueue_presence(app.session.bot_player)
 
         # Friends
-        self.send_packet(
-            self.packets.FRIENDS_LIST,
-            self.friends
-        )
+        self.enqueue_friends()
 
         # Append to player collection
         app.session.players.append(self)
@@ -479,4 +476,10 @@ class Player(BanchoProtocol):
                 username,
                 -1
             )
+        )
+
+    def enqueue_friends(self):
+        self.send_packet(
+            self.packets.FRIENDS_LIST,
+            self.friends
         )
