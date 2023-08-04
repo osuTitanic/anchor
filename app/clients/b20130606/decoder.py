@@ -88,3 +88,7 @@ def send_frames(stream: StreamIn):
 @register(RequestPacket.CANT_SPECTATE)
 def cant_spectate(stream: StreamIn):
     return
+
+@register(RequestPacket.ERROR_REPORT)
+def bancho_error(stream: StreamIn):
+    return stream.string()
