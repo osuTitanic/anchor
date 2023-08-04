@@ -46,6 +46,7 @@ import logging
 import config
 import bcrypt
 import utils
+import time
 import app
 
 class Player(BanchoProtocol):
@@ -83,6 +84,7 @@ class Player(BanchoProtocol):
 
         # TODO: Add current match
         self.in_lobby = False
+        self.last_response = time.time()
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
@@ -262,6 +264,7 @@ class Player(BanchoProtocol):
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
+        self.last_response = time.time()
 
         # TODO: Set packet enums
 
@@ -384,6 +387,8 @@ class Player(BanchoProtocol):
         # TODO: Remaining silence
 
     def packet_received(self, packet_id: int, stream: StreamIn):
+        self.last_response = time.time()
+
         if self.is_bot:
             return
 
