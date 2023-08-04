@@ -33,6 +33,10 @@ def receive_updates(stream: StreamIn):
 def presence_request(stream: StreamIn):
     return Reader(stream).read_intlist()
 
+@register(RequestPacket.PRESENCE_REQUEST_ALL)
+def presence_request_all(stream: StreamIn):
+    return
+
 @register(RequestPacket.STATS_REQUEST)
 def stats_request(stream: StreamIn):
     return Reader(stream).read_intlist()
@@ -104,3 +108,11 @@ def join_lobby(stream: StreamIn):
 @register(RequestPacket.PART_LOBBY)
 def leave_lobby(stream: StreamIn):
     return
+
+@register(RequestPacket.MATCH_INVITE)
+def invite(stream: StreamIn):
+    return Reader(stream).read_message()
+
+@register(RequestPacket.CHANGE_FRIENDONLY_DMS)
+def friendonly_dms(stream: StreamIn):
+    return stream.s32() == 1

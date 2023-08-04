@@ -51,6 +51,10 @@ def presence_request(player: Player, players: List[int]):
 
         player.enqueue_presence(target)
 
+@register(RequestPacket.PRESENCE_REQUEST_ALL)
+def presence_request_all(player: Player):
+    player.enqueue_players(session.players)
+
 @register(RequestPacket.STATS_REQUEST)
 def stats_request(player: Player, players: List[int]):
     for id in players:
