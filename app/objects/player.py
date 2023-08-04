@@ -74,14 +74,15 @@ class Player(BanchoProtocol):
         self.filter = PresenceFilter.All
 
         from .collections import Players
+        from .multiplayer import Match
         from .channel import Channel
 
         self.spectators = Players()
         self.spectating: Optional[Player] = None
         self.spectator_chat: Optional[Channel] = None
 
-        # TODO: Add current match
         self.in_lobby = False
+        self.match: Optional[Match] = None
         self.last_response = time.time()
 
     def __repr__(self) -> str:
