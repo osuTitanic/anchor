@@ -61,6 +61,10 @@ def send_message(stream: StreamIn):
 def send_message_private(stream: StreamIn):
     return Reader(stream).read_message()
 
+@register(RequestPacket.SET_AWAY_MESSAGE)
+def away_message(stream: StreamIn):
+    return Reader(stream).read_message()
+
 @register(RequestPacket.ADD_FRIEND)
 def add_friend(stream: StreamIn):
     return stream.s32()

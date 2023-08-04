@@ -169,16 +169,15 @@ def send_private_message(sender: Player, message: Message):
     # TODO: Submit to database
     # TODO: Check commands
 
-    if target.status.action == ClientStatus.Afk and target.away_message:
+    if target.away_message:
         sender.enqueue_message(
             Message(
                 target.name,
-                target.away_message,
+                 f'\x01ACTION is away: {target.away_message}\x01',
                 target.name,
                 target.id
             )
         )
-        return
 
     target.enqueue_message(
         Message(
@@ -188,6 +187,30 @@ def send_private_message(sender: Player, message: Message):
             sender.id
         )
     )
+
+@register(RequestPacket.SET_AWAY_MESSAGE)
+def away_message(player: Player, message: Message):
+    if player.away_message is None and message.content is None:
+        return
+
+    if message.content is not None:
+        player.enqueue_message(
+            Message(
+                session.bot_player.name,
+                f'You have been marked as away: {message.content}',
+                session.bot_player.name
+            )
+        )
+    else:
+        player.enqueue_message(
+            Message(
+                session.bot_player.name,
+                'You are no longer marked as being away',
+                session.bot_player.name
+            )
+        )
+
+    player.away_message = message.content
 
 @register(RequestPacket.ADD_FRIEND)
 def add_friend(player: Player, target_id: int):
