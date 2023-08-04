@@ -98,7 +98,8 @@ class Channel:
         except ValueError:
             pass
 
-        player.channels.remove(self)
+        if self in player.channels:
+            player.channels.remove(self)
 
         self.update()
 
