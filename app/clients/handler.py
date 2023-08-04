@@ -72,9 +72,8 @@ def change_status(player: Player, status: StatusUpdate):
     player.status.mode = status.mode
     player.status.text = status.text
 
-    # TODO: Update rank
-
     player.update_activity()
+    player.reload_rank()
 
     # (This needs to be done for older clients)
     session.players.send_stats(player)
@@ -82,7 +81,7 @@ def change_status(player: Player, status: StatusUpdate):
 @register(RequestPacket.REQUEST_STATUS)
 def request_status(player: Player):
     player.enqueue_stats(player)
-    # TODO: Update rank
+    player.reload_rank()
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):
@@ -140,7 +139,7 @@ def send_message(player: Player, message: Message):
     player.update_activity()
 
     # TODO: Multiplayer channels
-    # TODO: Submit message to datanase
+    # TODO: Submit message to database
     # TODO: Commands
 
     channel.send_message(player, message.content)

@@ -17,7 +17,8 @@ from app.common.objects import (
     Channel
 )
 
-from app.common.database.repositories import users
+from app.common.database.repositories import users, histories, stats
+from app.common.cache import leaderboards
 
 from app.protocol import BanchoProtocol, IPAddress
 from app.common.streams import StreamIn
@@ -212,9 +213,38 @@ class Player(BanchoProtocol):
         self.object = users.fetch_by_id(self.id)
         self.stats = self.object.stats
 
-        # TODO: Update leaderboard cache
+        self.update_leaderboard_stats()
+        self.reload_rank()
 
         return self.object
+
+    def reload_rank(self) -> None:
+        """Reload player rank from cache and update it if needed"""
+        cached_rank = leaderboards.global_rank(self.id, self.status.mode.value)
+
+        if cached_rank != self.current_stats.rank:
+            self.current_stats.rank = cached_rank
+
+            # Update rank in database
+            stats.update(
+                self.id,
+                self.status.mode.value,
+                {
+                    'rank': cached_rank
+                }
+            )
+
+            # Update rank history
+            histories.update_rank(self.current_stats, self.object.country)
+
+    def update_leaderboard_stats(self) -> None:
+        leaderboards.update(
+            self.id,
+            self.status.mode.value,
+            self.current_stats.pp,
+            self.current_stats.rscore,
+            self.object.country,
+        )
 
     def close_connection(self, error: Optional[Exception] = None):
         self.connectionLost()
@@ -323,8 +353,7 @@ class Player(BanchoProtocol):
                 # Reset ban info
             pass
 
-        # TODO: Update leaderboards
-
+        self.update_leaderboard_stats()
         self.login_success()
 
     def login_success(self):
@@ -338,6 +367,8 @@ class Player(BanchoProtocol):
             write_perms=1,
             public=False
         )
+
+        # TODO: Add to channel collection
 
         # Update latest activity
         self.update_activity()
