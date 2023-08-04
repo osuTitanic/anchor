@@ -155,7 +155,7 @@ def send_private_message(sender: Player, message: Message):
         return
 
     if target.silenced:
-        # TODO: Enqueue target silenced
+        sender.enqueue_silenced_target(target.name)
         return
 
     if target.client.friendonly_dms:
@@ -426,3 +426,27 @@ def part_lobby(player: Player):
 
     for p in session.players:
         p.enqueue_lobby_part(player.id)
+
+@register(RequestPacket.MATCH_INVITE)
+def invite(player: Player, target_id: int):
+    if player.silenced:
+        return
+
+    if not (target := session.players.by_id(target_id)):
+        return
+
+    # TODO: Check invite spams
+
+    # TODO:
+    # target.enqueue_message(
+    #     Message(
+    #         player.name,
+    #         'Come join my multiplayer match: [osump://...]',
+    #         player.name,
+    #         player.id
+    #     )
+    # )
+
+@register(RequestPacket.CHANGE_FRIENDONLY_DMS)
+def change_friendonly_dms(player: Player, enabled: bool):
+    player.client.friendonly_dms = enabled
