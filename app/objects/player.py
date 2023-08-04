@@ -39,6 +39,7 @@ from app.clients import (
     DefaultRequestPacket
 )
 
+import traceback
 import hashlib
 import logging
 import config
@@ -394,20 +395,24 @@ class Player(BanchoProtocol):
             self.logger.debug(
                 f'-> {packet.name}: {args}'
             )
-
-            handler_function = app.session.handlers[packet]
-            handler_function(
-               *[self, args] if args != None else
-                [self]
-            )
         except KeyError as e:
             self.logger.error(
-                f'Could not find decoder/handler for "{packet.name}": {e}'
+                f'Could not find decoder for "{packet.name}": {e}'
             )
         except ValueError as e:
             self.logger.error(
                 f'Could not find packet with id "{packet_id}": {e}'
             )
+
+        try:
+            handler_function = app.session.handlers[packet]
+            handler_function(
+               *[self, args] if args != None else
+                [self]
+            )
+        except Exception as e:
+            if config.DEBUG: traceback.print_exc()
+            self.logger.error(f'Failed to execute handler for packet "{packet.name}": {e}')
 
     def update_activity(self):
         users.update(
