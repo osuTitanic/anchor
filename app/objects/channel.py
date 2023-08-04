@@ -31,7 +31,7 @@ class Channel:
         self.users = Players()
 
     def __repr__(self) -> str:
-        return f'{self.name} ({self.topic})'
+        return f'<{self.name} - {self.topic}>'
 
     @property
     def display_name(self) -> str:
