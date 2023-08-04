@@ -95,8 +95,6 @@ def handle_channel_join(player: Player, channel_name: str):
     else:
         channel = session.channels.by_name(channel_name)
 
-    # TODO: Multiplayer channels
-
     if not channel:
         player.revoke_channel(channel_name)
         return
