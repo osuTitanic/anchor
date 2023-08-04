@@ -1,5 +1,5 @@
 
-from .objects.collections import Players, Channels
+from .objects.collections import Players, Channels, Matches
 from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
@@ -35,6 +35,7 @@ requests.headers = {
 handlers: Dict[DefaultResponsePacket, Callable] = {}
 
 jobs = Jobs(max_workers=4)
+channels = Channels()
 storage = Storage()
 players = Players()
-channels = Channels()
+matches = Matches()
