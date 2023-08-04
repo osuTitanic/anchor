@@ -405,10 +405,12 @@ class Player(BanchoProtocol):
             self.logger.error(
                 f'Could not find decoder for "{packet.name}": {e}'
             )
+            return
         except ValueError as e:
             self.logger.error(
                 f'Could not find packet with id "{packet_id}": {e}'
             )
+            return
 
         try:
             handler_function = app.session.handlers[packet]
