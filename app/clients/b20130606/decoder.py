@@ -72,3 +72,19 @@ def remove_friend(stream: StreamIn):
 @register(RequestPacket.BEATMAP_INFO)
 def beatmap_info_request(stream: StreamIn):
     return Reader(stream).read_beatmap_request()
+
+@register(RequestPacket.START_SPECTATING)
+def start_spectating(stream: StreamIn):
+    return stream.s32()
+
+@register(RequestPacket.STOP_SPECTATING)
+def stop_spectating(stream: StreamIn):
+    return
+
+@register(RequestPacket.SEND_FRAMES)
+def send_frames(stream: StreamIn):
+    return Reader(stream).read_replayframe_bundle()
+
+@register(RequestPacket.CANT_SPECTATE)
+def cant_spectate(stream: StreamIn):
+    return
