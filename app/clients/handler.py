@@ -131,7 +131,7 @@ def send_message(player: Player, message: Message):
             channel = player.spectating.spectator_chat
         else:
             channel = player.spectator_chat
-    elif channel_name == '#multiplayer':
+    elif message.target == '#multiplayer':
         channel = player.match.chat
     else:
         channel = session.channels.by_name(message.target)
