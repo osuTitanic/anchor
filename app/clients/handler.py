@@ -381,3 +381,19 @@ def send_frames(player: Player, bundle: ReplayFrameBundle):
 
     for p in player.spectators:
         p.enqueue_frames(bundle)
+
+@register(RequestPacket.JOIN_LOBBY)
+def join_lobby(player: Player):
+    for p in session.players:
+        p.enqueue_lobby_join(player.id)
+
+    # TODO: Enqueue matches
+
+    player.in_lobby = True
+
+@register(RequestPacket.PART_LOBBY)
+def part_lobby(player: Player):
+    player.in_lobby = False
+
+    for p in session.players:
+        p.enqueue_lobby_part(player.id)

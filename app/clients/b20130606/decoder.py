@@ -92,3 +92,11 @@ def cant_spectate(stream: StreamIn):
 @register(RequestPacket.ERROR_REPORT)
 def bancho_error(stream: StreamIn):
     return stream.string()
+
+@register(RequestPacket.JOIN_LOBBY)
+def join_lobby(stream: StreamIn):
+    return
+
+@register(RequestPacket.PART_LOBBY)
+def leave_lobby(stream: StreamIn):
+    return

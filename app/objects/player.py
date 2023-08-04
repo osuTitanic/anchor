@@ -535,3 +535,15 @@ class Player(BanchoProtocol):
             self.packets.SPECTATE_FRAMES,
             bundle
         )
+
+    def enqueue_lobby_join(self, player_id: int):
+        self.send_packet(
+            self.packets.LOBBY_JOIN,
+            player_id
+        )
+
+    def enqueue_lobby_part(self, player_id: int):
+        self.send_packet(
+            self.packets.LOBBY_PART,
+            player_id
+        )
