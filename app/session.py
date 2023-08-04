@@ -3,6 +3,7 @@ from .objects.collections import Players, Channels
 from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
+from .jobs import Jobs
 
 from typing import Callable, Dict
 from requests import Session
@@ -33,6 +34,7 @@ requests.headers = {
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
 
-channels = Channels()
+jobs = Jobs(max_workers=4)
 storage = Storage()
 players = Players()
+channels = Channels()
