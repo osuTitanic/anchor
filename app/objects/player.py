@@ -8,6 +8,7 @@ from app.common.constants import (
 )
 
 from app.common.objects import (
+    ReplayFrameBundle,
     UserPresence,
     StatusUpdate,
     UserStats,
@@ -490,4 +491,40 @@ class Player(BanchoProtocol):
         self.send_packet(
             self.packets.FRIENDS_LIST,
             self.friends
+        )
+
+    def enqueue_spectator(self, player_id: int):
+        self.send_packet(
+            self.packets.SPECTATOR_JOINED,
+            player_id
+        )
+
+    def enqueue_spectator_left(self, player_id: int):
+        self.send_packet(
+            self.packets.SPECTATOR_LEFT,
+            player_id
+        )
+
+    def enqueue_fellow_spectator(self, player_id: int):
+        self.send_packet(
+            self.packets.FELLOW_SPECTATOR_JOINED,
+            player_id
+        )
+
+    def enqueue_fellow_spectator_left(self, player_id: int):
+        self.send_packet(
+            self.packets.FELLOW_SPECTATOR_LEFT,
+            player_id
+        )
+
+    def enqueue_cant_spectate(self, player_id: int):
+        self.send_packet(
+            self.packets.CANT_SPECTATE,
+            player_id
+        )
+
+    def enqueue_frames(self, bundle: ReplayFrameBundle):
+        self.send_packet(
+            self.packets.SPECTATE_FRAMES,
+            bundle
         )

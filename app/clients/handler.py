@@ -9,6 +9,7 @@ from .. import session
 
 from ..common.objects import (
     BeatmapInfoRequest,
+    ReplayFrameBundle,
     BeatmapInfoReply,
     StatusUpdate,
     BeatmapInfo,
@@ -300,3 +301,83 @@ def beatmap_info(player: Player, info: BeatmapInfoRequest):
         ResponsePacket.BEATMAP_INFO_REPLY,
         BeatmapInfoReply(map_infos)
     )
+
+@register(RequestPacket.START_SPECTATING)
+def start_spectating(player: Player, player_id: int):
+    if not (target := session.players.by_id(player_id)):
+        return
+
+    if target.id == session.bot_player.id:
+        return
+
+    # TODO: Check osu! mania support
+
+    if (player.spectating) or (player in target.spectators):
+        stop_spectating(player)
+        return
+
+    player.spectating = target
+
+    # Join their channel
+    player.enqueue_channel(target.spectator_chat)
+    target.spectator_chat.add(player)
+
+    # Enqueue to others
+    for p in target.spectators:
+        p.enqueue_fellow_spectator(player.id)
+
+    # Enqueue to target
+    target.spectators.append(player)
+    target.enqueue_spectator(player.id)
+    target.enqueue_channel(target.spectator_chat)
+
+    # Check if target joined #spectator
+    if target not in target.spectator_chat.users:
+        target.spectator_chat.add(target)
+
+@register(RequestPacket.STOP_SPECTATING)
+def stop_spectating(player: Player):
+    if not player.spectating:
+        return
+
+    # Leave spectator channel
+    player.spectating.spectator_chat.remove(player)
+
+    # Remove from target
+    player.spectating.spectators.remove(player)
+
+    # Enqueue to others
+    for p in player.spectating.spectators:
+        p.enqueue_fellow_spectator_left(player.id)
+
+    # Enqueue to target
+    player.spectating.enqueue_spectator_left(player.id)
+
+    # If target has no spectators anymore
+    # kick them from the spectator channel
+    if not player.spectating.spectators:
+        player.spectating.spectator_chat.remove(
+            player.spectating
+        )
+
+    player.spectating = None
+
+@register(RequestPacket.CANT_SPECTATE)
+def cant_spectate(player: Player):
+    if not player.spectating:
+        return
+
+    player.spectating.enqueue_cant_spectate(player.id)
+
+    for p in player.spectating.spectators:
+        p.enqueue_cant_spectate(player.id)
+
+@register(RequestPacket.SEND_FRAMES)
+def send_frames(player: Player, bundle: ReplayFrameBundle):
+    if not player.spectators:
+        return
+
+    # TODO: Check osu! mania support
+
+    for p in player.spectators:
+        p.enqueue_frames(bundle)
