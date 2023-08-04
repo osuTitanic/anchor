@@ -438,7 +438,7 @@ def invite(player: Player, target_id: int):
     # TODO: Check invite spams
 
     # TODO:
-    # target.enqueue_message(
+    # target.enqueue_invite(
     #     Message(
     #         player.name,
     #         'Come join my multiplayer match: [osump://...]',

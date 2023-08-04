@@ -567,3 +567,9 @@ class Player(BanchoProtocol):
             self.packets.LOBBY_PART,
             player_id
         )
+
+    def enqueue_invite(self, message: Message):
+        self.send_packet(
+            self.packets.INVITE,
+            message
+        )
