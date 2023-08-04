@@ -68,3 +68,7 @@ def add_friend(stream: StreamIn):
 @register(RequestPacket.REMOVE_FRIEND)
 def remove_friend(stream: StreamIn):
     return stream.s32()
+
+@register(RequestPacket.BEATMAP_INFO)
+def beatmap_info_request(stream: StreamIn):
+    return Reader(stream).read_beatmap_request()

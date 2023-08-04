@@ -1,20 +1,27 @@
 
+from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
+from ..common.database.repositories import beatmaps, scores
+from ..common.database.objects import DBBeatmap
 from ..objects.player import Player
 from .. import session
 
 from ..common.objects import (
+    BeatmapInfoRequest,
+    BeatmapInfoReply,
     StatusUpdate,
+    BeatmapInfo,
     Message
 )
 
 from ..common.constants import (
     PresenceFilter,
-    ClientStatus
+    ClientStatus,
+    Grade
 )
 
-from typing import Callable, List
+from typing import Callable, Tuple, List
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
@@ -179,4 +186,81 @@ def send_private_message(sender: Player, message: Message):
             sender.name,
             sender.id
         )
+    )
+
+@register(RequestPacket.BEATMAP_INFO)
+def beatmap_info(player: Player, info: BeatmapInfoRequest):
+    maps: List[Tuple[int, DBBeatmap]] = []
+
+    # Fetch all matching beatmaps from database
+
+    for index, filename in enumerate(info.filenames):
+        if not (beatmap := beatmaps.fetch_by_file(filename)):
+            continue
+
+        maps.append((
+            index,
+            beatmap
+        ))
+
+    for id in info.beatmap_ids:
+        if not (beatmap := beatmaps.fetch_by_id(id)):
+            continue
+
+        maps.append((
+            -1,
+            beatmap
+        ))
+
+    # Create beatmap response
+
+    map_infos: List[BeatmapInfo] = []
+
+    for index, beatmap in maps:
+        ranked = {
+            -2: 0, # Graveyard: Pending
+            -1: 0, # WIP: Pending
+             0: 0, # Pending: Pending
+             1: 1, # Ranked: Ranked
+             2: 2, # Approved: Approved
+             3: 2, # Qualified: Approved
+             4: 2, # Loved: Approved
+        }[beatmap.status]
+
+        # Get personal best in every mode for this beatmap
+        grades = {
+            0: Grade.N,
+            1: Grade.N,
+            2: Grade.N,
+            3: Grade.N
+        }
+
+        for mode in range(4):
+            personal_best = scores.fetch_personal_best(
+                beatmap.id,
+                player.id,
+                mode
+            )
+
+            if personal_best:
+                grades[mode] = Grade[personal_best.grade]
+
+        map_infos.append(
+            BeatmapInfo(
+                index,
+                beatmap.id,
+                beatmap.set_id,
+                beatmap.set_id, # thread_id
+                ranked,
+                grades[0],
+                grades[1],
+                grades[2],
+                grades[3],
+                beatmap.md5
+            )
+        )
+
+    player.send_packet(
+        ResponsePacket.BEATMAP_INFO_REPLY,
+        BeatmapInfoReply(map_infos)
     )
