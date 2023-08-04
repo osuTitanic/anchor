@@ -96,7 +96,7 @@ class ResponsePacket(PacketEnum):
     MONITOR                         = 80
     MATCH_PLAYER_SKIPPED            = 81
     USER_PRESENCE                   = 83
-    IRC_ONLY                        = 84
+    IRC_ONLY                        = 84 # Only used in irc (duh)
     RESTART                         = 86
     INVITE                          = 88
     CHANNEL_INFO_COMPLETE           = 89
