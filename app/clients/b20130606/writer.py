@@ -124,8 +124,8 @@ class Writer(BaseWriter):
 
     def write_replayframe_bundle(self, bundle: ReplayFrameBundle):
         self.stream.s32(bundle.extra)
-        self.stream.u16(len(bundle.replay_frames))
-        [self.write_replayframe(frame) for frame in bundle.replay_frames]
+        self.stream.u16(len(bundle.frames))
+        [self.write_replayframe(frame) for frame in bundle.frames]
         self.stream.u8(bundle.action.value)
 
         if bundle.score_frame:
