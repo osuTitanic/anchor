@@ -72,9 +72,6 @@ class Player(BanchoProtocol):
         self.channels = set() # TODO: Add type
         self.filter = PresenceFilter.All
 
-        # TODO: Add spectator channel
-        # TODO: Add spectator collection
-
         from .collections import Players
         from .channel import Channel
 
@@ -276,6 +273,8 @@ class Player(BanchoProtocol):
 
         # Check adapters md5
         adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
+
+        # TODO: Store login attempt in database
 
         if adapters_hash != client.hash.adapters_md5:
             self.transport.write('no.\r\n')
