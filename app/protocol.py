@@ -111,10 +111,6 @@ class BanchoProtocol(Protocol):
                     # Wait for next buffer
                     break
 
-                self.logger.debug(
-                    f'-> {packet}: {payload}'
-                )
-
                 self.packet_received(
                     packet_id=packet,
                     stream=StreamIn(payload)

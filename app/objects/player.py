@@ -387,10 +387,13 @@ class Player(BanchoProtocol):
 
         try:
             packet = self.request_packets(packet_id)
-            self.logger.debug(f'-> "{packet.name}": {stream.get()}')
 
             decoder = self.decoders[packet]
             args = decoder(stream)
+
+            self.logger.debug(
+                f'-> {packet.name}: {args}'
+            )
 
             handler_function = app.session.handlers[packet]
             handler_function(
