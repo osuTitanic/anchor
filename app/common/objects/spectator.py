@@ -35,4 +35,4 @@ class ReplayFrameBundle:
     action: ReplayAction
     replay_frames: List[ReplayFrame]
     frames: List[ReplayFrame]
-    score_frame: Optional[ScoreFrame]
+    score_frame: Optional[ScoreFrame] = None
