@@ -113,6 +113,10 @@ def leave_lobby(stream: StreamIn):
 def invite(stream: StreamIn):
     return stream.s32()
 
+@register(RequestPacket.TOURNAMENT_MATCH_INFO)
+def tourney_match_info(stream: StreamIn):
+    return stream.s32()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def friendonly_dms(stream: StreamIn):
     return stream.s32() == 1
