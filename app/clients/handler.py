@@ -190,27 +190,29 @@ def send_private_message(sender: Player, message: Message):
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 def away_message(player: Player, message: Message):
-    if player.away_message is None and message.content is None:
+    if player.away_message is None and message.content == "":
         return
 
-    if message.content is not None:
+    if message.content != "":
+        player.away_message = message.content
         player.enqueue_message(
             Message(
                 session.bot_player.name,
                 f'You have been marked as away: {message.content}',
-                session.bot_player.name
+                session.bot_player.name,
+                session.bot_player.id
             )
         )
     else:
+        player.away_message = None
         player.enqueue_message(
             Message(
                 session.bot_player.name,
                 'You are no longer marked as being away',
-                session.bot_player.name
+                session.bot_player.name,
+                session.bot_player.id
             )
         )
-
-    player.away_message = message.content
 
 @register(RequestPacket.ADD_FRIEND)
 def add_friend(player: Player, target_id: int):
