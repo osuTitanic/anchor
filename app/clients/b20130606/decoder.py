@@ -111,7 +111,7 @@ def leave_lobby(stream: StreamIn):
 
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
-    return Reader(stream).read_message()
+    return stream.s32()
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def friendonly_dms(stream: StreamIn):
