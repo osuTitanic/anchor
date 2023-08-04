@@ -90,6 +90,8 @@ def handle_channel_join(player: Player, channel_name: str):
             channel = player.spectating.spectator_chat
         else:
             channel = player.spectator_chat
+    elif channel_name == '#multiplayer':
+        channel = player.match.chat
     else:
         channel = session.channels.by_name(channel_name)
 
@@ -108,10 +110,10 @@ def handle_channel_leave(player: Player, channel_name: str, kick: bool = False):
             channel = player.spectating.spectator_chat
         else:
             channel = player.spectator_chat
+    elif channel_name == '#multiplayer':
+        channel = player.match.chat
     else:
         channel = session.channels.by_name(channel_name)
-
-    # TODO: Multiplayer channels
 
     if not channel:
         player.revoke_channel(channel_name)
@@ -129,6 +131,8 @@ def send_message(player: Player, message: Message):
             channel = player.spectating.spectator_chat
         else:
             channel = player.spectator_chat
+    elif channel_name == '#multiplayer':
+        channel = player.match.chat
     else:
         channel = session.channels.by_name(message.target)
 
@@ -138,7 +142,6 @@ def send_message(player: Player, message: Message):
 
     player.update_activity()
 
-    # TODO: Multiplayer channels
     # TODO: Submit message to database
     # TODO: Commands
 
