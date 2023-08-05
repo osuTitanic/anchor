@@ -26,7 +26,7 @@ from app.common.streams import StreamIn
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 
-from typing import Optional, Callable, Tuple, List, Dict
+from typing import Optional, Callable, Tuple, List, Dict, Set
 from datetime import datetime
 from enum import Enum
 from copy import copy
@@ -70,7 +70,7 @@ class Player(BanchoProtocol):
         self.decoders: Dict[Enum, Callable] = {}
         self.encoders: Dict[Enum, Callable] = {}
 
-        self.channels = set() # TODO: Add type
+        self.channels: Set[Channel] = set()
         self.filter = PresenceFilter.All
 
         from .collections import Players
