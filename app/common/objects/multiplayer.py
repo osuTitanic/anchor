@@ -37,3 +37,8 @@ class Match:
     team_type: MatchTeamTypes
     freemod: bool
     seed: int
+
+@dataclass
+class MatchJoin:
+    match_id: int
+    password: str

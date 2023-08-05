@@ -1,9 +1,14 @@
 
 from .chat import Message as bMessage, Channel as bChannel
-from .multiplayer import Match as bMatch, Slot as bSlot
 from .achievements import Achievement as bAchievement
 
 from .generic import BanchoPacket
+
+from .multiplayer import (
+    MatchJoin as bMatchJoin,
+    Match as bMatch,
+    Slot as bSlot
+)
 
 from .player import (
     UserPresence as bUserPresence,
