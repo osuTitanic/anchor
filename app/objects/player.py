@@ -664,6 +664,15 @@ class Player(BanchoProtocol):
             player_id
         )
 
+    def enqueue_matchjoin_fail(self):
+        self.send_packet(self.packets.MATCH_JOIN_FAIL)
+
+    def enqueue_matchjoin_success(self, match):
+        self.send_packet(
+            self.packets.MATCH_JOIN_SUCCESS,
+            match
+        )
+
     def enqueue_invite(self, message: Message):
         self.send_packet(
             self.packets.INVITE,
