@@ -1,5 +1,5 @@
 
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -11,6 +11,7 @@ from app.common.constants import (
     Mods
 )
 
+from app.common.database.repositories import beatmaps
 from app.common.objects import bMatch, bSlot
 
 from .channel import Channel
@@ -142,3 +143,30 @@ class Match:
             self.freemod,
             self.seed
         )
+
+    @property
+    def players(self) -> List[Player]:
+        """Return all players"""
+        return [slot.player for slot in self.player_slots]
+
+    @property
+    def url(self) -> str:
+        """Url, used to join a match"""
+        return f'osump://{self.id}/{self.password}'
+
+    @property
+    def embed(self) -> str:
+        """Embed that will be sent on invite"""
+        return f'[{self.url} {self.name}]'
+
+    @property
+    def host_slot(self) -> Optional[Slot]:
+        for slot in self.slots:
+            if slot.status.value & SlotStatus.HasPlayer.value and slot.player is self.host:
+                return slot
+
+        return None
+
+    @property
+    def player_slots(self) -> List[Slot]:
+        return [slot for slot in self.slots if slot.has_player]
