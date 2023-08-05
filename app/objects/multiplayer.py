@@ -64,7 +64,8 @@ class Match:
         beatmap_id: int,
         beatmap_name: str,
         beatmap_hash: str,
-        mode: GameMode
+        mode: GameMode,
+        seed: int = 0
     ) -> None:
         self.id       = id
         self.name     = name
@@ -79,6 +80,7 @@ class Match:
 
         self.mods = Mods.NoMod
         self.mode = mode
+        self.seed = seed
 
         self.type          = MatchType.Standard
         self.scoring_type  = MatchScoringTypes.Score
