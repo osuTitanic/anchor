@@ -517,33 +517,37 @@ def create_match(player: Player, bancho_match: bMatch):
 def join_match(player: Player, match_join: bMatchJoin):
     if not (match := session.matches[match_join.match_id]):
         # Match was not found
+        player.logger.warning(f'{player.name} tried to join a match that does not exist')
         player.enqueue_matchjoin_fail()
         player.enqueue_match_disband(match_join.match_id)
         return
 
     if player.match:
         # Player already joined the match
+        player.logger.warning(f'{player.name} tried to join a match, but is already inside one')
         player.enqueue_matchjoin_fail()
         return
 
     if player is not match.host:
-        # TODO: Check password
-        slot_id = 124
+        if match_join.password != match.password:
+            # Invalid password
+            player.logger.warning(f'{player.name} failed to join match: Invalid password')
+            player.enqueue_matchjoin_fail()
+            return
+
+        if (slot_id := match.get_free()) is None:
+            # Match is full
+            player.logger.warning(f'{player.name} failed to join match: Match full')
+            player.enqueue_matchjoin_fail()
+            return
     else:
         # Player is creating the match
         slot_id = 0
 
     # Join the chat
-    match.chat.add(player)
+    player.enqueue_channel(match.chat.bancho_channel)
 
-    # Leave the lobby channel
-    channel_leave(
-        player,
-        '#lobby',
-        kick=True
-    )
-
-    slot = match.slots[0 if slot_id == -1 else slot_id]
+    slot = match.slots[slot_id]
 
     if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
         slot.team = SlotTeam.Red
@@ -553,8 +557,80 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     player.match = match
 
+    match.logger.info(f'{player.name} joined')
     player.enqueue_matchjoin_success(match.bancho_match)
-    # TODO: match.update()
+    match.update()
+
+@register(RequestPacket.LEAVE_MATCH)
+def leave_match(player: Player):
+    if not player.match:
+        return
+
+    match_id = player.match.id
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    if slot.status == SlotStatus.Locked:
+        status = SlotStatus.Locked
+    else:
+        status = SlotStatus.Open
+
+    slot.reset(status)
+    channel_leave(
+        player,
+        player.match.chat.name,
+        kick=True
+    )
+
+    if all(slot.empty for slot in player.match.slots):
+        # Match is empty
+        session.matches.remove(player.match)
+
+        player.enqueue_match_disband(match_id)
+
+        for player in session.players.in_lobby:
+            player.enqueue_match_disband(match_id)
+    else:
+        if player is player.match.host:
+            # Player was host, transfer to next player
+            for slot in player.match.slots:
+                if slot.status.value & SlotStatus.HasPlayer.value:
+                    player.match.host = slot.player
+                    player.match.host.enqueue_match_transferhost()
+
+        player.match.update()
+
+    player.match = None
+
+@register(RequestPacket.MATCH_CHANGE_SLOT)
+def change_slot(player: Player, slot_id: int):
+    if not player.match:
+        return
+
+    if not 0 <= slot_id < 8:
+        return
+
+    if player.match.slots[slot_id].status != SlotStatus.Open:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    player.match.slots[slot_id].copy_from(slot)
+    slot.reset()
+
+    player.match.update()
+
+@register(RequestPacket.MATCH_CHANGE_SETTINGS)
+def change_settings(player: Player, match: bMatch):
+    if not player.match:
+        return
+
+    if player is not player.match.host:
+        return
+
+    player.match.change_settings(match)
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
