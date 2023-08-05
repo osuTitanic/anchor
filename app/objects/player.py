@@ -300,7 +300,7 @@ class Player(BanchoProtocol):
         self.decoders, self.encoders = self.get_client(client.version.date)
 
         # Send protocol version
-        self.send_packet(self.packets.PROTOCOL_VERSION, 18) # TODO: Define constant
+        self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
         # Check adapters md5
         adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()

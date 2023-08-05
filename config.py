@@ -32,4 +32,5 @@ DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
 
 DATA_PATH = os.path.abspath('.data')
+PROTOCOL_VERSION = 18
 VERSION = 'dev'
