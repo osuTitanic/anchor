@@ -170,3 +170,31 @@ class Match:
     @property
     def player_slots(self) -> List[Slot]:
         return [slot for slot in self.slots if slot.has_player]
+
+    def get_slot(self, player: Player) -> Optional[Slot]:
+        for slot in self.slots:
+            if player is slot.player:
+                return slot
+
+        return None
+
+    def get_slot_id(self, player: Player) -> Optional[int]:
+        for index, slot in enumerate(self.slots):
+            if player is slot.player:
+                return index
+
+        return None
+
+    def get_slot_with_id(self, player: Player) -> Optional[Tuple[Slot, int]]:
+        for index, slot in enumerate(self.slots):
+            if player is slot.player:
+                return slot, index
+
+        return None, None
+
+    def get_free(self) -> Optional[int]:
+        for index, slot in enumerate(self.slots):
+            if slot.status == SlotStatus.Open:
+                return index
+
+        return None
