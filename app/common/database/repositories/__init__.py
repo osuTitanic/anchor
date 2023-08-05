@@ -9,6 +9,7 @@ from . import (
     histories,
     beatmaps,
     channels,
+    messages,
     comments,
     ratings,
     scores,
