@@ -121,7 +121,7 @@ class Reader(BaseReader):
 
         in_progress = self.stream.bool()
         match_type = MatchType(self.stream.u8())
-        mods = Mods(self.stream.s16())
+        mods = Mods(self.stream.u32())
 
         name = self.stream.string()
         password = self.stream.string()
@@ -132,7 +132,11 @@ class Reader(BaseReader):
 
         slot_status = [SlotStatus(self.stream.u8()) for _ in range(8)]
         slot_team   = [SlotTeam(self.stream.u8()) for _ in range(8)]
-        slot_id     = [self.stream.s32() for i in range(8) if slot_status[i] & SlotStatus.HasPlayer.value]
+        slot_id     = [
+            self.stream.s32()
+            if slot_status[i] & SlotStatus.HasPlayer.value else -1
+            for i in range(8)
+        ]
 
         host_id = self.stream.s32()
         mode = GameMode(self.stream.u8())
@@ -141,10 +145,10 @@ class Reader(BaseReader):
         team_type    = MatchTeamTypes(self.stream.u8())
 
         freemod = self.stream.bool()
-        slot_mods = [None for _ in range(8)]
+        slot_mods = [Mods.NoMod for _ in range(8)]
 
         if freemod:
-            slot_mods = [Mods(mods) for mods in range(8)]
+            slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
 
         slots = [
             Slot(
