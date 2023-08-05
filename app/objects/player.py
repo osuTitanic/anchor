@@ -471,7 +471,7 @@ class Player(BanchoProtocol):
             args = decoder(stream)
 
             self.logger.debug(
-                f'-> {packet.name}: {args}'
+                f'-> "{packet.name}": {args}'
             )
         except KeyError as e:
             self.logger.error(
