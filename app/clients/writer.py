@@ -1,18 +1,18 @@
 
 from app.common.streams import StreamOut
 from app.common.objects import (
-    ReplayFrameBundle,
-    BeatmapInfoReply,
-    StatusUpdate,
-    UserPresence,
-    BeatmapInfo,
-    ReplayFrame,
-    ScoreFrame,
-    UserStats,
-    UserQuit,
-    Message,
-    Channel,
-    Match
+    bReplayFrameBundle,
+    bBeatmapInfoReply,
+    bStatusUpdate,
+    bUserPresence,
+    bBeatmapInfo,
+    bReplayFrame,
+    bScoreFrame,
+    bUserStats,
+    bUserQuit,
+    bMessage,
+    bChannel,
+    bMatch
 )
 
 from typing import Optional, List
@@ -35,38 +35,38 @@ class BaseWriter(ABC):
     def write_intlist(self, list: List[int]):
         ...
 
-    def write_channel(self, channel: Channel):
+    def write_channel(self, channel: bChannel):
         ...
 
-    def write_message(self, msg: Message):
+    def write_message(self, msg: bMessage):
         ...
 
-    def write_presence(self, presence: UserPresence):
+    def write_presence(self, presence: bUserPresence):
         ...
 
-    def write_stats(self, stats: UserStats):
+    def write_stats(self, stats: bUserStats):
         ...
 
-    def write_quit(self, state: UserQuit):
+    def write_quit(self, state: bUserQuit):
         ...
 
-    def write_status(self, status: StatusUpdate):
+    def write_status(self, status: bStatusUpdate):
         ...
 
-    def write_beatmap_info(self, info: BeatmapInfo):
+    def write_beatmap_info(self, info: bBeatmapInfo):
         ...
 
-    def write_beatmap_info_reply(self, reply: BeatmapInfoReply):
+    def write_beatmap_info_reply(self, reply: bBeatmapInfoReply):
         ...
 
-    def write_match(self, match: Match):
+    def write_match(self, match: bMatch):
         ...
 
-    def write_replayframe(self, frame: ReplayFrame):
+    def write_replayframe(self, frame: bReplayFrame):
         ...
 
-    def write_scoreframe(self, frame: ScoreFrame):
+    def write_scoreframe(self, frame: bScoreFrame):
         ...
 
-    def write_replayframe_bundle(self, bundle: ReplayFrameBundle):
+    def write_replayframe_bundle(self, bundle: bReplayFrameBundle):
         ...

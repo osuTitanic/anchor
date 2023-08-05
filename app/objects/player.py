@@ -8,13 +8,13 @@ from app.common.constants import (
 )
 
 from app.common.objects import (
-    ReplayFrameBundle,
-    UserPresence,
-    StatusUpdate,
-    UserStats,
-    UserQuit,
-    Message,
-    Channel
+    bReplayFrameBundle,
+    bUserPresence,
+    bStatusUpdate,
+    bUserStats,
+    bUserQuit,
+    bMessage,
+    bChannel
 )
 
 from app.common.database.repositories import users, histories, stats
@@ -190,9 +190,9 @@ class Player(BanchoProtocol):
         ]
 
     @property
-    def user_presence(self) -> Optional[UserPresence]:
+    def user_presence(self) -> Optional[bUserPresence]:
         try:
-            return UserPresence(
+            return bUserPresence(
                 self.id,
                 False,
                 self.name,
@@ -208,11 +208,11 @@ class Player(BanchoProtocol):
             return None
 
     @property
-    def user_stats(self) -> Optional[UserStats]:
+    def user_stats(self) -> Optional[bUserStats]:
         try:
-            return UserStats(
+            return bUserStats(
                 self.id,
-                StatusUpdate(
+                bStatusUpdate(
                     self.status.action,
                     self.status.text,
                     self.status.mods,
@@ -238,7 +238,7 @@ class Player(BanchoProtocol):
 
         app.session.players.send_packet(
             self.packets.USER_QUIT,
-            UserQuit(
+            bUserQuit(
                 self.id,
                 QuitState.Gone # TODO: IRC
             )
@@ -545,7 +545,7 @@ class Player(BanchoProtocol):
             player.user_stats
         )
 
-    def enqueue_message(self, message: Message):
+    def enqueue_message(self, message: bMessage):
         self.send_packet(
             self.packets.SEND_MESSAGE,
             message
@@ -557,7 +557,7 @@ class Player(BanchoProtocol):
             self.permissions
         )
 
-    def enqueue_channel(self, channel: Channel, autojoin: bool = False):
+    def enqueue_channel(self, channel: bChannel, autojoin: bool = False):
         self.send_packet(
             self.packets.CHANNEL_AVAILABLE if not autojoin else \
             self.packets.CHANNEL_AVAILABLE_AUTOJOIN,
@@ -579,7 +579,7 @@ class Player(BanchoProtocol):
     def enqueue_blocked_dms(self, username: str):
         self.send_packet(
             self.packets.USER_DM_BLOCKED,
-            Message(
+            bMessage(
                 '',
                 '',
                 username,
@@ -590,7 +590,7 @@ class Player(BanchoProtocol):
     def enqueue_silenced_target(self, username: str):
         self.send_packet(
             self.packets.TARGET_IS_SILENCED,
-            Message(
+            bMessage(
                 '',
                 '',
                 username,
@@ -646,7 +646,7 @@ class Player(BanchoProtocol):
             player_id
         )
 
-    def enqueue_frames(self, bundle: ReplayFrameBundle):
+    def enqueue_frames(self, bundle: bReplayFrameBundle):
         self.send_packet(
             self.packets.SPECTATE_FRAMES,
             bundle
@@ -673,7 +673,7 @@ class Player(BanchoProtocol):
             match
         )
 
-    def enqueue_invite(self, message: Message):
+    def enqueue_invite(self, message: bMessage):
         self.send_packet(
             self.packets.INVITE,
             message

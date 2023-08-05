@@ -1,7 +1,7 @@
 
 from app.clients import DefaultResponsePacket
 from app.common.constants import Permissions
-from app.common.objects import Message
+from app.common.objects import bMessage
 
 import logging
 import app
@@ -127,7 +127,7 @@ class Channel:
             for user in users:
                 # Enqueue message to every user inside this channel
                 user.enqueue_message(
-                    Message(
+                    bMessage(
                         sender.name,
                         message,
                         self.display_name,

@@ -1,13 +1,13 @@
 
 from app.common.database.objects import DBAchievement
-from app.common.objects import Achievement
+from app.common.objects import bAchievement
 
 from typing import List
 
 import app
 
 def create_many(
-    achievements: List[Achievement],
+    achievements: List[bAchievement],
     user_id: int
 ) -> None:
     with app.session.database.session as session:

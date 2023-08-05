@@ -1,14 +1,14 @@
 
 from app.common.streams import StreamIn
 from app.common.objects import (
-    BeatmapInfoRequest,
-    ReplayFrameBundle,
-    StatusUpdate,
+    bBeatmapInfoRequest,
+    bReplayFrameBundle,
+    bStatusUpdate,
     BanchoPacket,
-    ReplayFrame,
-    ScoreFrame,
-    Message,
-    Match
+    bReplayFrame,
+    bScoreFrame,
+    bMessage,
+    bMatch
 )
 
 from typing import List
@@ -24,23 +24,23 @@ class BaseReader(ABC):
     def read_intlist(self) -> List[int]:
         ...
 
-    def read_message(self) -> Message:
+    def read_message(self) -> bMessage:
         ...
 
-    def read_status(self) -> StatusUpdate:
+    def read_status(self) -> bStatusUpdate:
         ...
 
-    def read_beatmap_request(self) -> BeatmapInfoRequest:
+    def read_beatmap_request(self) -> bBeatmapInfoRequest:
         ...
 
-    def read_replayframe(self) -> ReplayFrame:
+    def read_replayframe(self) -> bReplayFrame:
         ...
 
-    def read_replayframe_bundle(self) -> ReplayFrameBundle:
+    def read_replayframe_bundle(self) -> bReplayFrameBundle:
         ...
 
-    def read_scoreframe(self) -> ScoreFrame:
+    def read_scoreframe(self) -> bScoreFrame:
         ...
 
-    def read_match(self) -> Match:
+    def read_match(self) -> bMatch:
         ...

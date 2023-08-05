@@ -3,15 +3,15 @@ from typing import List
 from app.common.streams import StreamIn
 
 from app.common.objects import (
-    BeatmapInfoRequest,
-    ReplayFrameBundle,
-    StatusUpdate,
+    bBeatmapInfoRequest,
+    bReplayFrameBundle,
+    bStatusUpdate,
     BanchoPacket,
-    ReplayFrame,
-    ScoreFrame,
-    Message,
-    Match,
-    Slot
+    bReplayFrame,
+    bScoreFrame,
+    bMessage,
+    bMatch,
+    bSlot
 )
 
 from app.common.constants import (
@@ -48,16 +48,16 @@ class Reader(BaseReader):
     def read_intlist(self) -> List[int]:
         return [self.stream.s32() for _ in range(self.stream.s16())]
 
-    def read_message(self) -> Message:
-        return Message(
+    def read_message(self) -> bMessage:
+        return bMessage(
             sender=self.stream.string(),
             content=self.stream.string(),
             target=self.stream.string(),
             sender_id=self.stream.s32()
         )
 
-    def read_status(self) -> StatusUpdate:
-        return StatusUpdate(
+    def read_status(self) -> bStatusUpdate:
+        return bStatusUpdate(
             action=ClientStatus(self.stream.u8()),
             text=self.stream.string(),
             beatmap_checksum=self.stream.string(),
@@ -66,14 +66,14 @@ class Reader(BaseReader):
             beatmap_id=self.stream.s32()
         )
 
-    def read_beatmap_request(self) -> BeatmapInfoRequest:
-        return BeatmapInfoRequest(
+    def read_beatmap_request(self) -> bBeatmapInfoRequest:
+        return bBeatmapInfoRequest(
             [self.stream.string() for m in range(self.stream.s32())],
             [self.stream.s32() for m in range(self.stream.s32())]
         )
 
-    def read_replayframe(self) -> ReplayFrame:
-        return ReplayFrame(
+    def read_replayframe(self) -> bReplayFrame:
+        return bReplayFrame(
             button_state=ButtonState(self.stream.u8()),
             taiko_byte=self.stream.u8(),
             mouse_x=self.stream.float(),
@@ -81,8 +81,8 @@ class Reader(BaseReader):
             time=self.stream.s32()
         )
 
-    def read_scoreframe(self) -> ScoreFrame:
-        return ScoreFrame(
+    def read_scoreframe(self) -> bScoreFrame:
+        return bScoreFrame(
             time=self.stream.s32(),
             id=self.stream.u8(),
             c300=self.stream.u16(),
@@ -99,7 +99,7 @@ class Reader(BaseReader):
             tag_byte=self.stream.u8()
         )
 
-    def read_replayframe_bundle(self) -> ReplayFrameBundle:
+    def read_replayframe_bundle(self) -> bReplayFrameBundle:
         extra = self.stream.s32()
         replay_frames = [self.read_replayframe() for f in range(self.stream.u16())]
         action = ReplayAction(self.stream.u8())
@@ -109,14 +109,14 @@ class Reader(BaseReader):
         except Exception:
             score_frame = None
 
-        return ReplayFrameBundle(
+        return bReplayFrameBundle(
             extra,
             action,
             replay_frames,
             score_frame
         )
 
-    def read_match(self) -> Match:
+    def read_match(self) -> bMatch:
         match_id = self.stream.s16()
 
         in_progress = self.stream.bool()
@@ -151,7 +151,7 @@ class Reader(BaseReader):
             slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
 
         slots = [
-            Slot(
+            bSlot(
                 slot_id[i],
                 slot_status[i],
                 slot_team[i],
@@ -162,7 +162,7 @@ class Reader(BaseReader):
 
         seed = self.stream.s32()
 
-        return Match(
+        return bMatch(
             match_id,
             in_progress,
             match_type,

@@ -11,10 +11,13 @@ from app.common.constants import (
     Mods
 )
 
+from app.common.objects import bMatch
+
 from .channel import Channel
 from .player import Player
 
 import logging
+import app
 
 class Slot:
     def __init__(self) -> None:
@@ -93,3 +96,19 @@ class Match:
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
+
+    @classmethod
+    def from_bancho_match(cls, bancho_match: bMatch):
+        return Match(
+            bancho_match.id,
+            bancho_match.name,
+            bancho_match.password,
+            app.session.players.by_id(
+                bancho_match.host_id
+            ),
+            bancho_match.beatmap_id,
+            bancho_match.beatmap_text,
+            bancho_match.beatmap_checksum,
+            bancho_match.mode,
+            bancho_match.seed
+        )

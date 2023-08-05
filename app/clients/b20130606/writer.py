@@ -2,18 +2,18 @@
 from app.common.constants import SlotStatus
 from app.common.streams import StreamOut
 from app.common.objects import (
-    ReplayFrameBundle,
-    BeatmapInfoReply,
-    StatusUpdate,
-    UserPresence,
-    BeatmapInfo,
-    ReplayFrame,
-    ScoreFrame,
-    UserStats,
-    UserQuit,
-    Message,
-    Channel,
-    Match
+    bReplayFrameBundle,
+    bBeatmapInfoReply,
+    bStatusUpdate,
+    bUserPresence,
+    bBeatmapInfo,
+    bReplayFrame,
+    bScoreFrame,
+    bUserStats,
+    bUserQuit,
+    bMessage,
+    bChannel,
+    bMatch
 )
 
 from typing import List, Optional
@@ -38,18 +38,18 @@ class Writer(BaseWriter):
         self.stream.s16(len(list))
         [self.stream.s32(num) for num in list]
 
-    def write_channel(self, channel: Channel):
+    def write_channel(self, channel: bChannel):
         self.stream.string(channel.name)
         self.stream.string(channel.topic)
         self.stream.s16(channel.user_count)
 
-    def write_message(self, msg: Message):
+    def write_message(self, msg: bMessage):
         self.stream.string(msg.sender)
         self.stream.string(msg.content)
         self.stream.string(msg.target)
         self.stream.s32(msg.sender_id)
 
-    def write_presence(self, presence: UserPresence):
+    def write_presence(self, presence: bUserPresence):
         if presence.is_irc:
             presence.user_id = -presence.user_id
 
@@ -62,7 +62,7 @@ class Writer(BaseWriter):
         self.stream.float(presence.latitude)
         self.stream.s32(presence.rank)
 
-    def write_stats(self, stats: UserStats):
+    def write_stats(self, stats: bUserStats):
         self.stream.s32(stats.user_id)
         self.write_status(stats.status)
         self.stream.u64(stats.rscore)
@@ -72,7 +72,7 @@ class Writer(BaseWriter):
         self.stream.s32(stats.rank)
         self.stream.u16(round(stats.pp))
 
-    def write_status(self, status: StatusUpdate):
+    def write_status(self, status: bStatusUpdate):
         self.stream.u8(status.action.value)
         self.stream.string(status.text)
         self.stream.string(status.beatmap_checksum)
@@ -80,11 +80,11 @@ class Writer(BaseWriter):
         self.stream.u8(status.mode.value)
         self.stream.s32(status.beatmap_id)
 
-    def write_quit(self, state: UserQuit):
+    def write_quit(self, state: bUserQuit):
         self.stream.s32(state.user_id)
         self.stream.u8(state.quit_state.value)
 
-    def write_beatmap_info(self, info: BeatmapInfo):
+    def write_beatmap_info(self, info: bBeatmapInfo):
         self.stream.s16(info.index)
         self.stream.s32(info.beatmap_id)
         self.stream.s32(info.beatmapset_id)
@@ -96,18 +96,18 @@ class Writer(BaseWriter):
         self.stream.u8(info.mania_rank.value)
         self.stream.string(info.checksum)
 
-    def write_beatmap_info_reply(self, reply: BeatmapInfoReply):
+    def write_beatmap_info_reply(self, reply: bBeatmapInfoReply):
         self.stream.s32(len(reply.beatmaps))
         [self.write_beatmap_info(info) for info in reply.beatmaps]
 
-    def write_replayframe(self, frame: ReplayFrame):
+    def write_replayframe(self, frame: bReplayFrame):
         self.stream.u8(frame.button_state.value)
         self.stream.u8(frame.taiko_byte)
         self.stream.float(frame.mouse_x)
         self.stream.float(frame.mouse_y)
         self.stream.s32(frame.time)
 
-    def write_scoreframe(self, frame: ScoreFrame):
+    def write_scoreframe(self, frame: bScoreFrame):
         self.stream.s32(frame.time)
         self.stream.u8(frame.id)
         self.stream.u16(frame.c300)
@@ -123,7 +123,7 @@ class Writer(BaseWriter):
         self.stream.u8(frame.hp)
         self.stream.u8(frame.tag_byte)
 
-    def write_replayframe_bundle(self, bundle: ReplayFrameBundle):
+    def write_replayframe_bundle(self, bundle: bReplayFrameBundle):
         self.stream.s32(bundle.extra)
         self.stream.u16(len(bundle.frames))
         [self.write_replayframe(frame) for frame in bundle.frames]
@@ -132,7 +132,7 @@ class Writer(BaseWriter):
         if bundle.score_frame:
             self.write_scoreframe(bundle.score_frame)
 
-    def write_match(self, match: Match):
+    def write_match(self, match: bMatch):
         self.stream.u16(match.id)
 
         self.stream.bool(match.in_progress)

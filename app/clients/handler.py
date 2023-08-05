@@ -3,6 +3,8 @@ from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
 from ..common.database.objects import DBBeatmap
+from ..objects.multiplayer import Match
+from ..objects.channel import Channel
 from ..objects.player import Player
 from .. import session
 
@@ -14,12 +16,13 @@ from ..common.database.repositories import (
 )
 
 from ..common.objects import (
-    BeatmapInfoRequest,
-    ReplayFrameBundle,
-    BeatmapInfoReply,
-    StatusUpdate,
-    BeatmapInfo,
-    Message
+    bBeatmapInfoRequest,
+    bReplayFrameBundle,
+    bBeatmapInfoReply,
+    bStatusUpdate,
+    bBeatmapInfo,
+    bMessage,
+    bMatch
 )
 
 from ..common.constants import (
@@ -70,7 +73,7 @@ def stats_request(player: Player, players: List[int]):
         player.enqueue_stats(target)
 
 @register(RequestPacket.CHANGE_STATUS)
-def change_status(player: Player, status: StatusUpdate):
+def change_status(player: Player, status: bStatusUpdate):
     player.status.checksum = status.beatmap_checksum
     player.status.beatmap = status.beatmap_id
     player.status.action = status.action
@@ -129,7 +132,7 @@ def handle_channel_leave(player: Player, channel_name: str, kick: bool = False):
     channel.remove(player)
 
 @register(RequestPacket.SEND_MESSAGE)
-def send_message(player: Player, message: Message):
+def send_message(player: Player, message: bMessage):
     if message.target == '#spectator':
         if player.spectating:
             channel = player.spectating.spectator_chat
@@ -156,7 +159,7 @@ def send_message(player: Player, message: Message):
     )
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
-def send_private_message(sender: Player, message: Message):
+def send_private_message(sender: Player, message: bMessage):
     if not (target := session.players.by_name(message.target)):
         sender.revoke_channel(message.target)
         return
@@ -190,7 +193,7 @@ def send_private_message(sender: Player, message: Message):
 
     if target.away_message:
         sender.enqueue_message(
-            Message(
+            bMessage(
                 target.name,
                  f'\x01ACTION is away: {target.away_message}\x01',
                 target.name,
@@ -199,7 +202,7 @@ def send_private_message(sender: Player, message: Message):
         )
 
     target.enqueue_message(
-        Message(
+        bMessage(
             sender.name,
             message.content,
             sender.name,
@@ -208,14 +211,14 @@ def send_private_message(sender: Player, message: Message):
     )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
-def away_message(player: Player, message: Message):
+def away_message(player: Player, message: bMessage):
     if player.away_message is None and message.content == "":
         return
 
     if message.content != "":
         player.away_message = message.content
         player.enqueue_message(
-            Message(
+            bMessage(
                 session.bot_player.name,
                 f'You have been marked as away: {message.content}',
                 session.bot_player.name,
@@ -225,7 +228,7 @@ def away_message(player: Player, message: Message):
     else:
         player.away_message = None
         player.enqueue_message(
-            Message(
+            bMessage(
                 session.bot_player.name,
                 'You are no longer marked as being away',
                 session.bot_player.name,
@@ -270,7 +273,7 @@ def remove_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.BEATMAP_INFO)
-def beatmap_info(player: Player, info: BeatmapInfoRequest):
+def beatmap_info(player: Player, info: bBeatmapInfoRequest):
     maps: List[Tuple[int, DBBeatmap]] = []
 
     # Fetch all matching beatmaps from database
@@ -295,7 +298,7 @@ def beatmap_info(player: Player, info: BeatmapInfoRequest):
 
     # Create beatmap response
 
-    map_infos: List[BeatmapInfo] = []
+    map_infos: List[bBeatmapInfo] = []
 
     for index, beatmap in maps:
         ranked = {
@@ -327,7 +330,7 @@ def beatmap_info(player: Player, info: BeatmapInfoRequest):
                 grades[mode] = Grade[personal_best.grade]
 
         map_infos.append(
-            BeatmapInfo(
+            bBeatmapInfo(
                 index,
                 beatmap.id,
                 beatmap.set_id,
@@ -343,7 +346,7 @@ def beatmap_info(player: Player, info: BeatmapInfoRequest):
 
     player.send_packet(
         ResponsePacket.BEATMAP_INFO_REPLY,
-        BeatmapInfoReply(map_infos)
+        bBeatmapInfoReply(map_infos)
     )
 
 @register(RequestPacket.START_SPECTATING)
@@ -417,7 +420,7 @@ def cant_spectate(player: Player):
         p.enqueue_cant_spectate(player.id)
 
 @register(RequestPacket.SEND_FRAMES)
-def send_frames(player: Player, bundle: ReplayFrameBundle):
+def send_frames(player: Player, bundle: bReplayFrameBundle):
     if not player.spectators:
         return
 
@@ -461,6 +464,7 @@ def invite(player: Player, target_id: int):
     #         player.id
     #     )
     # )
+
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):

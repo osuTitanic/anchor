@@ -2,15 +2,15 @@
 from app.common.constants import Permissions
 from app.common.streams import StreamOut
 from app.common.objects import (
-    ReplayFrameBundle,
-    BeatmapInfoReply,
-    UserPresence,
-    ScoreFrame,
-    UserStats,
-    UserQuit,
-    Channel,
-    Message,
-    Match
+    bReplayFrameBundle,
+    bBeatmapInfoReply,
+    bUserPresence,
+    bScoreFrame,
+    bUserStats,
+    bUserQuit,
+    bChannel,
+    bMessage,
+    bMatch
 )
 
 from .constants import ResponsePacket
@@ -86,13 +86,13 @@ def monitor():
     return b''
 
 @register(ResponsePacket.USER_PRESENCE)
-def send_presence(presence: UserPresence):
+def send_presence(presence: bUserPresence):
     writer = Writer()
     writer.write_presence(presence)
     return writer.stream.get()
 
 @register(ResponsePacket.USER_STATS)
-def send_stats(stats: UserStats):
+def send_stats(stats: bUserStats):
     writer = Writer()
     writer.write_stats(stats)
     return writer.stream.get()
@@ -112,7 +112,7 @@ def send_players(player_ids: List[int]):
     return writer.stream.get()
 
 @register(ResponsePacket.USER_QUIT)
-def send_exit(user_quit: UserQuit):
+def send_exit(user_quit: bUserQuit):
     writer = Writer()
     writer.write_quit(user_quit)
     return writer.stream.get()
@@ -128,13 +128,13 @@ def irc_quit(*args):
     return b'' # TODO: Only used in older clients
 
 @register(ResponsePacket.CHANNEL_AVAILABLE)
-def channel_available(channel: Channel):
+def channel_available(channel: bChannel):
     writer = Writer()
     writer.write_channel(channel)
     return writer.stream.get()
 
 @register(ResponsePacket.CHANNEL_AVAILABLE_AUTOJOIN)
-def channel_available_autojoin(channel: Channel):
+def channel_available_autojoin(channel: bChannel):
     writer = Writer()
     writer.write_channel(channel)
     return writer.stream.get()
@@ -156,7 +156,7 @@ def channel_revoked(target: str):
     return stream.get()
 
 @register(ResponsePacket.SEND_MESSAGE)
-def send_message(msg: Message):
+def send_message(msg: bMessage):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
@@ -178,7 +178,7 @@ def spectator_left(player_id: int):
     )
 
 @register(ResponsePacket.SPECTATE_FRAMES)
-def spectate_frames(bundle: ReplayFrameBundle):
+def spectate_frames(bundle: bReplayFrameBundle):
     writer = Writer()
     writer.write_replayframe_bundle(bundle)
     return writer.stream.get()
@@ -224,13 +224,13 @@ def lobby_part(player_id: int):
     )
 
 @register(ResponsePacket.NEW_MATCH)
-def new_match(match: Match):
+def new_match(match: bMatch):
     writer = Writer()
     writer.write_match(match)
     return writer.stream.get()
 
 @register(ResponsePacket.UPDATE_MATCH)
-def update_match(match: Match):
+def update_match(match: bMatch):
     writer = Writer()
     writer.write_match(match)
     return writer.stream.get()
@@ -244,7 +244,7 @@ def disband_match(match_id: int):
     )
 
 @register(ResponsePacket.MATCH_JOIN_SUCCESS)
-def match_join_success(match: Match):
+def match_join_success(match: bMatch):
     writer = Writer()
     writer.write_match(match)
     return writer.stream.get()
@@ -260,13 +260,13 @@ def match_change_password(new_password: str):
     return stream.get()
 
 @register(ResponsePacket.MATCH_START)
-def match_start(match: Match):
+def match_start(match: bMatch):
     writer = Writer()
     writer.write_match(match)
     return writer.stream.get()
 
 @register(ResponsePacket.MATCH_SCORE_UPDATE)
-def score_update(score_frame: ScoreFrame):
+def score_update(score_frame: bScoreFrame):
     writer = Writer()
     writer.write_scoreframe(score_frame)
     return writer.stream.get()
@@ -304,13 +304,13 @@ def match_complete():
     return b''
 
 @register(ResponsePacket.INVITE)
-def match_invite(msg: Message):
+def match_invite(msg: bMessage):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
 
 @register(ResponsePacket.BEATMAP_INFO_REPLY)
-def beatmap_info_reply(reply: BeatmapInfoReply):
+def beatmap_info_reply(reply: bBeatmapInfoReply):
     writer = Writer()
     writer.write_beatmap_info_reply(reply)
     return writer.stream.get()
@@ -332,13 +332,13 @@ def user_silenced(player_id: int):
     )
 
 @register(ResponsePacket.USER_DM_BLOCKED)
-def dm_blocked(msg: Message):
+def dm_blocked(msg: bMessage):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
 
 @register(ResponsePacket.TARGET_IS_SILENCED)
-def target_silenced(msg: Message):
+def target_silenced(msg: bMessage):
     writer = Writer()
     writer.write_message(msg)
     return writer.stream.get()
