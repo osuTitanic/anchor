@@ -11,7 +11,7 @@ from app.common.constants import (
     Mods
 )
 
-from app.common.objects import bMatch
+from app.common.objects import bMatch, bSlot
 
 from .channel import Channel
 from .player import Player
@@ -30,6 +30,15 @@ class Slot:
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
+
+    @property
+    def bancho_slot(self) -> bSlot:
+        return bSlot(
+            self.player.id if self.player else -1,
+            self.status,
+            self.team,
+            self.mods
+        )
 
     @property
     def empty(self) -> bool:
@@ -111,4 +120,25 @@ class Match:
             bancho_match.beatmap_checksum,
             bancho_match.mode,
             bancho_match.seed
+        )
+
+    @property
+    def bancho_match(self) -> bMatch:
+        return bMatch(
+            self.id,
+            self.in_progress,
+            self.type,
+            self.mods,
+            self.name,
+            self.password,
+            self.beatmap_name,
+            self.beatmap_id,
+            self.beatmap_hash,
+            [s.bancho_slot for s in self.slots],
+            self.host.id,
+            self.mode,
+            self.scoring_type,
+            self.team_type,
+            self.freemod,
+            self.seed
         )
