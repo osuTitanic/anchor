@@ -198,3 +198,19 @@ class Match:
                 return index
 
         return None
+
+    def update(self, lobby=True) -> None:
+        # Enqueue to our players
+        for player in self.players:
+            player.enqueue_match(
+                self.bancho_match,
+                update=True
+            )
+
+        # Enqueue to lobby players
+        if lobby:
+            for player in app.session.players.in_lobby:
+                player.enqueue_match(
+                    self.bancho_match,
+                    update=True
+                )
