@@ -1,7 +1,7 @@
 
+from app.common.objects import bMessage, bChannel
 from app.clients import DefaultResponsePacket
 from app.common.constants import Permissions
-from app.common.objects import bMessage
 
 import logging
 import app
@@ -49,6 +49,15 @@ class Channel:
     def user_count(self) -> int:
         return len(self.users)
 
+    @property
+    def bancho_channel(self) -> bChannel:
+        return bChannel(
+            self.display_name,
+            self.topic,
+            self.owner,
+            self.user_count
+        )
+
     def can_read(self, perms: Permissions):
         return perms.value >= self.read_perms
 
@@ -59,36 +68,38 @@ class Channel:
         if not self.public:
             self.users.send_packet(
                 DefaultResponsePacket.CHANNEL_AVAILABLE,
-                self
+                self.bancho_channel
             )
             return
 
         for player in app.session.players:
             if self.can_read(player.permissions):
                 player.enqueue_channel(
-                    self,
+                    self.bancho_channel,
                     autojoin=False
                 )
 
-    def add(self, player):
+    def add(self, player, no_response: bool = False):
         # Update player's silence duration
         player.silenced
 
         if player in self.users:
             # Player has already joined the channel
-            player.join_success(self.display_name)
-            return
+            if not no_response:
+                player.join_success(self.display_name)
+                return
 
         if not self.can_read(player.permissions):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.revoke_channel(self.display_name)
 
+        player.channels.add(self)
         self.users.append(player)
         self.update()
 
-        player.join_success(self.display_name)
-        player.channels.add(self)
+        if not no_response:
+            player.join_success(self.display_name)
 
         self.logger.info(f'{player.name} joined')
 
