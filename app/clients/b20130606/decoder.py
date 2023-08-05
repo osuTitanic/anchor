@@ -109,6 +109,10 @@ def join_lobby(stream: StreamIn):
 def leave_lobby(stream: StreamIn):
     return
 
+@register(RequestPacket.CREATE_MATCH)
+def create_match(stream: StreamIn):
+    return Reader(stream).read_match()
+
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
     return stream.s32()
