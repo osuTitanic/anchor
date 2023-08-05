@@ -452,20 +452,22 @@ def invite(player: Player, target_id: int):
     if player.silenced:
         return
 
+    if not player.match:
+        return
+
     if not (target := session.players.by_id(target_id)):
         return
 
     # TODO: Check invite spams
 
-    # TODO:
-    # target.enqueue_invite(
-    #     Message(
-    #         player.name,
-    #         'Come join my multiplayer match: [osump://...]',
-    #         player.name,
-    #         player.id
-    #     )
-    # )
+    target.enqueue_invite(
+        bMessage(
+            player.name,
+            f'Come join my multiplayer match: {player.match.embed}',
+            player.name,
+            player.id
+        )
+    )
 
 @register(RequestPacket.CREATE_MATCH)
 def create_match(player: Player, bancho_match: bMatch):
