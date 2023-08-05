@@ -9,6 +9,7 @@ from app.common.objects import (
     BanchoPacket,
     bReplayFrame,
     bScoreFrame,
+    bMatchJoin,
     bMessage,
     bMatch,
     bSlot
@@ -114,6 +115,12 @@ class Reader(BaseReader):
             action,
             replay_frames,
             score_frame
+        )
+
+    def read_matchjoin(self) -> bMatchJoin:
+        return bMatchJoin(
+            self.stream.s32(),
+            self.stream.string()
         )
 
     def read_match(self) -> bMatch:
