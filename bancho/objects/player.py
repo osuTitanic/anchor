@@ -318,6 +318,10 @@ class Player(BanchoProtocol):
         if self.match:
             self.handler.leave_match()
 
+        # Stop spectating
+        if self.spectating:
+            self.handler.handle_stop_spectating(None)
+
         # Remove from cache
         bancho.services.cache.remove_user(self.id)
 
