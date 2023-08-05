@@ -214,3 +214,98 @@ class Match:
                     self.bancho_match,
                     update=True
                 )
+
+    def unready_players(self, expected = SlotStatus.Ready):
+        for slot in self.slots:
+            if slot.status == expected:
+                slot.status = SlotStatus.NotReady
+
+    def change_settings(self, new_match: bMatch):
+        if self.freemod != new_match.freemod:
+            # Freemod state has been changed
+            self.freemod = new_match.freemod
+            self.logger.info(f'Freemod: {self.freemod}')
+
+            if self.freemod:
+                for slot in self.slots:
+                    if slot.status.value & SlotStatus.HasPlayer.value:
+                        # Set current mods to every player inside the match, if they are not speed mods
+                        slot.mods = self.mods & ~Mods.SpeedMods
+
+                        # TODO: Fix for older clients without freemod support
+                        # slot.mods = []
+
+                # The speedmods are kept in the match mods
+                self.mods = self.mods & ~Mods.FreeModAllowed
+            else:
+                # Keep mods from host
+                self.mods |= self.host_slot.mods
+
+                # Reset any mod from players
+                for slot in self.slots:
+                    slot.mods = Mods.NoMod
+
+        if new_match.beatmap_id == -1:
+            # Host is selecting new map
+            self.logger.info('Host is selecting map...')
+            self.unready_players()
+
+            self.beatmap_id = -1
+            self.beatmap_hash = ""
+            self.beatmap_name = ""
+            self.previous_id = self.beatmap_id
+
+        else:
+            if self.previous_id != new_match.beatmap_id:
+                # New map has been chosen
+                self.chat.send_message(app.session.bot_player, f'Selected: {new_match.beatmap_text}')
+                self.logger.info(f'Selected: {new_match.beatmap_text}')
+                self.unready_players()
+
+            # Lookup beatmap in database
+            beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
+
+            if beatmap:
+                self.beatmap_id   = beatmap.id
+                self.beatmap_hash = beatmap.md5
+                self.beatmap_name = beatmap.full_name
+                self.mode         = GameMode(beatmap.mode)
+            else:
+                self.beatmap_id   = new_match.beatmap_id
+                self.beatmap_hash = new_match.beatmap_checksum
+                self.beatmap_name = new_match.beatmap_text
+                self.mode         = new_match.mode
+
+        if self.team_type != new_match.team_type:
+            # Changed team type
+            if new_match.team_type in (
+                MatchTeamTypes.HeadToHead,
+                MatchTeamTypes.TagCoop
+            ):
+                new_team = SlotTeam.Neutral
+            else:
+                new_team = SlotTeam.Red
+
+            for slot in self.slots:
+                if slot.has_player:
+                    slot.team = new_team
+
+            self.team_type = new_match.team_type
+
+            self.logger.info(f'Team type: {self.team_type.name}')
+
+        if self.scoring_type != new_match.scoring_type:
+            # Changed scoring type
+            self.scoring_type = new_match.scoring_type
+            self.logger.info(f'Scoring type: {self.scoring_type.name}')
+
+        if self.mode != new_match.mode:
+            self.mode = new_match.mode
+            self.logger.info(f'Mode: {self.mode.formatted}')
+            # TODO: Check osu! mania support
+
+        if self.name != new_match.name:
+            self.name = new_match.name
+            self.logger.info(f'Name: {self.name}')
+
+        self.update()
