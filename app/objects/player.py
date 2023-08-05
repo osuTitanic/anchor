@@ -121,7 +121,7 @@ class Player(BanchoProtocol):
                 return True
             else:
                 # User is not silenced anymore
-                # TODO: Unsilence
+                self.unsilence()
                 return False
         return False
 
@@ -492,6 +492,16 @@ class Player(BanchoProtocol):
 
     def create_stats(self):
         self.stats = [stats.create(self.id, mode) for mode in range(4)]
+
+    def unsilence(self):
+        self.object.silence_end = None
+        self.enqueue_silence_info(0)
+
+        # Update database
+        users.update(self.id, {'silence_end': None})
+
+    # TODO: Silence
+    # TODO: Restrict
 
     def update_activity(self):
         users.update(
