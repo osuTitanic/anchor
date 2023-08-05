@@ -70,12 +70,12 @@ class Player(BanchoProtocol):
         self.decoders: Dict[Enum, Callable] = {}
         self.encoders: Dict[Enum, Callable] = {}
 
-        self.channels: Set[Channel] = set()
-        self.filter = PresenceFilter.All
-
         from .collections import Players
         from .multiplayer import Match
         from .channel import Channel
+
+        self.channels: Set[Channel] = set()
+        self.filter = PresenceFilter.All
 
         self.spectators = Players()
         self.spectating: Optional[Player] = None
