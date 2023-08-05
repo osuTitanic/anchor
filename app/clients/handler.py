@@ -435,9 +435,10 @@ def join_lobby(player: Player):
     for p in session.players:
         p.enqueue_lobby_join(player.id)
 
-    # TODO: Enqueue matches
-
     player.in_lobby = True
+
+    for match in session.matches.active:
+        player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.PART_LOBBY)
 def part_lobby(player: Player):
