@@ -479,6 +479,12 @@ def create_match(player: Player, bancho_match: bMatch):
         player.enqueue_matchjoin_fail()
         return
 
+    if player.match:
+        player.enqueue_matchjoin_success(
+            player.match.bancho_match
+        )
+        return
+
     match = Match.from_bancho_match(bancho_match)
 
     if not session.matches.append(match):
