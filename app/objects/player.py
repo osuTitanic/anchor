@@ -667,6 +667,12 @@ class Player(BanchoProtocol):
     def enqueue_matchjoin_fail(self):
         self.send_packet(self.packets.MATCH_JOIN_FAIL)
 
+    def enqueue_match_disband(self, match_id: int):
+        self.send_packet(
+            self.packets.DISBAND_MATCH,
+            match_id
+        )
+
     def enqueue_matchjoin_success(self, match):
         self.send_packet(
             self.packets.MATCH_JOIN_SUCCESS,

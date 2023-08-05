@@ -21,13 +21,17 @@ from ..common.objects import (
     bBeatmapInfoReply,
     bStatusUpdate,
     bBeatmapInfo,
+    bMatchJoin,
     bMessage,
     bMatch
 )
 
 from ..common.constants import (
+    MatchTeamTypes,
     PresenceFilter,
     ClientStatus,
+    SlotStatus,
+    SlotTeam,
     Grade
 )
 
@@ -111,7 +115,7 @@ def handle_channel_join(player: Player, channel_name: str):
     channel.add(player)
 
 @register(RequestPacket.LEAVE_CHANNEL)
-def handle_channel_leave(player: Player, channel_name: str, kick: bool = False):
+def channel_leave(player: Player, channel_name: str, kick: bool = False):
     if channel_name == '#spectator':
         if player.spectating:
             channel = player.spectating.spectator_chat
@@ -465,6 +469,86 @@ def invite(player: Player, target_id: int):
     #     )
     # )
 
+@register(RequestPacket.CREATE_MATCH)
+def create_match(player: Player, bancho_match: bMatch):
+    if not player.in_lobby:
+        player.enqueue_matchjoin_fail()
+        return
+
+    if player.silenced:
+        player.enqueue_matchjoin_fail()
+        return
+
+    match = Match.from_bancho_match(bancho_match)
+
+    if not session.matches.append(match):
+        player.enqueue_matchjoin_fail()
+        return
+
+    session.channels.append(
+        c := Channel(
+            name=f'#multi_{match.id}',
+            topic=match.name,
+            owner=match.host.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
+    )
+    match.chat = c
+
+    session.logger.info(f'Created match: "{match.name}"')
+
+    join_match(
+        player,
+        bMatchJoin(
+            match.id,
+            match.password
+        )
+    )
+
+@register(RequestPacket.JOIN_MATCH)
+def join_match(player: Player, match_join: bMatchJoin):
+    if not (match := session.matches[match_join.match_id]):
+        # Match was not found
+        player.enqueue_matchjoin_fail()
+        player.enqueue_match_disband(match_join.match_id)
+        return
+
+    if player.match:
+        # Player already joined the match
+        player.enqueue_matchjoin_fail()
+        return
+
+    if player is not match.host:
+        # TODO: Check password
+        slot_id = 124
+    else:
+        # Player is creating the match
+        slot_id = 0
+
+    # Join the chat
+    match.chat.add(player)
+
+    # Leave the lobby channel
+    channel_leave(
+        player,
+        '#lobby',
+        kick=True
+    )
+
+    slot = match.slots[0 if slot_id == -1 else slot_id]
+
+    if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
+        slot.team = SlotTeam.Red
+
+    slot.status = SlotStatus.NotReady
+    slot.player = player
+
+    player.match = match
+
+    player.enqueue_matchjoin_success(match.bancho_match)
+    # TODO: match.update()
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
