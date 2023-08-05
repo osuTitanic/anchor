@@ -113,6 +113,22 @@ def leave_lobby(stream: StreamIn):
 def create_match(stream: StreamIn):
     return Reader(stream).read_match()
 
+@register(RequestPacket.JOIN_MATCH)
+def join_match(stream: StreamIn):
+    return Reader(stream).read_matchjoin()
+
+@register(RequestPacket.LEAVE_MATCH)
+def leave_match(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_CHANGE_SETTINGS)
+def change_settings(stream: StreamIn):
+    return Reader(stream).read_match()
+
+@register(RequestPacket.MATCH_CHANGE_SLOT)
+def change_slot(stream: StreamIn):
+    return stream.s32()
+
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
     return stream.s32()
