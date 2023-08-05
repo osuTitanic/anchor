@@ -452,7 +452,10 @@ class Player(BanchoProtocol):
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
 
-        # TODO: Remaining silence
+        if self.silenced:
+            self.enqueue_silence_info(
+                self.remaining_silence
+            )
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         self.last_response = time.time()
