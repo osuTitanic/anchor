@@ -146,6 +146,10 @@ class Matches(List[Optional[Match]]):
     def __repr__(self) -> str:
         return f'[{", ".join(match.name for match in self if match)}]'
 
+    @property
+    def active(self) -> List[Match]:
+        return [m for m in self if m]
+
     def get_free(self) -> Optional[int]:
         for index, match in enumerate(self):
             if match is None:
