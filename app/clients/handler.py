@@ -2,10 +2,16 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
-from ..common.database.repositories import beatmaps, scores, relationships
 from ..common.database.objects import DBBeatmap
 from ..objects.player import Player
 from .. import session
+
+from ..common.database.repositories import (
+    relationships,
+    beatmaps,
+    messages,
+    scores
+)
 
 from ..common.objects import (
     BeatmapInfoRequest,
@@ -139,11 +145,15 @@ def send_message(player: Player, message: Message):
         return
 
     player.update_activity()
+    channel.send_message(player, message.content)
 
-    # TODO: Submit message to database
     # TODO: Commands
 
-    channel.send_message(player, message.content)
+    messages.create(
+        player.name,
+        channel.name,
+        message.content
+    )
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: Message):
@@ -170,8 +180,13 @@ def send_private_message(sender: Player, message: Message):
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
     sender.update_activity()
 
-    # TODO: Submit to database
     # TODO: Check commands
+
+    messages.create(
+        sender.name,
+        target.name,
+        message.content
+    )
 
     if target.away_message:
         sender.enqueue_message(
