@@ -157,6 +157,6 @@ class Writer(BaseWriter):
         self.stream.bool(match.freemod)
 
         if match.freemod:
-            [self.stream.u32(slot.mods.value) for slot in match.slots]
+            [self.stream.s32(slot.mods.value) for slot in match.slots]
 
         self.stream.s32(match.seed)
