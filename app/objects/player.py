@@ -14,7 +14,8 @@ from app.common.objects import (
     bUserStats,
     bUserQuit,
     bMessage,
-    bChannel
+    bChannel,
+    bMatch
 )
 
 from app.common.database.repositories import users, histories, stats
@@ -664,6 +665,12 @@ class Player(BanchoProtocol):
             player_id
         )
 
+    def enqueue_matchjoin_success(self, match: bMatch):
+        self.send_packet(
+            self.packets.MATCH_JOIN_SUCCESS,
+            match
+        )
+
     def enqueue_matchjoin_fail(self):
         self.send_packet(self.packets.MATCH_JOIN_FAIL)
 
@@ -673,11 +680,15 @@ class Player(BanchoProtocol):
             match_id
         )
 
-    def enqueue_matchjoin_success(self, match):
+    def enqueue_match(self, match: bMatch, update: bool = False):
         self.send_packet(
-            self.packets.MATCH_JOIN_SUCCESS,
+            self.packets.UPDATE_MATCH if update else \
+            self.packets.NEW_MATCH,
             match
         )
+
+    def enqueue_match_transferhost(self):
+        self.send_packet(self.packets.MATCH_TRANSFER_HOST)
 
     def enqueue_invite(self, message: bMessage):
         self.send_packet(
