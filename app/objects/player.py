@@ -116,11 +116,51 @@ class Player(BanchoProtocol):
 
     @property
     def silenced(self) -> bool:
-        return False # TODO
+        if self.object.silence_end:
+            if self.remaining_silence > 0:
+                return True
+            else:
+                # User is not silenced anymore
+                # TODO: Unsilence
+                return False
+        return False
+
+    @property
+    def remaining_silence(self) -> int:
+        if self.object.silence_end:
+            return self.object.silence_end.timestamp() - datetime.now().timestamp()
+        return 0
 
     @property
     def supporter(self) -> bool:
-        return True # TODO
+        if config.FREE_SUPPORTER:
+            return True
+
+        if self.object.supporter_end:
+            if self.remaining_supporter > 0:
+                return True
+
+            # Remove supporter
+            self.object.supporter_end = None
+            self.object.permissions = self.permissions & ~Permissions.Supporter
+
+            # Update database
+            users.update(self.id, {
+                'supporter_end': None,
+                'permissions': self.permissions.value
+            })
+
+            # Update client
+            # NOTE: Client will exit after it notices a permission change
+            self.enqueue_permissions()
+
+        return False
+
+    @property
+    def remaining_supporter(self) -> int:
+        if self.object.supporter_end:
+            return self.object.supporter_end.timestamp() - datetime.now().timestamp()
+        return 0
 
     @property
     def restricted(self) -> bool:
@@ -388,10 +428,7 @@ class Player(BanchoProtocol):
         )
 
         # Permissions
-        self.send_packet(
-            self.packets.LOGIN_PERMISSIONS,
-            self.permissions
-        )
+        self.enqueue_permissions()
 
         # Presence
         self.enqueue_presence(self)
@@ -499,6 +536,12 @@ class Player(BanchoProtocol):
         self.send_packet(
             self.packets.SEND_MESSAGE,
             message
+        )
+
+    def enqueue_permissions(self):
+        self.send_packet(
+            self.packets.LOGIN_PERMISSIONS,
+            self.permissions
         )
 
     def enqueue_channel(self, channel: Channel, autojoin: bool = False):
