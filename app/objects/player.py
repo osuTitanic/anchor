@@ -244,7 +244,8 @@ class Player(BanchoProtocol):
             )
         )
 
-        # TODO: Remove spectator channel from collection
+        app.session.channels.remove(self.spectator_chat)
+
         # TODO: Remove from match
 
         super().connectionLost(reason)
@@ -408,8 +409,7 @@ class Player(BanchoProtocol):
             write_perms=1,
             public=False
         )
-
-        # TODO: Add to channel collection
+        app.session.channels.append(self.spectator_chat)
 
         # Update latest activity
         self.update_activity()
