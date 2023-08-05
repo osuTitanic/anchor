@@ -100,15 +100,14 @@ def request_status(player: Player):
 def handle_channel_join(player: Player, channel_name: str):
     if channel_name == '#spectator':
         if player.spectating:
-            channel = player.spectating.spectator_chat
+            channel_name = player.spectating.spectator_chat.name
         else:
-            channel = player.spectator_chat
-    elif channel_name == '#multiplayer':
-        channel = player.match.chat
-    else:
-        channel = session.channels.by_name(channel_name)
+            channel_name = player.spectator_chat.name
 
-    if not channel:
+    elif channel_name == '#multiplayer':
+        channel_name = player.match.chat.name
+
+    if not (channel := session.channels.by_name(channel_name)):
         player.revoke_channel(channel_name)
         return
 
@@ -118,15 +117,14 @@ def handle_channel_join(player: Player, channel_name: str):
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
     if channel_name == '#spectator':
         if player.spectating:
-            channel = player.spectating.spectator_chat
+            channel_name = player.spectating.spectator_chat.name
         else:
-            channel = player.spectator_chat
-    elif channel_name == '#multiplayer':
-        channel = player.match.chat
-    else:
-        channel = session.channels.by_name(channel_name)
+            channel_name = player.spectator_chat.name
 
-    if not channel:
+    elif channel_name == '#multiplayer':
+        channel_name = player.match.chat.name
+
+    if not (channel := session.channels.by_name(channel_name)):
         player.revoke_channel(channel_name)
         return
 
@@ -139,15 +137,14 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 def send_message(player: Player, message: bMessage):
     if message.target == '#spectator':
         if player.spectating:
-            channel = player.spectating.spectator_chat
+            message.target = player.spectating.spectator_chat.name
         else:
-            channel = player.spectator_chat
-    elif message.target == '#multiplayer':
-        channel = player.match.chat
-    else:
-        channel = session.channels.by_name(message.target)
+            message.target = player.spectator_chat.name
 
-    if not channel:
+    elif message.target == '#multiplayer':
+        message.target = player.match.chat.name
+
+    if not (channel := session.channels.by_name(message.target)):
         player.revoke_channel(message.target)
         return
 
