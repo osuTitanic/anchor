@@ -1,4 +1,5 @@
 
+from app.common.constants import SlotStatus
 from app.common.streams import StreamOut
 from app.common.objects import (
     ReplayFrameBundle,
@@ -146,7 +147,7 @@ class Writer(BaseWriter):
 
         [self.stream.u8(slot.status.value) for slot in match.slots]
         [self.stream.u8(slot.team.value) for slot in match.slots]
-        [self.stream.s32(slot.player_id) for slot in match.slots]
+        [self.stream.s32(slot.player_id) for slot in match.slots if SlotStatus.HasPlayer in slot.status]
 
         self.stream.s32(match.host_id)
         self.stream.u8(match.mode.value)
@@ -156,6 +157,6 @@ class Writer(BaseWriter):
         self.stream.bool(match.freemod)
 
         if match.freemod:
-            [self.stream.s32(slot.mods.value) for slot in match.slots]
+            [self.stream.u32(slot.mods.value) for slot in match.slots]
 
         self.stream.s32(match.seed)
