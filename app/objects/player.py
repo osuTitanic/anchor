@@ -247,7 +247,8 @@ class Player(BanchoProtocol):
 
         app.session.channels.remove(self.spectator_chat)
 
-        # TODO: Remove from match
+        if self.match:
+            app.clients.handler.leave_match(self)
 
         super().connectionLost(reason)
 
