@@ -21,6 +21,7 @@ from ..common.objects import (
     bBeatmapInfoReply,
     bStatusUpdate,
     bBeatmapInfo,
+    bScoreFrame,
     bMatchJoin,
     bMessage,
     bMatch
@@ -777,6 +778,25 @@ def match_start(player: Player):
         return
 
     player.match.start()
+
+@register(RequestPacket.MATCH_SCORE_UPDATE)
+def score_update(player: Player, scoreframe: bScoreFrame):
+    if not player.match:
+        return
+
+    slot, id = player.match.get_slot_with_id(player)
+    assert slot is not None
+
+    if not slot.is_playing:
+        return
+
+    scoreframe.id = id
+
+    for p in player.match.players:
+        p.enqueue_score_update(scoreframe)
+
+    for p in session.players.in_lobby:
+        p.enqueue_score_update(scoreframe)
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):

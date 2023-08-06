@@ -11,6 +11,7 @@ from app.common.objects import (
     bReplayFrameBundle,
     bUserPresence,
     bStatusUpdate,
+    bScoreFrame,
     bUserStats,
     bUserQuit,
     bMessage,
@@ -688,10 +689,16 @@ class Player(BanchoProtocol):
             match
         )
 
-    def enqueue_match_start(self, match):
+    def enqueue_match_start(self, match: bMatch):
         self.send_packet(
             self.packets.MATCH_START,
             match
+        )
+
+    def enqueue_score_update(self, frame: bScoreFrame):
+        self.send_packet(
+            self.packets.MATCH_SCORE_UPDATE,
+            frame
         )
 
     def enqueue_match_transferhost(self):
