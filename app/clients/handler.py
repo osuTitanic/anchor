@@ -893,6 +893,38 @@ def score_update(player: Player, scoreframe: bScoreFrame):
     for p in session.players.in_lobby:
         p.enqueue_score_update(scoreframe)
 
+@register(RequestPacket.MATCH_COMPLETE)
+def match_complete(player: Player):
+    if not player.match:
+        return
+
+    if not player.match.in_progress:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.status = SlotStatus.Complete
+
+    if any([slot.is_playing for slot in player.match.slots]):
+        return
+
+    # Players that have been playing this round
+    players = [
+        slot.player for slot in player.match.slots
+        if slot.status.value & SlotStatus.Complete.value
+        and slot.has_player
+    ]
+
+    player.match.unready_players(SlotStatus.Complete)
+    player.match.in_progress = False
+
+    for p in players:
+        p.enqueue_match_complete()
+
+    player.match.logger.info('Match finished')
+    player.match.update()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled

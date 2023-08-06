@@ -730,6 +730,9 @@ class Player(BanchoProtocol):
     def enqueue_match_skip(self):
         self.send_packet(self.packets.MATCH_SKIP)
 
+    def enqueue_match_complete(self):
+        self.send_packet(self.packets.MATCH_COMPLETE)
+
     def enqueue_invite(self, message: bMessage):
         self.send_packet(
             self.packets.INVITE,
