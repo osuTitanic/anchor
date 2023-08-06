@@ -280,16 +280,16 @@ def all_players_loaded():
     return b''
 
 @register(ResponsePacket.MATCH_PLAYER_FAILED)
-def match_player_failed(player_id: int):
-    return int(player_id).to_bytes(
+def match_player_failed(slot_id: int):
+    return int(slot_id).to_bytes(
         length=4,
         byteorder='little',
         signed=True
     )
 
 @register(ResponsePacket.MATCH_PLAYER_SKIPPED)
-def match_player_skipped(player_id: int):
-    return int(player_id).to_bytes(
+def match_player_skipped(slot_id: int):
+    return int(slot_id).to_bytes(
         length=4,
         byteorder='little',
         signed=True
