@@ -472,22 +472,25 @@ def invite(player: Player, target_id: int):
 @register(RequestPacket.CREATE_MATCH)
 def create_match(player: Player, bancho_match: bMatch):
     if not player.in_lobby:
+        player.logger.warning('Tried to create match, but not in lobby')
         player.enqueue_matchjoin_fail()
         return
 
     if player.silenced:
+        player.logger.warning('Tried to create match, but was silenced')
         player.enqueue_matchjoin_fail()
         return
 
     if player.match:
-        player.enqueue_matchjoin_success(
-            player.match.bancho_match
-        )
+        print(player.match)
+        player.logger.warning('Tried to create match, but was already inside one')
+        player.enqueue_matchjoin_fail()
         return
 
     match = Match.from_bancho_match(bancho_match)
 
     if not session.matches.append(match):
+        player.logger.warning('Tried to create match, but max match limit was reached')
         player.enqueue_matchjoin_fail()
         return
 
@@ -547,7 +550,7 @@ def join_match(player: Player, match_join: bMatchJoin):
     # Join the chat
     player.enqueue_channel(match.chat.bancho_channel)
 
-    slot = match.slots[0 if slot_id == -1 else slot_id]
+    slot = match.slots[slot_id]
 
     if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
         slot.team = SlotTeam.Red
@@ -566,8 +569,6 @@ def leave_match(player: Player):
     if not player.match:
         return
 
-    match_id = player.match.id
-
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -584,13 +585,13 @@ def leave_match(player: Player):
     )
 
     if all(slot.empty for slot in player.match.slots):
+        player.enqueue_match_disband(player.match.id)
+
+        for p in session.players.in_lobby:
+            p.enqueue_match_disband(player.match.id)
+
         # Match is empty
         session.matches.remove(player.match)
-
-        player.enqueue_match_disband(match_id)
-
-        for player in session.players.in_lobby:
-            player.enqueue_match_disband(match_id)
     else:
         if player is player.match.host:
             # Player was host, transfer to next player
