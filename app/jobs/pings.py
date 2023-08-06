@@ -12,6 +12,12 @@ def ping():
         if player.is_bot:
             continue
 
+        if not player.connected:
+            # Why the heck is this player even in the collection
+            player.logger.warning('Tried to ping player, but was not connected?')
+            player.connectionLost()
+            continue
+
         # Enqueue ping if needed
         if (next_ping > player.last_response):
             player.enqueue_ping()
