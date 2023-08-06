@@ -17,6 +17,6 @@ def create(user_id: int, hidden: bool) -> DBScreenshot:
     return ss
 
 def fetch_by_id(id: int) -> Optional[DBScreenshot]:
-    return app.session.database.temp_session.query(DBScreenshot) \
+    return app.session.database.pool_session.query(DBScreenshot) \
             .filter(DBScreenshot.id == id) \
             .first()

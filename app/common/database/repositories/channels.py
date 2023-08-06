@@ -25,6 +25,6 @@ def create(
     return chan
 
 def fetch_all() -> List[DBChannel]:
-    return app.session.database.temp_session \
+    return app.session.database.pool_session \
                       .query(DBChannel) \
                       .all()

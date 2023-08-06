@@ -27,12 +27,12 @@ def update(user_id: int, mode: int, updates: dict) -> int:
     return rows
 
 def fetch_by_mode(user_id: int,  mode: int) -> Optional[DBStats]:
-    return app.session.database.temp_session.query(DBStats) \
+    return app.session.database.pool_session.query(DBStats) \
         .filter(DBStats.user_id == user_id) \
         .filter(DBStats.mode == mode) \
         .first()
 
 def fetch_all(user_id: int) -> List[DBStats]:
-    return app.session.database.temp_session.query(DBStats) \
+    return app.session.database.pool_session.query(DBStats) \
         .filter(DBStats.user_id == user_id) \
         .first()

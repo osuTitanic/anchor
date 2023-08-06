@@ -37,7 +37,7 @@ class Postgres:
         return session
 
     @property
-    def temp_session(self) -> Session:
+    def pool_session(self) -> Session:
         for session in self.pool:
             if session.is_active:
                 return session

@@ -35,7 +35,7 @@ def fetch_many(
     target_id: int,
     type: str
 ) -> List[DBComment]:
-    return app.session.database.temp_session.query(DBComment) \
+    return app.session.database.pool_session.query(DBComment) \
             .filter(DBComment.target_id == target_id) \
             .filter(DBComment.target_type == type) \
             .order_by(DBComment.time.asc()) \

@@ -7,6 +7,6 @@ import app
 # TODO: create
 
 def fetch_one(id: int) -> Optional[DBBeatmapset]:
-    return app.session.database.temp_session.query(DBBeatmapset) \
+    return app.session.database.pool_session.query(DBBeatmapset) \
                 .filter(DBBeatmapset.id == id) \
                 .first()

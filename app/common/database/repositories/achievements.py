@@ -24,6 +24,6 @@ def create_many(
         session.commit()
 
 def fetch_many(user_id: int) -> List[DBAchievement]:
-    return app.session.database.temp_session.query(DBAchievement) \
+    return app.session.database.pool_session.query(DBAchievement) \
             .filter(DBAchievement.user_id == user_id) \
             .all()

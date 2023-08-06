@@ -40,21 +40,21 @@ def delete(
         return False
 
 def fetch_many_by_id(user_id: int) -> List[DBRelationship]:
-    return app.session.database.temp_session.query(DBRelationship) \
+    return app.session.database.pool_session.query(DBRelationship) \
                .filter(DBRelationship.user_id == user_id) \
                .all()
 
 def fetch_many_by_target(target_id: int) -> List[DBRelationship]:
-    return app.session.database.temp_session.query(DBRelationship) \
+    return app.session.database.pool_session.query(DBRelationship) \
                .filter(DBRelationship.target_id == target_id) \
                .all()
 
 def fetch_count_by_id(user_id: int) -> int:
-    return app.session.database.temp_session.query(DBRelationship) \
+    return app.session.database.pool_session.query(DBRelationship) \
                .filter(DBRelationship.user_id == user_id) \
                .count()
 
 def fetch_count_by_target(target_id: int) -> int:
-    return app.session.database.temp_session.query(DBRelationship) \
+    return app.session.database.pool_session.query(DBRelationship) \
                .filter(DBRelationship.target_id == target_id) \
                .count()

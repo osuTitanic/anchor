@@ -33,11 +33,11 @@ def update(user_id: int, updates: dict) -> int:
     return rows
 
 def fetch_by_name(username: str) -> Optional[DBUser]:
-    return app.session.database.temp_session.query(DBUser) \
+    return app.session.database.pool_session.query(DBUser) \
         .filter(DBUser.name == username) \
         .first()
 
 def fetch_by_id(id: int) -> Optional[DBUser]:
-    return app.session.database.temp_session.query(DBUser) \
+    return app.session.database.pool_session.query(DBUser) \
         .filter(DBUser.id == id) \
         .first()
