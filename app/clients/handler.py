@@ -673,6 +673,40 @@ def change_mods(player: Player, mods: Mods):
 
     player.match.update()
 
+@register(RequestPacket.MATCH_READY)
+def ready(player: Player):
+    if not player.match:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.status = SlotStatus.Ready
+    player.match.update()
+
+@register(RequestPacket.MATCH_HAS_BEATMAP)
+@register(RequestPacket.MATCH_NOT_READY)
+def not_ready(player: Player):
+    if not player.match:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.status = SlotStatus.NotReady
+    player.match.update()
+
+@register(RequestPacket.MATCH_NO_BEATMAP)
+def not_beatmap(player: Player):
+    if not player.match:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.status = SlotStatus.NoMap
+    player.match.update()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled

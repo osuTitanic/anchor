@@ -131,6 +131,22 @@ def change_mods(stream: StreamIn):
 def change_slot(stream: StreamIn):
     return stream.s32()
 
+@register(RequestPacket.MATCH_READY)
+def ready(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_NOT_READY)
+def not_ready(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_NO_BEATMAP)
+def no_beatmap(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_HAS_BEATMAP)
+def has_beatmap(stream: StreamIn):
+    return
+
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
     return stream.s32()
