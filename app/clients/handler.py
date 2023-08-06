@@ -858,7 +858,7 @@ def skip(player: Player):
             return
 
     for p in player.match.players:
-        p.enqueue_match_skip(id)
+        p.enqueue_match_skip()
 
 @register(RequestPacket.MATCH_FAILED)
 def player_failed(player: Player):
