@@ -860,8 +860,19 @@ def skip(player: Player):
     for p in player.match.players:
         p.enqueue_match_skip(id)
 
-# Failed
-# Complete
+@register(RequestPacket.MATCH_FAILED)
+def player_failed(player: Player):
+    if not player.match:
+        return
+
+    if not player.match.in_progress:
+        return
+
+    slot_id = player.match.get_slot_id(player)
+    assert slot_id is not None
+
+    for p in player.match.players:
+        p.enqueue_player_failed(slot_id)
 
 @register(RequestPacket.MATCH_SCORE_UPDATE)
 def score_update(player: Player, scoreframe: bScoreFrame):
