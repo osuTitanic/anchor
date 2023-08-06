@@ -531,13 +531,13 @@ def join_match(player: Player, match_join: bMatchJoin):
     if player is not match.host:
         if match_join.password != match.password:
             # Invalid password
-            player.logger.warning(f'{player.name} failed to join match: Invalid password')
+            player.logger.warning('Failed to join match: Invalid password')
             player.enqueue_matchjoin_fail()
             return
 
         if (slot_id := match.get_free()) is None:
             # Match is full
-            player.logger.warning(f'{player.name} failed to join match: Match full')
+            player.logger.warning('Failed to join match: Match full')
             player.enqueue_matchjoin_fail()
             return
     else:
@@ -547,7 +547,7 @@ def join_match(player: Player, match_join: bMatchJoin):
     # Join the chat
     player.enqueue_channel(match.chat.bancho_channel)
 
-    slot = match.slots[slot_id]
+    slot = match.slots[0 if slot_id == -1 else slot_id]
 
     if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
         slot.team = SlotTeam.Red
@@ -556,9 +556,9 @@ def join_match(player: Player, match_join: bMatchJoin):
     slot.player = player
 
     player.match = match
+    player.enqueue_matchjoin_success(match.bancho_match)
 
     match.logger.info(f'{player.name} joined')
-    player.enqueue_matchjoin_success(match.bancho_match)
     match.update()
 
 @register(RequestPacket.LEAVE_MATCH)

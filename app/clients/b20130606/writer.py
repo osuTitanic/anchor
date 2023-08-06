@@ -147,7 +147,7 @@ class Writer(BaseWriter):
 
         [self.stream.u8(slot.status.value) for slot in match.slots]
         [self.stream.u8(slot.team.value) for slot in match.slots]
-        [self.stream.s32(slot.player_id) for slot in match.slots if SlotStatus.HasPlayer in slot.status]
+        [self.stream.s32(slot.player_id) for slot in match.slots if slot.player_id >= 0]
 
         self.stream.s32(match.host_id)
         self.stream.u8(match.mode.value)

@@ -35,7 +35,7 @@ class Slot:
     @property
     def bancho_slot(self) -> bSlot:
         return bSlot(
-            self.player.id if self.player else -1,
+            self.player.id if self.has_player else -1,
             self.status,
             self.team,
             self.mods
