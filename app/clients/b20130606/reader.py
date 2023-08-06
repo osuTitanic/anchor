@@ -138,11 +138,11 @@ class Reader(BaseReader):
         beatmap_hash = self.stream.string()
 
         slot_status = [SlotStatus(self.stream.u8()) for _ in range(8)]
-        slot_team   = [SlotTeam(self.stream.u8()) for _ in range(8)]
-        slot_id     = [
+        slot_team = [SlotTeam(self.stream.u8()) for _ in range(8)]
+        slot_id = [
             self.stream.s32()
-            if slot_status[i] & SlotStatus.HasPlayer.value else -1
-            for i in range(8)
+            if (slot_status[i] & SlotStatus.HasPlayer) > 0 else -1
+            for i in range(len(slot_status))
         ]
 
         host_id = self.stream.s32()

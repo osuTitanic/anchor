@@ -19,6 +19,10 @@ class Slot:
     team: SlotTeam
     mods: Mods
 
+    @property
+    def has_player(self) -> bool:
+        return SlotStatus.HasPlayer & self.status > 0
+
 @dataclass
 class Match:
     id: int
