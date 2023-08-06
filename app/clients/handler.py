@@ -815,6 +815,28 @@ def match_start(player: Player):
 
     player.match.start()
 
+@register(RequestPacket.MATCH_LOAD_COMPLETE)
+def load_complete(player: Player):
+    if not player.match:
+        return
+
+    if not player.match.in_progress:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.loaded = True
+
+    if all(player.match.loaded_players):
+        for slot in player.match.slots:
+            if not slot.has_map:
+                continue
+
+            slot.player.enqueue_match_all_players_loaded()
+
+        player.match.update()
+
 @register(RequestPacket.MATCH_SCORE_UPDATE)
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:

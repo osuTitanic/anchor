@@ -50,6 +50,10 @@ class Slot:
         return self.status == SlotStatus.Playing and self.loaded
 
     @property
+    def has_map(self) -> bool:
+        return self.status != SlotStatus.NoMap and self.has_player
+
+    @property
     def has_player(self) -> bool:
         return self.player is not None
 
@@ -178,6 +182,10 @@ class Match:
     @property
     def player_count(self) -> int:
         return len(self.player_slots)
+
+    @property
+    def loaded_players(self) -> List[bool]:
+        return [slot.loaded for slot in self.slots if slot.has_map]
 
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:

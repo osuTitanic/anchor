@@ -709,6 +709,9 @@ class Player(BanchoProtocol):
             frame
         )
 
+    def enqueue_match_all_players_loaded(self):
+        self.send_packet(self.packets.MATCH_ALL_PLAYERS_LOADED)
+
     def enqueue_match_transferhost(self):
         self.send_packet(self.packets.MATCH_TRANSFER_HOST)
 
