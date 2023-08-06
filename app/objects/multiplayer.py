@@ -212,6 +212,7 @@ class Match:
         for player in self.players:
             player.enqueue_match(
                 self.bancho_match,
+                send_password=True,
                 update=True
             )
 

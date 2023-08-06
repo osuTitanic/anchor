@@ -682,7 +682,15 @@ class Player(BanchoProtocol):
             match_id
         )
 
-    def enqueue_match(self, match: bMatch, update: bool = False):
+    def enqueue_match(
+        self,
+        match: bMatch,
+        update: bool = False,
+        send_password: bool = False
+    ):
+        if not send_password:
+            match.password = ' '
+
         self.send_packet(
             self.packets.UPDATE_MATCH if update else \
             self.packets.NEW_MATCH,
