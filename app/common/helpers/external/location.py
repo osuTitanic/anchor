@@ -33,17 +33,20 @@ def download_database():
         f.write(response.content)
 
 def fetch_geolocation(ip: str, is_local: bool = False) -> Geolocation:
-    if is_local:
-        if not (geo := fetch_web(ip, is_local)):
-            return Geolocation()
+    try:
+        if is_local:
+            if not (geo := fetch_web(ip, is_local)):
+                return Geolocation()
 
-        return geo
+            return geo
 
-    if (geo := fetch_db(ip)):
-        return geo
+        if (geo := fetch_db(ip)):
+            return geo
 
-    if (geo := fetch_web(ip)):
-        return geo
+        if (geo := fetch_web(ip)):
+            return geo
+    except Exception as e:
+        app.session.logger.error(f'Failed to get geolocation: {e}')
 
     return Geolocation()
 
