@@ -31,7 +31,7 @@ class BanchoProtocol(Protocol):
         self.address = address
 
     def connectionMade(self):
-        if not self.is_local:
+        if not self.is_local or config.DEBUG:
             self.logger.info(
                 f'-> <{self.address.host}:{self.address.port}>'
             )
@@ -43,7 +43,7 @@ class BanchoProtocol(Protocol):
             )
             return
 
-        if not self.is_local:
+        if not self.is_local or config.DEBUG:
             self.logger.info(
                 f'<{self.address.host}> -> Connection done.'
             )
@@ -136,7 +136,7 @@ class BanchoProtocol(Protocol):
             )
 
     def close_connection(self, error: Optional[Exception] = None):
-        if not self.is_local:
+        if not self.is_local or config.DEBUG:
             if error:
                 self.send_error()
                 self.logger.warning(f'Closing connection -> <{self.address.host}>')
