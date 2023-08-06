@@ -837,6 +837,32 @@ def load_complete(player: Player):
 
         player.match.update()
 
+@register(RequestPacket.MATCH_SKIP)
+def skip(player: Player):
+    if not player.match:
+        return
+
+    if not player.match.in_progress:
+        return
+
+    slot, id = player.match.get_slot_with_id(player)
+    assert slot is not None
+
+    slot.skipped = True
+
+    for p in player.match.players:
+        p.enqueue_player_skipped(id)
+
+    for slot in player.match.slots:
+        if slot.status == SlotStatus.Playing and not slot.skipped:
+            return
+
+    for p in player.match.players:
+        p.enqueue_match_skip(id)
+
+# Failed
+# Complete
+
 @register(RequestPacket.MATCH_SCORE_UPDATE)
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:

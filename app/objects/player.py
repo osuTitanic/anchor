@@ -709,11 +709,20 @@ class Player(BanchoProtocol):
             frame
         )
 
+    def enqueue_player_skipped(self, slot_id: int):
+        self.send_packet(
+            self.packets.MATCH_PLAYER_SKIPPED,
+            slot_id
+        )
+
     def enqueue_match_all_players_loaded(self):
         self.send_packet(self.packets.MATCH_ALL_PLAYERS_LOADED)
 
     def enqueue_match_transferhost(self):
         self.send_packet(self.packets.MATCH_TRANSFER_HOST)
+
+    def enqueue_match_skip(self):
+        self.send_packet(self.packets.MATCH_SKIP)
 
     def enqueue_invite(self, message: bMessage):
         self.send_packet(
