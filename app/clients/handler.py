@@ -769,6 +769,27 @@ def change_team(player: Player):
 
     player.match.update()
 
+@register(RequestPacket.MATCH_TRANSFER_HOST)
+def transfer_host(player: Player, slot_id: int):
+    if not player.match:
+        return
+
+    if player is not player.match.host:
+        return
+
+    if not 0 <= slot_id < 8:
+        return
+
+    if not (target := player.match.slots[slot_id].player):
+        player.match.logger.warning('Host tried to transfer host into an empty slot?')
+        return
+
+    player.match.host = target
+    player.match.host.enqueue_match_transferhost()
+
+    player.match.logger.info(f'Changed host to: {target.name}')
+    player.match.update()
+
 @register(RequestPacket.MATCH_START)
 def match_start(player: Player):
     if not player.match:
