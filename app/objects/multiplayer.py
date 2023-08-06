@@ -168,6 +168,10 @@ class Match:
         return None
 
     @property
+    def ffa(self) -> bool:
+        return True if self.team_type in [MatchTeamTypes.TagTeamVs, MatchTeamTypes.TeamVs] else False
+
+    @property
     def player_slots(self) -> List[Slot]:
         return [slot for slot in self.slots if slot.has_player]
 

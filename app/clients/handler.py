@@ -744,6 +744,24 @@ def lock(player: Player, slot_id: int):
 
     player.match.update()
 
+@register(RequestPacket.MATCH_CHANGE_TEAM)
+def change_team(player: Player):
+    if not player.match:
+        return
+
+    if not player.match.ffa:
+        return
+
+    slot = player.match.get_slot(player)
+    assert slot is not None
+
+    slot.team = {
+        SlotTeam.Blue: SlotTeam.Red,
+        SlotTeam.Red: SlotTeam.Blue
+    }[slot.team]
+
+    player.match.update()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
