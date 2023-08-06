@@ -32,3 +32,40 @@ class Mods(IntFlag):
     SpeedMods = DoubleTime | HalfTime| Nightcore
     FreeModAllowed = NoFail | Easy | Hidden | HardRock | SuddenDeath | Flashlight | FadeIn | Relax | Autopilot | SpunOut | KeyMod
 
+    @property
+    def members(self) -> list:
+        return [flag for flag in Mods if self & flag]
+
+    @property
+    def short(self) -> str:
+        return ''.join([
+            {
+                Mods.NoMod: "NM",
+                Mods.NoFail: "NF",
+                Mods.Easy: "EZ",
+                Mods.Hidden: "HD",
+                Mods.HardRock: "HR",
+                Mods.SuddenDeath: "SD",
+                Mods.DoubleTime: "DT",
+                Mods.Relax: "RX",
+                Mods.HalfTime: "HT",
+                Mods.Nightcore: "NC",
+                Mods.Flashlight: "FL",
+                Mods.Autoplay: "AT",
+                Mods.SpunOut: "SO",
+                Mods.Autopilot: "AP",
+                Mods.Perfect: "PF",
+                Mods.Key4: "K4",
+                Mods.Key5: "K5",
+                Mods.Key6: "K6",
+                Mods.Key7: "K7",
+                Mods.Key8: "K8",
+                Mods.KeyMod: "",
+                Mods.FadeIn: "FadeIn",
+                Mods.Random: "Random",
+                Mods.SpeedMods: "",
+                Mods.LastMod: "",
+                Mods.FreeModAllowed: ""
+            }[mod]
+            for mod in self.members
+        ])
