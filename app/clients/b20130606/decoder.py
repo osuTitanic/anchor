@@ -155,6 +155,10 @@ def change_team(stream: StreamIn):
 def lock(stream: StreamIn):
     return stream.s32()
 
+@register(RequestPacket.MATCH_START)
+def match_start(stream: StreamIn):
+    return
+
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
     return stream.s32()

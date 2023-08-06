@@ -688,6 +688,12 @@ class Player(BanchoProtocol):
             match
         )
 
+    def enqueue_match_start(self, match):
+        self.send_packet(
+            self.packets.MATCH_START,
+            match
+        )
+
     def enqueue_match_transferhost(self):
         self.send_packet(self.packets.MATCH_TRANSFER_HOST)
 

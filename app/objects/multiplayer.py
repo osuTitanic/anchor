@@ -175,6 +175,10 @@ class Match:
     def player_slots(self) -> List[Slot]:
         return [slot for slot in self.slots if slot.has_player]
 
+    @property
+    def player_count(self) -> int:
+        return len(self.player_slots)
+
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:
             if player is slot.player:
@@ -326,3 +330,24 @@ class Match:
         self.logger.info(
             f'{player.name} was kicked from the match'
         )
+
+    def start(self):
+        if self.player_count <= 0:
+            self.logger.warning('Host tried to start match without any players')
+            return
+
+        self.in_progress = True
+
+        for slot in self.slots:
+            if not slot.has_player:
+                continue
+
+            # TODO: Check osu! mania support
+
+            slot.player.enqueue_match_start(self.bancho_match)
+
+            if slot.status != SlotStatus.NoMap:
+                slot.status = SlotStatus.Playing
+
+        self.logger.info('Match started')
+        self.update()

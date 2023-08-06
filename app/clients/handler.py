@@ -768,6 +768,16 @@ def change_team(player: Player):
 
     player.match.update()
 
+@register(RequestPacket.MATCH_START)
+def match_start(player: Player):
+    if not player.match:
+        return
+
+    if player is not player.match.host:
+        return
+
+    player.match.start()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
