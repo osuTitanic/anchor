@@ -1,9 +1,9 @@
 
-from sqlalchemy.orm import sessionmaker, scoped_session, Session
-from sqlalchemy.exc import ResourceClosedError
-from sqlalchemy     import create_engine
+from sqlalchemy.exc  import ResourceClosedError
+from sqlalchemy      import create_engine
+from sqlalchemy.orm  import Session
 
-from typing import Generator
+from typing import Generator, List
 from threading import Timer
 
 from .objects import Base
@@ -21,37 +21,27 @@ class Postgres:
             echo=False
         )
 
+        self.pool: List[Session] = []
+
         self.logger = logging.getLogger('postgres')
         Base.metadata.create_all(bind=self.engine)
 
     @property
     def session(self) -> Session:
-        return Session(self.engine, expire_on_commit=True)
+        self.pool.append(
+            session := Session(
+                bind=self.engine,
+                expire_on_commit=True
+            )
+        )
+        return session
 
     @property
     def temp_session(self) -> Session:
-        session = Session(self.engine)
+        for session in self.pool:
+            if session.is_active:
+                return session
+            else:
+                self.pool.remove(session)
 
-        # TODO: I don't like this...
-        # Maybe refactor?
-
-        Timer(
-            interval=15,
-            function=self.close_session,
-            args=[session]
-        ).start()
-
-        return session
-
-    def close_session(self, session: Session) -> None:
-        try:
-            session.close()
-        except AttributeError:
-            pass
-        except ResourceClosedError:
-            pass
-        except Exception as exc:
-            if config.DEBUG: traceback.print_exc()
-            self.logger.error(
-                f'Failed to close session: {exc}'
-            )
+        return self.session
