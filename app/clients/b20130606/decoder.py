@@ -155,6 +155,14 @@ def change_team(stream: StreamIn):
 def lock(stream: StreamIn):
     return stream.s32()
 
+@register(RequestPacket.MATCH_TRANSFER_HOST)
+def transfer_host(stream: StreamIn):
+    return stream.s32()
+
+@register(RequestPacket.MATCH_CHANGE_PASSWORD)
+def change_password(stream: StreamIn):
+    return Reader(stream).read_match().password
+
 @register(RequestPacket.MATCH_START)
 def match_start(stream: StreamIn):
     return
@@ -162,6 +170,22 @@ def match_start(stream: StreamIn):
 @register(RequestPacket.MATCH_SCORE_UPDATE)
 def score_update(stream: StreamIn):
     return Reader(stream).read_scoreframe()
+
+@register(RequestPacket.MATCH_LOAD_COMPLETE)
+def load_complete(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_SKIP)
+def skip(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_FAILED)
+def failed(stream: StreamIn):
+    return
+
+@register(RequestPacket.MATCH_COMPLETE)
+def match_complete(stream: StreamIn):
+    return
 
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
