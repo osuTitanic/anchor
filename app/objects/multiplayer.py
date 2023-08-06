@@ -63,7 +63,7 @@ class Slot:
         self.player  = None
         self.status  = new_status
         self.team    = SlotTeam.Neutral
-        self.mods    = Mods
+        self.mods    = Mods.NoMod
         self.loaded  = False
         self.skipped = False
 
