@@ -655,6 +655,10 @@ def change_mods(player: Player, mods: Mods):
             # Onky keep SpeedMods
             player.match.mods = mods & Mods.SpeedMods
 
+            # There is a bug, where DT and NC are enabled at the same time
+            if Mods.DoubleTime|Mods.Nightcore in player.match.mods:
+                player.match.mods &= ~Mods.DoubleTime
+
         slot = player.match.get_slot(player)
         assert slot is not None
 
@@ -662,7 +666,7 @@ def change_mods(player: Player, mods: Mods):
         slot.mods = mods & Mods.FreeModAllowed
 
         player.match.logger.info(
-            f'{player.name} changed their mods to {mods.short}'
+            f'{player.name} changed their mods to {slot.mods.short}'
         )
     else:
         if player is not player.match.host:
@@ -671,9 +675,11 @@ def change_mods(player: Player, mods: Mods):
 
         player.match.mods = mods
 
-        player.match.logger.info(f'Changed mods to: {mods.short}')
+        # There is a bug, where DT and NC are enabled at the same time
+        if Mods.DoubleTime|Mods.Nightcore in player.match.mods:
+            player.match.mods &= ~Mods.DoubleTime
 
-    # TODO: Remove invalid mods
+        player.match.logger.info(f'Changed mods to: {player.match.mods.short}')
 
     mods_changed = player.match.mods != mods_before
 
