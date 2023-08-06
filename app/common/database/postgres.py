@@ -8,9 +8,8 @@ from threading import Timer
 
 from .objects import Base
 
-import traceback
 import logging
-import config
+import random
 
 class Postgres:
     def __init__(self, username: str, password: str, host: str, port: int) -> None:
@@ -22,6 +21,9 @@ class Postgres:
         )
 
         self.pool: List[Session] = []
+        self.pool.extend(
+            [self.session] * 10
+        )
 
         self.logger = logging.getLogger('postgres')
         Base.metadata.create_all(bind=self.engine)
@@ -38,10 +40,15 @@ class Postgres:
 
     @property
     def pool_session(self) -> Session:
-        for session in self.pool:
-            if session.is_active:
-                return session
-            else:
-                self.pool.remove(session)
+        session = self.pool[random.randrange(0, 10)]
 
-        return self.session
+        if session.is_active:
+            return session
+        else:
+            # Create new session
+            self.pool.remove(session)
+            self.session
+
+        # I don't like this method...
+
+        return session
