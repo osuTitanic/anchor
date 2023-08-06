@@ -688,7 +688,7 @@ class Player(BanchoProtocol):
         update: bool = False,
         send_password: bool = False
     ):
-        if not send_password:
+        if not send_password and match.password:
             match.password = ' '
 
         self.send_packet(
