@@ -29,13 +29,14 @@ from ..common.objects import (
 from ..common.constants import (
     MatchTeamTypes,
     PresenceFilter,
-    ClientStatus,
     SlotStatus,
     SlotTeam,
-    Grade
+    Grade,
+    Mods
 )
 
 from typing import Callable, Tuple, List
+from copy import copy
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
@@ -632,6 +633,45 @@ def change_settings(player: Player, match: bMatch):
         return
 
     player.match.change_settings(match)
+
+@register(RequestPacket.MATCH_CHANGE_MODS)
+def change_mods(player: Player, mods: Mods):
+    if not player.match:
+        return
+
+    mods_before = copy(player.match.mods)
+
+    if player.match.freemod:
+        if player is player.match.host:
+            # Onky keep SpeedMods
+            player.match.mods = mods & Mods.SpeedMods
+
+        slot = player.match.get_slot(player)
+        assert slot is not None
+
+        # Only keep mods that are "FreeModAllowed"
+        slot.mods = mods & Mods.FreeModAllowed
+
+        player.match.logger.info(
+            f'{player.name} changed their mods to {mods.short}'
+        )
+    else:
+        if player is not player.match.host:
+            player.logger.warning(f'{player.name} tried to change mods, but was not host')
+            return
+
+        player.match.mods = mods
+
+        player.match.logger.info(f'Changed mods to: {mods.short}')
+
+    # TODO: Remove invalid mods
+
+    mods_changed = player.match.mods != mods_before
+
+    if mods_changed:
+        player.match.unready_players()
+
+    player.match.update()
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):

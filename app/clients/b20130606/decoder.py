@@ -1,5 +1,5 @@
 
-from app.common.constants import PresenceFilter
+from app.common.constants import PresenceFilter, Mods
 from app.common.streams import StreamIn
 
 from .constants import RequestPacket
@@ -7,8 +7,6 @@ from ..packets import PACKETS
 from .reader import Reader
 
 from typing import Callable
-
-import app
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
@@ -124,6 +122,10 @@ def leave_match(stream: StreamIn):
 @register(RequestPacket.MATCH_CHANGE_SETTINGS)
 def change_settings(stream: StreamIn):
     return Reader(stream).read_match()
+
+@register(RequestPacket.MATCH_CHANGE_MODS)
+def change_mods(stream: StreamIn):
+    return Mods(stream.s32())
 
 @register(RequestPacket.MATCH_CHANGE_SLOT)
 def change_slot(stream: StreamIn):
