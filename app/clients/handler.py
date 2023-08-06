@@ -790,6 +790,21 @@ def transfer_host(player: Player, slot_id: int):
     player.match.logger.info(f'Changed host to: {target.name}')
     player.match.update()
 
+@register(RequestPacket.MATCH_CHANGE_PASSWORD)
+def change_password(player: Player, new_password: str):
+    if not player.match:
+        return
+
+    if player is not player.match.host:
+        return
+
+    player.match.password = new_password
+    player.match.update()
+
+    player.match.logger.info(
+        f'Changed password to: {new_password}'
+    )
+
 @register(RequestPacket.MATCH_START)
 def match_start(player: Player):
     if not player.match:
