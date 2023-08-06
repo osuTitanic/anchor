@@ -147,6 +147,10 @@ def no_beatmap(stream: StreamIn):
 def has_beatmap(stream: StreamIn):
     return
 
+@register(RequestPacket.MATCH_LOCK)
+def lock(stream: StreamIn):
+    return stream.s32()
+
 @register(RequestPacket.MATCH_INVITE)
 def invite(stream: StreamIn):
     return stream.s32()

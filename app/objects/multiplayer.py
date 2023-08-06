@@ -309,3 +309,16 @@ class Match:
             self.logger.info(f'Name: {self.name}')
 
         self.update()
+
+    def kick_player(self, player: Player):
+        player.enqueue_match_disband(self.id)
+        player.revoke_channel('#multiplayer')
+        self.chat.remove(player)
+        player.match = None
+
+        if (slot := self.get_slot(player)):
+            slot.reset()
+
+        self.logger.info(
+            f'{player.name} was kicked from the match'
+        )

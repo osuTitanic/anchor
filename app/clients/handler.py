@@ -716,6 +716,34 @@ def not_beatmap(player: Player):
     slot.status = SlotStatus.NoMap
     player.match.update()
 
+@register(RequestPacket.MATCH_LOCK)
+def lock(player: Player, slot_id: int):
+    if not player.match:
+        return
+
+    if player is not player.match.host:
+        return
+
+    if not 0 <= slot_id < 8:
+        return
+
+    slot = player.match.slots[slot_id]
+
+    if slot.player is player:
+        # Player can't kick themselves
+        player.match.logger.warning(f'{player.name} tried to kick himself?')
+        return
+
+    if slot.has_player:
+        player.match.kick_player(slot.player)
+
+    if slot.status == SlotStatus.Locked:
+        slot.status = SlotStatus.Open
+    else:
+        slot.status = SlotStatus.Locked
+
+    player.match.update()
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
