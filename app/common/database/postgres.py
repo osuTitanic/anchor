@@ -20,35 +20,34 @@ class Postgres:
             echo=False
         )
 
-        self.pool: List[Session] = []
-        self.pool.extend(
-            [self.session] * 10
-        )
+        # TODO: Add config for poolsize
+        self.poolsize = 10
+
+        self.pool: List[Session] = [
+            self.session for _ in range(self.poolsize)
+        ]
 
         self.logger = logging.getLogger('postgres')
         Base.metadata.create_all(bind=self.engine)
 
     @property
     def session(self) -> Session:
-        self.pool.append(
-            session := Session(
-                bind=self.engine,
-                expire_on_commit=True
-            )
+        return Session(
+            bind=self.engine,
+            expire_on_commit=True
         )
-        return session
 
     @property
     def pool_session(self) -> Session:
-        session = self.pool[random.randrange(0, 10)]
+        session = self.pool[random.randrange(0, len(self.pool))]
 
         if session.is_active:
             return session
         else:
             # Create new session
             self.pool.remove(session)
-            self.session
+            self.pool.append(session := self.session)
 
-        # I don't like this method...
+        # TODO: Is there a built-in connection pool?
 
         return session
