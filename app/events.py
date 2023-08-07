@@ -33,3 +33,9 @@ def restrict(user_id: int, reason: str = ''):
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
     app.session.players.announce(message)
+
+@app.session.events.register('shutdown')
+def shutdown():
+    """Used to shutdown the event_listener thread"""
+    if app.session.jobs._shutdown:
+        exit()

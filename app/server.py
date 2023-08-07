@@ -46,6 +46,7 @@ class BanchoFactory(Factory):
 
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
+        app.session.events.submit('shutdown')
         app.session.jobs.shutdown(cancel_futures=True)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
