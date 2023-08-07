@@ -24,6 +24,7 @@ MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
 MENUICON_URL = os.environ.get('MENUICON_URL')
 
 DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'False').capitalize())
+APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
 SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
 FREE_SUPPORTER = eval(os.environ.get('FREE_SUPPORTER', 'True').capitalize())
 S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
