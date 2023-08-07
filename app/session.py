@@ -1,5 +1,6 @@
 
 from .objects.collections import Players, Channels, Matches
+from .common.cache.events import EventQueue
 from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
@@ -22,6 +23,11 @@ database = Postgres(
 redis = Redis(
     config.REDIS_HOST,
     config.REDIS_PORT
+)
+
+events = EventQueue(
+    name='bancho:events',
+    connection=redis
 )
 
 logger = logging.getLogger('bancho')
