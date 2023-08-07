@@ -19,8 +19,14 @@ from app.common.objects import (
     bMatch
 )
 
-from app.common.database.repositories import users, histories, stats
 from app.common.cache import leaderboards
+from app.common.database.repositories import (
+    histories,
+    clients,
+    logins,
+    users,
+    stats
+)
 
 from app.protocol import BanchoProtocol, IPAddress
 from app.common.streams import StreamIn
@@ -398,6 +404,16 @@ class Player(BanchoProtocol):
             self.reload_object()
             self.enqueue_silence_info(-1)
 
+        # Create login attempt in db
+        logins.create(
+            self.id,
+            self.address.host,
+            self.client.version.string
+        )
+
+        # Check for new hardware
+        self.check_client()
+
         self.update_leaderboard_stats()
         self.login_success()
 
@@ -459,6 +475,31 @@ class Player(BanchoProtocol):
             self.enqueue_silence_info(
                 self.remaining_silence
             )
+
+    def check_client(self):
+        client = clients.fetch_without_executable(
+            self.id,
+            self.client.hash.adapters_md5,
+            self.client.hash.uninstall_id,
+            self.client.hash.diskdrive_signature
+        )
+
+        if not client:
+            # New hardware detected
+            # TODO: Send email to user
+            self.logger.warning(
+                f'New hardware detected: {self.client.hash.string}'
+            )
+
+            clients.create(
+                self.id,
+                self.client.hash.md5,
+                self.client.hash.adapters_md5,
+                self.client.hash.uninstall_id,
+                self.client.hash.diskdrive_signature
+            )
+
+        # TODO: Check banned hardware
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         self.last_response = time.time()

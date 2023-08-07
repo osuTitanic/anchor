@@ -5,6 +5,7 @@ from app.common.helpers import location
 from datetime import datetime
 from typing import Optional
 
+import hashlib
 import utils
 import pytz
 import re
@@ -69,8 +70,8 @@ class ClientHash:
             adapters = args[1]
             adapters_md5 = args[2]
 
-            diskdrive_signature = 'unknown'
-            uninstall_id = 'unknown'
+            diskdrive_signature = hashlib.md5('unknown').hexdigest()
+            uninstall_id = hashlib.md5('unknown').hexdigest()
 
             try:
                 uninstall_id = args[3]
