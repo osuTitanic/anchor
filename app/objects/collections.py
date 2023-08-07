@@ -91,6 +91,10 @@ class Players(List[Player]):
             player.user_stats
         )
 
+    def announce(self, message: str):
+        for p in self:
+            p.enqueue_announcement(message)
+
 from .channel import Channel
 
 class Channels(List[Channel]):

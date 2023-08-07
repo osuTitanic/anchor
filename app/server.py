@@ -7,7 +7,7 @@ from .common.database.repositories import channels
 from .objects.channel import Channel
 from .objects.player import Player
 
-from .jobs import pings
+from .jobs import pings, events
 
 import app
 
@@ -40,6 +40,7 @@ class BanchoFactory(Factory):
 
         app.session.logger.info('Loading jobs...')
         app.session.jobs.submit(pings.ping_job)
+        app.session.jobs.submit(events.event_listener)
 
         app.session.logger.info(f'Starting factory: {self}')
 
