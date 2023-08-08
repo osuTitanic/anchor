@@ -55,6 +55,8 @@ class Players(List[Player]):
         for p in self:
             if p.id == id:
                 return p
+            if p.id == -id:
+                return p
         return None
 
     def by_name(self, name: str) -> Optional[Player]:
