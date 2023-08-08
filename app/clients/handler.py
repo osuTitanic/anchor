@@ -285,8 +285,14 @@ def remove_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.BEATMAP_INFO)
-def beatmap_info(player: Player, info: bBeatmapInfoRequest):
+def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool = False):
     maps: List[Tuple[int, DBBeatmap]] = []
+
+    # Limit request filenames/ids
+
+    if not ignore_limit:
+        info.beatmap_ids = info.beatmap_ids[:100]
+        info.filenames = info.filenames[:100]
 
     # Fetch all matching beatmaps from database
 
