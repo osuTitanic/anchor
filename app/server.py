@@ -6,6 +6,7 @@ from typing import Optional
 from .common.database.repositories import channels
 from .objects.channel import Channel
 from .objects.player import Player
+from .common.cache import status
 
 from .jobs import pings, events
 
@@ -48,6 +49,9 @@ class BanchoFactory(Factory):
         app.session.logger.warning(f'Stopping factory: {self}')
         app.session.events.submit('shutdown')
         app.session.jobs.shutdown(cancel_futures=True)
+
+        for player in app.session.players:
+            status.delete(player.id)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)
