@@ -258,7 +258,7 @@ def add_friend(player: Player, target_id: int):
 
     relationships.create(
         player.id,
-        target.id
+        target_id
     )
 
     session.logger.info(f'{player.name} is now friends with {target.name}.')
@@ -276,7 +276,7 @@ def remove_friend(player: Player, target_id: int):
 
     relationships.delete(
         player.id,
-        target.id
+        target_id
     )
 
     session.logger.info(f'{player.name} no longer friends with {target.name}.')
