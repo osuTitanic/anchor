@@ -242,6 +242,8 @@ class Player(BanchoProtocol):
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         app.session.players.remove(self)
 
+        status.delete(self.id)
+
         for channel in copy(self.channels):
             channel.remove(self)
 
