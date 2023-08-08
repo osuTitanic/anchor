@@ -41,7 +41,7 @@ def compute_score_checksum(score: DBScore) -> str:
         ).encode()
     ).hexdigest()
 
-def is_localip(ip: str) -> bool:
+def is_local_ip(ip: str) -> bool:
     private = (
         [ 2130706432, 4278190080 ], # 127.0.0.0
         [ 3232235520, 4294901760 ], # 192.168.0.0

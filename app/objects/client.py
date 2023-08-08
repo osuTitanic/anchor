@@ -51,14 +51,14 @@ class ClientHash:
         self.adapters_md5 = adapters_md5
         self.adapters = adapters
         self.md5 = md5
-    
+
     def __repr__(self) -> str:
         return self.string
 
     @property
     def string(self) -> str:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
-    
+
     @classmethod
     def from_string(cls, string: str):
         try:
@@ -107,7 +107,7 @@ class OsuClient:
 
         geolocation = location.fetch_geolocation(
             ip=ip,
-            is_local=utils.is_localip(ip)
+            is_local=utils.is_local_ip(ip)
         )
 
         utc_offset = int(

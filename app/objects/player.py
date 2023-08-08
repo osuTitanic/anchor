@@ -61,7 +61,7 @@ import app
 
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
-        self.is_local = utils.is_localip(address.host)
+        self.is_local = utils.is_local_ip(address.host)
         self.logger = logging.getLogger(address.host)
         self.address = address
 

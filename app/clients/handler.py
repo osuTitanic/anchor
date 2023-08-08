@@ -96,6 +96,7 @@ def stats_request(player: Player, players: List[int]):
         player.enqueue_stats(target)
 
 @register(RequestPacket.CHANGE_STATUS)
+@run_in_thread
 def change_status(player: Player, status: bStatusUpdate):
     player.status.checksum = status.beatmap_checksum
     player.status.beatmap = status.beatmap_id

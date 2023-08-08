@@ -26,7 +26,7 @@ class BanchoProtocol(Protocol):
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)
-        self.is_local = utils.is_localip(address.host)
+        self.is_local = utils.is_local_ip(address.host)
         self.client: Optional[OsuClient] = None
         self.address = address
 
