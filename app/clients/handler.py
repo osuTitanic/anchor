@@ -87,6 +87,7 @@ def change_status(player: Player, status: bStatusUpdate):
     player.status.mode = status.mode
     player.status.text = status.text
 
+    player.update_status_cache()
     player.update_activity()
     player.reload_rank()
 

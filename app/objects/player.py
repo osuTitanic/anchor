@@ -20,6 +20,7 @@ from app.common.objects import (
 )
 
 from app.common.cache import leaderboards
+from app.common.cache import status
 from app.common.database.repositories import (
     histories,
     clients,
@@ -265,6 +266,7 @@ class Player(BanchoProtocol):
         self.stats = self.object.stats
 
         self.update_leaderboard_stats()
+        self.update_status_cache()
         self.reload_rank()
 
         return self.object
@@ -295,6 +297,12 @@ class Player(BanchoProtocol):
             self.current_stats.pp,
             self.current_stats.rscore,
             self.object.country,
+        )
+
+    def update_status_cache(self) -> None:
+        status.update(
+            self.id,
+            self.status.bancho_status
         )
 
     def close_connection(self, error: Optional[Exception] = None):
@@ -415,6 +423,7 @@ class Player(BanchoProtocol):
         self.check_client()
 
         self.update_leaderboard_stats()
+        self.update_status_cache()
         self.login_success()
 
     def login_success(self):
