@@ -16,6 +16,7 @@ venv.bak/
 .VSCodeCounter
 
 logs/
+tests/
 
 TODO.txt
 .data
