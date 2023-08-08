@@ -8,6 +8,9 @@ def user_update(user_id: int):
     
     player.reload_object()
 
+    for player in app.session.players:
+        player.enqueue_stats(player)
+
 @app.session.events.register('bot_message')
 def bot_message(message: str, target: str):
     if not (channel := app.session.channels.by_name(target)):
