@@ -37,12 +37,26 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, List
+from threading import Thread
 from copy import copy
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
         session.handlers[packet] = func
         return func
+
+    return wrapper
+
+def run_in_thread(func):
+    def wrapper(*args, **kwargs):
+        thread = Thread(
+            target=func,
+            args=args,
+            kwargs=kwargs,
+            daemon=True
+        )
+        thread.start()
+        return thread
 
     return wrapper
 
@@ -59,6 +73,7 @@ def receive_updates(player: Player, filter: PresenceFilter):
     player.filter = filter
 
 @register(RequestPacket.PRESENCE_REQUEST)
+@run_in_thread
 def presence_request(player: Player, players: List[int]):
     for id in players:
         if not (target := session.players.by_id(id)):
@@ -67,10 +82,12 @@ def presence_request(player: Player, players: List[int]):
         player.enqueue_presence(target)
 
 @register(RequestPacket.PRESENCE_REQUEST_ALL)
+@run_in_thread
 def presence_request_all(player: Player):
     player.enqueue_players(session.players)
 
 @register(RequestPacket.STATS_REQUEST)
+@run_in_thread
 def stats_request(player: Player, players: List[int]):
     for id in players:
         if not (target := session.players.by_id(id)):
@@ -95,6 +112,7 @@ def change_status(player: Player, status: bStatusUpdate):
     session.players.send_stats(player)
 
 @register(RequestPacket.REQUEST_STATUS)
+@run_in_thread
 def request_status(player: Player):
     player.enqueue_stats(player)
     player.reload_rank()
@@ -286,6 +304,7 @@ def remove_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.BEATMAP_INFO)
+@run_in_thread
 def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool = False):
     maps: List[Tuple[int, DBBeatmap]] = []
 
@@ -439,6 +458,7 @@ def cant_spectate(player: Player):
         p.enqueue_cant_spectate(player.id)
 
 @register(RequestPacket.SEND_FRAMES)
+@run_in_thread
 def send_frames(player: Player, bundle: bReplayFrameBundle):
     if not player.spectators:
         return
@@ -882,6 +902,7 @@ def player_failed(player: Player):
         p.enqueue_player_failed(slot_id)
 
 @register(RequestPacket.MATCH_SCORE_UPDATE)
+@run_in_thread
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:
         return
