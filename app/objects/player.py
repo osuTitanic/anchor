@@ -340,7 +340,7 @@ class Player(BanchoProtocol):
     def get_client(self, version: int) -> Tuple[Dict[Enum, Callable], Dict[Enum, Callable]]:
         """Figure out packet sender/decoder, closest to version of client"""
 
-        decoders, encoders = PACKETS[
+        decoders, encoders, self.request_packets, self.packets = PACKETS[
             min(
                 PACKETS.keys(),
                 key=lambda x:abs(x-version)
@@ -353,8 +353,6 @@ class Player(BanchoProtocol):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
         self.last_response = time.time()
-
-        # TODO: Set packet enums
 
         # Get decoders and encoders
         self.decoders, self.encoders = self.get_client(client.version.date)
@@ -410,7 +408,7 @@ class Player(BanchoProtocol):
         self.status.mode = GameMode(self.object.preferred_mode)
 
         if not self.stats:
-            self.create_stats()
+            self.stats = [stats.create(self.id, mode) for mode in range(4)]
             self.reload_object()
             self.enqueue_silence_info(-1)
 

@@ -1,6 +1,6 @@
 
-from typing import Dict, Callable, Tuple
 from enum import IntEnum
+from typing import Dict
 
 class PacketEnum(IntEnum):
     ...
@@ -11,13 +11,7 @@ class PacketEnum(IntEnum):
     def __hash__(self) -> int:
         return hash(self.name)
 
-PACKETS: Dict[
-    int,
-    Tuple[
-        Dict[PacketEnum, Callable], # RequestPackets
-        Dict[PacketEnum, Callable]  # ResponsePackets
-    ]
-] = {
-    2013606: ({}, {})
+PACKETS: Dict[int, list] = {
+    2013606: [{}, {}, PacketEnum, PacketEnum]
     # Implement more clients here ...
 }
