@@ -56,16 +56,18 @@ class BanchoProtocol(Protocol):
             return
 
         try:
+            self.buffer += data.replace(b'\r', b'')
             self.busy = True
-            self.buffer += data
 
-            if self.buffer.count(b'\r\n') < 3:
+            if self.buffer.count(b'\n') < 3:
                 return
 
-            self.logger.debug(f'-> Received login: {self.buffer}')
+            self.logger.debug(
+                f'-> Received login: {self.buffer}'
+            )
 
             # Login received
-            username, password, client, self.buffer = self.buffer.split(b'\r\n', 3)
+            username, password, client, self.buffer = self.buffer.split(b'\n', 3)
 
             self.client = OsuClient.from_string(
                 client.decode(),
