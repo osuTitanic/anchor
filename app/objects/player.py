@@ -36,7 +36,7 @@ from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, Tuple, List, Dict, Set
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from copy import copy
 
@@ -52,6 +52,7 @@ from app.clients import (
 
 import traceback
 import hashlib
+import timeago
 import logging
 import config
 import bcrypt
@@ -546,8 +547,24 @@ class Player(BanchoProtocol):
             if config.DEBUG: traceback.print_exc()
             self.logger.error(f'Failed to execute handler for packet "{packet.name}": {e}')
 
-    def create_stats(self):
-        self.stats = [stats.create(self.id, mode) for mode in range(4)]
+    def silence(self, duration_sec: int, reason: str):
+        duration = timedelta(seconds=duration_sec)
+
+        if not self.object.silence_end:
+            self.object.silence_end = datetime.now() + duration
+        else:
+            # Append duration, if user has been silenced already
+            self.object.silence_end += duration
+
+        # Update database
+        users.update(self.id, {'silence_end': self.object.silence_end})
+
+        # Enqueue to client
+        self.enqueue_silence_info(duration_sec)
+
+        self.logger.info(
+            f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. Reason: "{reason}"'
+        )
 
     def unsilence(self):
         self.object.silence_end = None
@@ -556,7 +573,6 @@ class Player(BanchoProtocol):
         # Update database
         users.update(self.id, {'silence_end': None})
 
-    # TODO: Silence
     # TODO: Restrict
 
     def update_activity(self):
