@@ -364,8 +364,6 @@ class Player(BanchoProtocol):
         # Check adapters md5
         adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
-        # TODO: Store login attempt in database
-
         if adapters_hash != client.hash.adapters_md5:
             self.transport.write('no.\r\n')
             self.close_connection()
