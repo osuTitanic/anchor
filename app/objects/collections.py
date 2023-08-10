@@ -18,19 +18,11 @@ from .player import Player
 class Players(List[Player]):
     def __iter__(self) -> Iterator[Player]:
         return super().__iter__()
-    
+
     @property
     def ids(self) -> Set[int]:
         return {p.id for p in self}
 
-    @property
-    def restricted(self) -> Set[Player]:
-        return {p for p in self if p.restricted}
-
-    @property
-    def unrestricted(self) -> Set[Player]:
-        return {p for p in self if not p.restricted}
-    
     @property
     def in_lobby(self) -> Set[Player]:
         return {p for p in self if p.in_lobby}
@@ -70,28 +62,20 @@ class Players(List[Player]):
             p.send_packet(packet, *args)
 
     def send_player(self, player: Player):
-        self.send_packet(
-            DefaultResponsePacket.USER_PRESENCE_SINGLE,
-            player.id
-        )
+        for p in self:
+            p.enqueue_player(player)
 
     def send_player_bundle(self, players: List[Player]):
-        self.send_packet(
-            DefaultResponsePacket.USER_PRESENCE_BUNDLE,
-            [player.id for player in players]
-        )
+        for p in self:
+            p.enqueue_players(players)
 
     def send_presence(self, player: Player):
-        self.send_packet(
-            DefaultResponsePacket.USER_PRESENCE,
-            player.user_presence
-        )
+        for p in self:
+            p.enqueue_presence(player)
 
     def send_stats(self, player: Player):
-        self.send_packet(
-            DefaultResponsePacket.USER_STATS,
-            player.user_stats
-        )
+        for p in self:
+            p.enqueue_stats(player)
 
     def announce(self, message: str):
         for p in self:
