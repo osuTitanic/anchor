@@ -100,6 +100,12 @@ class Player(BanchoProtocol):
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
 
+    def __eq__(self, other) -> bool:
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return self.id
+
     @classmethod
     def bot_player(cls):
         player = Player(
