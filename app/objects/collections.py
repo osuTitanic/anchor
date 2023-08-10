@@ -81,6 +81,13 @@ class Players(List[Player]):
         for p in self:
             p.enqueue_announcement(message)
 
+    def send_user_quit(self, user_quit):
+        for p in self:
+            try:
+                p.enqueue_quit(user_quit)
+            except AttributeError:
+                continue
+
 from .channel import Channel
 
 class Channels(List[Channel]):

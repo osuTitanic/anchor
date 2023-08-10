@@ -214,7 +214,10 @@ class Player(BanchoProtocol):
                 self.status.mode,
                 self.client.ip.longitude,
                 self.client.ip.latitude,
-                self.current_stats.rank
+                self.current_stats.rank,
+                self.client.ip.city \
+                    if self.client.display_city
+                    else None
             )
         except AttributeError:
             return None
@@ -250,8 +253,7 @@ class Player(BanchoProtocol):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        app.session.players.send_packet(
-            self.packets.USER_QUIT,
+        app.session.players.send_user_quit(
             bUserQuit(
                 self.id,
                 QuitState.Gone # TODO: IRC
@@ -317,12 +319,12 @@ class Player(BanchoProtocol):
     def send_error(self, reason=-5, message=""):
         if self.encoders and message:
             self.send_packet(
-                self.packets.ANNOUNCE,
+                DefaultResponsePacket.ANNOUNCE,
                 message
             )
 
         self.send_packet(
-            self.packets.LOGIN_REPLY,
+            DefaultResponsePacket.LOGIN_REPLY,
             reason
         )
 
@@ -359,6 +361,8 @@ class Player(BanchoProtocol):
 
         # Get decoders and encoders
         self.decoders, self.encoders = self.get_client(client.version.date)
+
+        print(self.packets)
 
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
@@ -624,6 +628,12 @@ class Player(BanchoProtocol):
         self.send_packet(
             self.packets.USER_STATS,
             player.user_stats
+        )
+
+    def enqueue_quit(self, user_quit: bUserQuit):
+        self.send_packet(
+            self.packets.USER_QUIT,
+            user_quit
         )
 
     def enqueue_message(self, message: bMessage):
