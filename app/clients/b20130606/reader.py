@@ -50,12 +50,19 @@ class Reader(BaseReader):
         return [self.stream.s32() for _ in range(self.stream.s16())]
 
     def read_message(self) -> bMessage:
-        return bMessage(
+        message = bMessage(
             sender=self.stream.string(),
             content=self.stream.string(),
-            target=self.stream.string(),
-            sender_id=self.stream.s32()
+            target=self.stream.string()
         )
+
+        try:
+            message.sender_id = self.stream.s32()
+        except OverflowError:
+            # Workaround for older clients
+            pass
+
+        return message
 
     def read_status(self) -> bStatusUpdate:
         return bStatusUpdate(
@@ -151,11 +158,16 @@ class Reader(BaseReader):
         scoring_type = MatchScoringTypes(self.stream.u8())
         team_type    = MatchTeamTypes(self.stream.u8())
 
-        freemod = self.stream.bool()
         slot_mods = [Mods.NoMod for _ in range(8)]
 
-        if freemod:
-            slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
+        try:
+            freemod = self.stream.bool()
+
+            if freemod:
+                slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
+        except OverflowError:
+            # Workaround for old clients
+            freemod = False
 
         slots = [
             bSlot(
@@ -167,7 +179,10 @@ class Reader(BaseReader):
             for i in range(8)
         ]
 
-        seed = self.stream.s32()
+        try:
+            seed = self.stream.s32()
+        except OverflowError:
+            seed = 0
 
         return bMatch(
             match_id,
