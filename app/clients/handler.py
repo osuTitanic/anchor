@@ -954,6 +954,16 @@ def match_complete(player: Player):
     player.match.logger.info('Match finished')
     player.match.update()
 
+@register(RequestPacket.TOURNAMENT_MATCH_INFO)
+def tourney_match_info(player: Player, match_id: int):
+    if not player.supporter:
+        return
+
+    if not (match := session.matches[match_id]):
+        return
+
+    player.enqueue_match(match.bancho_match)
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
