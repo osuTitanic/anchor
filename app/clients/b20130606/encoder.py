@@ -21,7 +21,8 @@ from typing import List, Optional, Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[2013606][1][packet] = func
+        PACKETS[20130606][1][packet] = func
+        PACKETS[20130418][1][packet] = func
         return func
 
     return wrapper
