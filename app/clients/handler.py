@@ -521,7 +521,6 @@ def create_match(player: Player, bancho_match: bMatch):
         return
 
     if player.match:
-        print(player.match)
         player.logger.warning('Tried to create match, but was already inside one')
         player.enqueue_matchjoin_fail()
         return

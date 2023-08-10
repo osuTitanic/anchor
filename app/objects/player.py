@@ -360,9 +360,6 @@ class Player(BanchoProtocol):
         # Get decoders and encoders
         self.decoders, self.encoders = self.get_client(client.version.date)
 
-        print(PACKETS[20130606][1][self.packets.SPECTATE_FRAMES])
-        print(self.encoders[self.packets.SPECTATE_FRAMES])
-
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
