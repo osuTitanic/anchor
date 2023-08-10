@@ -3,7 +3,7 @@ from app.common.streams import StreamIn
 
 from ..packets import PACKETS
 from . import RequestPacket
-from .reader import Reader
+from . import Reader
 
 from typing import Callable
 

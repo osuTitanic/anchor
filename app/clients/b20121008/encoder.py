@@ -3,7 +3,7 @@ from app.common.objects import bBeatmapInfoReply
 
 from ..packets import PACKETS
 from . import ResponsePacket
-from .writer import Writer
+from . import Writer
 
 from typing import Callable
 
