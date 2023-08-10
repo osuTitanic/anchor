@@ -16,7 +16,7 @@ def register(packet: ResponsePacket) -> Callable:
     return wrapper
 
 @register(ResponsePacket.USER_PRESENCE)
-def presence_asdasd(presence: bUserPresence):
+def presence(presence: bUserPresence):
     writer = Writer()
     writer.write_presence(presence)
     return writer.stream.get()

@@ -362,8 +362,6 @@ class Player(BanchoProtocol):
         # Get decoders and encoders
         self.decoders, self.encoders = self.get_client(client.version.date)
 
-        print(self.packets)
-
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
