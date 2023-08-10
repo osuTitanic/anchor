@@ -9,6 +9,8 @@ from .. import (
     DefaultRequestPacket as RequestPacket
 )
 
+from .writer import Writer
+
 from ..packets import PACKETS
 from copy import deepcopy
 
