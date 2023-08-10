@@ -588,12 +588,23 @@ class Player(BanchoProtocol):
         self.send_packet(self.packets.PING)
 
     def enqueue_player(self, player):
+        if self.client.version.date <= 20121223:
+            # USER_PRESENCE_SINGLE is not supported anymore
+            self.enqueue_presence(player)
+            return
+
         self.send_packet(
             self.packets.USER_PRESENCE_SINGLE,
             player.id
         )
 
     def enqueue_players(self, players):
+        if self.client.version.date <= 20121223:
+            # USER_PRESENCE_BUNDLE is not supported anymore
+            for player in players:
+                self.enqueue_presence(player)
+            return
+
         n = max(1, 150)
 
         # Split players into chunks to avoid any buffer overflows
