@@ -392,16 +392,20 @@ class Player(BanchoProtocol):
             self.login_failed(LoginError.NotActivated)
             return
 
-        if (other_user := app.session.players.by_id(user.id)):
-            other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
-            other_user.close_connection()
-
-        # TODO: Tournament clients
-
         self.id = user.id
         self.name = user.name
         self.stats = user.stats
         self.object = user
+
+        if self.client.version.stream != 'tourney':
+            if (other_user := app.session.players.by_id(user.id)):
+                other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
+                other_user.close_connection()
+        else:
+            if not self.supporter:
+                # Trying to use tourney client without supporter
+                self.login_failed(LoginError.Authentication)
+                return
 
         self.status.mode = GameMode(self.object.preferred_mode)
 
