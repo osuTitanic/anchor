@@ -963,6 +963,10 @@ def tourney_match_info(player: Player, match_id: int):
 
     player.enqueue_match(match.bancho_match)
 
+@register(RequestPacket.ERROR_REPORT)
+def bancho_error(player: Player, error: str):
+    session.logger.error(f'Bancho Error Report:\n{error}')
+
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
