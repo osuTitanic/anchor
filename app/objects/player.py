@@ -19,8 +19,10 @@ from app.common.objects import (
     bMatch
 )
 
+from app.common.constants import strings
 from app.common.cache import leaderboards
 from app.common.cache import status
+
 from app.common.database.repositories import (
     histories,
     clients,
@@ -391,10 +393,7 @@ class Player(BanchoProtocol):
             return
 
         if (other_user := app.session.players.by_id(user.id)):
-            other_user.enqueue_announcement('\n'.join([
-                'Another player has logged in to your account, from another location.',
-                'Please change your password immediately, if you think this is an error!'
-            ]))
+            other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
             other_user.close_connection()
 
         # TODO: Tournament clients
