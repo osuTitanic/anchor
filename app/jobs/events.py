@@ -2,7 +2,7 @@
 import app
 
 def event_listener():
-    events = app.session.events.listen(buffer_time=0.1)
+    events = app.session.events.listen()
 
     if app.session.jobs._shutdown:
         exit()
