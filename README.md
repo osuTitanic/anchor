@@ -1,5 +1,8 @@
 # Anchor
 
+> ⚠️ Anchor is currently under a rewrite.
+> Please view [this branch](https://github.com/osuTitanic/anchor/tree/rewrite) for more details!
+
 Anchor is a bancho server designed for older osu! clients.
 It currently supports clients from b1807 to b2013606 and I will try to expand support in the future.
 
