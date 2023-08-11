@@ -415,6 +415,10 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
 
 @register(RequestPacket.START_SPECTATING)
 def start_spectating(player: Player, player_id: int):
+    if player_id == player.id:
+        player.logger.warning('Player tried to spectate himself?')
+        return
+
     if not (target := session.players.by_id(player_id)):
         return
 
