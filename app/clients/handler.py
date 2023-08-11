@@ -430,7 +430,7 @@ def start_spectating(player: Player, player_id: int):
     player.spectating = target
 
     # Join their channel
-    player.enqueue_channel(target.spectator_chat)
+    player.enqueue_channel(target.spectator_chat.bancho_channel)
     target.spectator_chat.add(player)
 
     # Enqueue to others
@@ -440,7 +440,7 @@ def start_spectating(player: Player, player_id: int):
     # Enqueue to target
     target.spectators.append(player)
     target.enqueue_spectator(player.id)
-    target.enqueue_channel(target.spectator_chat)
+    target.enqueue_channel(target.spectator_chat.bancho_channel)
 
     # Check if target joined #spectator
     if target not in target.spectator_chat.users:
