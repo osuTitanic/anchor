@@ -881,3 +881,6 @@ class Player(BanchoProtocol):
             self.packets.ANNOUNCE,
             message
         )
+
+    def enqueue_monitor(self):
+        self.send_packet(self.packets.MONITOR)
