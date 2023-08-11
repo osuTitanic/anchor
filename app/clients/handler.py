@@ -6,7 +6,7 @@ from ..common.database.objects import DBBeatmap
 from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
-from .. import session
+from .. import session, commands
 
 from ..common.database.repositories import (
     relationships,
@@ -179,10 +179,21 @@ def send_message(player: Player, message: bMessage):
         player.revoke_channel(message.target)
         return
 
-    player.update_activity()
-    channel.send_message(player, message.content)
+    if (parsed_message := message.content.strip()).startswith('!'):
+        # A command was executed
+        Thread(
+            target=commands.execute,
+            args=[
+                player,
+                channel,
+                parsed_message
+            ],
+            daemon=True
+        ).start()
+        return
 
-    # TODO: Commands
+    player.update_activity()
+    channel.send_message(player, parsed_message)
 
     messages.create(
         player.name,
@@ -207,6 +218,20 @@ def send_private_message(sender: Player, message: bMessage):
         if sender.id not in target.friends:
             sender.enqueue_blocked_dms(sender.name)
             return
+
+    if (parsed_message := message.content.strip()).startswith('!') \
+        or target == session.bot_player:
+        # A command was executed
+        Thread(
+            target=commands.execute,
+            args=[
+                sender,
+                target,
+                parsed_message
+            ],
+            daemon=True
+        ).start()
+        return
 
     # Limit message size
     if len(message.content) > 512:
