@@ -625,6 +625,8 @@ class Player(BanchoProtocol):
             f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
         )
 
+    # TODO: Unrestrict
+
     def update_activity(self):
         users.update(
             user_id=self.id,
