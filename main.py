@@ -1,38 +1,33 @@
 
 from twisted.internet import reactor
 
-from bancho.objects.ip import IPAddress
-from bancho.logging    import Console, File
-from bancho            import BanchoFactory
+from app.server import BanchoFactory
+from app.logging import Console, File
 
 import logging
-import bancho
 import config
-import os
+import utils
+import app
 
 logging.basicConfig(
     handlers=[Console, File],
-    level=logging.INFO
+    level=logging.DEBUG
+        if config.DEBUG
+        else logging.INFO
 )
 
-def setup():
-    os.makedirs(config.DATA_PATH, exist_ok=True)
-
-    if config.SKIP_IP_DATABASE:
-        return
-
-    if not os.path.isfile(f'{config.DATA_PATH}/geolite.mmdb'):
-        IPAddress.download_gopip_database()
-
 def main():
+    utils.setup()
+
     factory = BanchoFactory()
 
     for port in config.PORTS:
         reactor.listenTCP(port, factory)
-        bancho.services.logger.info(f'Reactor listening on port: {port}')
+        app.session.logger.info(
+            f'Reactor listening on port: {port}'
+        )
 
     reactor.run()
 
 if __name__ == "__main__":
-    setup()
     main()
