@@ -160,7 +160,7 @@ def get_command(
                     )
                 )
             except Exception as e:
-                traceback.print_exc()
+                if config.DEBUG: traceback.print_exc()
                 player.logger.error(f'Command error: {e}')
 
                 response = ['An error occurred while running this command.']
