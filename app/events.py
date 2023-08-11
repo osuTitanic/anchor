@@ -30,7 +30,7 @@ def restrict(user_id: int, reason: str = ''):
     if not (player := app.session.players.by_id(user_id)):
         return
 
-    # TODO: Restrict...
+    player.restrict(reason, autoban=True)
 
 @app.session.events.register('announcement')
 def announcement(message: str):
