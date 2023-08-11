@@ -15,3 +15,4 @@ from . import b20121119
 from . import b20121008
 from . import b20120812
 from . import b20120725
+from . import b20120704

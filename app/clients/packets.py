@@ -23,5 +23,6 @@ PACKETS: Dict[int, list] = {
     20121008: [{}, {}, PacketEnum, PacketEnum],
     20120916: [{}, {}, PacketEnum, PacketEnum],
     20120812: [{}, {}, PacketEnum, PacketEnum],
-    20120725: [{}, {}, PacketEnum, PacketEnum]
+    20120725: [{}, {}, PacketEnum, PacketEnum],
+    20120704: [{}, {}, PacketEnum, PacketEnum]
 }
