@@ -2,6 +2,11 @@
 from typing import List, Union, Optional, NamedTuple, Callable
 from dataclasses import dataclass
 
+from .common.database.repositories import (
+    users,
+    logs
+)
+
 from .common.constants import Permissions
 from .objects.channel import Channel
 from .common.objects import bMessage
@@ -130,6 +135,39 @@ def roll(ctx: Context) -> Optional[List]:
         max_roll = min(max_roll, 0x7FFF)
 
     return [f'{ctx.player.name} rolls {random.randrange(0, max_roll+1)}!']
+
+@command(['report'], hidden=True)
+def report(ctx: Context) -> Optional[List]:
+    """<username> <reason>"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <username> (<reason>)']
+
+    username = ctx.args[0].replace('_', ' ')
+
+    if not (player := users.fetch_by_name(username)):
+        return ['Could not find user.']
+
+    reason = ' '.join(ctx.args[1:])
+    message = f'{ctx.player.name} reported {player.name} for: "{reason}".'
+
+    if (player := app.session.players.by_id(player.id)):
+        player.enqueue_monitor()
+
+    logs.create(
+        message,
+        'info',
+        'reports'
+    )
+
+    channel = app.session.channels.by_name('#admin')
+
+    if channel:
+        channel.send_message(
+            app.session.bot_player,
+            message
+        )
+
+    return ['Player was reported.']
 
 # TODO: More commands...
 
