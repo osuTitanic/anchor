@@ -486,6 +486,11 @@ class Player(BanchoProtocol):
 
         for channel in app.session.channels.public:
             if channel.can_read(self.permissions):
+                if channel.name in config.AUTOJOIN_CHANNELS:
+                    self.enqueue_channel(channel, autojoin=True)
+                    channel.add(self)
+                    continue
+
                 self.enqueue_channel(channel)
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
