@@ -70,8 +70,8 @@ class ClientHash:
             adapters = args[1]
             adapters_md5 = args[2]
 
-            diskdrive_signature = hashlib.md5('unknown').hexdigest()
-            uninstall_id = hashlib.md5('unknown').hexdigest()
+            diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
+            uninstall_id = hashlib.md5(b'unknown').hexdigest()
 
             try:
                 uninstall_id = args[3]
