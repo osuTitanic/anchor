@@ -27,6 +27,7 @@ from app.common.database.repositories import (
     histories,
     clients,
     logins,
+    scores,
     users,
     stats
 )
@@ -74,13 +75,13 @@ class Player(BanchoProtocol):
         self.stats:  Optional[List[DBStats]] = None
         self.status = Status()
 
-        self.id = -1
+        self.id = 0
         self.name = ""
 
         self.request_packets = DefaultRequestPacket
         self.packets = DefaultResponsePacket
-        self.decoders: Dict[Enum, Callable] = {}
-        self.encoders: Dict[Enum, Callable] = {}
+        self.decoders: Dict[Enum, Callable] = PACKETS[20130606][0]
+        self.encoders: Dict[Enum, Callable] = PACKETS[20130606][1]
 
         from .collections import Players
         from .multiplayer import Match
@@ -325,12 +326,12 @@ class Player(BanchoProtocol):
     def send_error(self, reason=-5, message=""):
         if self.encoders and message:
             self.send_packet(
-                DefaultResponsePacket.ANNOUNCE,
+                self.packets.ANNOUNCE,
                 message
             )
 
         self.send_packet(
-            DefaultResponsePacket.LOGIN_REPLY,
+            self.packets.LOGIN_REPLY,
             reason
         )
 
@@ -587,7 +588,42 @@ class Player(BanchoProtocol):
         # Update database
         users.update(self.id, {'silence_end': None})
 
-    # TODO: Restrict
+    def restrict(self, reason: Optional[str] = None, autoban: bool = False):
+        self.object.restricted = True
+        self.object.permissions = 0
+
+        # Update database
+        users.update(self.id, {
+            'restricted': True,
+            'permissions': 0
+        })
+
+        # Update leaderboards
+        leaderboards.remove(
+            self.id,
+            self.object.country
+        )
+
+        # Remove stats
+        stats.delete_all(self.id)
+
+        # Hide scores
+        scores.hide_all(self.id)
+
+        if reason:
+            self.enqueue_announcement(
+                f'You have been restricted for:\n{reason}'
+            )
+
+        # Update client
+        self.login_failed(LoginError.Banned)
+
+        # Update hardware
+        clients.update_all(self.id, {'banned': True})
+
+        self.logger.warning(
+            f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
+        )
 
     def update_activity(self):
         users.update(
