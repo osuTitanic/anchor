@@ -6,6 +6,7 @@ from .common.database import Postgres
 from .common.storage import Storage
 from .jobs import Jobs
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict
 from requests import Session
 from redis import Redis
@@ -39,6 +40,7 @@ requests.headers = {
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
+executor = ThreadPoolExecutor(max_workers=15)
 
 jobs = Jobs(max_workers=4)
 channels = Channels()
