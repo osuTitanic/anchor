@@ -212,7 +212,18 @@ def alertuser(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {player.name}.']
 
-# TODO: More commands...
+# TODO: !silence
+# TODO: !unsilence
+# TODO: !restrict
+# TODO: !unrestrict
+# TODO: !where
+# TODO: !stats
+# TODO: !rank
+# TODO: !faq
+# TODO: !moderated
+# TODO: !kick
+# TODO: !kill
+# TODO: !search
 
 def get_command(
     player: Player,
