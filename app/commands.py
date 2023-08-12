@@ -169,6 +169,22 @@ def report(ctx: Context) -> Optional[List]:
 
     return ['Player was reported.']
 
+@command(['monitor'], Permissions.Admin, hidden=True)
+def monitor(ctx: Context) -> Optional[List]:
+    """<name>"""
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name>']
+
+    name = ctx.args[1:]
+
+    if not (player := app.session.players.by_name(name)):
+        return ['Player is not online.']
+
+    player.enqueue_monitor()
+
+    return ['Player has been monitored.']
+
 # TODO: More commands...
 
 def get_command(
