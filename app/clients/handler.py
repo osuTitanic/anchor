@@ -61,15 +61,18 @@ def thread_callback(future: Future):
 
 def run_in_thread(func):
     def wrapper(*args, **kwargs) -> Future:
-        f = session.executor.submit(
-            func,
-            *args,
-            **kwargs
-        )
-        f.add_done_callback(
-            thread_callback
-        )
-        return f
+        try:
+            f = session.executor.submit(
+                func,
+                *args,
+                **kwargs
+            )
+            f.add_done_callback(
+                thread_callback
+            )
+            return f
+        except RuntimeError:
+            exit()
 
     return wrapper
 
