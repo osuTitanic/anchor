@@ -436,7 +436,6 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     )
 
 @register(RequestPacket.START_SPECTATING)
-@run_in_thread
 def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
         player.logger.warning('Player tried to spectate himself?')
@@ -474,7 +473,6 @@ def start_spectating(player: Player, player_id: int):
         target.spectator_chat.add(target)
 
 @register(RequestPacket.STOP_SPECTATING)
-@run_in_thread
 def stop_spectating(player: Player):
     if not player.spectating:
         return
@@ -502,7 +500,6 @@ def stop_spectating(player: Player):
     player.spectating = None
 
 @register(RequestPacket.CANT_SPECTATE)
-@run_in_thread
 def cant_spectate(player: Player):
     if not player.spectating:
         return
@@ -922,7 +919,6 @@ def load_complete(player: Player):
         player.match.update()
 
 @register(RequestPacket.MATCH_SKIP)
-@run_in_thread
 def skip(player: Player):
     if not player.match:
         return
@@ -946,7 +942,6 @@ def skip(player: Player):
         p.enqueue_match_skip()
 
 @register(RequestPacket.MATCH_FAILED)
-@run_in_thread
 def player_failed(player: Player):
     if not player.match:
         return
@@ -960,8 +955,8 @@ def player_failed(player: Player):
     for p in player.match.players:
         p.enqueue_player_failed(slot_id)
 
+# TODO: There have been some issues when running this inside a thread...
 @register(RequestPacket.MATCH_SCORE_UPDATE)
-@run_in_thread
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:
         return
