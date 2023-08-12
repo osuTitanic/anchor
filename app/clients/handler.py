@@ -37,6 +37,7 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, List
+from concurrent.futures import Future
 from threading import Thread
 from copy import copy
 
@@ -47,16 +48,28 @@ def register(packet: RequestPacket) -> Callable:
 
     return wrapper
 
-def run_in_thread(func):
-    def wrapper(*args, **kwargs):
-        thread = Thread(
-            target=func,
-            args=args,
-            kwargs=kwargs,
-            daemon=True
+def thread_callback(future: Future):
+    if (exc := future.exception()):
+        session.logger.error(
+            f'Handler thread error: {exc}'
         )
-        thread.start()
-        return thread
+        raise exc
+
+    session.logger.debug(
+        'Handler thread result: {future}'
+    )
+
+def run_in_thread(func):
+    def wrapper(*args, **kwargs) -> Future:
+        f = session.executor.submit(
+            func,
+            *args,
+            **kwargs
+        )
+        f.add_done_callback(
+            thread_callback
+        )
+        return f
 
     return wrapper
 
