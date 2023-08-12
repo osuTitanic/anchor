@@ -1,8 +1,4 @@
 
-"""
-b20120704 uses protocol version 7, which changes some stuff in the bUserStats type.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket

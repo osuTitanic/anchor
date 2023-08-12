@@ -1,9 +1,4 @@
 
-"""
-b20130606/b20130716 is the latest supported version for tcp bancho, according to osekai snapshot builds.
-After that, the clients switch to the http based bancho protocol, which is still used to this day.
-"""
-
 from .constants import RequestPacket, ResponsePacket
 
 from .reader import Reader

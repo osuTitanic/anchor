@@ -1,9 +1,4 @@
 
-"""
-This is protocol version 17 and is supported until 20130303, according to osekai snapshot builds.
-The only thing that changed is the "extra" attribute inside the bReplayFrameBundle.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket
