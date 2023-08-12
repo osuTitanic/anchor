@@ -40,7 +40,7 @@ requests.headers = {
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
-executor = ThreadPoolExecutor(max_workers=15)
+executor = ThreadPoolExecutor(max_workers=config.WORKERS)
 
 jobs = Jobs(max_workers=4)
 channels = Channels()
