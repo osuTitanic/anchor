@@ -114,7 +114,7 @@ class Reader(BaseReader):
 
         try:
             score_frame = self.read_scoreframe()
-        except Exception:
+        except OverflowError:
             score_frame = None
 
         return bReplayFrameBundle(
