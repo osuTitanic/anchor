@@ -643,7 +643,8 @@ def join_match(player: Player, match_join: bMatchJoin):
         slot_id = 0
 
     # Join the chat
-    player.enqueue_channel(match.chat.bancho_channel)
+    player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    match.chat.add(player)
 
     slot = match.slots[slot_id]
 
