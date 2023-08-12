@@ -32,6 +32,7 @@ events = EventQueue(
 )
 
 logger = logging.getLogger('bancho')
+geolocation_cache = {}
 bot_player = None
 
 requests = Session()
