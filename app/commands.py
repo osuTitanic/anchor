@@ -70,7 +70,7 @@ sets = [
 ]
 
 def command(
-    aliases: list[str],
+    aliases: List[str],
     p: Permissions = Permissions.Normal,
     hidden: bool = False,
 ) -> Callable:
