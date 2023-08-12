@@ -19,12 +19,12 @@ PACKETS: Dict[int, list] = {
     20130118: [{}, {}, PacketEnum, PacketEnum], # 15
                                                 # 14 ?
     20121223: [{}, {}, PacketEnum, PacketEnum], # 13
-    20121203: [{}, {}, PacketEnum, PacketEnum], # ...
-    20121119: [{}, {}, PacketEnum, PacketEnum],
-    20121030: [{}, {}, PacketEnum, PacketEnum],
-    20121008: [{}, {}, PacketEnum, PacketEnum],
-    20120916: [{}, {}, PacketEnum, PacketEnum],
-    20120812: [{}, {}, PacketEnum, PacketEnum],
-    20120725: [{}, {}, PacketEnum, PacketEnum],
-    20120704: [{}, {}, PacketEnum, PacketEnum]
+    20121203: [{}, {}, PacketEnum, PacketEnum], # 13
+    20121119: [{}, {}, PacketEnum, PacketEnum], # 12
+    20121030: [{}, {}, PacketEnum, PacketEnum], # 12
+    20121008: [{}, {}, PacketEnum, PacketEnum], # 11
+    20120916: [{}, {}, PacketEnum, PacketEnum], # 11
+    20120812: [{}, {}, PacketEnum, PacketEnum], # 10
+    20120725: [{}, {}, PacketEnum, PacketEnum], # 8
+    20120704: [{}, {}, PacketEnum, PacketEnum]  # 7
 }
