@@ -145,7 +145,7 @@ def report(ctx: Context) -> Optional[List]:
     username = ctx.args[0].replace('_', ' ')
 
     if not (player := users.fetch_by_name(username)):
-        return ['Could not find user.']
+        return [f'Could not find player "{username}".']
 
     reason = ' '.join(ctx.args[1:])
     message = f'{ctx.player.name} reported {player.name} for: "{reason}".'
@@ -184,6 +184,33 @@ def monitor(ctx: Context) -> Optional[List]:
     player.enqueue_monitor()
 
     return ['Player has been monitored.']
+
+@command(['alert', 'announce', 'broadcast'], Permissions.Admin, hidden=True)
+def alert(ctx: Context) -> Optional[List]:
+    """<message> - Send a message to all players"""
+
+    if not ctx.args:
+        return [f'Invalid syntax: !{ctx.trigger} <message>']
+
+    app.session.players.announce(' '.join(ctx.args))
+
+    return [f'Alert was sent to {len(app.session.players)} players.']
+
+@command(['alertuser'], Permissions.Admin, hidden=True)
+def alertuser(ctx: Context) -> Optional[List]:
+    """<username> <message> - Send a notification to a player"""
+
+    if len(ctx.args) < 2:
+        return [f'Invalid syntax: !{ctx.trigger} <username> <message>']
+
+    username = ctx.args[0].replace('_', ' ')
+
+    if not (player := app.session.players.by_name(username)):
+        return [f'Could not find player "{username}".']
+
+    player.enqueue_announcement(' '.join(ctx.args[1:]))
+
+    return [f'Alert was sent to {player.name}.']
 
 # TODO: More commands...
 
