@@ -56,7 +56,7 @@ def thread_callback(future: Future):
         raise exc
 
     session.logger.debug(
-        'Handler thread result: {future}'
+        f'Handler thread result: {future}'
     )
 
 def run_in_thread(func):
@@ -78,6 +78,7 @@ def pong(player: Player):
     pass
 
 @register(RequestPacket.EXIT)
+@run_in_thread
 def exit(player: Player, updating: bool):
     player.update_activity()
 
@@ -132,6 +133,7 @@ def request_status(player: Player):
     player.reload_rank()
 
 @register(RequestPacket.JOIN_CHANNEL)
+@run_in_thread
 def handle_channel_join(player: Player, channel_name: str):
     try:
         if channel_name == '#spectator':
@@ -152,6 +154,7 @@ def handle_channel_join(player: Player, channel_name: str):
     channel.add(player)
 
 @register(RequestPacket.LEAVE_CHANNEL)
+@run_in_thread
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
     try:
         if channel_name == '#spectator':
@@ -281,6 +284,7 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
+@run_in_thread
 def away_message(player: Player, message: bMessage):
     if player.away_message is None and message.content == "":
         return
@@ -307,6 +311,7 @@ def away_message(player: Player, message: bMessage):
         )
 
 @register(RequestPacket.ADD_FRIEND)
+@run_in_thread
 def add_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -325,6 +330,7 @@ def add_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.REMOVE_FRIEND)
+@run_in_thread
 def remove_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -427,6 +433,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     )
 
 @register(RequestPacket.START_SPECTATING)
+@run_in_thread
 def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
         player.logger.warning('Player tried to spectate himself?')
@@ -464,6 +471,7 @@ def start_spectating(player: Player, player_id: int):
         target.spectator_chat.add(target)
 
 @register(RequestPacket.STOP_SPECTATING)
+@run_in_thread
 def stop_spectating(player: Player):
     if not player.spectating:
         return
@@ -491,6 +499,7 @@ def stop_spectating(player: Player):
     player.spectating = None
 
 @register(RequestPacket.CANT_SPECTATE)
+@run_in_thread
 def cant_spectate(player: Player):
     if not player.spectating:
         return
@@ -529,6 +538,7 @@ def part_lobby(player: Player):
         p.enqueue_lobby_part(player.id)
 
 @register(RequestPacket.MATCH_INVITE)
+@run_in_thread
 def invite(player: Player, target_id: int):
     if player.silenced:
         return
@@ -551,6 +561,7 @@ def invite(player: Player, target_id: int):
     )
 
 @register(RequestPacket.CREATE_MATCH)
+@run_in_thread
 def create_match(player: Player, bancho_match: bMatch):
     if not player.in_lobby:
         player.logger.warning('Tried to create match, but not in lobby')
@@ -597,6 +608,7 @@ def create_match(player: Player, bancho_match: bMatch):
     )
 
 @register(RequestPacket.JOIN_MATCH)
+@run_in_thread
 def join_match(player: Player, match_join: bMatchJoin):
     if not (match := session.matches[match_join.match_id]):
         # Match was not found
@@ -907,6 +919,7 @@ def load_complete(player: Player):
         player.match.update()
 
 @register(RequestPacket.MATCH_SKIP)
+@run_in_thread
 def skip(player: Player):
     if not player.match:
         return
@@ -930,6 +943,7 @@ def skip(player: Player):
         p.enqueue_match_skip()
 
 @register(RequestPacket.MATCH_FAILED)
+@run_in_thread
 def player_failed(player: Player):
     if not player.match:
         return
@@ -996,6 +1010,7 @@ def match_complete(player: Player):
     player.match.update()
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
+@run_in_thread
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
         return
@@ -1006,9 +1021,11 @@ def tourney_match_info(player: Player, match_id: int):
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
+@run_in_thread
 def bancho_error(player: Player, error: str):
     session.logger.error(f'Bancho Error Report:\n{error}')
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
+@run_in_thread
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled
