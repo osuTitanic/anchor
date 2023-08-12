@@ -11,5 +11,6 @@ from copy import deepcopy
 
 # Inherit packets from 20120725
 PACKETS[20120704] = deepcopy(PACKETS[20120725])
+PACKETS[1807]     = deepcopy(PACKETS[20120725])
 
 from . import encoder
