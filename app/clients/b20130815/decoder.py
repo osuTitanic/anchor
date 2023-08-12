@@ -10,8 +10,8 @@ from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130606][0][packet] = func
-        PACKETS[20130418][0][packet] = func
+        PACKETS[20130815][0][packet] = func
+        PACKETS[20130401][0][packet] = func
         return func
 
     return wrapper

@@ -12,12 +12,14 @@ class PacketEnum(IntEnum):
         return hash(self.name)
 
 PACKETS: Dict[int, list] = {
-    20130606: [{}, {}, PacketEnum, PacketEnum],
-    20130418: [{}, {}, PacketEnum, PacketEnum],
-    20130329: [{}, {}, PacketEnum, PacketEnum],
-    20130303: [{}, {}, PacketEnum, PacketEnum],
-    20121223: [{}, {}, PacketEnum, PacketEnum],
-    20121203: [{}, {}, PacketEnum, PacketEnum],
+    20130815: [{}, {}, PacketEnum, PacketEnum], # 18
+    20130401: [{}, {}, PacketEnum, PacketEnum], # 18
+    20130329: [{}, {}, PacketEnum, PacketEnum], # 17
+                                                # 16 ?
+    20130118: [{}, {}, PacketEnum, PacketEnum], # 15
+                                                # 14 ?
+    20121223: [{}, {}, PacketEnum, PacketEnum], # 13
+    20121203: [{}, {}, PacketEnum, PacketEnum], # ...
     20121119: [{}, {}, PacketEnum, PacketEnum],
     20121030: [{}, {}, PacketEnum, PacketEnum],
     20121008: [{}, {}, PacketEnum, PacketEnum],

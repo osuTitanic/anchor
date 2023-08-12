@@ -1,5 +1,5 @@
 
-from ..b20130606 import Reader as BaseReader
+from ..b20130815 import Reader as BaseReader
 
 from app.common.objects import bReplayFrameBundle
 from app.common.constants import ReplayAction

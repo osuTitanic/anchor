@@ -80,8 +80,8 @@ class Player(BanchoProtocol):
 
         self.request_packets = DefaultRequestPacket
         self.packets = DefaultResponsePacket
-        self.decoders: Dict[Enum, Callable] = PACKETS[20130606][0]
-        self.encoders: Dict[Enum, Callable] = PACKETS[20130606][1]
+        self.decoders: Dict[Enum, Callable] = PACKETS[20130815][0]
+        self.encoders: Dict[Enum, Callable] = PACKETS[20130815][1]
 
         from .collections import Players
         from .multiplayer import Match
