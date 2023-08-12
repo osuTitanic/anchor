@@ -51,12 +51,12 @@ def register(packet: RequestPacket) -> Callable:
 def thread_callback(future: Future):
     if (exc := future.exception()):
         session.logger.error(
-            f'Handler thread error: {exc}'
+            f'Exception in {future}: {exc}'
         )
         raise exc
 
     session.logger.debug(
-        f'Handler thread result: {future}'
+        f'Future Result: {future}'
     )
 
 def run_in_thread(func):
