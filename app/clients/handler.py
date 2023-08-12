@@ -819,7 +819,6 @@ def lock(player: Player, slot_id: int):
 
     if slot.player is player:
         # Player can't kick themselves
-        player.match.logger.warning(f'{player.name} tried to kick himself?')
         return
 
     if slot.has_player:
