@@ -176,7 +176,7 @@ def monitor(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
-    name = ctx.args[1:]
+    name = ' '.join(ctx.args[0:])
 
     if not (player := app.session.players.by_name(name)):
         return ['Player is not online.']
