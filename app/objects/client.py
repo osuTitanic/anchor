@@ -8,6 +8,7 @@ from typing import Optional
 import hashlib
 import utils
 import pytz
+import app
 import re
 
 class ClientVersion:
@@ -105,10 +106,14 @@ class OsuClient:
             build_version, utc_offset, display_city, client_hash = line.split('|')
             friendonly_dms = False
 
-        geolocation = location.fetch_geolocation(
-            ip=ip,
-            is_local=utils.is_local_ip(ip)
-        )
+        if not (geolocation := app.session.geolocation_cache.get(ip)):
+            geolocation = location.fetch_geolocation(
+                ip=ip,
+                is_local=utils.is_local_ip(ip)
+            )
+
+            # Load ip geolocation from web and store to cache
+            app.session.executor.submit(utils.load_geolocation_web, ip)
 
         utc_offset = int(
             datetime.now(

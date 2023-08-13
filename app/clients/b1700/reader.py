@@ -47,7 +47,7 @@ class Reader(BaseReader):
         )
 
     def read_intlist(self) -> List[int]:
-        return [self.stream.s32() for _ in range(self.stream.s16())]
+        return [self.stream.s32() for _ in range(self.stream.s32())]
 
     def read_message(self) -> bMessage:
         message = bMessage(
@@ -56,20 +56,20 @@ class Reader(BaseReader):
             target=self.stream.string()
         )
 
-        try:
-            message.sender_id = self.stream.s32()
-        except OverflowError:
-            # Workaround for older clients
-            pass
-
         return message
 
     def read_status(self) -> bStatusUpdate:
+        action = ClientStatus(self.stream.u8())
+        beatmap_update = self.stream.bool()
+
+        if not beatmap_update:
+            return bStatusUpdate(action)
+
         return bStatusUpdate(
-            action=ClientStatus(self.stream.u8()),
+            action,
             text=self.stream.string(),
             beatmap_checksum=self.stream.string(),
-            mods=Mods(self.stream.u32()),
+            mods=Mods(self.stream.u16()),
             mode=GameMode(self.stream.u8()),
             beatmap_id=self.stream.s32()
         )
@@ -108,17 +108,16 @@ class Reader(BaseReader):
         )
 
     def read_replayframe_bundle(self) -> bReplayFrameBundle:
-        extra = self.stream.s32()
         replay_frames = [self.read_replayframe() for f in range(self.stream.u16())]
         action = ReplayAction(self.stream.u8())
 
         try:
             score_frame = self.read_scoreframe()
-        except Exception:
+        except OverflowError:
             score_frame = None
 
         return bReplayFrameBundle(
-            extra,
+            0,
             action,
             replay_frames,
             score_frame
@@ -131,11 +130,11 @@ class Reader(BaseReader):
         )
 
     def read_match(self) -> bMatch:
-        match_id = self.stream.s16()
+        match_id = self.stream.u8()
 
         in_progress = self.stream.bool()
         match_type = MatchType(self.stream.u8())
-        mods = Mods(self.stream.u32())
+        mods = Mods(self.stream.u16())
 
         name = self.stream.string()
         password = self.stream.string()
@@ -156,18 +155,8 @@ class Reader(BaseReader):
         mode = GameMode(self.stream.u8())
 
         scoring_type = MatchScoringTypes(self.stream.u8())
-        team_type    = MatchTeamTypes(self.stream.u8())
-
+        team_type = MatchTeamTypes(self.stream.u8())
         slot_mods = [Mods.NoMod for _ in range(8)]
-
-        try:
-            freemod = self.stream.bool()
-
-            if freemod:
-                slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
-        except OverflowError:
-            # Workaround for old clients
-            freemod = False
 
         slots = [
             bSlot(
@@ -178,11 +167,6 @@ class Reader(BaseReader):
             )
             for i in range(8)
         ]
-
-        try:
-            seed = self.stream.s32()
-        except OverflowError:
-            seed = 0
 
         return bMatch(
             match_id,
@@ -199,6 +183,6 @@ class Reader(BaseReader):
             mode,
             scoring_type,
             team_type,
-            freemod,
-            seed
+            False,
+            0
         )

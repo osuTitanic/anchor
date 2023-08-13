@@ -10,8 +10,7 @@ from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130606][0][packet] = func
-        PACKETS[20130418][0][packet] = func
+        PACKETS[1700][0][packet] = func
         return func
 
     return wrapper
@@ -22,23 +21,11 @@ def pong(stream: StreamIn):
 
 @register(RequestPacket.EXIT)
 def exit(stream: StreamIn):
-    return stream.s32() == 1
+    return False
 
 @register(RequestPacket.RECEIVE_UPDATES)
 def receive_updates(stream: StreamIn):
     return PresenceFilter(stream.s32())
-
-@register(RequestPacket.PRESENCE_REQUEST)
-def presence_request(stream: StreamIn):
-    return Reader(stream).read_intlist()
-
-@register(RequestPacket.PRESENCE_REQUEST_ALL)
-def presence_request_all(stream: StreamIn):
-    return
-
-@register(RequestPacket.STATS_REQUEST)
-def stats_request(stream: StreamIn):
-    return Reader(stream).read_intlist()
 
 @register(RequestPacket.REQUEST_STATUS)
 def request_status(stream: StreamIn):
@@ -187,15 +174,3 @@ def failed(stream: StreamIn):
 @register(RequestPacket.MATCH_COMPLETE)
 def match_complete(stream: StreamIn):
     return
-
-@register(RequestPacket.MATCH_INVITE)
-def invite(stream: StreamIn):
-    return stream.s32()
-
-@register(RequestPacket.TOURNAMENT_MATCH_INFO)
-def tourney_match_info(stream: StreamIn):
-    return stream.s32()
-
-@register(RequestPacket.CHANGE_FRIENDONLY_DMS)
-def friendonly_dms(stream: StreamIn):
-    return stream.s32() == 1

@@ -9,6 +9,9 @@ POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
 POSTGRES_USER = os.environ.get('POSTGRES_USER')
 POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
 
+POSTGRES_POOLSIZE = int(os.environ.get('POSTGRES_POOLSIZE', 10))
+POSTGRES_POOLSIZE_OVERFLOW = int(os.environ.get('POSTGRES_POOLSIZE_OVERFLOW', 30))
+
 S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY')
 S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY')
 S3_BASEURL    = os.environ.get('S3_BASEURL')
@@ -19,6 +22,7 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
 
 PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
+WORKERS = int(os.environ.get('BANCHO_WORKERS', 10))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 

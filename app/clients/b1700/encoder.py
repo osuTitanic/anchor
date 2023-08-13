@@ -21,8 +21,7 @@ from typing import List, Optional, Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130606][1][packet] = func
-        PACKETS[20130418][1][packet] = func
+        PACKETS[1700][1][packet] = func
         return func
 
     return wrapper
@@ -86,17 +85,20 @@ def send_menu_icon(image: Optional[str], url: Optional[str]):
 def monitor():
     return b''
 
-@register(ResponsePacket.USER_PRESENCE)
-def send_presence(presence: bUserPresence):
+@register(ResponsePacket.USER_STATS)
+def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
     writer = Writer()
-    writer.write_presence(presence)
+    if presence:
+        writer.write_presence(presence, stats)
+    else:
+        writer.write_stats(stats)
     return writer.stream.get()
 
-@register(ResponsePacket.USER_STATS)
-def send_stats(stats: bUserStats):
-    writer = Writer()
-    writer.write_stats(stats)
-    return writer.stream.get()
+@register(ResponsePacket.IRC_JOIN)
+def send_irc_player(username: int):
+    stream = StreamOut()
+    stream.string(username)
+    return stream.get()
 
 @register(ResponsePacket.USER_PRESENCE_SINGLE)
 def send_player(player_id: int):

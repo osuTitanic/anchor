@@ -1,7 +1,7 @@
 
 from app.common.objects import bReplayFrameBundle
 
-from ..b20130606 import Writer as BaseWriter
+from ..b20130815 import Writer as BaseWriter
 
 class Writer(BaseWriter):
     def write_replayframe_bundle(self, bundle: bReplayFrameBundle):

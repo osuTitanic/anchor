@@ -1,9 +1,4 @@
 
-"""
-Protocol version 11 is supported from b20121119 to b20121030.
-It has a few changes regarding user presence.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket

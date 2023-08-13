@@ -1,9 +1,4 @@
 
-"""
-b20120725 uses protocol version 8, as far as I am aware.
-It has some changes in the bChannel type.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket

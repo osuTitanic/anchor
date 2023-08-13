@@ -1,9 +1,4 @@
 
-"""
-This is protocol version 10, which was used in b20120812 and earlier.
-There are changes in the bStatusUpdate and bMatch types.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket

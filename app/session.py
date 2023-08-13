@@ -6,6 +6,7 @@ from .common.database import Postgres
 from .common.storage import Storage
 from .jobs import Jobs
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict
 from requests import Session
 from redis import Redis
@@ -31,6 +32,7 @@ events = EventQueue(
 )
 
 logger = logging.getLogger('bancho')
+geolocation_cache = {}
 bot_player = None
 
 requests = Session()
@@ -39,6 +41,7 @@ requests.headers = {
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
+executor = ThreadPoolExecutor(max_workers=config.WORKERS)
 
 jobs = Jobs(max_workers=4)
 channels = Channels()

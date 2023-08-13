@@ -6,7 +6,7 @@ from ..common.database.objects import DBBeatmap
 from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
-from .. import session
+from .. import session, commands
 
 from ..common.database.repositories import (
     relationships,
@@ -37,6 +37,7 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, List
+from concurrent.futures import Future
 from threading import Thread
 from copy import copy
 
@@ -47,16 +48,31 @@ def register(packet: RequestPacket) -> Callable:
 
     return wrapper
 
-def run_in_thread(func):
-    def wrapper(*args, **kwargs):
-        thread = Thread(
-            target=func,
-            args=args,
-            kwargs=kwargs,
-            daemon=True
+def thread_callback(future: Future):
+    if (exc := future.exception()):
+        session.logger.error(
+            f'Exception in {future}: {exc}'
         )
-        thread.start()
-        return thread
+        raise exc
+
+    session.logger.debug(
+        f'Future Result: {future}'
+    )
+
+def run_in_thread(func):
+    def wrapper(*args, **kwargs) -> Future:
+        try:
+            f = session.executor.submit(
+                func,
+                *args,
+                **kwargs
+            )
+            f.add_done_callback(
+                thread_callback
+            )
+            return f
+        except RuntimeError:
+            exit()
 
     return wrapper
 
@@ -65,12 +81,21 @@ def pong(player: Player):
     pass
 
 @register(RequestPacket.EXIT)
+@run_in_thread
 def exit(player: Player, updating: bool):
     player.update_activity()
 
 @register(RequestPacket.RECEIVE_UPDATES)
 def receive_updates(player: Player, filter: PresenceFilter):
     player.filter = filter
+
+    if filter.value <= 0:
+        return
+
+    players = session.players if filter == PresenceFilter.All else \
+              player.online_friends
+
+    player.enqueue_players(players, stats_only=True)
 
 @register(RequestPacket.PRESENCE_REQUEST)
 @run_in_thread
@@ -115,10 +140,11 @@ def change_status(player: Player, status: bStatusUpdate):
 @register(RequestPacket.REQUEST_STATUS)
 @run_in_thread
 def request_status(player: Player):
-    player.enqueue_stats(player)
     player.reload_rank()
+    player.enqueue_stats(player)
 
 @register(RequestPacket.JOIN_CHANNEL)
+@run_in_thread
 def handle_channel_join(player: Player, channel_name: str):
     try:
         if channel_name == '#spectator':
@@ -139,6 +165,7 @@ def handle_channel_join(player: Player, channel_name: str):
     channel.add(player)
 
 @register(RequestPacket.LEAVE_CHANNEL)
+@run_in_thread
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
     try:
         if channel_name == '#spectator':
@@ -179,10 +206,21 @@ def send_message(player: Player, message: bMessage):
         player.revoke_channel(message.target)
         return
 
-    player.update_activity()
-    channel.send_message(player, message.content)
+    if (parsed_message := message.content.strip()).startswith('!'):
+        # A command was executed
+        Thread(
+            target=commands.execute,
+            args=[
+                player,
+                channel,
+                parsed_message
+            ],
+            daemon=True
+        ).start()
+        return
 
-    # TODO: Commands
+    player.update_activity()
+    channel.send_message(player, parsed_message)
 
     messages.create(
         player.name,
@@ -207,6 +245,20 @@ def send_private_message(sender: Player, message: bMessage):
         if sender.id not in target.friends:
             sender.enqueue_blocked_dms(sender.name)
             return
+
+    if (parsed_message := message.content.strip()).startswith('!') \
+        or target == session.bot_player:
+        # A command was executed
+        Thread(
+            target=commands.execute,
+            args=[
+                sender,
+                target,
+                parsed_message
+            ],
+            daemon=True
+        ).start()
+        return
 
     # Limit message size
     if len(message.content) > 512:
@@ -243,6 +295,7 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
+@run_in_thread
 def away_message(player: Player, message: bMessage):
     if player.away_message is None and message.content == "":
         return
@@ -269,6 +322,7 @@ def away_message(player: Player, message: bMessage):
         )
 
 @register(RequestPacket.ADD_FRIEND)
+@run_in_thread
 def add_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -287,6 +341,7 @@ def add_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.REMOVE_FRIEND)
+@run_in_thread
 def remove_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -334,6 +389,8 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             -1,
             beatmap
         ))
+
+    player.logger.info(f'Got {len(maps)} beatmap requests')
 
     # Create beatmap response
 
@@ -383,13 +440,19 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             )
         )
 
+    player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
+
     player.send_packet(
-        ResponsePacket.BEATMAP_INFO_REPLY,
+        player.packets.BEATMAP_INFO_REPLY,
         bBeatmapInfoReply(map_infos)
     )
 
 @register(RequestPacket.START_SPECTATING)
 def start_spectating(player: Player, player_id: int):
+    if player_id == player.id:
+        player.logger.warning('Player tried to spectate himself?')
+        return
+
     if not (target := session.players.by_id(player_id)):
         return
 
@@ -405,7 +468,7 @@ def start_spectating(player: Player, player_id: int):
     player.spectating = target
 
     # Join their channel
-    player.enqueue_channel(target.spectator_chat)
+    player.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
     target.spectator_chat.add(player)
 
     # Enqueue to others
@@ -415,7 +478,7 @@ def start_spectating(player: Player, player_id: int):
     # Enqueue to target
     target.spectators.append(player)
     target.enqueue_spectator(player.id)
-    target.enqueue_channel(target.spectator_chat)
+    target.enqueue_channel(target.spectator_chat.bancho_channel)
 
     # Check if target joined #spectator
     if target not in target.spectator_chat.users:
@@ -487,6 +550,7 @@ def part_lobby(player: Player):
         p.enqueue_lobby_part(player.id)
 
 @register(RequestPacket.MATCH_INVITE)
+@run_in_thread
 def invite(player: Player, target_id: int):
     if player.silenced:
         return
@@ -509,6 +573,7 @@ def invite(player: Player, target_id: int):
     )
 
 @register(RequestPacket.CREATE_MATCH)
+@run_in_thread
 def create_match(player: Player, bancho_match: bMatch):
     if not player.in_lobby:
         player.logger.warning('Tried to create match, but not in lobby')
@@ -555,6 +620,7 @@ def create_match(player: Player, bancho_match: bMatch):
     )
 
 @register(RequestPacket.JOIN_MATCH)
+@run_in_thread
 def join_match(player: Player, match_join: bMatchJoin):
     if not (match := session.matches[match_join.match_id]):
         # Match was not found
@@ -586,7 +652,8 @@ def join_match(player: Player, match_join: bMatchJoin):
         slot_id = 0
 
     # Join the chat
-    player.enqueue_channel(match.chat.bancho_channel)
+    player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    match.chat.add(player)
 
     slot = match.slots[slot_id]
 
@@ -765,7 +832,6 @@ def lock(player: Player, slot_id: int):
 
     if slot.player is player:
         # Player can't kick themselves
-        player.match.logger.warning(f'{player.name} tried to kick himself?')
         return
 
     if slot.has_player:
@@ -901,8 +967,8 @@ def player_failed(player: Player):
     for p in player.match.players:
         p.enqueue_player_failed(slot_id)
 
+# TODO: There have been some issues when running this inside a thread...
 @register(RequestPacket.MATCH_SCORE_UPDATE)
-@run_in_thread
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:
         return
@@ -954,6 +1020,7 @@ def match_complete(player: Player):
     player.match.update()
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
+@run_in_thread
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
         return
@@ -964,9 +1031,11 @@ def tourney_match_info(player: Player, match_id: int):
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
+@run_in_thread
 def bancho_error(player: Player, error: str):
     session.logger.error(f'Bancho Error Report:\n{error}')
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
+@run_in_thread
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled

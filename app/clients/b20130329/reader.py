@@ -1,5 +1,5 @@
 
-from ..b20130606 import Reader as BaseReader
+from ..b20130815 import Reader as BaseReader
 
 from app.common.objects import bReplayFrameBundle
 from app.common.constants import ReplayAction
@@ -12,7 +12,7 @@ class Reader(BaseReader):
 
         try:
             score_frame = self.read_scoreframe()
-        except Exception:
+        except OverflowError:
             score_frame = None
 
         return bReplayFrameBundle(

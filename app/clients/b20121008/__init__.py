@@ -1,9 +1,4 @@
 
-"""
-This should be around protocol version 12, which is used by b20121008 up to b20120916.
-It has some changes in the bBeatmapInfoReply.
-"""
-
 from .. import (
     DefaultResponsePacket as ResponsePacket,
     DefaultRequestPacket as RequestPacket

@@ -7,6 +7,7 @@ import hashlib
 import config
 import struct
 import socket
+import app
 import os
 
 def setup():
@@ -62,3 +63,10 @@ def is_local_ip(ip: str) -> bool:
             return True
 
     return False
+
+def load_geolocation_web(address: str) -> None:
+    """Fetch geolocation data from web and store it to cache"""
+    if not (result := location.fetch_web(address, is_local_ip(address))):
+        return
+
+    app.session.geolocation_cache[address] = result

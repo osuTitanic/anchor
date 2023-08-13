@@ -1,8 +1,4 @@
 
-"""
-This is protocol version 13, which is used from b20121223 to b20121203.
-"""
-
 from ..packets import PACKETS
 from copy import deepcopy
 
