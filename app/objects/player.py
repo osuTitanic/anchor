@@ -202,11 +202,11 @@ class Player(BanchoProtocol):
 
     @property
     def friends(self) -> List[int]:
-        return [
-            rel.target_id
-            for rel in self.object.relationships
-            if rel.status == 0
-        ]
+        return [rel.target_id for rel in self.object.relationships if rel.status == 0]
+
+    @property
+    def online_friends(self):
+        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players]
 
     @property
     def user_presence(self) -> Optional[bUserPresence]:
@@ -641,6 +641,10 @@ class Player(BanchoProtocol):
         self.send_packet(self.packets.PING)
 
     def enqueue_player(self, player):
+        if self.client.version.date <= 1704:
+            self.enqueue_presence(player)
+            return
+
         if self.client.version.date <= 20121223:
             # USER_PRESENCE_SINGLE is not supported anymore
             self.enqueue_presence(player)
@@ -651,7 +655,16 @@ class Player(BanchoProtocol):
             player.id
         )
 
-    def enqueue_players(self, players):
+    def enqueue_players(self, players, stats_only: bool = False):
+        if self.client.version.date <= 1704:
+            if stats_only:
+                for player in players:
+                    self.enqueue_stats(player)
+            else:
+                for player in players:
+                    self.enqueue_presence(player)
+            return
+
         if self.client.version.date <= 20121223:
             # USER_PRESENCE_BUNDLE is not supported anymore
             for player in players:
@@ -668,6 +681,14 @@ class Player(BanchoProtocol):
             )
 
     def enqueue_presence(self, player):
+        if self.client.version.date <= 1704:
+            self.send_packet(
+                self.packets.USER_STATS,
+                player.user_stats,
+                player.user_presence
+            )
+            return
+
         self.send_packet(
             self.packets.USER_PRESENCE,
             player.user_presence

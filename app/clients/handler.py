@@ -89,6 +89,14 @@ def exit(player: Player, updating: bool):
 def receive_updates(player: Player, filter: PresenceFilter):
     player.filter = filter
 
+    if filter.value <= 0:
+        return
+
+    players = session.players if filter == PresenceFilter.All else \
+              player.online_friends
+
+    player.enqueue_players(players, stats_only=True)
+
 @register(RequestPacket.PRESENCE_REQUEST)
 @run_in_thread
 def presence_request(player: Player, players: List[int]):
