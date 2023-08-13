@@ -140,8 +140,8 @@ def change_status(player: Player, status: bStatusUpdate):
 @register(RequestPacket.REQUEST_STATUS)
 @run_in_thread
 def request_status(player: Player):
-    player.enqueue_stats(player)
     player.reload_rank()
+    player.enqueue_stats(player)
 
 @register(RequestPacket.JOIN_CHANNEL)
 @run_in_thread
