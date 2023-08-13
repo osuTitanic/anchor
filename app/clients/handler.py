@@ -390,6 +390,8 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             beatmap
         ))
 
+    player.logger.info(f'Got {len(maps)} beatmap requests')
+
     # Create beatmap response
 
     map_infos: List[bBeatmapInfo] = []
@@ -437,6 +439,8 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                 beatmap.md5
             )
         )
+
+    player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
 
     player.send_packet(
         ResponsePacket.BEATMAP_INFO_REPLY,
