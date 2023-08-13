@@ -443,7 +443,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
 
     player.send_packet(
-        ResponsePacket.BEATMAP_INFO_REPLY,
+        player.packets.BEATMAP_INFO_REPLY,
         bBeatmapInfoReply(map_infos)
     )
 
