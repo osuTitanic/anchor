@@ -2,7 +2,7 @@
 import time
 import app
 
-PING_INTERVAL = 30
+PING_INTERVAL = 15
 TIMEOUT_SECS  = 45
 
 def ping():
