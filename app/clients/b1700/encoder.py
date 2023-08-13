@@ -94,6 +94,12 @@ def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
         writer.write_stats(stats)
     return writer.stream.get()
 
+@register(ResponsePacket.IRC_JOIN)
+def send_irc_player(username: int):
+    stream = StreamOut()
+    stream.string(username)
+    return stream.get()
+
 @register(ResponsePacket.USER_PRESENCE_SINGLE)
 def send_player(player_id: int):
     return int(player_id).to_bytes(
