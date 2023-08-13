@@ -641,7 +641,7 @@ class Player(BanchoProtocol):
         self.send_packet(self.packets.PING)
 
     def enqueue_player(self, player):
-        if self.client.version.date <= 1704:
+        if self.client.version.date <= 1710:
             self.enqueue_presence(player)
             return
 
@@ -656,7 +656,7 @@ class Player(BanchoProtocol):
         )
 
     def enqueue_players(self, players, stats_only: bool = False):
-        if self.client.version.date <= 1704:
+        if self.client.version.date <= 1710:
             if stats_only:
                 for player in players:
                     self.enqueue_stats(player)
@@ -681,7 +681,7 @@ class Player(BanchoProtocol):
             )
 
     def enqueue_presence(self, player):
-        if self.client.version.date <= 1704:
+        if self.client.version.date <= 1710:
             self.send_packet(
                 self.packets.USER_STATS,
                 player.user_stats,
@@ -892,6 +892,11 @@ class Player(BanchoProtocol):
         self.send_packet(self.packets.MATCH_COMPLETE)
 
     def enqueue_invite(self, message: bMessage):
+        if self.client.version.date <= 1710:
+            # Invite packet not supported
+            self.enqueue_message(message)
+            return
+
         self.send_packet(
             self.packets.INVITE,
             message
