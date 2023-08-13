@@ -411,7 +411,7 @@ class Player(BanchoProtocol):
         if self.client.version.stream != 'tourney':
             if (other_user := app.session.players.by_id(user.id)):
                 other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
-                other_user.close_connection()
+                other_user.login_failed(LoginError.ServerError)
         else:
             if not self.supporter:
                 # Trying to use tourney client without supporter
