@@ -66,10 +66,11 @@ class Channel:
 
     def update(self):
         if not self.public:
-            self.users.send_packet(
-                DefaultResponsePacket.CHANNEL_AVAILABLE,
-                self.bancho_channel
-            )
+            for player in self.users:
+                player.enqueue_channel(
+                    self.bancho_channel,
+                    autojoin=False
+                )
             return
 
         for player in app.session.players:

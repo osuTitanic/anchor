@@ -93,7 +93,6 @@ class Match:
         self.beatmap_id   = beatmap_id
         self.beatmap_name = beatmap_name
         self.beatmap_hash = beatmap_hash
-        self.previous_id  = self.beatmap_id
 
         self.mods = Mods.NoMod
         self.mode = mode
@@ -240,6 +239,7 @@ class Match:
     def change_settings(self, new_match: bMatch):
         if self.freemod != new_match.freemod:
             # Freemod state has been changed
+            self.unready_players()
             self.freemod = new_match.freemod
             self.logger.info(f'Freemod: {self.freemod}')
 
@@ -262,7 +262,7 @@ class Match:
                 for slot in self.slots:
                     slot.mods = Mods.NoMod
 
-        if new_match.beatmap_id == -1:
+        if new_match.beatmap_id <= 0:
             # Host is selecting new map
             self.logger.info('Host is selecting map...')
             self.unready_players()
@@ -270,14 +270,12 @@ class Match:
             self.beatmap_id = -1
             self.beatmap_hash = ""
             self.beatmap_name = ""
-            self.previous_id = self.beatmap_id
 
-        else:
-            if self.previous_id != new_match.beatmap_id:
-                # New map has been chosen
-                self.chat.send_message(app.session.bot_player, f'Selected: {new_match.beatmap_text}')
-                self.logger.info(f'Selected: {new_match.beatmap_text}')
-                self.unready_players()
+        if self.beatmap_hash != new_match.beatmap_checksum:
+            # New map has been chosen
+            self.chat.send_message(app.session.bot_player, f'Selected: {new_match.beatmap_text}')
+            self.logger.info(f'Selected: {new_match.beatmap_text}')
+            self.unready_players()
 
             # Lookup beatmap in database
             beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)

@@ -89,6 +89,14 @@ def exit(player: Player, updating: bool):
 def receive_updates(player: Player, filter: PresenceFilter):
     player.filter = filter
 
+    if filter.value <= 0:
+        return
+
+    players = session.players if filter == PresenceFilter.All else \
+              player.online_friends
+
+    player.enqueue_players(players, stats_only=True)
+
 @register(RequestPacket.PRESENCE_REQUEST)
 @run_in_thread
 def presence_request(player: Player, players: List[int]):
@@ -132,8 +140,8 @@ def change_status(player: Player, status: bStatusUpdate):
 @register(RequestPacket.REQUEST_STATUS)
 @run_in_thread
 def request_status(player: Player):
-    player.enqueue_stats(player)
     player.reload_rank()
+    player.enqueue_stats(player)
 
 @register(RequestPacket.JOIN_CHANNEL)
 @run_in_thread
@@ -435,7 +443,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
 
     player.send_packet(
-        ResponsePacket.BEATMAP_INFO_REPLY,
+        player.packets.BEATMAP_INFO_REPLY,
         bBeatmapInfoReply(map_infos)
     )
 
