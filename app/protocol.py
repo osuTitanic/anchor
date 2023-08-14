@@ -24,6 +24,7 @@ class BanchoProtocol(Protocol):
     buffer  = b""
     busy    = False
     proxied = False
+    connection_timeout = 5
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)

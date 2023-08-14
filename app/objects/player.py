@@ -40,6 +40,7 @@ from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, Tuple, List, Dict, Set
 from datetime import datetime, timedelta
+from threading import Timer
 from enum import Enum
 from copy import copy
 
@@ -252,6 +253,14 @@ class Player(BanchoProtocol):
         except AttributeError:
             return None
 
+    def connectionMade(self):
+        super().connectionMade()
+        # Create connection timeout
+        Timer(
+            self.connection_timeout,
+            self.check_connection
+        ).start()
+
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         app.session.players.remove(self)
 
@@ -273,6 +282,16 @@ class Player(BanchoProtocol):
             app.clients.handler.leave_match(self)
 
         super().connectionLost(reason)
+
+    def close_connection(self, error: Optional[Exception] = None):
+        self.connectionLost()
+        super().close_connection(error)
+
+    def check_connection(self):
+        """Check if user has logged in and log out if they haven't"""
+        if not self.object:
+            self.transport.write(b'no.\r\n')
+            self.close_connection()
 
     def reload_object(self) -> DBUser:
         """Reload player stats from database"""
@@ -318,10 +337,6 @@ class Player(BanchoProtocol):
             self.id,
             self.status.bancho_status
         )
-
-    def close_connection(self, error: Optional[Exception] = None):
-        self.connectionLost()
-        super().close_connection(error)
 
     def send_error(self, reason=-5, message=""):
         if self.encoders and message:
