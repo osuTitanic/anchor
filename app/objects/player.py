@@ -542,11 +542,13 @@ class Player(BanchoProtocol):
                 f'-> "{packet.name}": {args}'
             )
         except KeyError as e:
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Could not find decoder for "{packet.name}": {e}'
             )
             return
         except ValueError as e:
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Could not find packet with id "{packet_id}": {e}'
             )
