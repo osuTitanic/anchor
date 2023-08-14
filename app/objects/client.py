@@ -103,8 +103,15 @@ class OsuClient:
             build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
         except ValueError:
             # Workaround for older clients
-            build_version, utc_offset, display_city, client_hash = line.split('|')
             friendonly_dms = False
+
+            if line.count('|') > 3:
+                build_version, utc_offset, display_city, client_hash = line.split('|')
+            else:
+                # Client hash is not supported...
+                build_version, utc_offset, display_city = line.split('|')
+                # Generate pseudo client hash
+                client_hash = f'{hashlib.md5(build_version.encode()).hexdigest()}::{hashlib.md5(b"").hexdigest()}'
 
         if not (geolocation := app.session.geolocation_cache.get(ip)):
             geolocation = location.fetch_geolocation(
