@@ -529,8 +529,6 @@ class Player(BanchoProtocol):
         # TODO: Check banned hardware
 
     def packet_received(self, packet_id: int, stream: StreamIn):
-        self.last_response = time.time()
-
         if self.is_bot:
             return
 

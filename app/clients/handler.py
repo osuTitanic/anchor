@@ -38,6 +38,7 @@ from ..common.constants import (
 
 from typing import Callable, Tuple, List
 from concurrent.futures import Future
+from datetime import datetime
 from threading import Thread
 from copy import copy
 
@@ -78,7 +79,7 @@ def run_in_thread(func):
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
-    pass
+    player.last_response = datetime.now()
 
 @register(RequestPacket.EXIT)
 @run_in_thread
