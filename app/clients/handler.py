@@ -148,20 +148,26 @@ def request_status(player: Player):
 @run_in_thread
 def handle_channel_join(player: Player, channel_name: str):
     try:
+        channel = None
+
         if channel_name == '#spectator':
             if player.spectating:
-                channel_name = player.spectating.spectator_chat.name
+                channel = player.spectating.spectator_chat
             else:
-                channel_name = player.spectator_chat.name
+                channel = player.spectator_chat
 
         elif channel_name == '#multiplayer':
-            channel_name = player.match.chat.name
+            channel = player.match.chat
     except AttributeError:
         player.revoke_channel(channel_name)
-
-    if not (channel := session.channels.by_name(channel_name)):
-        player.revoke_channel(channel_name)
         return
+
+    if not channel:
+        channel = session.channels.by_name(channel_name)
+
+        if not channel:
+            player.revoke_channel(channel_name)
+            return
 
     channel.add(player)
 
@@ -169,20 +175,26 @@ def handle_channel_join(player: Player, channel_name: str):
 @run_in_thread
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
     try:
+        channel = None
+
         if channel_name == '#spectator':
             if player.spectating:
-                channel_name = player.spectating.spectator_chat.name
+                channel = player.spectating.spectator_chat
             else:
-                channel_name = player.spectator_chat.name
+                channel = player.spectator_chat
 
         elif channel_name == '#multiplayer':
-            channel_name = player.match.chat.name
+            channel = player.match.chat
     except AttributeError:
         player.revoke_channel(channel_name)
-
-    if not (channel := session.channels.by_name(channel_name)):
-        player.revoke_channel(channel_name)
         return
+
+    if not channel:
+        channel = session.channels.by_name(channel_name)
+
+        if not channel:
+            player.revoke_channel(channel_name)
+            return
 
     if kick:
         player.revoke_channel(channel_name)
@@ -192,20 +204,26 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 @register(RequestPacket.SEND_MESSAGE)
 def send_message(player: Player, message: bMessage):
     try:
+        channel = None
+
         if message.target == '#spectator':
             if player.spectating:
-                message.target = player.spectating.spectator_chat.name
+                channel = player.spectating.spectator_chat
             else:
-                message.target = player.spectator_chat.name
+                channel = player.spectator_chat
 
         elif message.target == '#multiplayer':
-            message.target = player.match.chat.name
+            channel = player.match.chat
     except AttributeError:
         player.revoke_channel(message.target)
-
-    if not (channel := session.channels.by_name(message.target)):
-        player.revoke_channel(message.target)
         return
+
+    if not channel:
+        channel = session.channels.by_name(message.target)
+
+        if not channel:
+            player.revoke_channel(message.target)
+            return
 
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
