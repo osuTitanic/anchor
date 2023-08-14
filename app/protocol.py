@@ -14,6 +14,7 @@ import traceback
 import logging
 import config
 import utils
+import gzip
 
 IPAddress = Union[IPv4Address, IPv6Address]
 
@@ -107,11 +108,15 @@ class BanchoProtocol(Protocol):
 
                 try:
                     packet = stream.u16()
-                    compression = stream.bool() # Gzip compression is only used in very old clients
+                    compression = stream.bool()
                     payload = stream.read(stream.u32())
                 except OverflowError:
                     # Wait for next buffer
                     break
+
+                if compression:
+                    # gzip compression is only used in very old clients
+                    payload = gzip.decompress(payload)
 
                 self.packet_received(
                     packet_id=packet,
