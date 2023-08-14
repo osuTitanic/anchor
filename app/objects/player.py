@@ -529,10 +529,10 @@ class Player(BanchoProtocol):
         # TODO: Check banned hardware
 
     def packet_received(self, packet_id: int, stream: StreamIn):
-        self.last_response = time.time()
-
         if self.is_bot:
             return
+
+        self.last_response = time.time()
 
         try:
             packet = self.request_packets(packet_id)
@@ -544,11 +544,13 @@ class Player(BanchoProtocol):
                 f'-> "{packet.name}": {args}'
             )
         except KeyError as e:
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Could not find decoder for "{packet.name}": {e}'
             )
             return
         except ValueError as e:
+            if config.DEBUG: traceback.print_exc()
             self.logger.error(
                 f'Could not find packet with id "{packet_id}": {e}'
             )
