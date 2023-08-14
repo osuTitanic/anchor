@@ -38,9 +38,10 @@ from ..common.constants import (
 
 from typing import Callable, Tuple, List
 from concurrent.futures import Future
-from datetime import datetime
 from threading import Thread
 from copy import copy
+
+import time
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
@@ -79,7 +80,7 @@ def run_in_thread(func):
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
-    player.last_response = datetime.now()
+    pass
 
 @register(RequestPacket.EXIT)
 @run_in_thread

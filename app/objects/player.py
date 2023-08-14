@@ -532,6 +532,8 @@ class Player(BanchoProtocol):
         if self.is_bot:
             return
 
+        self.last_response = time.time()
+
         try:
             packet = self.request_packets(packet_id)
 
