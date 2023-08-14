@@ -17,6 +17,6 @@ If you have any questions, feel free to contact me: [@Lekuru/Levi](https://githu
 - [x] User stats/presence
 - [x] Support for multiple clients at once
 - [x] Tourney client support
-- [ ] Commands
+- [x] Commands
 
 You can view the todo's [here](https://github.com/users/Lekuruu/projects/2).
