@@ -2,6 +2,7 @@
 from typing import List, Union, Optional, NamedTuple, Callable
 from dataclasses import dataclass
 
+from .common.cache import leaderboards
 from .common.database.repositories import (
     beatmapsets,
     users,
@@ -195,14 +196,14 @@ def search(ctx: Context):
 
 @command(['where', 'location'])
 def where(ctx: Context):
-    """- Get a player's location"""
+    """<name> - Get a player's current location"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
 
     name = ' '.join(ctx.args[0:])
 
     if not (target := app.session.players.by_name(name)):
-        return ['This player was not found or is not currently online']
+        return ['Player is not online']
 
     if not target.client.ip:
         return ['The players location data could not be resolved']
@@ -211,6 +212,28 @@ def where(ctx: Context):
     location_string = target.client.ip.country_name
 
     return [f'{target.name} is in {location_string} {city_string}']
+
+@command(['stats'])
+def stats(ctx: Context):
+    """<name> - Get the stats of a player"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return ['Player is not online']
+
+    global_rank = leaderboards.global_rank(target.id, target.status.mode.value)
+    score_rank = leaderboards.score_rank(target.id, target.status.mode.value)
+
+    return [
+        f'Stats for [http://osu.{config.DOMAIN_NAME}/u/{target.id} {target.name}] is {target.status.action.name}:',
+        f'  Score:    {format(target.current_stats.rscore, ",d")} (#{score_rank})',
+        f'  Plays:    {target.current_stats.playcount} (lv{target.level})',
+        f'  Accuracy: {round(target.current_stats.acc * 100, 2)}%',
+        f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
+    ]
 
 @command(['monitor'], Permissions.Admin, hidden=True)
 def monitor(ctx: Context) -> Optional[List]:
@@ -222,11 +245,11 @@ def monitor(ctx: Context) -> Optional[List]:
     name = ' '.join(ctx.args[0:])
 
     if not (player := app.session.players.by_name(name)):
-        return ['Player is not online.']
+        return ['Player is not online']
 
     player.enqueue_monitor()
 
-    return ['Player has been monitored.']
+    return ['Player has been monitored']
 
 @command(['alert', 'announce', 'broadcast'], Permissions.Admin, hidden=True)
 def alert(ctx: Context) -> Optional[List]:
