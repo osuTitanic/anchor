@@ -19,7 +19,7 @@ from app.common.objects import (
     bMatch
 )
 
-from app.common.constants import strings
+from app.common.constants import strings, level
 from app.common.cache import leaderboards
 from app.common.cache import status
 
@@ -252,6 +252,20 @@ class Player(BanchoProtocol):
             )
         except AttributeError:
             return None
+
+    @property
+    def level(self) -> int:
+        score = self.current_stats.tscore
+        added_score = 0
+        index = 0
+
+        while added_score + level.NEXT_LEVEL[index] < score:
+            added_score += level.NEXT_LEVEL[index]
+            index += 1
+
+        return round(
+            (index + 1) + (score - added_score) / level.NEXT_LEVEL[index]
+        )
 
     def connectionMade(self):
         super().connectionMade()
