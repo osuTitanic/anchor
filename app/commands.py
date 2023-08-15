@@ -8,7 +8,7 @@ from .common.database.repositories import (
     logs
 )
 
-from .common.constants import Permissions, ClientStatus
+from .common.constants import Permissions
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -247,7 +247,6 @@ def alertuser(ctx: Context) -> Optional[List]:
 # TODO: !moderated
 # TODO: !kick
 # TODO: !kill
-# TODO: !search
 
 def get_command(
     player: Player,
