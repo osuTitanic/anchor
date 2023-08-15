@@ -115,7 +115,7 @@ class Channel:
 
         self.update()
 
-    def send_message(self, sender, message: str, ignore_privs=False):
+    def send_message(self, sender, message: str, ignore_privs=False, exclude_sender=True):
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
             sender.revoke_channel(self.display_name)
@@ -133,8 +133,11 @@ class Channel:
 
             self.logger.info(f'[{sender.name}]: {message}')
 
-            # Filter out sender
-            users = {user for user in self.users if user != sender}
+            if exclude_sender:
+                # Filter out sender
+                users = {user for user in self.users if user != sender}
+            else:
+                users = self.users
 
             for user in users:
                 # Enqueue message to every user inside this channel
