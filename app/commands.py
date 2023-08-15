@@ -193,6 +193,25 @@ def search(ctx: Context):
 
     return [f'{result.link} [{status}]']
 
+@command(['where', 'location'])
+def where(ctx: Context):
+    """- Get a player's location"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return ['This player was not found or is not currently online']
+
+    if not target.client.ip:
+        return ['The players location data could not be resolved']
+
+    city_string = f"({target.client.ip.city})" if target.client.display_city else ""
+    location_string = target.client.ip.country_name
+
+    return [f'{target.name} is in {location_string} {city_string}']
+
 @command(['monitor'], Permissions.Admin, hidden=True)
 def monitor(ctx: Context) -> Optional[List]:
     """<name> - Monitor a player"""
@@ -240,7 +259,6 @@ def alertuser(ctx: Context) -> Optional[List]:
 # TODO: !unsilence
 # TODO: !restrict
 # TODO: !unrestrict
-# TODO: !where
 # TODO: !stats
 # TODO: !rank
 # TODO: !faq
