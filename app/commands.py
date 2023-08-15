@@ -3,11 +3,12 @@ from typing import List, Union, Optional, NamedTuple, Callable
 from dataclasses import dataclass
 
 from .common.database.repositories import (
+    beatmapsets,
     users,
     logs
 )
 
-from .common.constants import Permissions
+from .common.constants import Permissions, ClientStatus
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -169,9 +170,32 @@ def report(ctx: Context) -> Optional[List]:
 
     return ['Player was reported.']
 
+@command(['search'], Permissions.Supporter)
+def search(ctx: Context):
+    """<query> - Search a beatmap"""
+    query = ' '.join(ctx.args[0:])
+
+    if len(query) <= 3:
+        return ['Query too short']
+
+    if not (result := beatmapsets.search_one(query)):
+        return ['No matches found']
+
+    status = {
+        -2: 'Graveyarded',
+        -1: 'WIP',
+         0: 'Pending',
+         1: 'Ranked',
+         2: 'Approved',
+         3: 'Qualified',
+         4: 'Loved'
+    }[result.status]
+
+    return [f'{result.link} [{status}]']
+
 @command(['monitor'], Permissions.Admin, hidden=True)
 def monitor(ctx: Context) -> Optional[List]:
-    """<name>"""
+    """<name> - Monitor a player"""
 
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
