@@ -436,6 +436,9 @@ def execute(
         command_message
     )
 
+    if not command:
+        return
+
     # Send to others
     if not command.hidden and type(target) == Channel:
         target.send_message(
