@@ -27,9 +27,13 @@ class Players(List[Player]):
     def in_lobby(self) -> Set[Player]:
         return {p for p in self if p.in_lobby}
 
+    @property
+    def tourney_clients(self) -> List[Player]:
+        return [p for p in self if p.is_tourney_client]
+
     def append(self, player: Player) -> None:
         self.send_player(player)
-        if player.id not in self.ids:
+        if player.id not in self.ids or player.is_tourney_client:
             return super().append(player)
     
     def remove(self, player: Player) -> None:
@@ -56,6 +60,9 @@ class Players(List[Player]):
             if p.name == name:
                 return p
         return None
+
+    def get_all_tourney_clients(self, id: int) -> List[Player]:
+        return [p for p in self.tourney_clients if p.id == id]
 
     def send_packet(self, packet: Enum, *args):
         for p in self:

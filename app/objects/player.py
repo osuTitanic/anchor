@@ -267,6 +267,10 @@ class Player(BanchoProtocol):
             (index + 1) + (score - added_score) / level.NEXT_LEVEL[index]
         )
 
+    @property
+    def is_tourney_client(self) -> bool:
+        return self.client.version.name == 'tourney'
+
     def connectionMade(self):
         super().connectionMade()
         # Create connection timeout
@@ -283,12 +287,15 @@ class Player(BanchoProtocol):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        app.session.players.send_user_quit(
-            bUserQuit(
-                self.id,
-                QuitState.Gone # TODO: IRC
+        tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+
+        if len(tourney_clients) <= 0:
+            app.session.players.send_user_quit(
+                bUserQuit(
+                    self.id,
+                    QuitState.Gone # TODO: IRC
+                )
             )
-        )
 
         app.session.channels.remove(self.spectator_chat)
 
@@ -437,7 +444,7 @@ class Player(BanchoProtocol):
         self.stats = user.stats
         self.object = user
 
-        if self.client.version.stream != 'tourney':
+        if not self.is_tourney_client:
             if (other_user := app.session.players.by_id(user.id)):
                 other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
                 other_user.login_failed(LoginError.ServerError)
@@ -445,6 +452,14 @@ class Player(BanchoProtocol):
             if not self.supporter:
                 # Trying to use tourney client without supporter
                 self.login_failed(LoginError.Authentication)
+                return
+
+            # Check amount of tourney clients that are online
+            tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+
+            if len(tourney_clients) >= 8:
+                self.logger.warning('Tried to log in with more than 8 tourney clients')
+                self.close_connection()
                 return
 
         self.status.mode = GameMode(self.object.preferred_mode)

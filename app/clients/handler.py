@@ -481,7 +481,7 @@ def start_spectating(player: Player, player_id: int):
 
     # TODO: Check osu! mania support
 
-    if (player.spectating) or (player in target.spectators):
+    if (player.spectating) or (player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
         return
 
@@ -501,7 +501,7 @@ def start_spectating(player: Player, player_id: int):
     target.enqueue_channel(target.spectator_chat.bancho_channel)
 
     # Check if target joined #spectator
-    if target not in target.spectator_chat.users:
+    if target not in target.spectator_chat.users and not player.is_tourney_client:
         target.spectator_chat.add(target)
 
 @register(RequestPacket.STOP_SPECTATING)
