@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from .common.cache import leaderboards
 from .common.database.repositories import (
     beatmapsets,
+    scores,
+    stats,
     users,
     logs
 )
@@ -222,7 +224,7 @@ def where(ctx: Context):
     return [f'{target.name} is in {location_string} {city_string}']
 
 @command(['stats'])
-def stats(ctx: Context):
+def get_stats(ctx: Context):
     """<name> - Get the stats of a player"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
@@ -345,9 +347,43 @@ def unsilence(ctx: Context):
 
     return [f'{player.name} was unsilenced.']
 
-# TODO: !restrict
-# TODO: !unrestrict
-# TODO: !stats
+@command(['restrict', 'ban'], Permissions.Admin)
+def restrict(ctx: Context) -> Optional[List]:
+    """<name> (<reason>)"""
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name> (<reason>)']
+
+    username = ctx.args[0].replace('_', ' ')
+    reason   = ' '.join(ctx.args[1:])
+
+    if not (player := app.session.players.by_name(username)):
+        # Player is not online, or was not found
+        player = users.fetch_by_name(username)
+
+        if not player:
+            return [f'Player "{username}" was not found']
+
+        player.restricted = True
+        player.permissions = 0
+
+        # Update user
+        users.update(player.id,
+            {
+                'restricted': True,
+                'permissions': 0
+            }
+        )
+        stats.delete_all(player.id)
+        scores.hide_all(player.id)
+    else:
+        # Player is online
+        player.restrict(reason)
+
+    # TODO: Infringements Table
+
+    return [f'{player.name} was restricted.']
+
 # TODO: !rank
 # TODO: !faq
 # TODO: !moderated
