@@ -374,6 +374,10 @@ def restrict(ctx: Context) -> Optional[List]:
                 'permissions': 0
             }
         )
+        leaderboards.remove(
+            player.id,
+            player.country
+        )
         stats.delete_all(player.id)
         scores.hide_all(player.id)
     else:
@@ -383,6 +387,45 @@ def restrict(ctx: Context) -> Optional[List]:
     # TODO: Infringements Table
 
     return [f'{player.name} was restricted.']
+
+@command(['unrestrict', 'unban'], Permissions.Admin)
+def unrestrict(ctx: Context) -> Optional[List]:
+    """<name> <restore scores (true/false)>"""
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name> <restore scores (true/false)>']
+
+    username = ctx.args[0].replace('_', ' ')
+    restore_scores = False
+
+    if len(ctx.args) > 0:
+        restore_scores = eval(ctx.args[1].capitalize())
+
+    if not (player := users.fetch_by_name(username)):
+        return [f'Player "{username}" was not found.']
+
+    if not player.restricted:
+        return [f'Player "{username}" is not restricted.']
+
+    users.update(player.id,
+        {
+            'restricted': False,
+            'permissions': 5 if config.FREE_SUPPORTER else 1
+        }
+    )
+
+    if restore_scores:
+        try:
+            scores.restore_hidden_scores(player.id)
+            stats.restore(player.id)
+        except Exception as e:
+            if config.DEBUG: traceback.print_exc()
+            app.session.logger.error(
+                f'Failed to restore scores of player "{player.name}": {e}'
+            )
+            return ['Failed to restore scores, but player was unrestricted.']
+
+    return [f'Player "{username}" was unrestricted.']
 
 # TODO: !rank
 # TODO: !faq
