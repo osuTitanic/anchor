@@ -105,7 +105,7 @@ class OsuClient:
             # Workaround for older clients
             friendonly_dms = False
 
-            if line.count('|') > 3:
+            if line.count('|') > 2:
                 build_version, utc_offset, display_city, client_hash = line.split('|')
             else:
                 # Client hash is not supported...
