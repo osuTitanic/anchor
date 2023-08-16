@@ -1,8 +1,8 @@
 
 from twisted.internet import reactor
 
-from app.server import BanchoFactory
 from app.logging import Console, File
+from app.server import BanchoFactory
 
 import logging
 import config
