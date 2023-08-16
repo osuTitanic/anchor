@@ -614,6 +614,11 @@ def create_match(player: Player, bancho_match: bMatch):
         player.enqueue_matchjoin_fail()
         return
 
+    if player.is_tourney_client:
+        player.logger.warning('Tried to create match, but was inside tourney client')
+        player.enqueue_matchjoin_fail()
+        return
+
     if player.silenced:
         player.logger.warning('Tried to create match, but was silenced')
         player.enqueue_matchjoin_fail()
@@ -661,6 +666,11 @@ def join_match(player: Player, match_join: bMatchJoin):
         player.logger.warning(f'{player.name} tried to join a match that does not exist')
         player.enqueue_matchjoin_fail()
         player.enqueue_match_disband(match_join.match_id)
+        return
+
+    if player.is_tourney_client:
+        player.logger.warning('Tried to join match, but was inside tourney client')
+        player.enqueue_matchjoin_fail()
         return
 
     if player.match:
@@ -1057,6 +1067,9 @@ def match_complete(player: Player):
 @run_in_thread
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
+        return
+
+    if not player.is_tourney_client:
         return
 
     if not (match := session.matches[match_id]):
