@@ -24,12 +24,16 @@ class Players(List[Player]):
         return {p.id for p in self}
 
     @property
-    def in_lobby(self) -> Set[Player]:
-        return {p for p in self if p.in_lobby}
+    def in_lobby(self) -> List[Player]:
+        return [p for p in self if p.in_lobby]
 
     @property
     def tourney_clients(self) -> List[Player]:
         return [p for p in self if p.is_tourney_client]
+
+    @property
+    def normal_clients(self) -> List[Player]:
+        return [p for p in self if not p.is_tourney_client]
 
     def append(self, player: Player) -> None:
         self.send_player(player)
@@ -48,7 +52,12 @@ class Players(List[Player]):
                 p.enqueue(data)
     
     def by_id(self, id: int) -> Optional[Player]:
-        for p in self:
+        for p in self.normal_clients:
+            if p.id == id:
+                return p
+            if p.id == -id:
+                return p
+        for p in self.tourney_clients:
             if p.id == id:
                 return p
             if p.id == -id:
@@ -56,7 +65,10 @@ class Players(List[Player]):
         return None
 
     def by_name(self, name: str) -> Optional[Player]:
-        for p in self:
+        for p in self.normal_clients:
+            if p.name == name:
+                return p
+        for p in self.tourney_clients:
             if p.name == name:
                 return p
         return None

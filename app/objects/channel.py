@@ -84,7 +84,7 @@ class Channel:
         # Update player's silence duration
         player.silenced
 
-        if player in self.users:
+        if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
             if not no_response:
                 player.join_success(self.display_name)
@@ -149,6 +149,20 @@ class Channel:
                         sender.id
                     )
                 )
+
+                # Send to their tourney clients
+                for client in app.session.players.get_all_tourney_clients(user.id):
+                    if client.address.port == user.address.port:
+                        continue
+
+                    client.enqueue_message(
+                        bMessage(
+                            sender.name,
+                            message,
+                            self.display_name,
+                            sender.id
+                        )
+                    )
             return
 
         # Player was silenced or is not allowed to write

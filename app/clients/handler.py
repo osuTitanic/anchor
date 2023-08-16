@@ -314,6 +314,20 @@ def send_private_message(sender: Player, message: bMessage):
         )
     )
 
+    # Send to their tourney clients
+    for client in session.players.get_all_tourney_clients(target.id):
+        if client.address.port == target.address.port:
+            continue
+
+        client.enqueue_message(
+            bMessage(
+                sender.name,
+                message.content,
+                sender.name,
+                sender.id
+            )
+        )
+
 @register(RequestPacket.SET_AWAY_MESSAGE)
 @run_in_thread
 def away_message(player: Player, message: bMessage):
