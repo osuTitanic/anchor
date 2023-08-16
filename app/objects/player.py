@@ -269,7 +269,7 @@ class Player(BanchoProtocol):
 
     @property
     def is_tourney_client(self) -> bool:
-        return self.client.version.name == 'tourney'
+        return self.client.version.stream == 'tourney'
 
     def connectionMade(self):
         super().connectionMade()
