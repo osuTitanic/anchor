@@ -1,5 +1,7 @@
 
 from typing import List, Union, Optional, NamedTuple, Callable
+from pytimeparse.timeparse import timeparse
+from datetime import timedelta, datetime
 from dataclasses import dataclass
 
 from .common.cache import leaderboards
@@ -15,6 +17,7 @@ from .common.objects import bMessage
 from .objects.player import Player
 
 import traceback
+import timeago
 import config
 import random
 import app
@@ -67,9 +70,14 @@ class CommandSet:
 
 commands: List[Command] = []
 sets = [
-    mp_commands := CommandSet('mp', 'Multiplayer Commands')
-    # TODO: Add more...
+    mp_commands := CommandSet('mp', 'Multiplayer Commands'),
+    system_commands := CommandSet('system', 'System Commands')
 ]
+
+# TODO: !system maintanance
+# TODO: !system deploy
+# TODO: !system restart
+# TODO: !system shutdown
 
 def command(
     aliases: List[str],
@@ -278,8 +286,65 @@ def alertuser(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {player.name}.']
 
-# TODO: !silence
-# TODO: !unsilence
+@command(['silence', 'mute'], Permissions.Admin)
+def silence(ctx: Context) -> Optional[List]:
+    """<username> <duration> (<reason>)"""
+
+    if len(ctx.args) < 2:
+        return [f'Invalid syntax: !{ctx.trigger} <username> <duration> (<reason>)']
+
+    name = ctx.args[0].replace('_', ' ')
+    duration = timeparse(ctx.args[1])
+    reason = ' '.join(ctx.args[2:])
+
+    if (player := app.session.players.by_name(name)):
+        player.silence(duration, reason)
+        silence_end = player.object.silence_end
+    else:
+        if not (player := users.fetch_by_name(name)):
+            return [f'Player "{name}" was not found.']
+
+        if player.silence_end:
+            player.silence_end += timedelta(seconds=duration)
+        else:
+            player.silence_end = datetime.now() + timedelta(seconds=duration)
+
+        users.update(
+            player.id,
+            {
+                'silence_end': player.silence_end
+            }
+        )
+
+        silence_end = player.silence_end
+
+    time_string = timeago.format(silence_end)
+    time_string = time_string.replace('in ', '')
+
+    # TODO: Infringements Table
+
+    return [f'{player.name} was silenced for {time_string}']
+
+@command(['unsilence', 'unmute'], Permissions.Admin)
+def unsilence(ctx: Context):
+    """- <username>"""
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <name>']
+
+    name = ctx.args[0].replace('_', ' ')
+
+    if (player := app.session.players.by_name(name)):
+        player.unsilence()
+        return [f'{player.name} was unsilenced.']
+
+    if not (player := users.fetch_by_name(name)):
+        return [f'Player "{name}" was not found.']
+
+    users.update(player.id, {'silence_end': None})
+
+    return [f'{player.name} was unsilenced.']
+
 # TODO: !restrict
 # TODO: !unrestrict
 # TODO: !stats
