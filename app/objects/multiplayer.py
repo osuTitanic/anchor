@@ -309,6 +309,11 @@ class Match:
 
             self.logger.info(f'Team type: {self.team_type.name}')
 
+        if self.type != new_match.type:
+            # Changed match type
+            self.type = new_match.type
+            self.logger.info(f'Match type: {self.type.name}')
+
         if self.scoring_type != new_match.scoring_type:
             # Changed scoring type
             self.scoring_type = new_match.scoring_type
