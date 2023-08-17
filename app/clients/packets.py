@@ -34,5 +34,7 @@ PACKETS: Dict[int, list] = {
     1150:     [{}, {}, PacketEnum, PacketEnum], # 4
     679:      [{}, {}, PacketEnum, PacketEnum], # 4
     675:      [{}, {}, PacketEnum, PacketEnum], # 4 (UserStats)
-    591:      [{}, {}, PacketEnum, PacketEnum]  # 4 (UserStats)
+    591:      [{}, {}, PacketEnum, PacketEnum], # 4 (UserStats)
+    590:      [{}, {}, PacketEnum, PacketEnum], # 4 (NoMatchPasswords)
+    558:      [{}, {}, PacketEnum, PacketEnum]  # 4 (NoMatchPasswords)
 }

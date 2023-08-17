@@ -19,3 +19,4 @@ from . import b20120704
 from . import b1700
 from . import b1150
 from . import b675
+from . import b590
