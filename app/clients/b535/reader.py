@@ -40,7 +40,12 @@ class Reader(BaseReader):
         ]
 
         host_id = self.stream.s32()
-        mode = GameMode(self.stream.u8())
+
+        try:
+            mode = GameMode(self.stream.u8())
+        except OverflowError:
+            # Just to be sure...
+            mode = GameMode.Osu
 
         scoring_type = MatchScoringTypes.Combo
         team_type = MatchTeamTypes.HeadToHead
