@@ -520,7 +520,7 @@ class Player(BanchoProtocol):
         self.enqueue_stats(self)
 
         # Bot presence
-        self.enqueue_presence(app.session.bot_player)
+        self.enqueue_irc_player(app.session.bot_player)
 
         # Friends
         self.enqueue_friends()
@@ -701,7 +701,10 @@ class Player(BanchoProtocol):
             player.id
         )
 
-    def enqueue_players(self, players, stats_only: bool = False):
+    def enqueue_players(self, players: list, stats_only: bool = False):
+        if app.session.bot_player in players:
+            players.remove(app.session.bot_player)
+
         if self.client.version.date <= 1710:
             if stats_only:
                 for player in players:
@@ -710,6 +713,8 @@ class Player(BanchoProtocol):
                 for player in players:
                     self.enqueue_presence(player)
             return
+
+        # TODO: Enqueue irc players
 
         if self.client.version.date <= 20121223:
             # USER_PRESENCE_BUNDLE is not supported anymore
@@ -725,6 +730,33 @@ class Player(BanchoProtocol):
                 self.packets.USER_PRESENCE_BUNDLE,
                 [player.id for player in chunk]
             )
+
+    def enqueue_irc_player(self, player):
+        if self.client.version.date <= 1710:
+            self.send_packet(
+                self.packets.IRC_JOIN,
+                player.name
+            )
+            return
+
+        self.enqueue_presence(player)
+
+    def enqueue_irc_leave(self, player):
+        if self.client.version.date <= 1710:
+            self.send_packet(
+                self.packets.IRC_QUIT,
+                player.name
+            )
+            return
+
+        # TODO: Refactor
+
+        quit_state = QuitState.Gone
+
+        if (app.session.players.by_id(player.id)):
+            quit_state = QuitState.OsuRemaining
+
+        self.enqueue_quit(quit_state)
 
     def enqueue_presence(self, player):
         if self.client.version.date <= 1710:
