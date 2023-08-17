@@ -11,5 +11,6 @@ from copy import deepcopy
 
 # Inherit packets from 536
 PACKETS[503] = deepcopy(PACKETS[504])
+PACKETS[487] = deepcopy(PACKETS[504])
 
 from . import encoder
