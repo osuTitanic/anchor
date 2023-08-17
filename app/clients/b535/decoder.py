@@ -26,3 +26,7 @@ def change_settings(stream: StreamIn):
 @register(RequestPacket.MATCH_CHANGE_PASSWORD)
 def change_password(stream: StreamIn):
     return Reader(stream).read_match().password
+
+@register(RequestPacket.BEATMAP_INFO)
+def beatmap_info(stream: StreamIn):
+    return Reader(stream).read_beatmap_request()

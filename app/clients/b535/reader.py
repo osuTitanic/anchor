@@ -1,5 +1,6 @@
 
 from app.common.objects import (
+    bBeatmapInfoRequest,
     bMatch,
     bSlot
 )
@@ -81,3 +82,13 @@ class Reader(BaseReader):
             False,
             0
         )
+
+    def read_beatmap_request(self) -> bBeatmapInfoRequest:
+        filenames = [self.stream.string() for m in range(self.stream.s32())]
+
+        try:
+            ids = [self.stream.s32() for m in range(self.stream.s32())]
+        except OverflowError:
+            ids = []
+
+        return bBeatmapInfoRequest(filenames, ids)
