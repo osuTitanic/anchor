@@ -38,5 +38,10 @@ PACKETS: Dict[int, list] = {
     590:      [{}, {}, PacketEnum, PacketEnum], # 4 (NoMatchPasswords)
     558:      [{}, {}, PacketEnum, PacketEnum], # 4 (NoMatchPasswords)
     553:      [{}, {}, PacketEnum, PacketEnum], # 3
-    536:      [{}, {}, PacketEnum, PacketEnum]  # 3
+    536:      [{}, {}, PacketEnum, PacketEnum], # 3
+    535:      [{}, {}, PacketEnum, PacketEnum], # 2
+    504:      [{}, {}, PacketEnum, PacketEnum]  # 2
 }
+
+# PV1: bBeatmapInfo changes
+# PV0: No playmode in bMatch

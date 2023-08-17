@@ -21,3 +21,4 @@ from . import b1150
 from . import b675
 from . import b590
 from . import b553
+from . import b535
