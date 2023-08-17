@@ -9,8 +9,8 @@ from .writer import Writer
 from ..packets import PACKETS
 from copy import deepcopy
 
-# Inherit packets from 1700
-PACKETS[1150] = deepcopy(PACKETS[1700])
-PACKETS[679] = deepcopy(PACKETS[1700])
+# Inherit packets from 679
+PACKETS[675] = deepcopy(PACKETS[679])
+PACKETS[591] = deepcopy(PACKETS[679])
 
 from . import encoder
