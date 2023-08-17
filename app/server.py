@@ -8,7 +8,7 @@ from .objects.channel import Channel
 from .objects.player import Player
 from .common.cache import status
 
-from .jobs import pings, events
+from .jobs import pings, events, rank_indexing
 
 import app
 
@@ -42,6 +42,7 @@ class BanchoFactory(Factory):
         app.session.logger.info('Loading jobs...')
         app.session.jobs.submit(pings.ping_job)
         app.session.jobs.submit(events.event_listener)
+        app.session.jobs.submit(rank_indexing.index_ranks)
 
         app.session.logger.info(f'Starting factory: {self}')
 
