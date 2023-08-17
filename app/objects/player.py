@@ -394,17 +394,15 @@ class Player(BanchoProtocol):
         self.send_error(reason.value, message)
         self.close_connection()
 
-    def get_client(self, version: int) -> Tuple[Dict[Enum, Callable], Dict[Enum, Callable]]:
+    def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
 
-        decoders, encoders, self.request_packets, self.packets = PACKETS[
+        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[
             min(
                 PACKETS.keys(),
                 key=lambda x:abs(x-version)
             )
         ]
-
-        return decoders, encoders
 
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
@@ -412,7 +410,7 @@ class Player(BanchoProtocol):
         self.last_response = time.time()
 
         # Get decoders and encoders
-        self.decoders, self.encoders = self.get_client(client.version.date)
+        self.get_client(client.version.date)
 
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
