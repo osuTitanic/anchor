@@ -11,6 +11,7 @@ class PacketEnum(IntEnum):
     def __hash__(self) -> int:
         return hash(self.name)
 
+# Here is an overview of all supported packet versions
 PACKETS: Dict[int, list] = {
     20130815: [{}, {}, PacketEnum, PacketEnum], # 18
     20130401: [{}, {}, PacketEnum, PacketEnum], # 18
@@ -40,8 +41,6 @@ PACKETS: Dict[int, list] = {
     553:      [{}, {}, PacketEnum, PacketEnum], # 3
     536:      [{}, {}, PacketEnum, PacketEnum], # 3
     535:      [{}, {}, PacketEnum, PacketEnum], # 2
-    504:      [{}, {}, PacketEnum, PacketEnum]  # 2
+    504:      [{}, {}, PacketEnum, PacketEnum], # 2
+    503:      [{}, {}, PacketEnum, PacketEnum], # 1
 }
-
-# PV1: bBeatmapInfo changes
-# PV0: No playmode in bMatch
