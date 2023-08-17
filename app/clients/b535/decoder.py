@@ -30,3 +30,7 @@ def change_password(stream: StreamIn):
 @register(RequestPacket.BEATMAP_INFO)
 def beatmap_info(stream: StreamIn):
     return Reader(stream).read_beatmap_request()
+
+@register(RequestPacket.MATCH_SCORE_UPDATE)
+def score_update(stream: StreamIn):
+    return Reader(stream).read_scoreframe()

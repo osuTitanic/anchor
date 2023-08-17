@@ -1,6 +1,7 @@
 
 from app.common.objects import (
     bBeatmapInfoRequest,
+    bScoreFrame,
     bMatch,
     bSlot
 )
@@ -92,3 +93,27 @@ class Reader(BaseReader):
             ids = []
 
         return bBeatmapInfoRequest(filenames, ids)
+
+    def read_scoreframe(self) -> bScoreFrame:
+        sf = bScoreFrame(
+            time=self.stream.s32(),
+            id=self.stream.u8(),
+            c300=self.stream.u16(),
+            c100=self.stream.u16(),
+            c50=self.stream.u16(),
+            cGeki=self.stream.u16(),
+            cKatu=self.stream.u16(),
+            cMiss=self.stream.u16(),
+            total_score=self.stream.s32(),
+            max_combo=self.stream.u16(),
+            current_combo=self.stream.u16(),
+            perfect=self.stream.bool(),
+            hp=self.stream.u8()
+        )
+
+        try:
+            sf.tag_byte = self.stream.u8()
+        except OverflowError:
+            pass
+
+        return sf
