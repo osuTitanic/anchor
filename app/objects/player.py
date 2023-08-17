@@ -222,7 +222,7 @@ class Player(BanchoProtocol):
                 self.status.mode,
                 self.client.ip.longitude,
                 self.client.ip.latitude,
-                self.current_stats.rank,
+                self.rank,
                 self.client.ip.city \
                     if self.client.display_city
                     else None
@@ -247,7 +247,7 @@ class Player(BanchoProtocol):
                 self.current_stats.tscore,
                 self.current_stats.acc,
                 self.current_stats.playcount,
-                self.current_stats.rank,
+                self.rank,
                 self.current_stats.pp,
             )
         except AttributeError:
@@ -270,6 +270,15 @@ class Player(BanchoProtocol):
     @property
     def is_tourney_client(self) -> bool:
         return self.client.version.stream == 'tourney'
+
+    @property
+    def rank(self) -> int:
+        if self.client.version.date > 833 and \
+           self.current_stats.pp <= 0:
+            # Newer clients don't display rank 0
+            return 0
+
+        return self.current_stats.rank
 
     def connectionMade(self):
         super().connectionMade()
