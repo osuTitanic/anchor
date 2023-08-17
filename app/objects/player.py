@@ -554,6 +554,10 @@ class Player(BanchoProtocol):
                 self.remaining_silence
             )
 
+        # Enqueue players in lobby
+        for player in app.session.players.in_lobby:
+            self.enqueue_lobby_join(player.id)
+
     def check_client(self):
         client = clients.fetch_without_executable(
             self.id,
