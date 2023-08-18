@@ -41,6 +41,8 @@ requests.headers = {
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
+
+login_queue = ThreadPoolExecutor(max_workers=config.LOGIN_WORKERS)
 executor = ThreadPoolExecutor(max_workers=config.WORKERS)
 
 jobs = Jobs(max_workers=4)
