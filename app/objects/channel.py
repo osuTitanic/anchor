@@ -124,9 +124,15 @@ class Channel:
             )
             return
 
+        if sender.silenced:
+            sender.logger.warning(
+                'Failed to send message: Sender was silenced'
+            )
+            return
+
         can_write = self.can_write(sender.permissions)
 
-        if (can_write and not sender.silenced) or not ignore_privs:
+        if can_write or not ignore_privs:
             # Limit message size
             if len(message) > 512:
                 message = message[:512] + '... (truncated)'

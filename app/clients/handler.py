@@ -255,6 +255,9 @@ def send_private_message(sender: Player, message: bMessage):
         return
 
     if sender.silenced:
+        sender.logger.warning(
+            'Failed to send private message: Sender was silenced'
+        )
         return
 
     if target.silenced:
