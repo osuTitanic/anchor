@@ -38,8 +38,9 @@ from app.common.streams import StreamIn
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 
-from typing import Optional, Callable, Tuple, List, Dict, Set
+from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
+from concurrent.futures import Future
 from threading import Timer
 from enum import Enum
 from copy import copy
@@ -63,6 +64,34 @@ import bcrypt
 import utils
 import time
 import app
+
+def login_callback(future: Future):
+    if (exc := future.exception()):
+        app.session.logger.error(
+            f'Exception in login thread {future}: {exc}'
+        )
+        raise exc
+
+    app.session.logger.debug(
+        f'Login Result: {future}'
+    )
+
+def login_thread(func):
+    def wrapper(*args, **kwargs) -> Future:
+        try:
+            f = app.session.login_queue.submit(
+                func,
+                *args,
+                **kwargs
+            )
+            f.add_done_callback(
+                login_callback
+            )
+            return f
+        except RuntimeError:
+            exit()
+
+    return wrapper
 
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
@@ -404,6 +433,7 @@ class Player(BanchoProtocol):
             )
         ]
 
+    @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
