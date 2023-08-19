@@ -524,21 +524,21 @@ def get_command(
                 # Check set conditions
                 for condition in set.conditions:
                     if not condition(ctx):
-                        continue
+                        break
+                else:
+                    # Try running the command
+                    try:
+                        response = command.callback(ctx)
+                    except Exception as e:
+                        if config.DEBUG: traceback.print_exc()
+                        player.logger.error(f'Command error: {e}')
 
-                # Try running the command
-                try:
-                    response = command.callback(ctx)
-                except Exception as e:
-                    if config.DEBUG: traceback.print_exc()
-                    player.logger.error(f'Command error: {e}')
+                        response = ['An error occurred while running this command.']
 
-                    response = ['An error occurred while running this command.']
-
-                return CommandResponse(
-                    response,
-                    command.hidden
-                )
+                    return CommandResponse(
+                        response,
+                        command.hidden
+                    )
 
     return None
 
