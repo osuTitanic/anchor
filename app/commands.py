@@ -7,13 +7,14 @@ from dataclasses import dataclass
 from .common.cache import leaderboards
 from .common.database.repositories import (
     beatmapsets,
+    beatmaps,
     scores,
     stats,
     users,
     logs
 )
 
-from .common.constants import Permissions
+from .common.constants import Permissions, GameMode
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -119,6 +120,29 @@ def mp_abort(ctx: Context):
     ctx.player.match.abort()
 
     return ['Match aborted.']
+
+@mp_commands.register(['map', 'setmap', 'beatmap'])
+def mp_map(ctx: Context):
+    """<beatmap_id> - Select a new beatmap by it's id"""
+    if len(ctx.args) != 1 or not ctx.args[0].isdecimal():
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <beatmap_id>']
+
+    match = ctx.player.match
+    beatmap_id = int(ctx.args[0])
+
+    if beatmap_id == match.beatmap_id:
+        return ['That map was already selected.']
+
+    if not (map := beatmaps.fetch_by_id(beatmap_id)):
+        return ['Could not find that beatmap.']
+
+    match.beatmap_id = map.id
+    match.beatmap_hash = map.md5
+    match.beatmap_name = map.full_name
+    match.mode = GameMode(map.mode)
+    match.update()
+
+    return [f'Selected: {map.link}']
 
 # TODO: !system maintanance
 # TODO: !system deploy
