@@ -275,7 +275,6 @@ class Match:
 
         if self.beatmap_hash != new_match.beatmap_checksum:
             # New map has been chosen
-            self.chat.send_message(app.session.bot_player, f'Selected: {new_match.beatmap_text}')
             self.logger.info(f'Selected: {new_match.beatmap_text}')
             self.unready_players()
 
@@ -287,11 +286,18 @@ class Match:
                 self.beatmap_hash = beatmap.md5
                 self.beatmap_name = beatmap.full_name
                 self.mode         = GameMode(beatmap.mode)
+                beatmap_text      = beatmap.link
             else:
                 self.beatmap_id   = new_match.beatmap_id
                 self.beatmap_hash = new_match.beatmap_checksum
                 self.beatmap_name = new_match.beatmap_text
                 self.mode         = new_match.mode
+                beatmap_text      = new_match.beatmap_text
+
+            self.chat.send_message(
+                app.session.bot_player,
+                f'Selected: {beatmap_text}'
+            )
 
         if self.team_type != new_match.team_type:
             # Changed team type
@@ -348,13 +354,20 @@ class Match:
     def close(self):
         app.session.matches.remove(self)
 
+        if self.in_progress:
+            for player in self.players:
+                player.enqueue_match_complete()
+
         for player in self.players:
             self.kick_player(player)
+            self.chat.remove(player)
             player.enqueue_match_disband(self.id)
             player.match = None
 
         for player in app.session.players.in_lobby:
             player.enqueue_match_disband(self.id)
+
+        app.session.channels.remove(self.chat)
 
     def start(self):
         if self.player_count <= 0:
@@ -375,4 +388,20 @@ class Match:
                 slot.status = SlotStatus.Playing
 
         self.logger.info('Match started')
+        self.update()
+
+    def abort(self):
+        self.unready_players(SlotStatus.Playing)
+        self.in_progress = False
+
+        # Players that have been playing this round
+        players = [
+            slot.player for slot in self.slots
+            if slot.status.value & SlotStatus.Complete.value
+            and slot.has_player
+        ]
+
+        for player in players:
+            player.enqueue_match_complete()
+
         self.update()
