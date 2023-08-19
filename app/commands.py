@@ -398,7 +398,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
     username = ctx.args[0].replace('_', ' ')
     restore_scores = False
 
-    if len(ctx.args) > 0:
+    if len(ctx.args) > 1:
         restore_scores = eval(ctx.args[1].capitalize())
 
     if not (player := users.fetch_by_name(username)):
