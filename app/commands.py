@@ -14,7 +14,7 @@ from .common.database.repositories import (
     logs
 )
 
-from .common.constants import Permissions, GameMode
+from .common.constants import Permissions, GameMode, Mods
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -57,7 +57,7 @@ class CommandSet:
         aliases:
         List[str],
         p: Permissions = Permissions.Normal,
-        hidden: bool = True
+        hidden: bool = False
     ) -> Callable:
         def wrapper(f: Callable):
             self.commands.append(
@@ -144,6 +144,31 @@ def mp_map(ctx: Context):
 
     return [f'Selected: {map.link}']
 
+@mp_commands.register(['mods', 'setmods'])
+def mp_mods(ctx: Context):
+    """<mods> - Set the current match's mods (e.g. HDHR)"""
+    if len(ctx.args) != 1 or len(ctx.args[0]) % 2 != 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+
+    match = ctx.player.match
+    mods = Mods.from_string(ctx.args[0])
+    # TODO: Filter out invalid mods
+
+    if mods == match.mods:
+        return [f'Mods are already set to {match.mods.short}.']
+
+    if match.freemod:
+        # Set match mods
+        match.mods = mods & ~Mods.FreeModAllowed
+
+        # Set host mods
+        match.host_slot.mods = mods & ~Mods.SpeedMods
+    else:
+        match.mods = mods
+
+    match.update()
+    return [f'Updated match mods to {match.mods.short}.']
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
@@ -154,7 +179,7 @@ def mp_map(ctx: Context):
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
-    hidden: bool = False,
+    hidden: bool = True,
 ) -> Callable:
     def wrapper(f: Callable) -> Callable:
         commands.append(
