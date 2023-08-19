@@ -55,7 +55,7 @@ class CommandSet:
         aliases:
         List[str],
         p: Permissions = Permissions.Normal,
-        hidden: bool = False
+        hidden: bool = True
     ) -> Callable:
         def wrapper(f: Callable):
             self.commands.append(
@@ -99,7 +99,7 @@ def command(
         return f
     return wrapper
 
-@command(['help', 'h', ''], hidden=True)
+@command(['help', 'h', ''])
 def help(ctx: Context) -> Optional[List]:
     """- Shows this message"""
     response = []
@@ -132,7 +132,7 @@ def help(ctx: Context) -> Optional[List]:
 
     return response
 
-@command(['roll'])
+@command(['roll'], hidden=False)
 def roll(ctx: Context) -> Optional[List]:
     """<number> - Roll a dice and get random result from 1 to <number> (default 100)"""
     max_roll = 100
@@ -148,7 +148,7 @@ def roll(ctx: Context) -> Optional[List]:
 
     return [f'{ctx.player.name} rolls {random.randrange(0, max_roll+1)}!']
 
-@command(['report'], hidden=True)
+@command(['report'])
 def report(ctx: Context) -> Optional[List]:
     """<username> <reason>"""
     if len(ctx.args) < 1:
@@ -181,7 +181,7 @@ def report(ctx: Context) -> Optional[List]:
 
     return ['Player was reported.']
 
-@command(['search'], Permissions.Supporter)
+@command(['search'], Permissions.Supporter, hidden=False)
 def search(ctx: Context):
     """<query> - Search a beatmap"""
     query = ' '.join(ctx.args[0:])
@@ -204,7 +204,7 @@ def search(ctx: Context):
 
     return [f'{result.link} [{status}]']
 
-@command(['where', 'location'])
+@command(['where', 'location'], hidden=False)
 def where(ctx: Context):
     """<name> - Get a player's current location"""
     if len(ctx.args) < 1:
@@ -223,7 +223,7 @@ def where(ctx: Context):
 
     return [f'{target.name} is in {location_string} {city_string}']
 
-@command(['stats'])
+@command(['stats'], hidden=False)
 def get_stats(ctx: Context):
     """<name> - Get the stats of a player"""
     if len(ctx.args) < 1:
@@ -245,7 +245,7 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
-@command(['monitor'], Permissions.Admin, hidden=True)
+@command(['monitor'], Permissions.Admin)
 def monitor(ctx: Context) -> Optional[List]:
     """<name> - Monitor a player"""
 
@@ -261,7 +261,7 @@ def monitor(ctx: Context) -> Optional[List]:
 
     return ['Player has been monitored']
 
-@command(['alert', 'announce', 'broadcast'], Permissions.Admin, hidden=True)
+@command(['alert', 'announce', 'broadcast'], Permissions.Admin)
 def alert(ctx: Context) -> Optional[List]:
     """<message> - Send a message to all players"""
 
@@ -272,7 +272,7 @@ def alert(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {len(app.session.players)} players.']
 
-@command(['alertuser'], Permissions.Admin, hidden=True)
+@command(['alertuser'], Permissions.Admin)
 def alertuser(ctx: Context) -> Optional[List]:
     """<username> <message> - Send a notification to a player"""
 
@@ -288,7 +288,7 @@ def alertuser(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {player.name}.']
 
-@command(['silence', 'mute'], Permissions.Admin)
+@command(['silence', 'mute'], Permissions.Admin, hidden=False)
 def silence(ctx: Context) -> Optional[List]:
     """<username> <duration> (<reason>)"""
 
@@ -327,7 +327,7 @@ def silence(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was silenced for {time_string}']
 
-@command(['unsilence', 'unmute'], Permissions.Admin)
+@command(['unsilence', 'unmute'], Permissions.Admin, hidden=False)
 def unsilence(ctx: Context):
     """- <username>"""
 
@@ -347,7 +347,7 @@ def unsilence(ctx: Context):
 
     return [f'{player.name} was unsilenced.']
 
-@command(['restrict', 'ban'], Permissions.Admin)
+@command(['restrict', 'ban'], Permissions.Admin, hidden=False)
 def restrict(ctx: Context) -> Optional[List]:
     """<name> (<reason>)"""
 
@@ -388,7 +388,7 @@ def restrict(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was restricted.']
 
-@command(['unrestrict', 'unban'], Permissions.Admin)
+@command(['unrestrict', 'unban'], Permissions.Admin, hidden=False)
 def unrestrict(ctx: Context) -> Optional[List]:
     """<name> <restore scores (true/false)>"""
 
@@ -432,6 +432,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
 # TODO: !moderated
 # TODO: !kick
 # TODO: !kill
+# TODO: !top
 
 def get_command(
     player: Player,
