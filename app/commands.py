@@ -95,6 +95,10 @@ def inside_match(ctx: Context) -> bool:
     return ctx.player.match is not None
 
 @mp_commands.condition
+def inside_chat(ctx: Context) -> bool:
+    return ctx.target is ctx.player.match.chat
+
+@mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
            (Permissions.Admin in ctx.player.permissions)
