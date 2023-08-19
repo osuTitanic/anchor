@@ -216,6 +216,12 @@ class Match:
 
         return None
 
+    def get_player(self, name: str) -> Optional[Player]:
+        for player in self.players:
+            if player.name == name:
+                return player
+        return None
+
     def update(self, lobby=True) -> None:
         # Enqueue to our players
         for player in self.players:
