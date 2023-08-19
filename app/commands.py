@@ -48,6 +48,7 @@ class CommandSet:
         self.trigger = trigger
         self.doc = doc
 
+        self.conditions: List[Callable] = []
         self.commands: List[Command] = []
 
     def register(
@@ -70,17 +71,43 @@ class CommandSet:
             return f
         return wrapper
 
+    def condition(self, f: Callable) -> Callable:
+        self.conditions.append(f)
+        return f
+
 commands: List[Command] = []
 sets = [
     mp_commands := CommandSet('mp', 'Multiplayer Commands'),
     system_commands := CommandSet('system', 'System Commands')
 ]
 
+@mp_commands.condition
+def inside_match(ctx: Context) -> bool:
+    return ctx.player.match is not None
+
+@mp_commands.condition
+def is_host(ctx: Context) -> bool:
+    return ctx.player is ctx.player.match.host
+
+@mp_commands.register(aliases=['help', 'h'])
+def mp_help(ctx: Context):
+    """- Shows this message"""
+    response = []
+
+    for command in mp_commands.commands:
+        if not command.doc:
+            continue
+
+        response.append(f'!{mp_commands.trigger.upper()} {command.triggers[0].upper()} {command.doc}')
+
+    return '\n'.join(response)
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
 # TODO: !system shutdown
 # TODO: !system stats
+# TODO: !system exec
 
 def command(
     aliases: List[str],
@@ -121,15 +148,22 @@ def help(ctx: Context) -> Optional[List]:
             # Set has no commands
             continue
 
-        response.append(f'{set.doc} (!{set.trigger}):')
+        for condition in set.conditions:
+            if not condition(ctx):
+                break
+        else:
+            response.append(f'{set.doc} (!{set.trigger}):')
 
-        for command in set.commands:
-            if command.permissions not in ctx.player.permissions:
-                continue
+            for command in set.commands:
+                if command.permissions not in ctx.player.permissions:
+                    continue
 
-            response.append(
-                f'!{command.triggers[0].upper()} {command.doc}'
-            )
+                if not command.doc:
+                    continue
+
+                response.append(
+                    f'!{set.trigger.upper()} {command.triggers[0].upper()} {command.doc}'
+                )
 
     return response
 
@@ -187,7 +221,7 @@ def search(ctx: Context):
     """<query> - Search a beatmap"""
     query = ' '.join(ctx.args[0:])
 
-    if len(query) <= 3:
+    if len(query) <= 2:
         return ['Query too short']
 
     if not (result := beatmapsets.search_one(query)):
@@ -480,16 +514,21 @@ def get_command(
                 if command.permissions not in player.permissions:
                     return None
 
+                ctx = Context(
+                    player,
+                    trigger,
+                    target,
+                    args
+                )
+
+                # Check set conditions
+                for condition in set.conditions:
+                    if not condition(ctx):
+                        continue
+
                 # Try running the command
                 try:
-                    response = command.callback(
-                        Context(
-                            player,
-                            trigger,
-                            target,
-                            args
-                        )
-                    )
+                    response = command.callback(ctx)
                 except Exception as e:
                     if config.DEBUG: traceback.print_exc()
                     player.logger.error(f'Command error: {e}')
