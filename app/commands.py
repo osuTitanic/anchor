@@ -87,7 +87,8 @@ def inside_match(ctx: Context) -> bool:
 
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
-    return ctx.player is ctx.player.match.host
+    return (ctx.player is ctx.player.match.host) or \
+           (Permissions.Admin in ctx.player.permissions)
 
 @mp_commands.register(aliases=['help', 'h'])
 def mp_help(ctx: Context):
