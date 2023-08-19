@@ -181,6 +181,44 @@ def mp_mods(ctx: Context):
     match.update()
     return [f'Updated match mods to {match.mods.short}.']
 
+@mp_commands.register(aliases=['freemod', 'fm', 'fmod'])
+def mp_freemod(ctx: Context):
+    """<on/off> - Enable or disable freemod status."""
+    if len(ctx.args) != 1 or ctx.args[0] not in ("on", "off"):
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <on/off>']
+
+    freemod = ctx.args[0] == 'on'
+    match = ctx.player.match
+
+    if match.freemod == freemod:
+        return [f'Freemod is already {ctx.args[0]}.']
+
+    match.unready_players()
+    match.freemod = freemod
+    match.logger.info(f'Freemod: {freemod}')
+
+    if freemod:
+        for slot in match.slots:
+            if slot.status.value & SlotStatus.HasPlayer.value:
+                # Set current mods to every player inside the match, if they are not speed mods
+                slot.mods = match.mods & ~Mods.SpeedMods
+
+                # TODO: Fix for older clients without freemod support
+                # slot.mods = []
+
+            # The speedmods are kept in the match mods
+            match.mods = match.mods & ~Mods.FreeModAllowed
+    else:
+        # Keep mods from host
+        match.mods |= match.host_slot.mods
+
+        # Reset any mod from players
+        for slot in match.slots:
+            slot.mods = Mods.NoMod
+
+    match.update()
+    return [f'Freemod is now {"enabled" if freemod else "disabled"}.']
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
