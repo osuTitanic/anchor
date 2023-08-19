@@ -110,6 +110,16 @@ def mp_close(ctx: Context):
 
     return ['Match was closed.']
 
+@mp_commands.register(['abort'])
+def mp_abort(ctx: Context):
+    """- Abort the current match"""
+    if not ctx.player.match.in_progress:
+        return ["Nothing to abort."]
+
+    ctx.player.match.abort()
+
+    return ['Match aborted.']
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
