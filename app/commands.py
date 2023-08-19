@@ -122,8 +122,8 @@ def mp_help(ctx: Context):
 @mp_commands.register(['close', 'terminate', 'disband'], Permissions.Admin)
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
-    ctx.player.match.close()
     ctx.player.match.logger.info('Match was closed by an admin.')
+    ctx.player.match.close()
 
     return ['Match was closed.']
 
@@ -330,7 +330,7 @@ def mp_force_invite(ctx: Context):
 
 @mp_commands.register(['lock'])
 def mp_lock(ctx: Context):
-    """Lock all unsued slots in the match."""
+    """- Lock all unsued slots in the match."""
     for slot in ctx.player.match.slots:
         if slot.status == SlotStatus.Open:
             slot.status = SlotStatus.Locked
@@ -340,7 +340,7 @@ def mp_lock(ctx: Context):
 
 @mp_commands.register(['unlock'])
 def mp_unlock(ctx: Context):
-    """Unlock all locked slots in the match."""
+    """- Unlock all locked slots in the match."""
     for slot in ctx.player.match.slots:
         if slot.status == SlotStatus.Locked:
             slot.status = SlotStatus.Open
