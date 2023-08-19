@@ -417,18 +417,19 @@ class Match:
         self.update()
 
     def abort(self):
-        self.unready_players(SlotStatus.Playing)
-        self.in_progress = False
-
         # Players that have been playing this round
         players = [
             slot.player for slot in self.slots
-            if slot.status.value & SlotStatus.Complete.value
+            if slot.status.value & SlotStatus.Playing.value
             and slot.has_player
         ]
 
+        self.unready_players(SlotStatus.Playing)
+        self.in_progress = False
+
+        # The join success packet will reset the players to the setup screen
         for player in players:
-            player.enqueue_match_complete()
+            player.enqueue_matchjoin_success(self.bancho_match)
 
         self.update()
 
