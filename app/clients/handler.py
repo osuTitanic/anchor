@@ -671,6 +671,8 @@ def join_match(player: Player, match_join: bMatchJoin):
         player.enqueue_match_disband(match_join.match_id)
         return
 
+    match.last_activity = time.time()
+
     if player.is_tourney_client:
         player.logger.warning('Tried to join match, but was inside tourney client')
         player.enqueue_matchjoin_fail()
@@ -721,6 +723,8 @@ def leave_match(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -767,6 +771,8 @@ def change_slot(player: Player, slot_id: int):
     if player.match.slots[slot_id].status != SlotStatus.Open:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -783,12 +789,16 @@ def change_settings(player: Player, match: bMatch):
     if player is not player.match.host:
         return
 
+    player.match.last_activity = time.time()
+
     player.match.change_settings(match)
 
 @register(RequestPacket.MATCH_CHANGE_MODS)
 def change_mods(player: Player, mods: Mods):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     mods_before = copy(player.match.mods)
 
@@ -835,6 +845,8 @@ def ready(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -847,6 +859,8 @@ def not_ready(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -857,6 +871,8 @@ def not_ready(player: Player):
 def not_beatmap(player: Player):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     slot = player.match.get_slot(player)
     assert slot is not None
@@ -871,6 +887,8 @@ def lock(player: Player, slot_id: int):
 
     if player is not player.match.host:
         return
+
+    player.match.last_activity = time.time()
 
     if not 0 <= slot_id < 8:
         return
@@ -899,6 +917,8 @@ def change_team(player: Player):
     if not player.match.ffa:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -916,6 +936,8 @@ def transfer_host(player: Player, slot_id: int):
 
     if player is not player.match.host:
         return
+
+    player.match.last_activity = time.time()
 
     if not 0 <= slot_id < 8:
         return
@@ -949,6 +971,8 @@ def change_password(player: Player, new_password: str):
 def match_start(player: Player):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     if player is not player.match.host:
         return
@@ -1041,6 +1065,8 @@ def match_complete(player: Player):
 
     if not player.match.in_progress:
         return
+
+    player.match.last_activity = time.time()
 
     slot = player.match.get_slot(player)
     assert slot is not None

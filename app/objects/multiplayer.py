@@ -18,6 +18,7 @@ from .channel import Channel
 from .player import Player
 
 import logging
+import time
 import app
 
 class Slot:
@@ -109,6 +110,7 @@ class Match:
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
+        self.last_activity = time.time()
 
     @classmethod
     def from_bancho_match(cls, bancho_match: bMatch):
@@ -342,6 +344,17 @@ class Match:
         self.logger.info(
             f'{player.name} was kicked from the match'
         )
+
+    def close(self):
+        app.session.matches.remove(self)
+
+        for player in self.players:
+            self.kick_player(player)
+            player.enqueue_match_disband(self.id)
+            player.match = None
+
+        for player in app.session.players.in_lobby:
+            player.enqueue_match_disband(self.id)
 
     def start(self):
         if self.player_count <= 0:
