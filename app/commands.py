@@ -219,6 +219,26 @@ def mp_freemod(ctx: Context):
     match.update()
     return [f'Freemod is now {"enabled" if freemod else "disabled"}.']
 
+@mp_commands.register(aliases=['host', 'sethost'])
+def mp_host(ctx: Context):
+    """<name> - Set the host for this match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:])
+    match = ctx.player.match
+
+    if not (target := match.get_player(name)):
+        return ['Could not find this player.']
+
+    match.host = target
+    match.host.enqueue_match_transferhost()
+
+    match.logger.info(f'Changed host to: {target.name}')
+    match.update()
+
+    return [f'{target.name} is now host of this match.']
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
