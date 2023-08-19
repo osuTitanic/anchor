@@ -3,6 +3,7 @@ from typing import List, Union, Optional, NamedTuple, Callable
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
 from dataclasses import dataclass
+from threading import Thread
 
 from .common.cache import leaderboards
 from .common.database.repositories import (
@@ -23,6 +24,7 @@ from .common.constants import (
     Mods
 )
 
+from .objects.multiplayer import StartingTimers
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -31,6 +33,7 @@ import traceback
 import timeago
 import config
 import random
+import time
 import app
 
 @dataclass
@@ -118,6 +121,73 @@ def mp_help(ctx: Context):
         response.append(f'!{mp_commands.trigger.upper()} {command.triggers[0].upper()} {command.doc}')
 
     return response
+
+@mp_commands.register(['start', 'st'])
+def mp_start(ctx: Context):
+    """<force/seconds/cancel> - Start the match, with any players that are ready"""
+    if len(ctx.args) > 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
+
+    match = ctx.player.match
+
+    if match.in_progress:
+        return ['This match is already running.']
+
+    if not ctx.args:
+        # Check if match is starting
+        if match.starting:
+            time_remaining = round(match.starting.time - time.time())
+            return [f'Match starting in {time_remaining} seconds.']
+
+        # Check if players are ready
+        if any([s.status == SlotStatus.NotReady for s in match.slots]):
+            return [f'Not all players are ready ("!{mp_commands.trigger}" {ctx.trigger} force" to start anyways)']
+
+        match.start()
+        return ['Match was started. Good luck!']
+
+    if ctx.args[0].isdecimal():
+        # Host wants to start a timer
+
+        if match.starting:
+            # Timer is already running
+            time_remaining = round(match.starting.time - time.time())
+            return [f'Match starting in {time_remaining} seconds.']
+
+        duration = int(ctx.args[0])
+
+        if duration <= 0:
+            return ['no.']
+
+        if duration > 300:
+            return ['Please lower your duration!']
+
+        match.starting = StartingTimers(
+            time.time() + duration,
+            timer := Thread(
+                target=match.execute_timer,
+                daemon=True
+            )
+        )
+
+        timer.start()
+
+        return [f'Match starting in {duration} {"seconds" if duration != 1 else "second"}.']
+
+    elif ctx.args[0] in ('cancel', 'c'):
+        # Host wants to cancel the timer
+        if not match.starting:
+            return ['Match timer is not active!']
+
+        # The timer thread will check if 'starting' is None
+        match.starting = None
+        return ['Match timer was cancelled.']
+
+    elif ctx.args[0] in ('force', 'f'):
+        match.start()
+        return ['Match was started. Good luck!']
+
+    return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
 @mp_commands.register(['close', 'terminate', 'disband'], Permissions.Admin)
 def mp_close(ctx: Context):

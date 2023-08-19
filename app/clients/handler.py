@@ -748,6 +748,7 @@ def leave_match(player: Player):
 
         # Match is empty
         session.matches.remove(player.match)
+        player.match.starting = None
     else:
         if player is player.match.host:
             # Player was host, transfer to next player

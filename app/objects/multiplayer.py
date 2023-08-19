@@ -1,5 +1,7 @@
 
 from typing import Optional, Tuple, List
+from dataclasses import dataclass
+from threading import Thread
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -72,6 +74,11 @@ class Slot:
         self.loaded  = False
         self.skipped = False
 
+@dataclass
+class StartingTimers:
+    time: float
+    thread: Thread
+
 class Match:
     def __init__(
         self,
@@ -107,6 +114,7 @@ class Match:
 
         self.slots = [Slot() for _ in range(8)]
 
+        self.starting: Optional[StartingTimers] = None
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
@@ -358,6 +366,9 @@ class Match:
         )
 
     def close(self):
+        # Shutdown pending match timer
+        self.starting = None
+
         app.session.matches.remove(self)
 
         if self.in_progress:
@@ -380,10 +391,11 @@ class Match:
             self.logger.warning('Host tried to start match without any players')
             return
 
-        self.in_progress = True
-
         for slot in self.slots:
             if not slot.has_player:
+                continue
+
+            if slot.status == SlotStatus.NotReady:
                 continue
 
             # TODO: Check osu! mania support
@@ -392,6 +404,14 @@ class Match:
 
             if slot.status != SlotStatus.NoMap:
                 slot.status = SlotStatus.Playing
+
+        playing_slots = [s for s in self.player_slots if s.status == SlotStatus.Playing]
+
+        if not playing_slots:
+            self.logger.info('Could not start match, because no one was ready.')
+            return
+
+        self.in_progress = True
 
         self.logger.info('Match started')
         self.update()
@@ -411,3 +431,49 @@ class Match:
             player.enqueue_match_complete()
 
         self.update()
+
+    def execute_timer(self) -> None:
+        if not self.starting:
+            self.logger.warning('Tried to execute timer, but match was not starting.')
+            return
+
+        remaining_time = round(self.starting.time - time.time())
+        intervals = [60, 30, 10, 5, 4, 3, 2, 1]
+
+        if remaining_time in intervals:
+            intervals.remove(remaining_time)
+
+        self.logger.debug(f'Match timer starting: {remaining_time} seconds left')
+
+        for interval in intervals:
+            if remaining_time < interval:
+                continue
+
+            until_next_message = remaining_time - interval
+
+            while until_next_message > 0:
+                if not self.starting:
+                    # Timer was cancelled
+                    return
+
+                time.sleep(1)
+                until_next_message -= 1
+
+            remaining_time = round(self.starting.time - time.time())
+
+            self.chat.send_message(
+                app.session.bot_player,
+                f'Match starting in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
+            )
+
+            self.logger.debug(f'Match timer running: {remaining_time} seconds left')
+
+        time.sleep(1)
+
+        self.chat.send_message(
+            app.session.bot_player,
+            'Match was started. Good luck!'
+        )
+
+        self.starting = None
+        self.start()
