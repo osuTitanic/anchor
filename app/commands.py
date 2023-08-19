@@ -14,7 +14,13 @@ from .common.database.repositories import (
     logs
 )
 
-from .common.constants import Permissions, GameMode, Mods
+from .common.constants import (
+    Permissions,
+    SlotStatus,
+    GameMode,
+    Mods
+)
+
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -108,6 +114,7 @@ def mp_help(ctx: Context):
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
     ctx.player.match.close()
+    ctx.player.match.logger.info('Match was closed by an admin.')
 
     return ['Match was closed.']
 
@@ -118,6 +125,7 @@ def mp_abort(ctx: Context):
         return ["Nothing to abort."]
 
     ctx.player.match.abort()
+    ctx.player.match.logger.info('Match was aborted.')
 
     return ['Match aborted.']
 
@@ -142,6 +150,8 @@ def mp_map(ctx: Context):
     match.mode = GameMode(map.mode)
     match.update()
 
+    match.logger.info(f'Selected: {map.full_name}')
+
     return [f'Selected: {map.link}']
 
 @mp_commands.register(['mods', 'setmods'])
@@ -165,6 +175,8 @@ def mp_mods(ctx: Context):
         match.host_slot.mods = mods & ~Mods.SpeedMods
     else:
         match.mods = mods
+
+    match.logger.info(f'Updated match mods to {match.mods.short}.')
 
     match.update()
     return [f'Updated match mods to {match.mods.short}.']
