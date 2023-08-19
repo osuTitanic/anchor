@@ -80,6 +80,7 @@ sets = [
 # TODO: !system deploy
 # TODO: !system restart
 # TODO: !system shutdown
+# TODO: !system stats
 
 def command(
     aliases: List[str],
