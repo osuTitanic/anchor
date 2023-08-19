@@ -97,7 +97,7 @@ def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
            (Permissions.Admin in ctx.player.permissions)
 
-@mp_commands.register(['help', 'h'])
+@mp_commands.register(['help', 'h'], hidden=True)
 def mp_help(ctx: Context):
     """- Shows this message"""
     response = []
@@ -181,7 +181,7 @@ def mp_mods(ctx: Context):
     match.update()
     return [f'Updated match mods to {match.mods.short}.']
 
-@mp_commands.register(aliases=['freemod', 'fm', 'fmod'])
+@mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
     """<on/off> - Enable or disable freemod status."""
     if len(ctx.args) != 1 or ctx.args[0] not in ("on", "off"):
@@ -219,7 +219,7 @@ def mp_freemod(ctx: Context):
     match.update()
     return [f'Freemod is now {"enabled" if freemod else "disabled"}.']
 
-@mp_commands.register(aliases=['host', 'sethost'])
+@mp_commands.register(['host', 'sethost'])
 def mp_host(ctx: Context):
     """<name> - Set the host for this match"""
     if len(ctx.args) <= 0:
@@ -238,6 +238,45 @@ def mp_host(ctx: Context):
     match.update()
 
     return [f'{target.name} is now host of this match.']
+
+bot_invites = [
+    "Uhh... sorry, no time to play. (°_o)",
+    "I'm too busy!",
+    "nope.",
+    "idk how to play this game... ¯\(°_o)/¯"
+]
+
+@mp_commands.register(['invite', 'inv'])
+def mp_invite(ctx: Context):
+    """<name> - Invite a player to this match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:])
+    match = ctx.player.match
+
+    if name == app.session.bot_player.name:
+        return [bot_invites[random.randrange(0, len(bot_invites))]]
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    if target is ctx.player:
+        return ['You are already here.']
+
+    if target.match is match:
+        return ['This player is already here.']
+
+    target.enqueue_invite(
+        bMessage(
+            ctx.player.name,
+            f'Come join my multiplayer match: {match.embed}',
+            ctx.player.name,
+            ctx.player.id
+        )
+    )
+
+    return [f'Invited {target.name} to this match.']
 
 # TODO: !system maintanance
 # TODO: !system deploy
