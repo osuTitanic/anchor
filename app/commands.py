@@ -90,7 +90,7 @@ def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
            (Permissions.Admin in ctx.player.permissions)
 
-@mp_commands.register(aliases=['help', 'h'])
+@mp_commands.register(['help', 'h'])
 def mp_help(ctx: Context):
     """- Shows this message"""
     response = []
@@ -101,7 +101,14 @@ def mp_help(ctx: Context):
 
         response.append(f'!{mp_commands.trigger.upper()} {command.triggers[0].upper()} {command.doc}')
 
-    return '\n'.join(response)
+    return response
+
+@mp_commands.register(['close', 'terminate', 'disband'], Permissions.Admin)
+def mp_close(ctx: Context):
+    """- Close a match and kick all players"""
+    ctx.player.match.close()
+
+    return ['Match was closed.']
 
 # TODO: !system maintanance
 # TODO: !system deploy
