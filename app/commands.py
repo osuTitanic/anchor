@@ -15,8 +15,10 @@ from .common.database.repositories import (
 )
 
 from .common.constants import (
+    MatchTeamTypes,
     Permissions,
     SlotStatus,
+    SlotTeam,
     GameMode,
     Mods
 )
@@ -103,6 +105,9 @@ def mp_help(ctx: Context):
     response = []
 
     for command in mp_commands.commands:
+        if command.permissions not in ctx.player.permissions:
+            continue
+
         if not command.doc:
             continue
 
@@ -277,6 +282,47 @@ def mp_invite(ctx: Context):
     )
 
     return [f'Invited {target.name} to this match.']
+
+@mp_commands.register(['force', 'forceinvite'], Permissions.Admin)
+def mp_force_invite(ctx: Context):
+    """<name> - Force a player to join this match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:])
+    match = ctx.player.match
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    if target.match is match:
+        return [f'{target.name} is already in this match.']
+
+    if target.match is not None:
+        target.match.kick_player(target)
+
+    if (slot_id := match.get_free()) is None:
+        return ['This match is full.']
+
+    # Join the chat
+    target.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    match.chat.add(target)
+
+    slot = match.slots[slot_id]
+
+    if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
+        slot.team = SlotTeam.Red
+
+    slot.status = SlotStatus.NotReady
+    slot.player = target
+
+    target.match = match
+    target.enqueue_matchjoin_success(match.bancho_match)
+
+    match.logger.info(f'{target.name} joined')
+    match.update()
+
+    return ['Welcome.']
 
 @mp_commands.register(['lock'])
 def mp_lock(ctx: Context):
