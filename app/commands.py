@@ -278,6 +278,26 @@ def mp_invite(ctx: Context):
 
     return [f'Invited {target.name} to this match.']
 
+@mp_commands.register(['lock'])
+def mp_lock(ctx: Context):
+    """Lock all unsued slots in the match."""
+    for slot in ctx.player.match.slots:
+        if slot.status == SlotStatus.Open:
+            slot.status = SlotStatus.Locked
+
+    ctx.player.match.update()
+    return ['Locked all unused slots.']
+
+@mp_commands.register(['unlock'])
+def mp_unlock(ctx: Context):
+    """Unlock all locked slots in the match."""
+    for slot in ctx.player.match.slots:
+        if slot.status == SlotStatus.Locked:
+            slot.status = SlotStatus.Open
+
+    ctx.player.match.update()
+    return ['Locked all unused slots.']
+
 # TODO: !system maintanance
 # TODO: !system deploy
 # TODO: !system restart
