@@ -548,8 +548,13 @@ def get_command(
                 command.hidden
             )
 
+    set_trigger, trigger, *args = trigger, *args
+
     # Command sets
     for set in sets:
+        if set.trigger != set_trigger:
+            continue
+
         for command in set.commands:
             if trigger in command.triggers:
                 # Check permissions
