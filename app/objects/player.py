@@ -533,6 +533,9 @@ class Player(BanchoProtocol):
         )
         app.session.channels.append(self.spectator_chat)
 
+        # Remove avatar so that it can be reloaded
+        app.session.redis.delete(f'avatar:{self.id}')
+
         # Update latest activity
         self.update_activity()
 
