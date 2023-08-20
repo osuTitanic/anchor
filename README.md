@@ -1,7 +1,7 @@
 # Anchor
 
 Anchor is a bancho server designed for older osu! clients.
-It currently supports clients from b1122 to b2013716 and I will try to expand support in the future.
+It currently supports clients from b487 to b2013716 and I will try to expand support in the future.
 
 Please view [this repository](https://github.com/osuTitanic/titanic) for setup instructions!
 
