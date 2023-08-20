@@ -11,6 +11,7 @@ class PacketEnum(IntEnum):
     def __hash__(self) -> int:
         return hash(self.name)
 
+# Here is an overview of all supported packet versions
 PACKETS: Dict[int, list] = {
     20130815: [{}, {}, PacketEnum, PacketEnum], # 18
     20130401: [{}, {}, PacketEnum, PacketEnum], # 18
@@ -29,5 +30,19 @@ PACKETS: Dict[int, list] = {
     20120704: [{}, {}, PacketEnum, PacketEnum], # 7
     1807:     [{}, {}, PacketEnum, PacketEnum], # 7
     1700:     [{}, {}, PacketEnum, PacketEnum], # 6
-    1152:     [{}, {}, PacketEnum, PacketEnum]  # 6
+    1152:     [{}, {}, PacketEnum, PacketEnum], # 6
+                                                # 5 ?
+    1150:     [{}, {}, PacketEnum, PacketEnum], # 4
+    679:      [{}, {}, PacketEnum, PacketEnum], # 4
+    675:      [{}, {}, PacketEnum, PacketEnum], # 4 (UserStats)
+    591:      [{}, {}, PacketEnum, PacketEnum], # 4 (UserStats)
+    590:      [{}, {}, PacketEnum, PacketEnum], # 4 (NoMatchPasswords)
+    558:      [{}, {}, PacketEnum, PacketEnum], # 4 (NoMatchPasswords)
+    553:      [{}, {}, PacketEnum, PacketEnum], # 3
+    536:      [{}, {}, PacketEnum, PacketEnum], # 3
+    535:      [{}, {}, PacketEnum, PacketEnum], # 2
+    504:      [{}, {}, PacketEnum, PacketEnum], # 2
+    503:      [{}, {}, PacketEnum, PacketEnum], # 1
+    487:      [{}, {}, PacketEnum, PacketEnum], # 1
+    483:      [{}, {}, PacketEnum, PacketEnum]  # 0
 }

@@ -7,6 +7,7 @@ from twisted.python.failure import Failure
 from typing import Union, Optional
 from enum import Enum
 
+from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.common.streams import StreamOut, StreamIn
 from app.objects import OsuClient
 
@@ -24,6 +25,7 @@ class BanchoProtocol(Protocol):
     buffer  = b""
     busy    = False
     proxied = False
+    connection_timeout = 20
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)
@@ -59,6 +61,12 @@ class BanchoProtocol(Protocol):
         try:
             self.buffer += data.replace(b'\r', b'')
             self.busy = True
+
+            if data.startswith(b'GET /'):
+                # We received a web request
+                self.send_web_response()
+                self.close_connection()
+                return
 
             if self.buffer.count(b'\n') < 3:
                 return
@@ -141,6 +149,13 @@ class BanchoProtocol(Protocol):
             self.logger.error(
                 f'Could not write to transport layer: {e}'
             )
+
+    def send_web_response(self):
+        self.enqueue('\r\n'.join([
+            'HTTP/1.1 200 OK',
+            'content-type: text/html',
+            ANCHOR_WEB_RESPONSE
+        ]).encode())
 
     def close_connection(self, error: Optional[Exception] = None):
         if not self.is_local or config.DEBUG:

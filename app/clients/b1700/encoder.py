@@ -128,8 +128,10 @@ def irc_nick(previous: str, after: str):
     return stream.get()
 
 @register(ResponsePacket.IRC_QUIT)
-def irc_quit(*args):
-    return b'' # TODO: Only used in older clients
+def irc_quit(username: str):
+    stream = StreamOut()
+    stream.string(username)
+    return stream.get()
 
 @register(ResponsePacket.CHANNEL_AVAILABLE)
 def channel_available(channel: bChannel):

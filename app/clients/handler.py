@@ -255,6 +255,9 @@ def send_private_message(sender: Player, message: bMessage):
         return
 
     if sender.silenced:
+        sender.logger.warning(
+            'Failed to send private message: Sender was silenced'
+        )
         return
 
     if target.silenced:
@@ -313,6 +316,20 @@ def send_private_message(sender: Player, message: bMessage):
             sender.id
         )
     )
+
+    # Send to their tourney clients
+    for client in session.players.get_all_tourney_clients(target.id):
+        if client.address.port == target.address.port:
+            continue
+
+        client.enqueue_message(
+            bMessage(
+                sender.name,
+                message.content,
+                sender.name,
+                sender.id
+            )
+        )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 @run_in_thread
@@ -481,7 +498,7 @@ def start_spectating(player: Player, player_id: int):
 
     # TODO: Check osu! mania support
 
-    if (player.spectating) or (player in target.spectators):
+    if (player.spectating) or (player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
         return
 
@@ -501,7 +518,7 @@ def start_spectating(player: Player, player_id: int):
     target.enqueue_channel(target.spectator_chat.bancho_channel)
 
     # Check if target joined #spectator
-    if target not in target.spectator_chat.users:
+    if target not in target.spectator_chat.users and not player.is_tourney_client:
         target.spectator_chat.add(target)
 
 @register(RequestPacket.STOP_SPECTATING)
@@ -600,6 +617,11 @@ def create_match(player: Player, bancho_match: bMatch):
         player.enqueue_matchjoin_fail()
         return
 
+    if player.is_tourney_client:
+        player.logger.warning('Tried to create match, but was inside tourney client')
+        player.enqueue_matchjoin_fail()
+        return
+
     if player.silenced:
         player.logger.warning('Tried to create match, but was silenced')
         player.enqueue_matchjoin_fail()
@@ -649,6 +671,13 @@ def join_match(player: Player, match_join: bMatchJoin):
         player.enqueue_match_disband(match_join.match_id)
         return
 
+    match.last_activity = time.time()
+
+    if player.is_tourney_client:
+        player.logger.warning('Tried to join match, but was inside tourney client')
+        player.enqueue_matchjoin_fail()
+        return
+
     if player.match:
         # Player already joined the match
         player.logger.warning(f'{player.name} tried to join a match, but is already inside one')
@@ -694,6 +723,8 @@ def leave_match(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -717,6 +748,7 @@ def leave_match(player: Player):
 
         # Match is empty
         session.matches.remove(player.match)
+        player.match.starting = None
     else:
         if player is player.match.host:
             # Player was host, transfer to next player
@@ -740,6 +772,8 @@ def change_slot(player: Player, slot_id: int):
     if player.match.slots[slot_id].status != SlotStatus.Open:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -756,12 +790,16 @@ def change_settings(player: Player, match: bMatch):
     if player is not player.match.host:
         return
 
+    player.match.last_activity = time.time()
+
     player.match.change_settings(match)
 
 @register(RequestPacket.MATCH_CHANGE_MODS)
 def change_mods(player: Player, mods: Mods):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     mods_before = copy(player.match.mods)
 
@@ -808,6 +846,8 @@ def ready(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -820,6 +860,8 @@ def not_ready(player: Player):
     if not player.match:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -830,6 +872,8 @@ def not_ready(player: Player):
 def not_beatmap(player: Player):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     slot = player.match.get_slot(player)
     assert slot is not None
@@ -844,6 +888,8 @@ def lock(player: Player, slot_id: int):
 
     if player is not player.match.host:
         return
+
+    player.match.last_activity = time.time()
 
     if not 0 <= slot_id < 8:
         return
@@ -872,6 +918,8 @@ def change_team(player: Player):
     if not player.match.ffa:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -889,6 +937,8 @@ def transfer_host(player: Player, slot_id: int):
 
     if player is not player.match.host:
         return
+
+    player.match.last_activity = time.time()
 
     if not 0 <= slot_id < 8:
         return
@@ -922,6 +972,8 @@ def change_password(player: Player, new_password: str):
 def match_start(player: Player):
     if not player.match:
         return
+
+    player.match.last_activity = time.time()
 
     if player is not player.match.host:
         return
@@ -1015,6 +1067,8 @@ def match_complete(player: Player):
     if not player.match.in_progress:
         return
 
+    player.match.last_activity = time.time()
+
     slot = player.match.get_slot(player)
     assert slot is not None
 
@@ -1043,6 +1097,9 @@ def match_complete(player: Player):
 @run_in_thread
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
+        return
+
+    if not player.is_tourney_client:
         return
 
     if not (match := session.matches[match_id]):

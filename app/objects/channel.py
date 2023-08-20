@@ -84,7 +84,7 @@ class Channel:
         # Update player's silence duration
         player.silenced
 
-        if player in self.users:
+        if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
             if not no_response:
                 player.join_success(self.display_name)
@@ -115,7 +115,7 @@ class Channel:
 
         self.update()
 
-    def send_message(self, sender, message: str, ignore_privs=False):
+    def send_message(self, sender, message: str, ignore_privs=False, exclude_sender=True):
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
             sender.revoke_channel(self.display_name)
@@ -124,17 +124,26 @@ class Channel:
             )
             return
 
+        if sender.silenced:
+            sender.logger.warning(
+                'Failed to send message: Sender was silenced'
+            )
+            return
+
         can_write = self.can_write(sender.permissions)
 
-        if (can_write and not sender.silenced) or not ignore_privs:
+        if can_write or not ignore_privs:
             # Limit message size
             if len(message) > 512:
                 message = message[:512] + '... (truncated)'
 
             self.logger.info(f'[{sender.name}]: {message}')
 
-            # Filter out sender
-            users = {user for user in self.users if user != sender}
+            if exclude_sender:
+                # Filter out sender
+                users = {user for user in self.users if user != sender}
+            else:
+                users = self.users
 
             for user in users:
                 # Enqueue message to every user inside this channel
@@ -146,6 +155,20 @@ class Channel:
                         sender.id
                     )
                 )
+
+                # Send to their tourney clients
+                for client in app.session.players.get_all_tourney_clients(user.id):
+                    if client.address.port == user.address.port:
+                        continue
+
+                    client.enqueue_message(
+                        bMessage(
+                            sender.name,
+                            message,
+                            self.display_name,
+                            sender.id
+                        )
+                    )
             return
 
         # Player was silenced or is not allowed to write

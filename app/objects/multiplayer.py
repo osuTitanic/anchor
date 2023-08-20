@@ -1,5 +1,7 @@
 
 from typing import Optional, Tuple, List
+from dataclasses import dataclass
+from threading import Thread
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -18,6 +20,7 @@ from .channel import Channel
 from .player import Player
 
 import logging
+import time
 import app
 
 class Slot:
@@ -71,6 +74,11 @@ class Slot:
         self.loaded  = False
         self.skipped = False
 
+@dataclass
+class StartingTimers:
+    time: float
+    thread: Thread
+
 class Match:
     def __init__(
         self,
@@ -106,9 +114,11 @@ class Match:
 
         self.slots = [Slot() for _ in range(8)]
 
+        self.starting: Optional[StartingTimers] = None
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
+        self.last_activity = time.time()
 
     @classmethod
     def from_bancho_match(cls, bancho_match: bMatch):
@@ -214,6 +224,12 @@ class Match:
 
         return None
 
+    def get_player(self, name: str) -> Optional[Player]:
+        for player in self.players:
+            if player.name == name:
+                return player
+        return None
+
     def update(self, lobby=True) -> None:
         # Enqueue to our players
         for player in self.players:
@@ -273,7 +289,6 @@ class Match:
 
         if self.beatmap_hash != new_match.beatmap_checksum:
             # New map has been chosen
-            self.chat.send_message(app.session.bot_player, f'Selected: {new_match.beatmap_text}')
             self.logger.info(f'Selected: {new_match.beatmap_text}')
             self.unready_players()
 
@@ -285,11 +300,18 @@ class Match:
                 self.beatmap_hash = beatmap.md5
                 self.beatmap_name = beatmap.full_name
                 self.mode         = GameMode(beatmap.mode)
+                beatmap_text      = beatmap.link
             else:
                 self.beatmap_id   = new_match.beatmap_id
                 self.beatmap_hash = new_match.beatmap_checksum
                 self.beatmap_name = new_match.beatmap_text
                 self.mode         = new_match.mode
+                beatmap_text      = new_match.beatmap_text
+
+            self.chat.send_message(
+                app.session.bot_player,
+                f'Selected: {beatmap_text}'
+            )
 
         if self.team_type != new_match.team_type:
             # Changed team type
@@ -308,6 +330,11 @@ class Match:
             self.team_type = new_match.team_type
 
             self.logger.info(f'Team type: {self.team_type.name}')
+
+        if self.type != new_match.type:
+            # Changed match type
+            self.type = new_match.type
+            self.logger.info(f'Match type: {self.type.name}')
 
         if self.scoring_type != new_match.scoring_type:
             # Changed scoring type
@@ -338,15 +365,37 @@ class Match:
             f'{player.name} was kicked from the match'
         )
 
+    def close(self):
+        # Shutdown pending match timer
+        self.starting = None
+
+        app.session.matches.remove(self)
+
+        if self.in_progress:
+            for player in self.players:
+                player.enqueue_match_complete()
+
+        for player in self.players:
+            self.kick_player(player)
+            self.chat.remove(player)
+            player.enqueue_match_disband(self.id)
+            player.match = None
+
+        for player in app.session.players.in_lobby:
+            player.enqueue_match_disband(self.id)
+
+        app.session.channels.remove(self.chat)
+
     def start(self):
         if self.player_count <= 0:
             self.logger.warning('Host tried to start match without any players')
             return
 
-        self.in_progress = True
-
         for slot in self.slots:
             if not slot.has_player:
+                continue
+
+            if slot.status == SlotStatus.NotReady:
                 continue
 
             # TODO: Check osu! mania support
@@ -356,5 +405,76 @@ class Match:
             if slot.status != SlotStatus.NoMap:
                 slot.status = SlotStatus.Playing
 
+        playing_slots = [s for s in self.player_slots if s.status == SlotStatus.Playing]
+
+        if not playing_slots:
+            self.logger.info('Could not start match, because no one was ready.')
+            return
+
+        self.in_progress = True
+
         self.logger.info('Match started')
         self.update()
+
+    def abort(self):
+        # Players that have been playing this round
+        players = [
+            slot.player for slot in self.slots
+            if slot.status.value & SlotStatus.Playing.value
+            and slot.has_player
+        ]
+
+        self.unready_players(SlotStatus.Playing)
+        self.in_progress = False
+
+        # The join success packet will reset the players to the setup screen
+        for player in players:
+            player.enqueue_matchjoin_success(self.bancho_match)
+
+        self.update()
+
+    def execute_timer(self) -> None:
+        if not self.starting:
+            self.logger.warning('Tried to execute timer, but match was not starting.')
+            return
+
+        remaining_time = round(self.starting.time - time.time())
+        intervals = [60, 30, 10, 5, 4, 3, 2, 1]
+
+        if remaining_time in intervals:
+            intervals.remove(remaining_time)
+
+        self.logger.debug(f'Match timer starting: {remaining_time} seconds left')
+
+        for interval in intervals:
+            if remaining_time < interval:
+                continue
+
+            until_next_message = remaining_time - interval
+
+            while until_next_message > 0:
+                if not self.starting:
+                    # Timer was cancelled
+                    return
+
+                time.sleep(1)
+                until_next_message -= 1
+
+            remaining_time = round(self.starting.time - time.time())
+
+            self.chat.send_message(
+                app.session.bot_player,
+                f'Match starting in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
+            )
+
+            self.logger.debug(f'Match timer running: {remaining_time} seconds left')
+
+        time.sleep(1)
+
+        self.chat.send_message(
+            app.session.bot_player,
+            'Match was started. Good luck!'
+        )
+
+        self.starting = None
+        self.start()

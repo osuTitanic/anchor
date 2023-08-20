@@ -363,3 +363,11 @@ def restarting(retry_in_ms: int):
         byteorder='little',
         signed=True
     )
+
+@register(ResponsePacket.UNAUTHORIZED)
+def unauthorized_build():
+    # This packet is used in very old clients
+    # It will display a message like this:
+    # "Your account has not been authorised to use the private version of osu!."
+    # "If you think this is a mistake, please contact peppy via IRC/forums"
+    return

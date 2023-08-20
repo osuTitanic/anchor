@@ -1,4 +1,5 @@
 
+from app.common.constants import ANCHOR_ASCII_ART
 from app.common.database import DBScore
 from app.common.helpers import location
 from datetime import datetime
@@ -11,6 +12,8 @@ import app
 import os
 
 def setup():
+    app.session.logger.info(f'{ANCHOR_ASCII_ART}\n    anchor-{config.VERSION}\n')
+
     os.makedirs(config.DATA_PATH, exist_ok=True)
 
     if config.SKIP_IP_DATABASE:
