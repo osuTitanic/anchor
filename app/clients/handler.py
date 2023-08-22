@@ -239,8 +239,8 @@ def send_message(player: Player, message: bMessage):
         ).start()
         return
 
-    player.update_activity()
     channel.send_message(player, parsed_message)
+    player.update_activity()
 
     messages.create(
         player.name,
@@ -287,17 +287,6 @@ def send_private_message(sender: Player, message: bMessage):
     if len(message.content) > 512:
         message.content = message.content[:512] + '... (truncated)'
 
-    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
-    sender.update_activity()
-
-    # TODO: Check commands
-
-    messages.create(
-        sender.name,
-        target.name,
-        message.content
-    )
-
     if target.away_message:
         sender.enqueue_message(
             bMessage(
@@ -330,6 +319,15 @@ def send_private_message(sender: Player, message: bMessage):
                 sender.id
             )
         )
+
+    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
+    sender.update_activity()
+
+    messages.create(
+        sender.name,
+        target.name,
+        message.content
+    )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 @run_in_thread
