@@ -778,6 +778,19 @@ def unrestrict(ctx: Context) -> Optional[List]:
 
     return [f'Player "{username}" was unrestricted.']
 
+@command(['moderated'], Permissions.Admin, hidden=False)
+def moderated(ctx: Context) -> Optional[List]:
+    """(on/off)"""
+    if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
+        return [f'Invalid syntax: !{ctx.trigger} (on/off)']
+
+    if type(ctx.target) != Channel:
+        return ['Target is not a channel.']
+
+    ctx.target.moderated = ctx.args[0] == "on"
+
+    return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
+
 # TODO: !rank
 # TODO: !faq
 # TODO: !moderated

@@ -22,6 +22,7 @@ class Channel:
 
         self.read_perms = read_perms
         self.write_perms = write_perms
+        self.moderated = False
         self.public = public
 
         self.logger = logging.getLogger(self.name)
@@ -123,6 +124,12 @@ class Channel:
                 f'Failed to send message: "{message}" on {self.name}, because player did not join the channel.'
             )
             return
+
+        if self.moderated:
+            allowed_permissions = [Permissions.Admin, Permissions.Friend]
+
+            if not any([p in sender.permissions for p in allowed_permissions]):
+                return
 
         if sender.silenced:
             sender.logger.warning(
