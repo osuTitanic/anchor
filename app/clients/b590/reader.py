@@ -1,5 +1,6 @@
 
 from app.common.objects import (
+    bMatchJoin,
     bMatch,
     bSlot
 )
@@ -75,3 +76,6 @@ class Reader(BaseReader):
             False,
             0
         )
+
+    def read_matchjoin(self) -> bMatchJoin:
+        return bMatchJoin(self.stream.s32())
