@@ -426,12 +426,14 @@ class Player(BanchoProtocol):
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
 
-        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[
-            min(
+        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[(
+            version := min(
                 PACKETS.keys(),
                 key=lambda x:abs(x-version)
             )
-        ]
+        )]
+
+        self.logger.debug(f'Assigned decoder with version b{version}')
 
     @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
