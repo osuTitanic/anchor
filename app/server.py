@@ -55,8 +55,9 @@ class BanchoFactory(Factory):
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
         app.session.events.submit('shutdown')
+        app.session.executor.shutdown(wait=True)
         app.session.jobs.shutdown(cancel_futures=True)
-        app.session.executor.shutdown(cancel_futures=True, wait=False)
+        app.session.packet_executor.shutdown(cancel_futures=True, wait=False)
 
         for player in app.session.players:
             status.delete(player.id)

@@ -516,7 +516,8 @@ def report(ctx: Context) -> Optional[List]:
     if (player := app.session.players.by_id(player.id)):
         player.enqueue_monitor()
 
-    logs.create(
+    app.session.executor.submit(
+        logs.create,
         message,
         'info',
         'reports'

@@ -64,7 +64,7 @@ def thread_callback(future: Future):
 def run_in_thread(func):
     def wrapper(*args, **kwargs) -> Future:
         try:
-            f = session.executor.submit(
+            f = session.packet_executor.submit(
                 func,
                 *args,
                 **kwargs
@@ -240,12 +240,16 @@ def send_message(player: Player, message: bMessage):
         return
 
     channel.send_message(player, parsed_message)
-    player.update_activity()
 
-    messages.create(
+    session.executor.submit(
+        messages.create,
         player.name,
         channel.name,
         message.content
+    )
+
+    session.executor.submit(
+        player.update_activity
     )
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
@@ -321,12 +325,16 @@ def send_private_message(sender: Player, message: bMessage):
         )
 
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
-    sender.update_activity()
 
-    messages.create(
+    session.executor.submit(
+        messages.create,
         sender.name,
         target.name,
         message.content
+    )
+
+    session.executor.submit(
+        sender.update_activity
     )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)

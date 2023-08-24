@@ -42,8 +42,14 @@ requests.headers = {
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
 
+# This is to prevent database overload when too many users log in at the same time
 login_queue = ThreadPoolExecutor(max_workers=config.LOGIN_WORKERS)
-executor = ThreadPoolExecutor(max_workers=config.WORKERS)
+
+# Used to run most of the packets in threads, except for things like messages
+packet_executor = ThreadPoolExecutor(max_workers=config.WORKERS)
+
+# This is mostly used for database writes like messages, user activity and so on...
+executor = ThreadPoolExecutor(max_workers=2)
 
 jobs = Jobs(max_workers=4)
 channels = Channels()
