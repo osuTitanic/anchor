@@ -46,10 +46,10 @@ handlers: Dict[DefaultResponsePacket, Callable] = {}
 login_queue = ThreadPoolExecutor(max_workers=config.LOGIN_WORKERS)
 
 # Used to run most of the packets in threads, except for things like messages
-packet_executor = ThreadPoolExecutor(max_workers=config.WORKERS)
+packet_executor = ThreadPoolExecutor(max_workers=config.PACKET_WORKERS)
 
 # This is mostly used for database writes like messages, user activity and so on...
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=config.DB_WORKERS)
 
 jobs = Jobs(max_workers=4)
 channels = Channels()
