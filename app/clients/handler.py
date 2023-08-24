@@ -638,7 +638,7 @@ def create_match(player: Player, bancho_match: bMatch):
         player.enqueue_matchjoin_fail()
         return
 
-    match = Match.from_bancho_match(bancho_match)
+    match = Match.from_bancho_match(bancho_match, player)
 
     if not session.matches.append(match):
         player.logger.warning('Tried to create match, but max match limit was reached')

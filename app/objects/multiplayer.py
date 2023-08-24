@@ -121,14 +121,12 @@ class Match:
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, bancho_match: bMatch):
+    def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
         return Match(
             bancho_match.id,
             bancho_match.name,
             bancho_match.password,
-            app.session.players.by_id(
-                bancho_match.host_id
-            ),
+            host_player,
             bancho_match.beatmap_id,
             bancho_match.beatmap_text,
             bancho_match.beatmap_checksum,
