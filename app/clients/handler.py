@@ -740,6 +740,7 @@ def leave_match(player: Player):
         status = SlotStatus.Open
 
     slot.reset(status)
+
     channel_leave(
         player,
         player.match.chat.name,
