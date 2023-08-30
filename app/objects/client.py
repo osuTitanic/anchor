@@ -109,29 +109,23 @@ class OsuClient:
 
     @classmethod
     def from_string(cls, line: str, ip: str):
+        args = line.split('|')
+
+        # Sent in every client version
+        build_version = args[0]
+        utc_offset = args[1]
+
+        # Not sent in every client version
+        client_hash = ClientHash.empty().string
+        friendonly_dms = '0'
+        display_city = '0'
+
         try:
-            build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
+            display_city = args[2]
+            client_hash = args[3]
+            friendonly_dms = args[4]
         except ValueError:
-            # Workaround for older clients
-            friendonly_dms = False
-
-            if line.count('|') > 2:
-                build_version, utc_offset, display_city, client_hash = line.split('|')
-
-            elif line.count('|') == 2:
-                build_version, utc_offset, display_city = line.split('|')
-                # No client hash support
-                client_hash = ClientHash.empty(build_version).string
-
-            elif line.count('|') <= 1:
-                build_version, utc_offset = line.split('|')
-                # No client hash support
-                client_hash = ClientHash.empty(build_version).string
-                # No city
-                display_city = False
-
-            else:
-                raise ValueError('what?')
+            pass
 
         if not (geolocation := app.session.geolocation_cache.get(ip)):
             geolocation = location.fetch_geolocation(
