@@ -61,6 +61,16 @@ class ClientHash:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
 
     @classmethod
+    def empty(cls, build_version: str):
+        return ClientHash(
+            md5=hashlib.md5(build_version.encode()).hexdigest(),
+            adapters='',
+            adapters_md5=hashlib.md5(b'').hexdigest(),
+            uninstall_id=hashlib.md5(b'unknown').hexdigest(),
+            diskdrive_signature=hashlib.md5(b'unknown').hexdigest()
+        )
+
+    @classmethod
     def from_string(cls, string: str):
         try:
             md5, adapters, adapters_md5, uninstall_id, diskdrive_signature = string.split(':')
@@ -107,11 +117,21 @@ class OsuClient:
 
             if line.count('|') > 2:
                 build_version, utc_offset, display_city, client_hash = line.split('|')
-            else:
-                # Client hash is not supported...
+
+            elif line.count('|') == 2:
                 build_version, utc_offset, display_city = line.split('|')
-                # Generate pseudo client hash
-                client_hash = f'{hashlib.md5(build_version.encode()).hexdigest()}::{hashlib.md5(b"").hexdigest()}'
+                # No client hash support
+                client_hash = ClientHash.empty(build_version).string
+
+            elif line.count('|') <= 1:
+                build_version, utc_offset = line.split('|')
+                # No client hash support
+                client_hash = ClientHash.empty(build_version).string
+                # No city
+                display_city = False
+
+            else:
+                raise ValueError('what?')
 
         if not (geolocation := app.session.geolocation_cache.get(ip)):
             geolocation = location.fetch_geolocation(
