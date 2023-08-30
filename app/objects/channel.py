@@ -135,26 +135,41 @@ class Channel:
             sender.logger.warning(
                 'Failed to send message: Sender was silenced'
             )
+            return 
+
+        if not self.can_write(sender.permissions) and not ignore_privs:
+            sender.logger.warning(f'Failed to send message: "{message}".')
             return
 
-        can_write = self.can_write(sender.permissions)
+        # Limit message size
+        if len(message) > 512:
+            message = message[:512] + '... (truncated)'
 
-        if can_write or not ignore_privs:
-            # Limit message size
-            if len(message) > 512:
-                message = message[:512] + '... (truncated)'
+        self.logger.info(f'[{sender.name}]: {message}')
 
-            self.logger.info(f'[{sender.name}]: {message}')
+        if exclude_sender:
+            # Filter out sender
+            users = {user for user in self.users if user != sender}
+        else:
+            users = self.users
 
-            if exclude_sender:
-                # Filter out sender
-                users = {user for user in self.users if user != sender}
-            else:
-                users = self.users
+        for user in users:
+            # Enqueue message to every user inside this channel
+            user.enqueue_message(
+                bMessage(
+                    sender.name,
+                    message,
+                    self.display_name,
+                    sender.id
+                )
+            )
 
-            for user in users:
-                # Enqueue message to every user inside this channel
-                user.enqueue_message(
+            # Send to their tourney clients
+            for client in app.session.players.get_all_tourney_clients(user.id):
+                if client.address.port == user.address.port:
+                    continue
+
+                client.enqueue_message(
                     bMessage(
                         sender.name,
                         message,
@@ -162,21 +177,3 @@ class Channel:
                         sender.id
                     )
                 )
-
-                # Send to their tourney clients
-                for client in app.session.players.get_all_tourney_clients(user.id):
-                    if client.address.port == user.address.port:
-                        continue
-
-                    client.enqueue_message(
-                        bMessage(
-                            sender.name,
-                            message,
-                            self.display_name,
-                            sender.id
-                        )
-                    )
-            return
-
-        # Player was silenced or is not allowed to write
-        sender.logger.warning(f'Failed to send message: "{message}".')
