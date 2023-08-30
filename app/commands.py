@@ -794,7 +794,6 @@ def moderated(ctx: Context) -> Optional[List]:
 
 # TODO: !rank
 # TODO: !faq
-# TODO: !moderated
 # TODO: !kick
 # TODO: !kill
 # TODO: !top
