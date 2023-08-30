@@ -48,10 +48,10 @@ class ClientVersion:
 class ClientHash:
     def __init__(self, md5: str, adapters: str, adapters_md5: str, uninstall_id: str, diskdrive_signature: str) -> None:
         self.diskdrive_signature = diskdrive_signature
-        self.uninstall_id = uninstall_id
-        self.adapters_md5 = adapters_md5
-        self.adapters = adapters
-        self.md5 = md5
+        self.uninstall_id        = uninstall_id
+        self.adapters_md5        = adapters_md5
+        self.adapters            = adapters
+        self.md5                 = md5
 
     def __repr__(self) -> str:
         return self.string
@@ -81,6 +81,7 @@ class ClientHash:
             adapters = args[1]
             adapters_md5 = args[2]
 
+            # Hardware IDs are not implemented
             diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
             uninstall_id = hashlib.md5(b'unknown').hexdigest()
 
@@ -100,12 +101,12 @@ class ClientHash:
 
 class OsuClient:
     def __init__(self, ip: location.Geolocation, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
-        self.ip = ip
-        self.hash = client_hash
-        self.version = version
-        self.utc_offset = utc_offset
-        self.display_city = display_city
         self.friendonly_dms = friendonly_dms
+        self.display_city   = display_city
+        self.utc_offset     = utc_offset
+        self.version        = version
+        self.hash           = client_hash
+        self.ip             = ip
 
     @classmethod
     def from_string(cls, line: str, ip: str):
