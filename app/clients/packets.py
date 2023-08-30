@@ -46,5 +46,6 @@ PACKETS: Dict[int, list] = {
     487:      [{}, {}, PacketEnum, PacketEnum], # 1
     483:      [{}, {}, PacketEnum, PacketEnum], # 0
     402:      [{}, {}, PacketEnum, PacketEnum], # 0
-    399:      [{}, {}, PacketEnum, PacketEnum]  # 0 (NoHostId)
+    399:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoHostId)
+    392:      [{}, {}, PacketEnum, PacketEnum]  # 0 (NoHostId)
 }
