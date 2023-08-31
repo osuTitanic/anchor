@@ -148,6 +148,10 @@ def no_beatmap(stream: StreamIn):
 def has_beatmap(stream: StreamIn):
     return
 
+@register(RequestPacket.MATCH_CHANGE_BEATMAP)
+def legacy_change_beatmap(stream: StreamIn):
+    return Reader().read_match()
+
 @register(RequestPacket.MATCH_CHANGE_TEAM)
 def change_team(stream: StreamIn):
     return
