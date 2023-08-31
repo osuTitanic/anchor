@@ -46,7 +46,7 @@ class Writer(BaseWriter):
         self.stream.string(msg.content)
         self.stream.string(msg.target)
 
-    def write_presence(self, presence: bUserPresence, stats: Optional[bUserStats] = None):
+    def write_presence(self, presence: bUserPresence, stats: bUserStats):
         if stats.user_id <= 0:
             stats.user_id = -stats.user_id
 

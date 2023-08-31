@@ -7,7 +7,7 @@ from ..b1700.constants import Completeness
 from typing import Optional
 
 class Writer(BaseWriter):
-    def write_presence(self, presence: bUserPresence, stats: Optional[bUserStats] = None):
+    def write_presence(self, presence: bUserPresence, stats: bUserStats):
         if stats.user_id <= 0:
             stats.user_id = -stats.user_id
 
