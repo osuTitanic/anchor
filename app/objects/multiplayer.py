@@ -290,6 +290,9 @@ class Match:
             self.logger.info(f'Selected: {new_match.beatmap_text}')
             self.unready_players()
 
+            # Unready players with no beatmap
+            self.unready_players(SlotStatus.NoMap)
+
             # Lookup beatmap in database
             beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
 

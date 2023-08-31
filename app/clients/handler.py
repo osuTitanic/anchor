@@ -819,6 +819,9 @@ def change_beatmap(player: Player, new_match: bMatch):
     match.logger.info(f'Selected: {new_match.beatmap_text}')
     match.unready_players()
 
+    # Unready players with no beatmap
+    match.unready_players(SlotStatus.NoMap)
+
     # Lookup beatmap in database
     beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
 
