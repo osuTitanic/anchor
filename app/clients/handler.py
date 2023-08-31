@@ -226,6 +226,9 @@ def send_message(player: Player, message: bMessage):
             player.revoke_channel(message.target)
             return
 
+    if message.content.startswith('/me'):
+        message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
+
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
         Thread(
