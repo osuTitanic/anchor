@@ -117,7 +117,7 @@ class OsuClient:
         utc_offset = args[1]
 
         # Not sent in every client version
-        client_hash = ClientHash.empty().string
+        client_hash = ClientHash.empty(build_version).string
         friendonly_dms = '0'
         display_city = '0'
 
