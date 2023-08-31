@@ -7,6 +7,7 @@ from app.common.objects import (
     BanchoPacket,
     bReplayFrame,
     bScoreFrame,
+    bMatchJoin,
     bMessage,
     bMatch
 )
@@ -43,4 +44,7 @@ class BaseReader(ABC):
         ...
 
     def read_match(self) -> bMatch:
+        ...
+
+    def read_matchjoin(self) -> bMatchJoin:
         ...

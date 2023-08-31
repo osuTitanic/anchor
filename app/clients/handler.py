@@ -32,6 +32,7 @@ from ..common.constants import (
     PresenceFilter,
     SlotStatus,
     SlotTeam,
+    GameMode,
     Grade,
     Mods
 )
@@ -803,6 +804,43 @@ def change_settings(player: Player, match: bMatch):
     player.match.last_activity = time.time()
 
     player.match.change_settings(match)
+
+@register(RequestPacket.MATCH_CHANGE_BEATMAP)
+def change_beatmap(player: Player, new_match: bMatch):
+    if not (match := player.match):
+        return
+
+    if player is not player.match.host:
+        return
+
+    player.match.last_activity = time.time()
+
+    # New map has been chosen
+    match.logger.info(f'Selected: {new_match.beatmap_text}')
+    match.unready_players()
+
+    # Lookup beatmap in database
+    beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
+
+    if beatmap:
+        match.beatmap_id   = beatmap.id
+        match.beatmap_hash = beatmap.md5
+        match.beatmap_name = beatmap.full_name
+        match.mode         = GameMode(beatmap.mode)
+        beatmap_text       = beatmap.link
+    else:
+        match.beatmap_id   = new_match.beatmap_id
+        match.beatmap_hash = new_match.beatmap_checksum
+        match.beatmap_name = new_match.beatmap_text
+        match.mode         = new_match.mode
+        beatmap_text       = new_match.beatmap_text
+
+    match.chat.send_message(
+        session.bot_player,
+        f'Selected: {beatmap_text}'
+    )
+
+    match.update()
 
 @register(RequestPacket.MATCH_CHANGE_MODS)
 def change_mods(player: Player, mods: Mods):

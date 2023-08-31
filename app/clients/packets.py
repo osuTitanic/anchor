@@ -49,5 +49,7 @@ PACKETS: Dict[int, list] = {
     399:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoHostId)
     392:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoHostId)
     388:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoApprovedStatus)
-    339:      [{}, {}, PacketEnum, PacketEnum]  # 0 (NoApprovedStatus)
+    339:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoApprovedStatus)
+    338:      [{}, {}, PacketEnum, PacketEnum], # 0 (MatchChangeBeatmap)
+    337:      [{}, {}, PacketEnum, PacketEnum]  # 0 (UserStatsChange)
 }
