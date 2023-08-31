@@ -222,6 +222,7 @@ class Player(BanchoProtocol):
         for stats in self.stats:
             if stats.mode == self.status.mode.value:
                 return stats
+        self.logger.warning('Failed to load current stats!')
         return None
 
     @property
@@ -240,47 +241,41 @@ class Player(BanchoProtocol):
 
     @property
     def user_presence(self) -> Optional[bUserPresence]:
-        try:
-            return bUserPresence(
-                self.id,
-                False,
-                self.name,
-                self.client.utc_offset,
-                self.client.ip.country_index,
-                self.permissions,
-                self.status.mode,
-                self.client.ip.longitude,
-                self.client.ip.latitude,
-                self.rank,
-                self.client.ip.city \
-                    if self.client.display_city
-                    else None
-            )
-        except AttributeError:
-            return None
+        return bUserPresence(
+            self.id,
+            False,
+            self.name,
+            self.client.utc_offset,
+            self.client.ip.country_index,
+            self.permissions,
+            self.status.mode,
+            self.client.ip.longitude,
+            self.client.ip.latitude,
+            self.rank,
+            self.client.ip.city \
+                if self.client.display_city
+                else None
+        )
 
     @property
     def user_stats(self) -> Optional[bUserStats]:
-        try:
-            return bUserStats(
-                self.id,
-                bStatusUpdate(
-                    self.status.action,
-                    self.status.text,
-                    self.status.mods,
-                    self.status.mode,
-                    self.status.checksum,
-                    self.status.beatmap
-                ),
-                self.current_stats.rscore,
-                self.current_stats.tscore,
-                self.current_stats.acc,
-                self.current_stats.playcount,
-                self.rank,
-                self.current_stats.pp,
-            )
-        except AttributeError:
-            return None
+        return bUserStats(
+            self.id,
+            bStatusUpdate(
+                self.status.action,
+                self.status.text,
+                self.status.mods,
+                self.status.mode,
+                self.status.checksum,
+                self.status.beatmap
+            ),
+            self.current_stats.rscore,
+            self.current_stats.tscore,
+            self.current_stats.acc,
+            self.current_stats.playcount,
+            self.rank,
+            self.current_stats.pp,
+        )
 
     @property
     def level(self) -> int:
