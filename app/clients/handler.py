@@ -920,11 +920,15 @@ def not_ready(player: Player):
     player.match.update()
 
 @register(RequestPacket.MATCH_NO_BEATMAP)
-def not_beatmap(player: Player):
+def no_beatmap(player: Player):
     if not player.match:
         return
 
     player.match.last_activity = time.time()
+
+    if player.match.beatmap_id <= 0:
+        # Beatmap is being selected by the host
+        return
 
     slot = player.match.get_slot(player)
     assert slot is not None
