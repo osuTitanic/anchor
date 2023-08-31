@@ -125,7 +125,7 @@ class OsuClient:
             display_city = args[2]
             client_hash = args[3]
             friendonly_dms = args[4]
-        except ValueError:
+        except (ValueError, IndexError):
             pass
 
         if not (geolocation := app.session.geolocation_cache.get(ip)):
