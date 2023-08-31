@@ -26,6 +26,7 @@ class RequestPacket(PacketEnum):
     MATCH_START           = 45
     MATCH_SCORE_UPDATE    = 48
     MATCH_COMPLETE        = 50
+  # MATCH_CHANGE_BEATMAP  = 51
     MATCH_CHANGE_MODS     = 52
     MATCH_LOAD_COMPLETE   = 53
     MATCH_NO_BEATMAP      = 55
