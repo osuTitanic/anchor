@@ -313,6 +313,32 @@ class Player(BanchoProtocol):
         ).start()
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
+        if self.spectating:
+            if not self.spectating:
+                return
+
+            # Leave spectator channel
+            self.spectating.spectator_chat.remove(self)
+
+            # Remove from target
+            self.spectating.spectators.remove(self)
+
+            # Enqueue to others
+            for p in self.spectating.spectators:
+                p.enqueue_fellow_spectator_left(self.id)
+
+            # Enqueue to target
+            self.spectating.enqueue_spectator_left(self.id)
+
+            # If target has no spectators anymore
+            # kick them from the spectator channel
+            if not self.spectating.spectators:
+                self.spectating.spectator_chat.remove(
+                    self.spectating
+                )
+
+            self.spectating = None
+
         app.session.players.remove(self)
 
         status.delete(self.id)
@@ -432,8 +458,8 @@ class Player(BanchoProtocol):
 
     @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
-        self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.logger.name = f'Player "{username}"'
+        self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
         self.last_response = time.time()
 
         # Get decoders and encoders
