@@ -17,6 +17,7 @@ from app.common.constants import (
     MatchScoringTypes,
     MatchScoringTypes,
     MatchTeamTypes,
+    ReplayAction,
     ClientStatus,
     ButtonState,
     SlotStatus,
@@ -85,9 +86,14 @@ class Reader(BaseReader):
         )
 
     def read_replayframe(self) -> bReplayFrame:
+        button_state = ButtonState.NoButton
+
+        if self.stream.bool(): button_state |= ButtonState.Left1
+        if self.stream.bool(): button_state |= ButtonState.Right1
+
         return bReplayFrame(
-            button_state=ButtonState(self.stream.u8()),
-            taiko_byte=self.stream.u8(),
+            button_state=button_state,
+            taiko_byte=0,
             mouse_x=self.stream.float(),
             mouse_y=self.stream.float(),
             time=self.stream.s32()
@@ -108,6 +114,22 @@ class Reader(BaseReader):
             current_combo=self.stream.u16(),
             perfect=self.stream.bool(),
             hp=self.stream.u8()
+        )
+
+    def read_replayframe_bundle(self) -> bReplayFrameBundle:
+        replay_frames = [self.read_replayframe() for f in range(self.stream.u16())]
+        action = ReplayAction(self.stream.u8())
+
+        try:
+            score_frame = self.read_scoreframe()
+        except OverflowError:
+            score_frame = None
+
+        return bReplayFrameBundle(
+            0,
+            action,
+            replay_frames,
+            score_frame
         )
 
     def read_match(self) -> bMatch:

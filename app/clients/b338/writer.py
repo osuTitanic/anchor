@@ -1,4 +1,5 @@
 
+from app.common.constants import ButtonState
 from app.common.streams import StreamOut
 from app.common.objects import (
     bReplayFrameBundle,
@@ -122,8 +123,14 @@ class Writer(BaseWriter):
         [self.stream.s32(slot.player_id) for slot in match.slots if slot.has_player]
 
     def write_replayframe(self, frame: bReplayFrame):
-        self.stream.u8(frame.button_state.value)
-        self.stream.u8(frame.taiko_byte)
+        self.stream.bool(
+            (ButtonState.Left1 in frame.button_state) or
+            (ButtonState.Left2 in frame.button_state)
+        ) # "mouseLeft"
+        self.stream.bool(
+            (ButtonState.Right1 in frame.button_state) or
+            (ButtonState.Right2 in frame.button_state)
+        ) # "mouseRight"
         self.stream.float(frame.mouse_x)
         self.stream.float(frame.mouse_y)
         self.stream.s32(frame.time)
