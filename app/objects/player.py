@@ -458,8 +458,8 @@ class Player(BanchoProtocol):
 
     @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
-        self.logger.name = f'Player "{username}"'
-        self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
+        self.logger = logging.getLogger(f'Player "{username}"')
+        self.logger.info(f'Login attempt as "{username}" with {client.version}.')
         self.last_response = time.time()
 
         # Get decoders and encoders
