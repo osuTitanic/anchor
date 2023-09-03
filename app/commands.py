@@ -838,10 +838,7 @@ def get_command(
     try:
         set_trigger, trigger, *args = trigger, *args
     except ValueError:
-        return CommandResponse(
-            [f'Invalid Syntax: !{trigger} help'],
-            hidden=True
-        )
+        return
 
     # Command sets
     for set in sets:
