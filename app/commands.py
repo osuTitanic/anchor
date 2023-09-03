@@ -835,7 +835,13 @@ def get_command(
                 command.hidden
             )
 
-    set_trigger, trigger, *args = trigger, *args
+    try:
+        set_trigger, trigger, *args = trigger, *args
+    except ValueError:
+        return CommandResponse(
+            [f'Invalid Syntax: !{trigger} help'],
+            hidden=True
+        )
 
     # Command sets
     for set in sets:
