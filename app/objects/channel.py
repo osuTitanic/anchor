@@ -4,6 +4,7 @@ from app.clients import DefaultResponsePacket
 from app.common.constants import Permissions
 
 import logging
+import config
 import app
 
 class Channel:
@@ -152,6 +153,13 @@ class Channel:
             users = {user for user in self.users if user != sender}
         else:
             users = self.users
+
+        # Exclude clients that only write in #osu if channel was not autojoined
+        users = {
+            user for user in users \
+            if user.client.version.date > 342 \
+            or self.name in config.AUTOJOIN_CHANNELS
+        }
 
         for user in users:
             # Enqueue message to every user inside this channel
