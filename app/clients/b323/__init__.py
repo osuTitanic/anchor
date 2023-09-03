@@ -10,9 +10,8 @@ from .reader import Reader
 from ..packets import PACKETS
 from copy import deepcopy
 
-# Inherit packets from 339
-PACKETS[337] = deepcopy(PACKETS[338])
-PACKETS[334] = deepcopy(PACKETS[338])
+# Inherit packets from 334
+PACKETS[323] = deepcopy(PACKETS[334])
 
 from . import encoder
 from . import decoder
