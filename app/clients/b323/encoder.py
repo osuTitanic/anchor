@@ -1,5 +1,9 @@
 
-from app.common.objects import bMatch
+from app.common.objects import (
+    bScoreFrame,
+    bMatch
+)
+
 from typing import Callable
 
 from . import ResponsePacket
@@ -34,4 +38,10 @@ def match_join_success(match: bMatch):
 def match_start(match: bMatch):
     writer = Writer()
     writer.write_match(match)
+    return writer.stream.get()
+
+@register(ResponsePacket.MATCH_SCORE_UPDATE)
+def score_update(frame: bScoreFrame):
+    writer = Writer()
+    writer.write_scoreframe(frame)
     return writer.stream.get()

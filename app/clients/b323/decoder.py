@@ -25,3 +25,7 @@ def change_settings(stream: StreamIn):
 @register(RequestPacket.MATCH_CHANGE_PASSWORD)
 def change_password(stream: StreamIn):
     return Reader(stream).read_match().password
+
+@register(RequestPacket.MATCH_SCORE_UPDATE)
+def score_update(stream: StreamIn):
+    return Reader(stream).read_scoreframe()

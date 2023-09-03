@@ -1,5 +1,9 @@
 
-from app.common.objects import bMatch
+from app.common.objects import (
+    bScoreFrame,
+    bMatch
+)
+
 from typing import List
 
 from ..b337 import Writer as BaseWriter
@@ -29,3 +33,19 @@ class Writer(BaseWriter):
             if index > 0:
                 byte = byte << 1
         self.stream.u8(byte)
+
+    def write_scoreframe(self, frame: bScoreFrame):
+        self.stream.string(frame.checksum)
+        self.stream.s32(frame.time)
+        self.stream.u8(frame.id)
+        self.stream.u16(frame.c300)
+        self.stream.u16(frame.c100)
+        self.stream.u16(frame.c50)
+        self.stream.u16(frame.cGeki)
+        self.stream.u16(frame.cKatu)
+        self.stream.u16(frame.cMiss)
+        self.stream.s32(frame.total_score)
+        self.stream.u16(frame.max_combo)
+        self.stream.u16(frame.current_combo)
+        self.stream.bool(frame.perfect)
+        self.stream.u8(frame.hp)
