@@ -192,7 +192,9 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        return [slot.loaded for slot in self.slots if slot.has_map]
+        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE packet
+        # so we can just ignore them...
+        return [slot.loaded for slot in self.slots if slot.has_map and slot.player.client.version.date > 323]
 
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:
