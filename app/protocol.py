@@ -116,7 +116,11 @@ class BanchoProtocol(Protocol):
 
                 try:
                     packet = stream.u16()
-                    compression = stream.bool()
+                    if self.client.version.date > 323:
+                        compression = stream.bool()
+                    else:
+                        # In version b323 and below, the compression is enabled by default
+                        compression = True
                     payload = stream.read(stream.u32())
                 except OverflowError:
                     # Wait for next buffer
@@ -176,7 +180,13 @@ class BanchoProtocol(Protocol):
                 f'<- "{packet.name}": {str(list(args)).removeprefix("[").removesuffix("]")}'
             )
 
-            stream.header(packet, len(data))
+            if self.client.version.date <= 323:
+                # In version b323 and below, the compression is enabled by default
+                data = gzip.compress(data)
+                stream.legacy_header(packet, len(data))
+            else:
+                stream.header(packet, len(data))
+
             stream.write(data)
 
             self.enqueue(stream.get())
