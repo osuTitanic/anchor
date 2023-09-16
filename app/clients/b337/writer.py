@@ -58,4 +58,4 @@ class Writer(BaseWriter):
         # The client expects a bUserStats type, so we just fill in random data
         self.stream.s32(state.user_id)
         self.stream.bool(False)
-        self.write_status(bStatusUpdate(ClientStatus.Unknown))
+        self.write_status(state.stats.status)
