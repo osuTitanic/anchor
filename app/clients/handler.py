@@ -301,7 +301,8 @@ def send_private_message(sender: Player, message: bMessage):
                 target.name,
                  f'\x01ACTION is away: {target.away_message}\x01',
                 target.name,
-                target.id
+                target.id,
+                is_private=True
             )
         )
 
@@ -310,7 +311,8 @@ def send_private_message(sender: Player, message: bMessage):
             sender.name,
             message.content,
             sender.name,
-            sender.id
+            sender.id,
+            is_private=True
         )
     )
 
@@ -324,7 +326,8 @@ def send_private_message(sender: Player, message: bMessage):
                 sender.name,
                 message.content,
                 sender.name,
-                sender.id
+                sender.id,
+                is_private=True
             )
         )
 
@@ -354,7 +357,8 @@ def away_message(player: Player, message: bMessage):
                 session.bot_player.name,
                 f'You have been marked as away: {message.content}',
                 session.bot_player.name,
-                session.bot_player.id
+                session.bot_player.id,
+                is_private=True
             )
         )
     else:
@@ -364,7 +368,8 @@ def away_message(player: Player, message: bMessage):
                 session.bot_player.name,
                 'You are no longer marked as being away',
                 session.bot_player.name,
-                session.bot_player.id
+                session.bot_player.id,
+                is_private=True
             )
         )
 
@@ -615,7 +620,8 @@ def invite(player: Player, target_id: int):
             player.name,
             f'Come join my multiplayer match: {player.match.embed}',
             player.name,
-            player.id
+            player.id,
+            is_private=True
         )
     )
 

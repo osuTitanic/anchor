@@ -10,7 +10,7 @@ def user_update(user_id: int):
 
     for player in app.session.players:
         if player.client.version.date <= 377:
-            player.enqueue_presence(player)
+            player.enqueue_presence(player, update=True)
             continue
 
         player.enqueue_stats(player)

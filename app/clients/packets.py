@@ -53,5 +53,6 @@ PACKETS: Dict[int, list] = {
     338:      [{}, {}, PacketEnum, PacketEnum], # 0 (MatchChangeBeatmap)
     337:      [{}, {}, PacketEnum, PacketEnum], # 0 (UserStatsUpdate)
     334:      [{}, {}, PacketEnum, PacketEnum], # 0 (UserStatsUpdate)
-    323:      [{}, {}, PacketEnum, PacketEnum]  # 0 (LegacyMatch)
+    323:      [{}, {}, PacketEnum, PacketEnum], # 0 (LegacyMatch)
+    319:      [{}, {}, PacketEnum, PacketEnum]  # 0 (LegacyUserStats)
 }

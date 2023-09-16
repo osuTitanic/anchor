@@ -352,6 +352,8 @@ class Player(BanchoProtocol):
             app.session.players.send_user_quit(
                 bUserQuit(
                     self.id,
+                    self.user_presence,
+                    self.user_stats,
                     QuitState.Gone # TODO: IRC
                 )
             )
@@ -824,7 +826,16 @@ class Player(BanchoProtocol):
 
         self.enqueue_quit(quit_state)
 
-    def enqueue_presence(self, player):
+    def enqueue_presence(self, player, update: bool = False):
+        if self.client.version.date <= 319:
+            self.send_packet(
+                self.packets.USER_STATS,
+                player.user_stats,
+                player.user_presence,
+                update
+            )
+            return
+
         if self.client.version.date <= 1710:
             self.send_packet(
                 self.packets.USER_STATS,
@@ -839,6 +850,14 @@ class Player(BanchoProtocol):
         )
 
     def enqueue_stats(self, player):
+        if self.client.version.date <= 319:
+            self.send_packet(
+                self.packets.USER_STATS,
+                player.user_stats,
+                player.user_presence
+            )
+            return
+
         self.send_packet(
             self.packets.USER_STATS,
             player.user_stats
