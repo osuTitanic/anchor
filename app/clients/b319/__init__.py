@@ -12,6 +12,7 @@ from copy import deepcopy
 
 # Inherit packets from 319
 PACKETS[319] = deepcopy(PACKETS[323])
+PACKETS[282] = deepcopy(PACKETS[323])
 
 from . import encoder
 from . import decoder

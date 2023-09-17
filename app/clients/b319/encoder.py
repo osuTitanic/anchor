@@ -15,6 +15,7 @@ from . import Writer
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
         PACKETS[319][1][packet] = func
+        PACKETS[282][1][packet] = func
         return func
 
     return wrapper
