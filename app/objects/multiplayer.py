@@ -121,14 +121,12 @@ class Match:
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, bancho_match: bMatch):
+    def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
         return Match(
             bancho_match.id,
             bancho_match.name,
             bancho_match.password,
-            app.session.players.by_id(
-                bancho_match.host_id
-            ),
+            host_player,
             bancho_match.beatmap_id,
             bancho_match.beatmap_text,
             bancho_match.beatmap_checksum,
@@ -194,7 +192,9 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        return [slot.loaded for slot in self.slots if slot.has_map]
+        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE packet
+        # so we can just ignore them...
+        return [slot.loaded for slot in self.slots if slot.has_map and slot.player.client.version.date > 323]
 
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:
@@ -291,6 +291,9 @@ class Match:
             # New map has been chosen
             self.logger.info(f'Selected: {new_match.beatmap_text}')
             self.unready_players()
+
+            # Unready players with no beatmap
+            self.unready_players(SlotStatus.NoMap)
 
             # Lookup beatmap in database
             beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)

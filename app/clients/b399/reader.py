@@ -1,6 +1,5 @@
 
 from app.common.objects import (
-    bMatchJoin,
     bMatch,
     bSlot
 )
@@ -9,14 +8,14 @@ from app.common.constants import (
     MatchScoringTypes,
     MatchScoringTypes,
     MatchTeamTypes,
-    MatchType,
     SlotStatus,
+    MatchType,
     SlotTeam,
     GameMode,
     Mods,
 )
 
-from ..b1700.reader import Reader as BaseReader
+from ..b535.reader import Reader as BaseReader
 
 class Reader(BaseReader):
     def read_match(self) -> bMatch:
@@ -34,18 +33,20 @@ class Reader(BaseReader):
         beatmap_hash = self.stream.string()
 
         slot_status = [SlotStatus(self.stream.u8()) for _ in range(8)]
-        slot_team = [SlotTeam(self.stream.u8()) for _ in range(8)]
+
         slot_id = [
             self.stream.s32()
             if (slot_status[i] & SlotStatus.HasPlayer) > 0 else -1
             for i in range(len(slot_status))
         ]
 
-        host_id = self.stream.s32()
-        mode = GameMode(self.stream.u8())
+        host_id = -1
+        mode = GameMode.Osu
 
-        scoring_type = MatchScoringTypes(self.stream.u8())
-        team_type = MatchTeamTypes(self.stream.u8())
+        scoring_type = MatchScoringTypes.Combo
+        team_type = MatchTeamTypes.HeadToHead
+
+        slot_team = [SlotTeam.Neutral for _ in range(8)]
         slot_mods = [Mods.NoMod for _ in range(8)]
 
         slots = [
@@ -73,9 +74,6 @@ class Reader(BaseReader):
             mode,
             scoring_type,
             team_type,
-            False,
-            0
+            freemod=False,
+            seed=0
         )
-
-    def read_matchjoin(self) -> bMatchJoin:
-        return bMatchJoin(self.stream.s32())

@@ -48,10 +48,10 @@ class ClientVersion:
 class ClientHash:
     def __init__(self, md5: str, adapters: str, adapters_md5: str, uninstall_id: str, diskdrive_signature: str) -> None:
         self.diskdrive_signature = diskdrive_signature
-        self.uninstall_id = uninstall_id
-        self.adapters_md5 = adapters_md5
-        self.adapters = adapters
-        self.md5 = md5
+        self.uninstall_id        = uninstall_id
+        self.adapters_md5        = adapters_md5
+        self.adapters            = adapters
+        self.md5                 = md5
 
     def __repr__(self) -> str:
         return self.string
@@ -59,6 +59,16 @@ class ClientHash:
     @property
     def string(self) -> str:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
+
+    @classmethod
+    def empty(cls, build_version: str):
+        return ClientHash(
+            md5=hashlib.md5(build_version.encode()).hexdigest(),
+            adapters='',
+            adapters_md5=hashlib.md5(b'').hexdigest(),
+            uninstall_id=hashlib.md5(b'unknown').hexdigest(),
+            diskdrive_signature=hashlib.md5(b'unknown').hexdigest()
+        )
 
     @classmethod
     def from_string(cls, string: str):
@@ -71,6 +81,7 @@ class ClientHash:
             adapters = args[1]
             adapters_md5 = args[2]
 
+            # Hardware IDs are not implemented
             diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
             uninstall_id = hashlib.md5(b'unknown').hexdigest()
 
@@ -90,28 +101,32 @@ class ClientHash:
 
 class OsuClient:
     def __init__(self, ip: location.Geolocation, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
-        self.ip = ip
-        self.hash = client_hash
-        self.version = version
-        self.utc_offset = utc_offset
-        self.display_city = display_city
         self.friendonly_dms = friendonly_dms
+        self.display_city   = display_city
+        self.utc_offset     = utc_offset
+        self.version        = version
+        self.hash           = client_hash
+        self.ip             = ip
 
     @classmethod
     def from_string(cls, line: str, ip: str):
-        try:
-            build_version, utc_offset, display_city, client_hash, friendonly_dms = line.split('|')
-        except ValueError:
-            # Workaround for older clients
-            friendonly_dms = False
+        args = line.split('|')
 
-            if line.count('|') > 2:
-                build_version, utc_offset, display_city, client_hash = line.split('|')
-            else:
-                # Client hash is not supported...
-                build_version, utc_offset, display_city = line.split('|')
-                # Generate pseudo client hash
-                client_hash = f'{hashlib.md5(build_version.encode()).hexdigest()}::{hashlib.md5(b"").hexdigest()}'
+        # Sent in every client version
+        build_version = args[0]
+        utc_offset = args[1]
+
+        # Not sent in every client version
+        client_hash = ClientHash.empty(build_version).string
+        friendonly_dms = '0'
+        display_city = '0'
+
+        try:
+            display_city = args[2]
+            client_hash = args[3]
+            friendonly_dms = args[4]
+        except (ValueError, IndexError):
+            pass
 
         if not (geolocation := app.session.geolocation_cache.get(ip)):
             geolocation = location.fetch_geolocation(

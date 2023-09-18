@@ -4,14 +4,13 @@ from app.common.streams import StreamIn
 
 from .constants import RequestPacket
 from ..packets import PACKETS
-from .reader import Reader
+from . import Reader
 
 from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130815][0][packet] = func
-        PACKETS[20130401][0][packet] = func
+        PACKETS[338][0][packet] = func
         return func
 
     return wrapper
@@ -22,23 +21,11 @@ def pong(stream: StreamIn):
 
 @register(RequestPacket.EXIT)
 def exit(stream: StreamIn):
-    return stream.s32() == 1
+    return False
 
 @register(RequestPacket.RECEIVE_UPDATES)
 def receive_updates(stream: StreamIn):
     return PresenceFilter(stream.s32())
-
-@register(RequestPacket.PRESENCE_REQUEST)
-def presence_request(stream: StreamIn):
-    return Reader(stream).read_intlist()
-
-@register(RequestPacket.PRESENCE_REQUEST_ALL)
-def presence_request_all(stream: StreamIn):
-    return
-
-@register(RequestPacket.STATS_REQUEST)
-def stats_request(stream: StreamIn):
-    return Reader(stream).read_intlist()
 
 @register(RequestPacket.REQUEST_STATUS)
 def request_status(stream: StreamIn):
@@ -149,8 +136,8 @@ def has_beatmap(stream: StreamIn):
     return
 
 @register(RequestPacket.MATCH_CHANGE_BEATMAP)
-def legacy_change_beatmap(stream: StreamIn):
-    return Reader().read_match()
+def change_beatmap(stream: StreamIn):
+    return Reader(stream).read_match()
 
 @register(RequestPacket.MATCH_CHANGE_TEAM)
 def change_team(stream: StreamIn):
@@ -191,15 +178,3 @@ def failed(stream: StreamIn):
 @register(RequestPacket.MATCH_COMPLETE)
 def match_complete(stream: StreamIn):
     return
-
-@register(RequestPacket.MATCH_INVITE)
-def invite(stream: StreamIn):
-    return stream.s32()
-
-@register(RequestPacket.TOURNAMENT_MATCH_INFO)
-def tourney_match_info(stream: StreamIn):
-    return stream.s32()
-
-@register(RequestPacket.CHANGE_FRIENDONLY_DMS)
-def friendonly_dms(stream: StreamIn):
-    return stream.s32() == 1

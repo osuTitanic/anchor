@@ -1,25 +1,19 @@
 
 from app.common.objects import (
-    bReplayFrameBundle,
-    bUserPresence,
     bScoreFrame,
-    bUserStats,
     bMatch
 )
 
-from typing import Callable, Optional
+from typing import Callable
 
 from . import ResponsePacket
 from . import PACKETS
 from . import Writer
 
-
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[483][1][packet] = func
-        PACKETS[402][1][packet] = func
+        PACKETS[323][1][packet] = func
         return func
-
     return wrapper
 
 @register(ResponsePacket.NEW_MATCH)
@@ -46,23 +40,8 @@ def match_start(match: bMatch):
     writer.write_match(match)
     return writer.stream.get()
 
-@register(ResponsePacket.USER_STATS)
-def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
-    writer = Writer()
-    if presence:
-        writer.write_presence(presence, stats)
-    else:
-        writer.write_stats(stats)
-    return writer.stream.get()
-
-@register(ResponsePacket.SPECTATE_FRAMES)
-def spectate_frames(bundle: bReplayFrameBundle):
-    writer = Writer()
-    writer.write_replayframe_bundle(bundle)
-    return writer.stream.get()
-
 @register(ResponsePacket.MATCH_SCORE_UPDATE)
-def score_update(score_frame: bScoreFrame):
+def score_update(frame: bScoreFrame):
     writer = Writer()
-    writer.write_scoreframe(score_frame)
+    writer.write_scoreframe(frame)
     return writer.stream.get()

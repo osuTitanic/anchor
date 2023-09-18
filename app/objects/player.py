@@ -222,6 +222,7 @@ class Player(BanchoProtocol):
         for stats in self.stats:
             if stats.mode == self.status.mode.value:
                 return stats
+        self.logger.warning('Failed to load current stats!')
         return None
 
     @property
@@ -240,47 +241,41 @@ class Player(BanchoProtocol):
 
     @property
     def user_presence(self) -> Optional[bUserPresence]:
-        try:
-            return bUserPresence(
-                self.id,
-                False,
-                self.name,
-                self.client.utc_offset,
-                self.client.ip.country_index,
-                self.permissions,
-                self.status.mode,
-                self.client.ip.longitude,
-                self.client.ip.latitude,
-                self.rank,
-                self.client.ip.city \
-                    if self.client.display_city
-                    else None
-            )
-        except AttributeError:
-            return None
+        return bUserPresence(
+            self.id,
+            False,
+            self.name,
+            self.client.utc_offset,
+            self.client.ip.country_index,
+            self.permissions,
+            self.status.mode,
+            self.client.ip.longitude,
+            self.client.ip.latitude,
+            self.rank,
+            self.client.ip.city \
+                if self.client.display_city
+                else None
+        )
 
     @property
     def user_stats(self) -> Optional[bUserStats]:
-        try:
-            return bUserStats(
-                self.id,
-                bStatusUpdate(
-                    self.status.action,
-                    self.status.text,
-                    self.status.mods,
-                    self.status.mode,
-                    self.status.checksum,
-                    self.status.beatmap
-                ),
-                self.current_stats.rscore,
-                self.current_stats.tscore,
-                self.current_stats.acc,
-                self.current_stats.playcount,
-                self.rank,
-                self.current_stats.pp,
-            )
-        except AttributeError:
-            return None
+        return bUserStats(
+            self.id,
+            bStatusUpdate(
+                self.status.action,
+                self.status.text,
+                self.status.mods,
+                self.status.mode,
+                self.status.checksum,
+                self.status.beatmap
+            ),
+            self.current_stats.rscore,
+            self.current_stats.tscore,
+            self.current_stats.acc,
+            self.current_stats.playcount,
+            self.rank,
+            self.current_stats.pp,
+        )
 
     @property
     def level(self) -> int:
@@ -318,6 +313,32 @@ class Player(BanchoProtocol):
         ).start()
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
+        if self.spectating:
+            if not self.spectating:
+                return
+
+            # Leave spectator channel
+            self.spectating.spectator_chat.remove(self)
+
+            # Remove from target
+            self.spectating.spectators.remove(self)
+
+            # Enqueue to others
+            for p in self.spectating.spectators:
+                p.enqueue_fellow_spectator_left(self.id)
+
+            # Enqueue to target
+            self.spectating.enqueue_spectator_left(self.id)
+
+            # If target has no spectators anymore
+            # kick them from the spectator channel
+            if not self.spectating.spectators:
+                self.spectating.spectator_chat.remove(
+                    self.spectating
+                )
+
+            self.spectating = None
+
         app.session.players.remove(self)
 
         status.delete(self.id)
@@ -331,6 +352,8 @@ class Player(BanchoProtocol):
             app.session.players.send_user_quit(
                 bUserQuit(
                     self.id,
+                    self.user_presence,
+                    self.user_stats,
                     QuitState.Gone # TODO: IRC
                 )
             )
@@ -426,17 +449,19 @@ class Player(BanchoProtocol):
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
 
-        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[
-            min(
+        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[(
+            version := min(
                 PACKETS.keys(),
                 key=lambda x:abs(x-version)
             )
-        ]
+        )]
+
+        self.logger.debug(f'Assigned decoder with version b{version}')
 
     @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
-        self.logger.info(f'Login attempt as "{username}" with {client.version.string}.')
-        self.logger.name = f'Player "{username}"'
+        self.logger = logging.getLogger(f'Player "{username}"')
+        self.logger.info(f'Login attempt as "{username}" with {client.version}.')
         self.last_response = time.time()
 
         # Get decoders and encoders
@@ -483,8 +508,11 @@ class Player(BanchoProtocol):
 
         if not self.is_tourney_client:
             if (other_user := app.session.players.by_id(user.id)):
-                other_user.enqueue_announcement(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
-                other_user.login_failed(LoginError.ServerError)
+                # Another user is online with this account
+                other_user.login_failed(
+                    LoginError.Authentication,
+                    strings.LOGGED_IN_FROM_ANOTHER_LOCATION
+                )
         else:
             if not self.supporter:
                 # Trying to use tourney client without supporter
@@ -717,8 +745,6 @@ class Player(BanchoProtocol):
             f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
         )
 
-    # TODO: Unrestrict
-
     def update_activity(self):
         users.update(
             user_id=self.id,
@@ -793,8 +819,6 @@ class Player(BanchoProtocol):
             )
             return
 
-        # TODO: Refactor
-
         quit_state = QuitState.Gone
 
         if (app.session.players.by_id(player.id)):
@@ -802,7 +826,16 @@ class Player(BanchoProtocol):
 
         self.enqueue_quit(quit_state)
 
-    def enqueue_presence(self, player):
+    def enqueue_presence(self, player, update: bool = False):
+        if self.client.version.date <= 319:
+            self.send_packet(
+                self.packets.USER_STATS,
+                player.user_stats,
+                player.user_presence,
+                update
+            )
+            return
+
         if self.client.version.date <= 1710:
             self.send_packet(
                 self.packets.USER_STATS,
@@ -817,6 +850,14 @@ class Player(BanchoProtocol):
         )
 
     def enqueue_stats(self, player):
+        if self.client.version.date <= 319:
+            self.send_packet(
+                self.packets.USER_STATS,
+                player.user_stats,
+                player.user_presence
+            )
+            return
+
         self.send_packet(
             self.packets.USER_STATS,
             player.user_stats

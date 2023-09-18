@@ -15,14 +15,13 @@ from app.common.objects import (
 
 from .constants import ResponsePacket
 from ..packets import PACKETS
-from .writer import Writer
+from . import Writer
 
 from typing import List, Optional, Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130815][1][packet] = func
-        PACKETS[20130401][1][packet] = func
+        PACKETS[338][1][packet] = func
         return func
 
     return wrapper
@@ -86,17 +85,20 @@ def send_menu_icon(image: Optional[str], url: Optional[str]):
 def monitor():
     return b''
 
-@register(ResponsePacket.USER_PRESENCE)
-def send_presence(presence: bUserPresence):
+@register(ResponsePacket.USER_STATS)
+def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
     writer = Writer()
-    writer.write_presence(presence)
+    if presence:
+        writer.write_presence(presence, stats)
+    else:
+        writer.write_stats(stats)
     return writer.stream.get()
 
-@register(ResponsePacket.USER_STATS)
-def send_stats(stats: bUserStats):
-    writer = Writer()
-    writer.write_stats(stats)
-    return writer.stream.get()
+@register(ResponsePacket.IRC_JOIN)
+def send_irc_player(username: int):
+    stream = StreamOut()
+    stream.string(username)
+    return stream.get()
 
 @register(ResponsePacket.USER_PRESENCE_SINGLE)
 def send_player(player_id: int):
@@ -126,7 +128,6 @@ def irc_nick(previous: str, after: str):
 
 @register(ResponsePacket.IRC_QUIT)
 def irc_quit(username: str):
-    # NOTE: Not used in this client
     stream = StreamOut()
     stream.string(username)
     return stream.get()
@@ -366,11 +367,3 @@ def restarting(retry_in_ms: int):
         byteorder='little',
         signed=True
     )
-
-@register(ResponsePacket.UNAUTHORIZED)
-def unauthorized_build():
-    # This packet is used in very old clients
-    # It will display a message like this:
-    # "Your account has not been authorised to use the private version of osu!."
-    # "If you think this is a mistake, please contact peppy via IRC/forums"
-    return

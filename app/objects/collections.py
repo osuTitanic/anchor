@@ -15,6 +15,8 @@ from typing import (
 
 from .player import Player
 
+import app
+
 class Players(List[Player]):
     def __iter__(self) -> Iterator[Player]:
         return super().__iter__()
@@ -52,19 +54,21 @@ class Players(List[Player]):
                 p.enqueue(data)
     
     def by_id(self, id: int) -> Optional[Player]:
+        if id == 1:
+            return app.session.bot_player
+
         for p in self.normal_clients:
             if p.id == id:
-                return p
-            if p.id == -id:
                 return p
         for p in self.tourney_clients:
             if p.id == id:
                 return p
-            if p.id == -id:
-                return p
         return None
 
     def by_name(self, name: str) -> Optional[Player]:
+        if name == app.session.bot_player.name:
+            return app.session.bot_player
+
         for p in self.normal_clients:
             if p.name == name:
                 return p

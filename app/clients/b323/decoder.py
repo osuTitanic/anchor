@@ -9,8 +9,7 @@ from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[590][0][packet] = func
-        PACKETS[558][0][packet] = func
+        PACKETS[323][0][packet] = func
         return func
 
     return wrapper
@@ -27,6 +26,6 @@ def change_settings(stream: StreamIn):
 def change_password(stream: StreamIn):
     return Reader(stream).read_match().password
 
-@register(RequestPacket.JOIN_MATCH)
-def join_match(stream: StreamIn):
-    return Reader(stream).read_matchjoin()
+@register(RequestPacket.MATCH_SCORE_UPDATE)
+def score_update(stream: StreamIn):
+    return Reader(stream).read_scoreframe()

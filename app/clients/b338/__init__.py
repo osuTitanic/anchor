@@ -1,5 +1,5 @@
 
-from ..b1700.constants import (
+from .constants import (
     ResponsePacket,
     RequestPacket
 )
@@ -10,9 +10,11 @@ from .reader import Reader
 from ..packets import PACKETS
 from copy import deepcopy
 
-# Inherit packets from 487
-PACKETS[483] = deepcopy(PACKETS[487])
-PACKETS[402] = deepcopy(PACKETS[487])
+# Inherit packets from 339
+PACKETS[338] = deepcopy(PACKETS[339])
+
+PACKETS[338][2] = RequestPacket
+PACKETS[338][3] = ResponsePacket
 
 from . import encoder
 from . import decoder

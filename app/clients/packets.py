@@ -44,5 +44,15 @@ PACKETS: Dict[int, list] = {
     504:      [{}, {}, PacketEnum, PacketEnum], # 2
     503:      [{}, {}, PacketEnum, PacketEnum], # 1
     487:      [{}, {}, PacketEnum, PacketEnum], # 1
-    483:      [{}, {}, PacketEnum, PacketEnum]  # 0
+    483:      [{}, {}, PacketEnum, PacketEnum], # 0
+    402:      [{}, {}, PacketEnum, PacketEnum], # 0
+    399:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoHostId)
+    392:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoHostId)
+    388:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoApprovedStatus)
+    339:      [{}, {}, PacketEnum, PacketEnum], # 0 (NoApprovedStatus)
+    338:      [{}, {}, PacketEnum, PacketEnum], # 0 (MatchChangeBeatmap)
+    337:      [{}, {}, PacketEnum, PacketEnum], # 0 (UserStatsUpdate)
+    334:      [{}, {}, PacketEnum, PacketEnum], # 0 (UserStatsUpdate)
+    323:      [{}, {}, PacketEnum, PacketEnum], # 0 (LegacyMatch)
+    319:      [{}, {}, PacketEnum, PacketEnum]  # 0 (LegacyUserStats)
 }

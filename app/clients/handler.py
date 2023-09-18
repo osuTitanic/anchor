@@ -32,6 +32,7 @@ from ..common.constants import (
     PresenceFilter,
     SlotStatus,
     SlotTeam,
+    GameMode,
     Grade,
     Mods
 )
@@ -64,7 +65,7 @@ def thread_callback(future: Future):
 def run_in_thread(func):
     def wrapper(*args, **kwargs) -> Future:
         try:
-            f = session.executor.submit(
+            f = session.packet_executor.submit(
                 func,
                 *args,
                 **kwargs
@@ -226,6 +227,9 @@ def send_message(player: Player, message: bMessage):
             player.revoke_channel(message.target)
             return
 
+    if message.content.startswith('/me'):
+        message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
+
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
         Thread(
@@ -239,13 +243,17 @@ def send_message(player: Player, message: bMessage):
         ).start()
         return
 
-    player.update_activity()
     channel.send_message(player, parsed_message)
 
-    messages.create(
+    session.executor.submit(
+        messages.create,
         player.name,
         channel.name,
         message.content
+    )
+
+    session.executor.submit(
+        player.update_activity
     )
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
@@ -287,24 +295,14 @@ def send_private_message(sender: Player, message: bMessage):
     if len(message.content) > 512:
         message.content = message.content[:512] + '... (truncated)'
 
-    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
-    sender.update_activity()
-
-    # TODO: Check commands
-
-    messages.create(
-        sender.name,
-        target.name,
-        message.content
-    )
-
     if target.away_message:
         sender.enqueue_message(
             bMessage(
                 target.name,
                  f'\x01ACTION is away: {target.away_message}\x01',
                 target.name,
-                target.id
+                target.id,
+                is_private=True
             )
         )
 
@@ -313,7 +311,8 @@ def send_private_message(sender: Player, message: bMessage):
             sender.name,
             message.content,
             sender.name,
-            sender.id
+            sender.id,
+            is_private=True
         )
     )
 
@@ -327,9 +326,23 @@ def send_private_message(sender: Player, message: bMessage):
                 sender.name,
                 message.content,
                 sender.name,
-                sender.id
+                sender.id,
+                is_private=True
             )
         )
+
+    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
+
+    session.executor.submit(
+        messages.create,
+        sender.name,
+        target.name,
+        message.content
+    )
+
+    session.executor.submit(
+        sender.update_activity
+    )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 @run_in_thread
@@ -344,7 +357,8 @@ def away_message(player: Player, message: bMessage):
                 session.bot_player.name,
                 f'You have been marked as away: {message.content}',
                 session.bot_player.name,
-                session.bot_player.id
+                session.bot_player.id,
+                is_private=True
             )
         )
     else:
@@ -354,7 +368,8 @@ def away_message(player: Player, message: bMessage):
                 session.bot_player.name,
                 'You are no longer marked as being away',
                 session.bot_player.name,
-                session.bot_player.id
+                session.bot_player.id,
+                is_private=True
             )
         )
 
@@ -605,7 +620,8 @@ def invite(player: Player, target_id: int):
             player.name,
             f'Come join my multiplayer match: {player.match.embed}',
             player.name,
-            player.id
+            player.id,
+            is_private=True
         )
     )
 
@@ -632,7 +648,7 @@ def create_match(player: Player, bancho_match: bMatch):
         player.enqueue_matchjoin_fail()
         return
 
-    match = Match.from_bancho_match(bancho_match)
+    match = Match.from_bancho_match(bancho_match, player)
 
     if not session.matches.append(match):
         player.logger.warning('Tried to create match, but max match limit was reached')
@@ -734,6 +750,7 @@ def leave_match(player: Player):
         status = SlotStatus.Open
 
     slot.reset(status)
+
     channel_leave(
         player,
         player.match.chat.name,
@@ -793,6 +810,46 @@ def change_settings(player: Player, match: bMatch):
     player.match.last_activity = time.time()
 
     player.match.change_settings(match)
+
+@register(RequestPacket.MATCH_CHANGE_BEATMAP)
+def change_beatmap(player: Player, new_match: bMatch):
+    if not (match := player.match):
+        return
+
+    if player is not player.match.host:
+        return
+
+    player.match.last_activity = time.time()
+
+    # New map has been chosen
+    match.logger.info(f'Selected: {new_match.beatmap_text}')
+    match.unready_players()
+
+    # Unready players with no beatmap
+    match.unready_players(SlotStatus.NoMap)
+
+    # Lookup beatmap in database
+    beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
+
+    if beatmap:
+        match.beatmap_id   = beatmap.id
+        match.beatmap_hash = beatmap.md5
+        match.beatmap_name = beatmap.full_name
+        match.mode         = GameMode(beatmap.mode)
+        beatmap_text       = beatmap.link
+    else:
+        match.beatmap_id   = new_match.beatmap_id
+        match.beatmap_hash = new_match.beatmap_checksum
+        match.beatmap_name = new_match.beatmap_text
+        match.mode         = new_match.mode
+        beatmap_text       = new_match.beatmap_text
+
+    match.chat.send_message(
+        session.bot_player,
+        f'Selected: {beatmap_text}'
+    )
+
+    match.update()
 
 @register(RequestPacket.MATCH_CHANGE_MODS)
 def change_mods(player: Player, mods: Mods):
@@ -869,11 +926,15 @@ def not_ready(player: Player):
     player.match.update()
 
 @register(RequestPacket.MATCH_NO_BEATMAP)
-def not_beatmap(player: Player):
+def no_beatmap(player: Player):
     if not player.match:
         return
 
     player.match.last_activity = time.time()
+
+    if player.match.beatmap_id <= 0:
+        # Beatmap is being selected by the host
+        return
 
     slot = player.match.get_slot(player)
     assert slot is not None
