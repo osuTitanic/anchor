@@ -35,6 +35,6 @@ SQLAlchemy==2.0.19
 timeago==1.0.16
 Twisted==23.8.0
 typing-extensions==4.7.1
-urllib3==1.26.16
+urllib3==2.0.5
 yarl==1.9.2
 zope.interface==6.0
