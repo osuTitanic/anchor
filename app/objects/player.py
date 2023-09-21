@@ -125,6 +125,7 @@ class Player(BanchoProtocol):
         self.spectator_chat: Optional[Channel] = None
 
         self.in_lobby = False
+        self.logged_in = False
         self.match: Optional[Match] = None
         self.last_response = time.time()
 
@@ -313,6 +314,10 @@ class Player(BanchoProtocol):
         ).start()
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
+        if not self.logged_in:
+            super().connectionLost(reason)
+            return
+
         if self.spectating:
             if not self.spectating:
                 return
@@ -598,6 +603,8 @@ class Player(BanchoProtocol):
 
         # Enqueue other players
         self.enqueue_players(app.session.players)
+
+        self.logged_in = True
 
         for channel in app.session.channels.public:
             if channel.can_read(self.permissions):
