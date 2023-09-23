@@ -552,6 +552,7 @@ class Player(BanchoProtocol):
         if self.object.country == 'XX':
             # User is logging in for the first time
             # Update their country value in the database
+            self.logger.info('Updating country...')
             self.object.country = self.client.ip.country_code.upper()
             users.update(
                 user_id=self.id,
