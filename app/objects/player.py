@@ -129,6 +129,9 @@ class Player(BanchoProtocol):
         self.match: Optional[Match] = None
         self.last_response = time.time()
 
+        self.messages_in_last_minute = 0
+        self.last_minute_stamp = time.time()
+
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
 

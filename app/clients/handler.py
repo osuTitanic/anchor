@@ -230,6 +230,14 @@ def send_message(player: Player, message: bMessage):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
+    if (time.time() - player.last_minute_stamp) > 60:
+        player.last_minute_stamp = time.time()
+        player.messages_in_last_minute = 0
+
+    if player.messages_in_last_minute > 400:
+        player.silence(60, reason='Chat spamming')
+        return
+
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
         Thread(
@@ -244,6 +252,8 @@ def send_message(player: Player, message: bMessage):
         return
 
     channel.send_message(player, parsed_message)
+
+    player.messages_in_last_minute += 1
 
     session.executor.submit(
         messages.create,
@@ -276,6 +286,14 @@ def send_private_message(sender: Player, message: bMessage):
         if sender.id not in target.friends:
             sender.enqueue_blocked_dms(sender.name)
             return
+
+    if (time.time() - sender.last_minute_stamp) > 60:
+        sender.last_minute_stamp = time.time()
+        sender.messages_in_last_minute = 0
+
+    if sender.messages_in_last_minute > 400:
+        sender.silence(60, reason='Chat spamming')
+        return
 
     if (parsed_message := message.content.strip()).startswith('!') \
         or target == session.bot_player:
@@ -315,6 +333,8 @@ def send_private_message(sender: Player, message: bMessage):
             is_private=True
         )
     )
+
+    sender.messages_in_last_minute += 1
 
     # Send to their tourney clients
     for client in session.players.get_all_tourney_clients(target.id):
