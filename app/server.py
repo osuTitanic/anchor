@@ -49,8 +49,8 @@ class BanchoFactory(Factory):
         app.session.jobs.submit(pings.ping_job)
         app.session.jobs.submit(replays.replays)
         app.session.jobs.submit(events.event_listener)
-        app.session.jobs.submit(activities.match_activity)
         app.session.jobs.submit(rank_indexing.index_ranks)
+        app.session.jobs.submit(activities.match_activity)
 
         app.session.logger.info(f'Starting factory: {self}')
 
