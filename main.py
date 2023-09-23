@@ -10,7 +10,9 @@ import utils
 import app
 
 logging.basicConfig(
-    handlers=[Console, File, Discord],
+    handlers=[Console, File, Discord]
+             if config.WEBHOOK_URL else
+             [Console, File],
     level=logging.DEBUG
         if config.DEBUG
         else logging.INFO
