@@ -129,6 +129,9 @@ class Player(BanchoProtocol):
         self.match: Optional[Match] = None
         self.last_response = time.time()
 
+        self.messages_in_last_minute = 0
+        self.last_minute_stamp = time.time()
+
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
 
@@ -549,8 +552,20 @@ class Player(BanchoProtocol):
         # Check for new hardware
         self.check_client()
 
+        if self.object.country == 'XX':
+            # User is logging in for the first time
+            # Update their country value in the database
+            self.logger.info('Updating country...')
+            self.object.country = self.client.ip.country_code.upper()
+            users.update(
+                user_id=self.id,
+                updates={'country': self.object.country}
+            )
+
+        # Update cache
         self.update_leaderboard_stats()
         self.update_status_cache()
+
         self.login_success()
 
     def login_success(self):
