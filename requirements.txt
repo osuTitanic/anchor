@@ -30,7 +30,7 @@ python-dotenv==1.0.0
 pytimeparse==1.1.8
 pytz==2023.3.post1
 redis==5.0.0
-requests==2.25.1
+requests==2.31.0
 s3transfer==0.6.1
 six==1.16.0
 SQLAlchemy==2.0.19
