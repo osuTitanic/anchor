@@ -11,7 +11,7 @@ botocore==1.31.52
 certifi==2023.7.22
 chardet==4.0.0
 charset-normalizer==3.2.0
-click==8.1.6
+click==8.1.7
 colorama==0.4.6
 constantly==15.1.0
 discord-webhook-logging==0.0.3
