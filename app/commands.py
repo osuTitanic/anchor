@@ -674,16 +674,16 @@ def silence(ctx: Context) -> Optional[List]:
 
         silence_end = player.silence_end
 
+        # Add entry inside infringements table
+        infringements.create(
+            player.id,
+            action=1,
+            length=(datetime.now() + timedelta(seconds=duration)),
+            description=reason
+        )
+
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
-
-    # Add entry inside infringements table
-    infringements.create(
-        player.id,
-        action=1,
-        length=(datetime.now() + duration),
-        description=reason
-    )
 
     return [f'{player.name} was silenced for {time_string}']
 
