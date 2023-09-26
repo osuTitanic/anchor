@@ -24,6 +24,7 @@ from app.common.cache import leaderboards
 from app.common.cache import status
 
 from app.common.database.repositories import (
+    infringements,
     histories,
     clients,
     logins,
@@ -219,7 +220,24 @@ class Player(BanchoProtocol):
     def restricted(self) -> bool:
         if not self.object:
             return False
-        return self.object.restricted
+
+        if not self.object.restricted:
+            return False
+
+        if not (recent := infringements.fetch_recent_by_action(self.id, action=0)):
+            self.unrestrict()
+            return False
+
+        if recent.is_permanent:
+            return True
+
+        remaining = (recent.length - datetime.now()).total_seconds()
+
+        if remaining <= 0:
+            self.unrestrict()
+            return False
+
+        return True
 
     @property
     def current_stats(self) -> Optional[DBStats]:
@@ -493,26 +511,26 @@ class Player(BanchoProtocol):
             self.login_failed(LoginError.Authentication)
             return
 
+        self.id = user.id
+        self.name = user.name
+        self.stats = user.stats
+        self.object = user
+
         if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
             self.logger.warning('Login Failed: Authentication error')
             self.login_failed(LoginError.Authentication)
             return
 
-        if user.restricted:
-            # TODO: Check ban time
+        if self.restricted:
             self.logger.warning('Login Failed: Restricted')
             self.login_failed(LoginError.Banned)
             return
 
         if not user.activated:
+            # TODO: Some clients may interpret this as being banned...?
             self.logger.warning('Login Failed: Not activated')
             self.login_failed(LoginError.NotActivated)
             return
-
-        self.id = user.id
-        self.name = user.name
-        self.stats = user.stats
-        self.object = user
 
         if not self.is_tourney_client:
             if (other_user := app.session.players.by_id(user.id)):
@@ -704,7 +722,7 @@ class Player(BanchoProtocol):
             if config.DEBUG: traceback.print_exc()
             self.logger.error(f'Failed to execute handler for packet "{packet.name}": {e}')
 
-    def silence(self, duration_sec: int, reason: str):
+    def silence(self, duration_sec: int, reason: Optional[str] = None):
         duration = timedelta(seconds=duration_sec)
 
         if not self.object.silence_end:
@@ -719,6 +737,14 @@ class Player(BanchoProtocol):
         # Enqueue to client
         self.enqueue_silence_info(duration_sec)
 
+        # Add entry inside infringements table
+        infringements.create(
+            self.id,
+            action=1,
+            length=(datetime.now() + duration),
+            description=reason
+        )
+
         self.logger.info(
             f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. Reason: "{reason}"'
         )
@@ -730,7 +756,7 @@ class Player(BanchoProtocol):
         # Update database
         users.update(self.id, {'silence_end': None})
 
-    def restrict(self, reason: Optional[str] = None, autoban: bool = False):
+    def restrict(self, reason: Optional[str] = None, until: Optional[datetime] = None, autoban: bool = False):
         self.object.restricted = True
         self.object.permissions = 0
 
@@ -755,6 +781,15 @@ class Player(BanchoProtocol):
         if reason:
             self.enqueue_announcement(
                 f'You have been restricted for:\n{reason}'
+                f'\nYou will be able to play again {timeago.format(until)}.'
+                if until else ''
+            )
+
+        if until:
+            self.enqueue_silence_info(
+                round(
+                    (until - datetime.now()).total_seconds()
+                )
             )
 
         # Update client
@@ -763,9 +798,37 @@ class Player(BanchoProtocol):
         # Update hardware
         clients.update_all(self.id, {'banned': True})
 
+        # Add entry inside infringements table
+        infringements.create(
+            self.id,
+            action=0,
+            length=until,
+            is_permanent=True
+                    if not until
+                    else False,
+            description=f'{"Autoban: " if autoban else ""}{reason}'
+        )
+
         self.logger.warning(
             f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
         )
+
+    def unrestrict(self) -> None:
+        users.update(self.id,
+            {
+                'restricted': False,
+                'permissions': 5 if config.FREE_SUPPORTER else 1
+            }
+        )
+
+        # Update hardware
+        clients.update_all(self.id, {'banned': False})
+
+        # Update client
+        self.enqueue_silence_info(-1)
+
+        self.object.restricted = False
+        self.object.permissions = 5 if config.FREE_SUPPORTER else 1
 
     def update_activity(self):
         users.update(
