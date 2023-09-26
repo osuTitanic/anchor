@@ -221,6 +221,9 @@ class Player(BanchoProtocol):
         if not self.object:
             return False
 
+        if not self.object.restricted:
+            return False
+
         if not (recent := infringements.fetch_recent_by_action(self.id, action=0)):
             self.unrestrict()
             return False
@@ -234,7 +237,7 @@ class Player(BanchoProtocol):
             self.unrestrict()
             return False
 
-        return self.object.restricted
+        return True
 
     @property
     def current_stats(self) -> Optional[DBStats]:
