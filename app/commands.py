@@ -7,8 +7,10 @@ from threading import Thread
 
 from .common.cache import leaderboards
 from .common.database.repositories import (
+    infringements,
     beatmapsets,
     beatmaps,
+    clients,
     scores,
     stats,
     users,
@@ -675,7 +677,13 @@ def silence(ctx: Context) -> Optional[List]:
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
 
-    # TODO: Infringements Table
+    # Add entry inside infringements table
+    infringements.create(
+        player.id,
+        action=1,
+        length=(datetime.now() + duration),
+        description=reason
+    )
 
     return [f'{player.name} was silenced for {time_string}']
 
@@ -701,13 +709,19 @@ def unsilence(ctx: Context):
 
 @command(['restrict', 'ban'], Permissions.Admin, hidden=False)
 def restrict(ctx: Context) -> Optional[List]:
-    """<name> (<reason>)"""
+    """ <name> <length/permanent> (<reason>)"""
 
     if len(ctx.args) < 1:
-        return [f'Invalid syntax: !{ctx.trigger} <name> (<reason>)']
+        return [f'Invalid syntax: !{ctx.trigger} <name> <length/permanent> (<reason>)']
 
     username = ctx.args[0].replace('_', ' ')
-    reason   = ' '.join(ctx.args[1:])
+    length   = ctx.args[1]
+    reason   = ' '.join(ctx.args[2:])
+
+    if not length.startswith('perma'):
+        until = datetime.now() + timedelta(seconds=timeparse(length))
+    else:
+        until = None
 
     if not (player := app.session.players.by_name(username)):
         # Player is not online, or was not found
@@ -732,11 +746,21 @@ def restrict(ctx: Context) -> Optional[List]:
         )
         stats.delete_all(player.id)
         scores.hide_all(player.id)
+
+        # Add entry inside infringements table
+        infringements.create(
+            player.id,
+            action=0,
+            length=until,
+            description=reason,
+            is_permanent=True if not until else False
+        )
     else:
         # Player is online
-        player.restrict(reason)
-
-    # TODO: Infringements Table
+        player.restrict(
+            reason,
+            until
+        )
 
     return [f'{player.name} was restricted.']
 
@@ -766,6 +790,9 @@ def unrestrict(ctx: Context) -> Optional[List]:
         }
     )
 
+    # Update hardware
+    clients.update_all(player.id, {'banned': False})
+
     if restore_scores:
         try:
             scores.restore_hidden_scores(player.id)
@@ -792,10 +819,11 @@ def moderated(ctx: Context) -> Optional[List]:
 
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
+# TODO: !recent
 # TODO: !rank
-# TODO: !faq
 # TODO: !kick
 # TODO: !kill
+# TODO: !faq
 # TODO: !top
 
 def get_command(
