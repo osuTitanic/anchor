@@ -580,9 +580,6 @@ class Player(BanchoProtocol):
                 updates={'country': self.object.country}
             )
 
-        # Infringement entries will be deleted after 5 weeks
-        infringements.delete_old(self.id)
-
         # Update cache
         self.update_leaderboard_stats()
         self.update_status_cache()
