@@ -1,9 +1,4 @@
 
-from discord_webhook_logging import (
-    DiscordWebhookFormatter,
-    DiscordWebhookHandler
-)
-
 from datetime import datetime
 from logging import Formatter, StreamHandler, FileHandler
 from logging import (
@@ -14,7 +9,6 @@ from logging import (
     INFO
 )
 
-import config
 import os
 
 class ColorFormatter(Formatter):
@@ -46,10 +40,6 @@ os.makedirs('logs', exist_ok=True)
 
 Console = StreamHandler()
 Console.setFormatter(ColorFormatter())
-
-Discord = DiscordWebhookHandler(config.WEBHOOK_URL, auto_flush=True)
-Discord.setFormatter(DiscordWebhookFormatter())
-Discord.setLevel(ERROR)
 
 File = FileHandler(f'logs/{datetime.now().strftime("%Y-%m-%d")}.log', mode='a', encoding='utf-8')
 File.setFormatter(
