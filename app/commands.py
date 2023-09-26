@@ -31,7 +31,6 @@ from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
 
-import traceback
 import timeago
 import config
 import random
@@ -798,9 +797,9 @@ def unrestrict(ctx: Context) -> Optional[List]:
             scores.restore_hidden_scores(player.id)
             stats.restore(player.id)
         except Exception as e:
-            if config.DEBUG: traceback.print_exc()
             app.session.logger.error(
-                f'Failed to restore scores of player "{player.name}": {e}'
+                f'Failed to restore scores of player "{player.name}": {e}',
+                exc_info=e
             )
             return ['Failed to restore scores, but player was unrestricted.']
 
@@ -853,8 +852,10 @@ def get_command(
                     )
                 )
             except Exception as e:
-                if config.DEBUG: traceback.print_exc()
-                player.logger.error(f'Command error: {e}')
+                player.logger.error(
+                    f'Command error: {e}',
+                    exc_info=e
+                )
 
                 response = ['An error occurred while running this command.']
 
@@ -895,8 +896,10 @@ def get_command(
                     try:
                         response = command.callback(ctx)
                     except Exception as e:
-                        if config.DEBUG: traceback.print_exc()
-                        player.logger.error(f'Command error: {e}')
+                        player.logger.error(
+                            f'Command error: {e}',
+                            exc_info=e
+                        )
 
                         response = ['An error occurred while running this command.']
 
