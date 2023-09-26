@@ -19,8 +19,6 @@ S3_BASEURL    = os.environ.get('S3_BASEURL')
 REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 
-WEBHOOK_URL = os.environ.get('WEBHOOK_URL')
-
 AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
 
 PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))

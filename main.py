@@ -1,7 +1,7 @@
 
 from twisted.internet import reactor
 
-from app.logging import Console, File, Discord
+from app.logging import Console, File
 from app.server import BanchoFactory
 
 import logging
@@ -10,9 +10,7 @@ import utils
 import app
 
 logging.basicConfig(
-    handlers=[Console, File, Discord]
-             if config.WEBHOOK_URL else
-             [Console, File],
+    handlers=[Console, File],
     level=logging.DEBUG
         if config.DEBUG
         else logging.INFO

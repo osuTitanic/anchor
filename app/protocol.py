@@ -11,7 +11,6 @@ from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.common.streams import StreamOut, StreamIn
 from app.objects import OsuClient
 
-import traceback
 import logging
 import config
 import utils
@@ -93,8 +92,10 @@ class BanchoProtocol(Protocol):
                 self.client
             )
         except Exception as e:
-            if config.DEBUG: traceback.print_exc()
-            self.logger.error(f'Error on login: {e}')
+            self.logger.error(
+                f'Error on login: {e}',
+                exc_info=e
+            )
             self.close_connection(e)
 
         finally:
@@ -138,8 +139,10 @@ class BanchoProtocol(Protocol):
                 # Reset buffer
                 self.buffer = stream.readall()
         except Exception as e:
-            if config.DEBUG: traceback.print_exc()
-            self.logger.error(f'Error while receiving packet: {e}')
+            self.logger.error(
+                f'Error while receiving packet: {e}',
+                exc_info=e
+            )
 
             self.close_connection(e)
 
@@ -151,7 +154,8 @@ class BanchoProtocol(Protocol):
             self.transport.write(data)
         except Exception as e:
             self.logger.error(
-                f'Could not write to transport layer: {e}'
+                f'Could not write to transport layer: {e}',
+                exc_info=e
             )
 
     def send_web_response(self):
@@ -191,9 +195,9 @@ class BanchoProtocol(Protocol):
 
             self.enqueue(stream.get())
         except Exception as e:
-            if config.DEBUG: traceback.print_exc()
             self.logger.error(
-                f'Could not send packet "{packet.name}": {e}'
+                f'Could not send packet "{packet.name}": {e}',
+                exc_info=e
             )
 
     def send_error(self, reason = -5, message = ""):

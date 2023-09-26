@@ -56,7 +56,6 @@ from app.clients import (
     DefaultRequestPacket
 )
 
-import traceback
 import hashlib
 import timeago
 import logging
@@ -67,11 +66,12 @@ import time
 import app
 
 def login_callback(future: Future):
-    if (exc := future.exception()):
+    if (e := future.exception()):
         app.session.logger.error(
-            f'Exception in login thread {future}: {exc}'
+            f'Exception in login thread {future}: {e}',
+            exc_info=e
         )
-        raise exc
+        raise e
 
     app.session.logger.debug(
         f'Login Result: {future}'
@@ -700,15 +700,15 @@ class Player(BanchoProtocol):
                 f'-> "{packet.name}": {args}'
             )
         except KeyError as e:
-            if config.DEBUG: traceback.print_exc()
             self.logger.error(
-                f'Could not find decoder for "{packet.name}": {e}'
+                f'Could not find decoder for "{packet.name}": {e}',
+                exc_info=e
             )
             return
         except ValueError as e:
-            if config.DEBUG: traceback.print_exc()
             self.logger.error(
-                f'Could not find packet with id "{packet_id}": {e}'
+                f'Could not find packet with id "{packet_id}": {e}',
+                exc_info=e
             )
             return
 
@@ -719,8 +719,10 @@ class Player(BanchoProtocol):
                 [self]
             )
         except Exception as e:
-            if config.DEBUG: traceback.print_exc()
-            self.logger.error(f'Failed to execute handler for packet "{packet.name}": {e}')
+            self.logger.error(
+                f'Failed to execute handler for packet "{packet.name}": {e}',
+                exc_info=e
+            )
 
     def silence(self, duration_sec: int, reason: Optional[str] = None):
         duration = timedelta(seconds=duration_sec)
