@@ -1,20 +1,23 @@
 
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
+from datetime import datetime
 from threading import Thread
 
 from app.common.constants import (
     MatchScoringTypes,
     MatchTeamTypes,
     SlotStatus,
+    EventType,
     MatchType,
     SlotTeam,
     GameMode,
     Mods
 )
 
-from app.common.database.repositories import beatmaps
-from app.common.objects import bMatch, bSlot
+from app.common.database.repositories import beatmaps, events, matches
+from app.common.objects import bMatch, bSlot, bScoreFrame
+from app.common.database import DBMatch
 
 from .channel import Channel
 from .player import Player
@@ -25,12 +28,14 @@ import app
 
 class Slot:
     def __init__(self) -> None:
+        self.last_frame: Optional[bScoreFrame] = None
         self.player: Optional[Player] = None
-        self.status  = SlotStatus.Open
-        self.team    = SlotTeam.Neutral
-        self.mods    = Mods.NoMod
-        self.loaded  = False
-        self.skipped = False
+        self.status     = SlotStatus.Open
+        self.team       = SlotTeam.Neutral
+        self.mods       = Mods.NoMod
+        self.has_failed = False
+        self.loaded     = False
+        self.skipped    = False
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
@@ -115,6 +120,7 @@ class Match:
         self.slots = [Slot() for _ in range(8)]
 
         self.starting: Optional[StartingTimers] = None
+        self.db_match: Optional[DBMatch] = None
         self.chat: Optional[Channel] = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
@@ -368,6 +374,12 @@ class Match:
             f'{player.name} was kicked from the match'
         )
 
+        events.create(
+            self.db_match.id,
+            type=EventType.Kick,
+            data={'user_id': player.id}
+        )
+
     def close(self):
         # Shutdown pending match timer
         self.starting = None
@@ -388,6 +400,18 @@ class Match:
             player.enqueue_match_disband(self.id)
 
         app.session.channels.remove(self.chat)
+
+        last_game = events.fetch_last_by_type(
+            self.db_match.id,
+            type=EventType.Start
+        )
+
+        if not last_game:
+            # No games were played
+            matches.delete(self.db_match.id)
+        else:
+            matches.update(self.db_match.id, {'ended_at': datetime.now()})
+            events.create(self.db_match.id, type=EventType.Disband)
 
     def start(self):
         if self.player_count <= 0:
@@ -418,6 +442,23 @@ class Match:
 
         self.logger.info('Match started')
         self.update()
+
+        events.create(
+            self.db_match.id,
+            type=EventType.Start,
+            data={
+                'beatmap_id': self.beatmap_id,
+                'beatmap_text': self.beatmap_name,
+                'beatmap_hash': self.beatmap_hash,
+                'mode': self.mode.value,
+                'team_mode': self.team_type.value,
+                'scoring_mode': self.scoring_type.value,
+                'mods': self.mods.value,
+                'freemod': self.freemod,
+                'host': self.host.id,
+                'start_time': str(datetime.now())
+            }
+        )
 
     def abort(self):
         # Players that have been playing this round

@@ -12,7 +12,9 @@ from ..common.database.repositories import (
     relationships,
     beatmaps,
     messages,
-    scores
+    matches,
+    scores,
+    events
 )
 
 from ..common.objects import (
@@ -28,9 +30,11 @@ from ..common.objects import (
 )
 
 from ..common.constants import (
+    MatchScoringTypes,
     MatchTeamTypes,
     PresenceFilter,
     SlotStatus,
+    EventType,
     SlotTeam,
     GameMode,
     Grade,
@@ -39,6 +43,7 @@ from ..common.constants import (
 
 from typing import Callable, Tuple, List
 from concurrent.futures import Future
+from datetime import datetime
 from threading import Thread
 from copy import copy
 
@@ -690,6 +695,12 @@ def create_match(player: Player, bancho_match: bMatch):
     )
     match.chat = c
 
+    match.db_match = matches.create(
+        match.name,
+        match.id,
+        match.host.id
+    )
+
     session.logger.info(f'Created match: "{match.name}"')
 
     join_match(
@@ -754,6 +765,12 @@ def join_match(player: Player, match_join: bMatchJoin):
     player.match = match
     player.enqueue_matchjoin_success(match.bancho_match)
 
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={'user_id': player.id}
+    )
+
     match.logger.info(f'{player.name} joined')
     match.update()
 
@@ -780,6 +797,12 @@ def leave_match(player: Player):
         kick=True
     )
 
+    events.create(
+        player.match.db_match.id,
+        type=EventType.Leave,
+        data={'user_id': player.id}
+    )
+
     if all(slot.empty for slot in player.match.slots):
         player.enqueue_match_disband(player.match.id)
 
@@ -789,6 +812,22 @@ def leave_match(player: Player):
         # Match is empty
         session.matches.remove(player.match)
         player.match.starting = None
+
+        match_id = player.match.db_match.id
+
+        last_game = events.fetch_last_by_type(
+            match_id,
+            type=EventType.Start
+        )
+
+        if not last_game:
+            # No games were played
+            matches.delete(match_id)
+        else:
+            matches.update(match_id, {'ended_at': datetime.now()})
+            events.create(match_id, type=EventType.Disband)
+
+        player.match.logger.info('Match was disbanded.')
     else:
         if player is player.match.host:
             # Player was host, transfer to next player
@@ -1034,6 +1073,12 @@ def transfer_host(player: Player, slot_id: int):
     player.match.host = target
     player.match.host.enqueue_match_transferhost()
 
+    events.create(
+        player.match.db_match.id,
+        type=EventType.Host,
+        data={'user_id': target.id, 'previous': player.id}
+    )
+
     player.match.logger.info(f'Changed host to: {target.name}')
     player.match.update()
 
@@ -1117,8 +1162,10 @@ def player_failed(player: Player):
     if not player.match.in_progress:
         return
 
-    slot_id = player.match.get_slot_id(player)
+    slot, slot_id = player.match.get_slot_with_id(player)
     assert slot_id is not None
+
+    slot.has_failed = True
 
     for p in player.match.players:
         p.enqueue_player_failed(slot_id)
@@ -1135,6 +1182,7 @@ def score_update(player: Player, scoreframe: bScoreFrame):
     if not slot.is_playing:
         return
 
+    slot.last_frame = scoreframe
     scoreframe.id = id
 
     for p in player.match.players:
@@ -1176,6 +1224,64 @@ def match_complete(player: Player):
 
     player.match.logger.info('Match finished')
     player.match.update()
+
+    start_event = events.fetch_last_by_type(
+        player.match.db_match.id,
+        type=EventType.Start
+    )
+
+    if start_event:
+        ranking_type = {
+            MatchScoringTypes.Score: lambda s: s.last_frame.total_score,
+            MatchScoringTypes.Accuracy: lambda s: s.last_frame.accuracy(player.match.mode),
+            MatchScoringTypes.Combo: lambda s: s.last_frame.max_combo
+        }[player.match.scoring_type]
+
+        slots = [slot for slot in player.match.slots if slot.last_frame]
+        slots.sort(key=ranking_type, reverse=True)
+
+        events.create(
+            player.match.db_match.id,
+            type=EventType.Result,
+            data={
+                'beatmap_id': player.match.beatmap_id,
+                'beatmap_text': player.match.beatmap_name,
+                'beatmap_hash': player.match.beatmap_hash,
+                'mode': player.match.mode.value,
+                'team_mode': player.match.team_type.value,
+                'scoring_mode': player.match.scoring_type.value,
+                'mods': player.match.mods.value,
+                'freemod': player.match.freemod,
+                'host': player.match.host.id,
+                'start_time': start_event.data['start_time'],
+                'end_time': str(datetime.now()),
+                'results': [
+                    {
+                        'player': {
+                            'id': slot.player.id,
+                            'name': slot.player.name,
+                            'country': slot.player.object.country,
+                            'team': slot.team.value,
+                            'mods': slot.mods.value
+                        },
+                        'score': {
+                            'c300': slot.last_frame.c300,
+                            'c100': slot.last_frame.c100,
+                            'c50': slot.last_frame.c50,
+                            'cGeki': slot.last_frame.cGeki,
+                            'cKatu': slot.last_frame.cKatu,
+                            'cMiss': slot.last_frame.cMiss,
+                            'score': slot.last_frame.total_score,
+                            'accuracy': round(slot.last_frame.accuracy(player.match.mode) * 100, 2),
+                            'max_combo': slot.last_frame.max_combo,
+                            'perfect': slot.last_frame.perfect
+                        },
+                        'place': rank + 1
+                    }
+                    for rank, slot in enumerate(slots)
+                ]
+            }
+        )
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
 @run_in_thread
