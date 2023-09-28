@@ -1274,7 +1274,9 @@ def match_complete(player: Player):
                             'score': slot.last_frame.total_score,
                             'accuracy': round(slot.last_frame.accuracy(player.match.mode) * 100, 2),
                             'max_combo': slot.last_frame.max_combo,
-                            'perfect': slot.last_frame.perfect
+                            'perfect': slot.last_frame.perfect,
+                            'failed': slot.has_failed,
+                            'grade': slot.last_frame.grade(player.match.mode, slot.mods).name
                         },
                         'place': rank + 1
                     }
