@@ -11,6 +11,7 @@ from .common.database.repositories import (
     beatmapsets,
     beatmaps,
     clients,
+    events,
     scores,
     stats,
     users,
@@ -21,6 +22,7 @@ from .common.constants import (
     MatchTeamTypes,
     Permissions,
     SlotStatus,
+    EventType,
     SlotTeam,
     GameMode,
     Mods
@@ -157,7 +159,7 @@ def mp_start(ctx: Context):
 
         duration = int(ctx.args[0])
 
-        if duration <= 0:
+        if duration < 0:
             return ['no.']
 
         if duration > 300:
@@ -206,6 +208,8 @@ def mp_abort(ctx: Context):
 
     ctx.player.match.abort()
     ctx.player.match.logger.info('Match was aborted.')
+
+    # TODO: Event
 
     return ['Match aborted.']
 
@@ -311,6 +315,12 @@ def mp_host(ctx: Context):
     if not (target := match.get_player(name)):
         return ['Could not find this player.']
 
+    events.create(
+        match.db_match.id,
+        type=EventType.Host,
+        data={'old_host': target.id, 'new_host': match.host.id}
+    )
+
     match.host = target
     match.host.enqueue_match_transferhost()
 
@@ -403,6 +413,9 @@ def mp_force_invite(ctx: Context):
 def mp_lock(ctx: Context):
     """- Lock all unsued slots in the match."""
     for slot in ctx.player.match.slots:
+        if slot.has_player:
+            ctx.player.match.kick_player(slot.player)
+
         if slot.status == SlotStatus.Open:
             slot.status = SlotStatus.Locked
 

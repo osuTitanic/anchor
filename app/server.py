@@ -56,13 +56,15 @@ class BanchoFactory(Factory):
 
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
-        app.session.events.submit('shutdown')
-        app.session.executor.shutdown(wait=True)
-        app.session.jobs.shutdown(cancel_futures=True)
-        app.session.packet_executor.shutdown(cancel_futures=True, wait=False)
 
         for player in app.session.players:
             status.delete(player.id)
+
+        app.session.events.submit('shutdown')
+        app.session.executor.shutdown(wait=True)
+        app.session.jobs.shutdown(cancel_futures=True, wait=False)
+        app.session.packet_executor.shutdown(cancel_futures=True, wait=False)
+        app.session.login_queue.shutdown(cancel_futures=True, wait=False)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)
