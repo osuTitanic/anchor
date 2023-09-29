@@ -159,7 +159,7 @@ def mp_start(ctx: Context):
 
         duration = int(ctx.args[0])
 
-        if duration <= 0:
+        if duration < 0:
             return ['no.']
 
         if duration > 300:
