@@ -326,6 +326,10 @@ class Player(BanchoProtocol):
 
         return self.current_stats.rank
 
+    @property
+    def link(self) -> str:
+        return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
+
     def connectionMade(self):
         super().connectionMade()
         # Create connection timeout
