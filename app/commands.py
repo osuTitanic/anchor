@@ -519,7 +519,7 @@ def report(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <username> (<reason>)']
 
-    username = ctx.args[0].replace('_', ' ')
+    username = ctx.args[0]
     reason = ' '.join(ctx.args[1:])[:255]
 
     if not (target := users.fetch_by_name(username)):
@@ -656,7 +656,7 @@ def alertuser(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <message>']
 
-    username = ctx.args[0].replace('_', ' ')
+    username = ctx.args[0]
 
     if not (player := app.session.players.by_name(username)):
         return [f'Could not find player "{username}".']
@@ -672,7 +672,7 @@ def silence(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <duration> (<reason>)']
 
-    name = ctx.args[0].replace('_', ' ')
+    name = ctx.args[0]
     duration = timeparse(ctx.args[1])
     reason = ' '.join(ctx.args[2:])
 
@@ -717,7 +717,7 @@ def unsilence(ctx: Context):
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
-    name = ctx.args[0].replace('_', ' ')
+    name = ctx.args[0]
 
     if (player := app.session.players.by_name(name)):
         player.unsilence()
@@ -737,7 +737,7 @@ def restrict(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name> <length/permanent> (<reason>)']
 
-    username = ctx.args[0].replace('_', ' ')
+    username = ctx.args[0]
     length   = ctx.args[1]
     reason   = ' '.join(ctx.args[2:])
 
@@ -794,7 +794,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name> <restore scores (true/false)>']
 
-    username = ctx.args[0].replace('_', ' ')
+    username = ctx.args[0]
     restore_scores = False
 
     if len(ctx.args) > 1:
