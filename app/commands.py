@@ -11,11 +11,11 @@ from .common.database.repositories import (
     beatmapsets,
     beatmaps,
     clients,
+    reports,
     events,
     scores,
     stats,
     users,
-    logs
 )
 
 from .common.constants import (
@@ -520,32 +520,43 @@ def report(ctx: Context) -> Optional[List]:
         return [f'Invalid syntax: !{ctx.trigger} <username> (<reason>)']
 
     username = ctx.args[0].replace('_', ' ')
+    reason = ' '.join(ctx.args[1:])[:255]
 
-    if not (player := users.fetch_by_name(username)):
+    if not (target := users.fetch_by_name(username)):
         return [f'Could not find player "{username}".']
 
-    reason = ' '.join(ctx.args[1:])
-    message = f'{ctx.player.name} reported {player.name} for: "{reason}".'
+    if target.id == ctx.player.id:
+        return ['You cannot report yourself.']
 
-    if (player := app.session.players.by_id(player.id)):
-        player.enqueue_monitor()
+    if target.name == app.session.bot_player.name:
+        return ['no.']
 
-    app.session.executor.submit(
-        logs.create,
-        message,
-        'info',
-        'reports'
-    )
-
-    channel = app.session.channels.by_name('#admin')
-
-    if channel:
-        channel.send_message(
-            app.session.bot_player,
-            message
+    if r := reports.fetch_by_sender_to_target(ctx.player.id, target.id):
+        seconds_since_last_report = (
+            datetime.now().timestamp() - r.time.timestamp()
         )
 
-    return ['Player was reported.']
+        if seconds_since_last_report <= 86400:
+            return [
+                'You have already reported that user. '
+                'Please wait until you report them again!'
+            ]
+
+    if channel := app.session.channels.by_name('#admin'):
+        # Send message to admin chat
+        channel.send_message(
+            app.session.bot_player,
+            f'[{ctx.target.name}] {ctx.player.link} reported {target.link} for: "{reason}".'
+        )
+
+    # Create record in database
+    reports.create(
+        target.id,
+        ctx.player.id,
+        reason
+    )
+
+    return ['Chat moderators have been alerted. Thanks for your help.']
 
 @command(['search'], Permissions.Supporter, hidden=False)
 def search(ctx: Context):
