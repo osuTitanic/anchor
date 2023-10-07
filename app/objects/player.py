@@ -21,6 +21,7 @@ from app.common.objects import (
 
 from app.common.constants import strings, level
 from app.common.cache import leaderboards
+from app.common.cache import usercount
 from app.common.cache import status
 
 from app.common.database.repositories import (
@@ -343,6 +344,9 @@ class Player(BanchoProtocol):
             super().connectionLost(reason)
             return
 
+        # Decrement usercount
+        usercount.decrement()
+
         if self.spectating:
             if not self.spectating:
                 return
@@ -640,6 +644,9 @@ class Player(BanchoProtocol):
 
         # Enqueue other players
         self.enqueue_players(app.session.players)
+
+        # Increment usercount
+        usercount.increment()
 
         self.logged_in = True
 
