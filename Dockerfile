@@ -1,8 +1,17 @@
-# syntax=docker/dockerfile:1
-
-FROM python:3.9-bullseye
+FROM python:3.11-bullseye
 
 WORKDIR /bancho
+
+# Installing/Updating system dependencies
+RUN apt update -y
+RUN apt install postgresql git curl -y
+
+# Install rust toolchain
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Update pip
+RUN pip install --upgrade pip
 
 # Install python dependencies
 COPY requirements.txt ./
