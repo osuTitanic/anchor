@@ -51,8 +51,8 @@ packet_executor = ThreadPoolExecutor(max_workers=config.PACKET_WORKERS)
 # This is mostly used for database writes like messages, user activity and so on...
 executor = ThreadPoolExecutor(max_workers=config.DB_WORKERS)
 
-jobs = Jobs(max_workers=4)
 channels = Channels()
 storage = Storage()
 players = Players()
 matches = Matches()
+jobs = Jobs()
