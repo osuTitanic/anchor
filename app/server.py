@@ -4,9 +4,9 @@ from twisted.internet.interfaces import IAddress
 from typing import Optional
 
 from .common.database.repositories import channels
+from .common.cache import status, usercount
 from .objects.channel import Channel
 from .objects.player import Player
-from .common.cache import status
 
 from .jobs import (
     rank_indexing,
@@ -51,6 +51,9 @@ class BanchoFactory(Factory):
         app.session.jobs.submit(events.event_listener)
         app.session.jobs.submit(rank_indexing.index_ranks)
         app.session.jobs.submit(activities.match_activity)
+
+        # Reset usercount
+        usercount.set(0)
 
         app.session.logger.info(f'Starting factory: {self}')
 
