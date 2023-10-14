@@ -24,7 +24,8 @@ def index_ranks():
                     stats.mode,
                     stats.pp,
                     stats.rscore,
-                    player.country
+                    player.country,
+                    stats.tscore
                 )
 
         app.session.logger.info('Index complete!')
