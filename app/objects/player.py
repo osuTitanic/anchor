@@ -445,7 +445,7 @@ class Player(BanchoProtocol):
             self.status.mode.value,
             self.current_stats.pp,
             self.current_stats.rscore,
-            self.object.country,
+            self.object.country.lower(),
             self.current_stats.tscore
         )
 

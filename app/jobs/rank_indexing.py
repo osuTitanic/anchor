@@ -24,7 +24,7 @@ def index_ranks():
                     stats.mode,
                     stats.pp,
                     stats.rscore,
-                    player.country,
+                    player.country.lower(),
                     stats.tscore
                 )
 
