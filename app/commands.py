@@ -734,7 +734,7 @@ def unsilence(ctx: Context):
 def restrict(ctx: Context) -> Optional[List]:
     """ <name> <length/permanent> (<reason>)"""
 
-    if len(ctx.args) < 1:
+    if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <name> <length/permanent> (<reason>)']
 
     username = ctx.args[0]
