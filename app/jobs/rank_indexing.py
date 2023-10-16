@@ -13,7 +13,7 @@ def index_ranks():
 
     if not leaderboards.top_players(0):
         # Redis cache was flushed
-        active_players = users.fetch_active()
+        active_players = users.fetch_all()
 
         app.session.logger.info(f'Indexing player ranks... ({len(active_players)})')
 
