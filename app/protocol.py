@@ -168,7 +168,7 @@ class BanchoProtocol(Protocol):
     def close_connection(self, error: Optional[Exception] = None):
         if not self.is_local or config.DEBUG:
             if error:
-                self.send_error()
+                self.send_error(message=str(error) if config.DEBUG else None)
                 self.logger.warning(f'Closing connection -> <{self.address.host}>')
             else:
                 self.logger.info(f'Closing connection -> <{self.address.host}>')
