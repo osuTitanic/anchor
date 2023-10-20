@@ -404,7 +404,7 @@ def add_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    if target.id in player.friends:
+    if abs(target.id) in player.friends:
         return
 
     relationships.create(
@@ -423,7 +423,7 @@ def remove_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    if target.id not in player.friends:
+    if abs(target.id) not in player.friends:
         return
 
     relationships.delete(
@@ -431,7 +431,7 @@ def remove_friend(player: Player, target_id: int):
         target_id
     )
 
-    session.logger.info(f'{player.name} no longer friends with {target.name}.')
+    session.logger.info(f'{player.name} is no longer friends with {target.name}.')
 
     player.reload_object()
     player.enqueue_friends()
