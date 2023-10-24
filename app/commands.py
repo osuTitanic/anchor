@@ -102,7 +102,7 @@ def is_admin(ctx: Context) -> bool:
 
 @system_commands.register(['maintenance', 'panic'], Permissions.Admin)
 def maintenance_mode(ctx: Context) -> List[str]:
-    """<on/off> - Toggle maintenance mode on or off"""
+    """<on/off>"""
     if ctx.args:
         # Change maintenance value based on input
         config.MAINTENANCE = ctx.args[0].lower() == 'on'
@@ -849,9 +849,9 @@ def unrestrict(ctx: Context) -> Optional[List]:
 
 @command(['moderated'], Permissions.Admin, hidden=False)
 def moderated(ctx: Context) -> Optional[List]:
-    """(on/off)"""
+    """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
-        return [f'Invalid syntax: !{ctx.trigger} (on/off)']
+        return [f'Invalid syntax: !{ctx.trigger} <on/off>']
 
     if type(ctx.target) != Channel:
         return ['Target is not a channel.']
