@@ -29,6 +29,10 @@ def register(packet: ResponsePacket) -> Callable:
 
 @register(ResponsePacket.LOGIN_REPLY)
 def send_login_reply(reply: int):
+    if reply < -4:
+        # Login Errors < -4 are not supported
+        reply = -1
+
     return int(reply).to_bytes(
         length=4,
         byteorder='little',

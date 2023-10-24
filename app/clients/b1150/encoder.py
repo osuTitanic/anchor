@@ -15,6 +15,18 @@ def register(packet: ResponsePacket) -> Callable:
 
     return wrapper
 
+@register(ResponsePacket.LOGIN_REPLY)
+def send_login_reply(reply: int):
+    if reply < -3:
+        # Login Errors < -3 are not supported
+        reply = -1
+
+    return int(reply).to_bytes(
+        length=4,
+        byteorder='little',
+        signed=True
+    )
+
 @register(ResponsePacket.USER_STATS)
 def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
     writer = Writer()

@@ -96,6 +96,24 @@ sets = [
     system_commands := CommandSet('system', 'System Commands')
 ]
 
+@system_commands.condition
+def is_admin(ctx: Context) -> bool:
+    return ctx.player.is_admin
+
+@system_commands.register(['maintenance', 'panic'], Permissions.Admin)
+def maintenance_mode(ctx: Context) -> List[str]:
+    """<on/off>"""
+    if ctx.args:
+        # Change maintenance value based on input
+        config.MAINTENANCE = ctx.args[0].lower() == 'on'
+    else:
+        # Toggle maintenance value
+        config.MAINTENANCE = not config.MAINTENANCE
+
+    return [
+        f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
+    ]
+
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
     return ctx.player.match is not None
@@ -107,7 +125,7 @@ def inside_chat(ctx: Context) -> bool:
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
-           (Permissions.Admin in ctx.player.permissions)
+           (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
 def mp_help(ctx: Context):
@@ -831,9 +849,9 @@ def unrestrict(ctx: Context) -> Optional[List]:
 
 @command(['moderated'], Permissions.Admin, hidden=False)
 def moderated(ctx: Context) -> Optional[List]:
-    """(on/off)"""
+    """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
-        return [f'Invalid syntax: !{ctx.trigger} (on/off)']
+        return [f'Invalid syntax: !{ctx.trigger} <on/off>']
 
     if type(ctx.target) != Channel:
         return ['Target is not a channel.']
