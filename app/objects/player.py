@@ -331,6 +331,12 @@ class Player(BanchoProtocol):
     def link(self) -> str:
         return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
 
+    @property
+    def is_admin(self) -> bool:
+        if self.permissions:
+            return True if Permissions.Admin in self.permissions else False
+        return False
+
     def connectionMade(self):
         super().connectionMade()
         # Create connection timeout
@@ -539,6 +545,16 @@ class Player(BanchoProtocol):
             # TODO: Some clients may interpret this as being banned...?
             self.logger.warning('Login Failed: Not activated')
             self.login_failed(LoginError.NotActivated)
+            return
+
+        latest_supported_version = list(PACKETS.keys())[0]
+
+        if (self.client.version.date > latest_supported_version) and not self.is_admin:
+            self.logger.warning('Login Failed: Unsupported version')
+            self.login_failed(
+                LoginError.Authentication,
+                message=strings.UNSUPPORTED_VERSION
+            )
             return
 
         if not self.is_tourney_client:
