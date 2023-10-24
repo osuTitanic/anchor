@@ -107,7 +107,7 @@ def inside_chat(ctx: Context) -> bool:
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
-           (Permissions.Admin in ctx.player.permissions)
+           (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
 def mp_help(ctx: Context):
