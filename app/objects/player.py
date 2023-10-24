@@ -333,8 +333,8 @@ class Player(BanchoProtocol):
 
     @property
     def is_admin(self) -> bool:
-        if self.permissions:
-            return True if Permissions.Admin in self.permissions else False
+        if self.permissions is not None:
+            return Permissions.Admin in self.permissions
         return False
 
     def connectionMade(self):
@@ -556,6 +556,17 @@ class Player(BanchoProtocol):
                 message=strings.UNSUPPORTED_VERSION
             )
             return
+
+        if config.MAINTENANCE:
+            if not self.is_admin:
+                self.logger.warning('Login Failed: Maintenance')
+                self.login_failed(
+                    LoginError.ServerError,
+                    message=strings.MAINTENANCE_MODE
+                )
+                return
+
+            self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
         if not self.is_tourney_client:
             if (other_user := app.session.players.by_id(user.id)):
