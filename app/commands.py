@@ -96,6 +96,24 @@ sets = [
     system_commands := CommandSet('system', 'System Commands')
 ]
 
+@system_commands.condition
+def is_admin(ctx: Context) -> bool:
+    return ctx.player.is_admin
+
+@system_commands.register(['maintenance', 'panic'], Permissions.Admin)
+def maintenance_mode(ctx: Context) -> List[str]:
+    """<on/off> - Toggle maintenance mode on or off"""
+    if ctx.args:
+        # Change maintenance value based on input
+        config.MAINTENANCE = ctx.args[0].lower() == 'on'
+    else:
+        # Toggle maintenance value
+        config.MAINTENANCE = not config.MAINTENANCE
+
+    return [
+        f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
+    ]
+
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
     return ctx.player.match is not None
