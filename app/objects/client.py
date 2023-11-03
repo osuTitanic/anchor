@@ -128,14 +128,10 @@ class OsuClient:
         except (ValueError, IndexError):
             pass
 
-        if not (geolocation := app.session.geolocation_cache.get(ip)):
-            geolocation = location.fetch_geolocation(
-                ip=ip,
-                is_local=utils.is_local_ip(ip)
-            )
-
-            # Load ip geolocation from web and store to cache
-            app.session.executor.submit(utils.load_geolocation_web, ip)
+        geolocation = location.fetch_geolocation(
+            ip=ip,
+            is_local=utils.is_local_ip(ip)
+        )
 
         utc_offset = int(
             datetime.now(
