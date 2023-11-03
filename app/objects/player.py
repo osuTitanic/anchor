@@ -67,35 +67,6 @@ import utils
 import time
 import app
 
-def login_callback(future: Future):
-    if (e := future.exception()):
-        app.session.logger.error(
-            f'Exception in login thread {future}: {e}',
-            exc_info=e
-        )
-        raise e
-
-    app.session.logger.debug(
-        f'Login Result: {future}'
-    )
-
-def login_thread(func):
-    def wrapper(*args, **kwargs) -> Future:
-        try:
-            f = app.session.login_queue.submit(
-                func,
-                *args,
-                **kwargs
-            )
-            f.add_done_callback(
-                login_callback
-            )
-            return f
-        except RuntimeError:
-            exit()
-
-    return wrapper
-
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
         self.is_local = utils.is_local_ip(address.host)
@@ -500,7 +471,6 @@ class Player(BanchoProtocol):
 
         self.logger.debug(f'Assigned decoder with version b{version}')
 
-    @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {client.version}.')
