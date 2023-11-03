@@ -23,10 +23,6 @@ AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announc
 
 PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
 
-PACKET_WORKERS = int(os.environ.get('BANCHO_PACKET_WORKERS', 10))
-LOGIN_WORKERS = int(os.environ.get('BANCHO_LOGIN_WORKERS', 5))
-DB_WORKERS = int(os.environ.get('BANCHO_DB_WORKERS', 2))
-
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
 MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
