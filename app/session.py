@@ -6,7 +6,6 @@ from .common.database import Postgres
 from .common.storage import Storage
 from .jobs import Jobs
 
-from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict
 from requests import Session
 from redis import Redis
@@ -40,9 +39,6 @@ requests.headers = {
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
-
-# This is mostly used for database writes like messages, user activity and so on...
-executor = ThreadPoolExecutor(max_workers=config.DB_WORKERS)
 
 channels = Channels()
 storage = Storage()

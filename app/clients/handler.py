@@ -42,11 +42,12 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, List
-from concurrent.futures import Future
+from twisted.internet import threads
 from datetime import datetime
 from threading import Thread
 from copy import copy
 
+import utils
 import time
 
 def register(packet: RequestPacket) -> Callable:
@@ -224,16 +225,16 @@ def send_message(player: Player, message: bMessage):
 
     player.messages_in_last_minute += 1
 
-    session.executor.submit(
+    threads.deferToThread(
         messages.create,
         player.name,
         channel.name,
         message.content
+    ).addErrback(
+        utils.thread_callback
     )
 
-    session.executor.submit(
-        player.update_activity
-    )
+    player.update_activity()
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
@@ -322,16 +323,16 @@ def send_private_message(sender: Player, message: bMessage):
 
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
 
-    session.executor.submit(
+    threads.deferToThread(
         messages.create,
         sender.name,
         target.name,
         message.content
+    ).addErrback(
+        utils.thread_callback
     )
 
-    session.executor.submit(
-        sender.update_activity
-    )
+    sender.update_activity()
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 def away_message(player: Player, message: bMessage):

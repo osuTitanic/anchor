@@ -1,4 +1,5 @@
 
+from twisted.python.failure import Failure
 from app.common.constants import ANCHOR_ASCII_ART
 from app.common.database import DBScore
 from app.common.helpers import location
@@ -68,3 +69,8 @@ def is_local_ip(ip: str) -> bool:
 
     return False
 
+def thread_callback(error: Failure):
+    app.session.logger.error(
+        f'Failed to execute thread: "{error.getErrorMessage()}"',
+        exc_info=error.value
+    )

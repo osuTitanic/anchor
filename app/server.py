@@ -64,7 +64,6 @@ class BanchoFactory(Factory):
             status.delete(player.id)
 
         app.session.events.submit('shutdown')
-        app.session.executor.shutdown(wait=True)
         app.session.jobs.shutdown(cancel_futures=True, wait=False)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
