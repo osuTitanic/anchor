@@ -56,40 +56,11 @@ def register(packet: RequestPacket) -> Callable:
 
     return wrapper
 
-def thread_callback(future: Future):
-    if (exc := future.exception()):
-        session.logger.error(
-            f'Exception in {future}: {exc}'
-        )
-        raise exc
-
-    session.logger.debug(
-        f'Future Result: {future}'
-    )
-
-def run_in_thread(func):
-    def wrapper(*args, **kwargs) -> Future:
-        try:
-            f = session.packet_executor.submit(
-                func,
-                *args,
-                **kwargs
-            )
-            f.add_done_callback(
-                thread_callback
-            )
-            return f
-        except RuntimeError:
-            exit()
-
-    return wrapper
-
 @register(RequestPacket.PONG)
 def pong(player: Player):
     pass
 
 @register(RequestPacket.EXIT)
-@run_in_thread
 def exit(player: Player, updating: bool):
     player.update_activity()
 
@@ -106,7 +77,6 @@ def receive_updates(player: Player, filter: PresenceFilter):
     player.enqueue_players(players, stats_only=True)
 
 @register(RequestPacket.PRESENCE_REQUEST)
-@run_in_thread
 def presence_request(player: Player, players: List[int]):
     for id in players:
         if not (target := session.players.by_id(id)):
@@ -115,12 +85,10 @@ def presence_request(player: Player, players: List[int]):
         player.enqueue_presence(target)
 
 @register(RequestPacket.PRESENCE_REQUEST_ALL)
-@run_in_thread
 def presence_request_all(player: Player):
     player.enqueue_players(session.players)
 
 @register(RequestPacket.STATS_REQUEST)
-@run_in_thread
 def stats_request(player: Player, players: List[int]):
     for id in players:
         if not (target := session.players.by_id(id)):
@@ -129,7 +97,6 @@ def stats_request(player: Player, players: List[int]):
         player.enqueue_stats(target)
 
 @register(RequestPacket.CHANGE_STATUS)
-@run_in_thread
 def change_status(player: Player, status: bStatusUpdate):
     player.status.checksum = status.beatmap_checksum
     player.status.beatmap = status.beatmap_id
@@ -146,13 +113,11 @@ def change_status(player: Player, status: bStatusUpdate):
     session.players.send_stats(player)
 
 @register(RequestPacket.REQUEST_STATUS)
-@run_in_thread
 def request_status(player: Player):
     player.reload_rank()
     player.enqueue_stats(player)
 
 @register(RequestPacket.JOIN_CHANNEL)
-@run_in_thread
 def handle_channel_join(player: Player, channel_name: str):
     try:
         channel = None
@@ -179,7 +144,6 @@ def handle_channel_join(player: Player, channel_name: str):
     channel.add(player)
 
 @register(RequestPacket.LEAVE_CHANNEL)
-@run_in_thread
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
     try:
         channel = None
@@ -370,7 +334,6 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
-@run_in_thread
 def away_message(player: Player, message: bMessage):
     if player.away_message is None and message.content == "":
         return
@@ -399,7 +362,6 @@ def away_message(player: Player, message: bMessage):
         )
 
 @register(RequestPacket.ADD_FRIEND)
-@run_in_thread
 def add_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -418,7 +380,6 @@ def add_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.REMOVE_FRIEND)
-@run_in_thread
 def remove_friend(player: Player, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
@@ -437,7 +398,6 @@ def remove_friend(player: Player, target_id: int):
     player.enqueue_friends()
 
 @register(RequestPacket.BEATMAP_INFO)
-@run_in_thread
 def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool = False):
     maps: List[Tuple[int, DBBeatmap]] = []
 
@@ -599,7 +559,6 @@ def cant_spectate(player: Player):
         p.enqueue_cant_spectate(player.id)
 
 @register(RequestPacket.SEND_FRAMES)
-@run_in_thread
 def send_frames(player: Player, bundle: bReplayFrameBundle):
     if not player.spectators:
         return
@@ -627,7 +586,6 @@ def part_lobby(player: Player):
         p.enqueue_lobby_part(player.id)
 
 @register(RequestPacket.MATCH_INVITE)
-@run_in_thread
 def invite(player: Player, target_id: int):
     if player.silenced:
         return
@@ -651,7 +609,6 @@ def invite(player: Player, target_id: int):
     )
 
 @register(RequestPacket.CREATE_MATCH)
-@run_in_thread
 def create_match(player: Player, bancho_match: bMatch):
     if not player.in_lobby:
         player.logger.warning('Tried to create match, but not in lobby')
@@ -712,7 +669,6 @@ def create_match(player: Player, bancho_match: bMatch):
     )
 
 @register(RequestPacket.JOIN_MATCH)
-@run_in_thread
 def join_match(player: Player, match_join: bMatchJoin):
     if not (match := session.matches[match_join.match_id]):
         # Match was not found
@@ -1286,7 +1242,6 @@ def match_complete(player: Player):
         )
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
-@run_in_thread
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
         return
@@ -1300,11 +1255,9 @@ def tourney_match_info(player: Player, match_id: int):
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
-@run_in_thread
 def bancho_error(player: Player, error: str):
     session.logger.error(f'Bancho Error Report:\n{error}')
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
-@run_in_thread
 def change_friendonly_dms(player: Player, enabled: bool):
     player.client.friendonly_dms = enabled

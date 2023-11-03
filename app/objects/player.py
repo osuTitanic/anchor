@@ -50,6 +50,7 @@ from copy import copy
 from twisted.internet.error import ConnectionDone
 from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
+from twisted.internet import threads
 
 from app.clients.packets import PACKETS
 from app.clients import (
@@ -751,17 +752,23 @@ class Player(BanchoProtocol):
             )
             return
 
-        try:
-            handler_function = app.session.handlers[packet]
-            handler_function(
-               *[self, args] if args != None else
-                [self]
-            )
-        except Exception as e:
-            self.logger.error(
-                f'Failed to execute handler for packet "{packet.name}": {e}',
-                exc_info=e
-            )
+        if not (handler_function := app.session.handlers.get(packet)):
+            self.logger.warning(f'Could not find a handler function for "{packet}".')
+            return
+
+        deferred = threads.deferToThread(
+            handler_function,
+           *[self, args] if args != None else
+            [self]
+        )
+
+        deferred.addErrback(self.packet_callback)
+
+    def packet_callback(self, result: Failure):
+        self.logger.error(
+            f'Failed to execute handler function: "{result.getErrorMessage()}"',
+            exc_info=result.value
+        )
 
     def silence(self, duration_sec: int, reason: Optional[str] = None):
         duration = timedelta(seconds=duration_sec)
