@@ -42,7 +42,6 @@ from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
-from concurrent.futures import Future
 from threading import Timer
 from enum import Enum
 from copy import copy

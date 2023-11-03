@@ -1,7 +1,7 @@
 
+from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures._base import Future
-from concurrent.futures       import ThreadPoolExecutor
-from typing                   import Any, Callable, Tuple
+from typing import Any, Callable, Tuple
 
 from . import events
 from . import pings
