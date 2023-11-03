@@ -66,8 +66,6 @@ class BanchoFactory(Factory):
         app.session.events.submit('shutdown')
         app.session.executor.shutdown(wait=True)
         app.session.jobs.shutdown(cancel_futures=True, wait=False)
-        app.session.packet_executor.shutdown(cancel_futures=True, wait=False)
-        app.session.login_queue.shutdown(cancel_futures=True, wait=False)
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)
