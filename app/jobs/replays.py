@@ -6,6 +6,7 @@ import app
 
 def replays():
     """Job for automatically removing score replays if they have been beaten"""
+    # TODO: Move this somewhere else?
 
     last_id = app.session.database.session.query(DBScore.id) \
                 .order_by(DBScore.id.desc()) \
