@@ -444,6 +444,7 @@ class Match:
             return
 
         self.in_progress = True
+        self.score_queue = Queue()
 
         # Execute score queue
         threads.deferToThread(self._process_score_queue) \
