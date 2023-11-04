@@ -207,9 +207,16 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE packet
-        # so we can just ignore them...
-        return [slot.loaded for slot in self.slots if slot.has_map and slot.player.client.version.date > 323]
+        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE
+        # packet so we can just ignore them...
+        return [
+            slot.loaded
+            for slot in self.slots
+            if (
+                slot.status == SlotStatus.Playing and
+                slot.player.client.version.date > 323
+            )
+        ]
 
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:
@@ -266,6 +273,7 @@ class Match:
         for slot in self.slots:
             if slot.status == expected:
                 slot.status = SlotStatus.NotReady
+                slot.loaded = False
 
     def change_settings(self, new_match: bMatch):
         if self.freemod != new_match.freemod:
