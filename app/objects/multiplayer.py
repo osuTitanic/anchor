@@ -1,8 +1,12 @@
 
+from twisted.python.failure import Failure
+from twisted.internet import threads
+
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
 from datetime import datetime
 from threading import Thread
+from queue import Queue
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -65,6 +69,10 @@ class Slot:
     def has_player(self) -> bool:
         return self.player is not None
 
+    @property
+    def completed(self) -> bool:
+        return self.status & SlotStatus.Complete and self.has_player
+
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status
@@ -107,6 +115,10 @@ class Match:
         self.beatmap_name = beatmap_name
         self.beatmap_hash = beatmap_hash
 
+        self.previous_beatmap_id   = beatmap_id
+        self.previous_beatmap_name = beatmap_name
+        self.previous_beatmap_hash = beatmap_hash
+
         self.mods = Mods.NoMod
         self.mode = mode
         self.seed = seed
@@ -125,6 +137,7 @@ class Match:
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
+        self.score_queue = Queue()
 
     @classmethod
     def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
@@ -198,9 +211,16 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE packet
-        # so we can just ignore them...
-        return [slot.loaded for slot in self.slots if slot.has_map and slot.player.client.version.date > 323]
+        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE
+        # packet so we can just ignore them...
+        return [
+            slot.loaded
+            for slot in self.slots
+            if (
+                slot.status == SlotStatus.Playing and
+                slot.player.client.version.date > 323
+            )
+        ]
 
     def get_slot(self, player: Player) -> Optional[Slot]:
         for slot in self.slots:
@@ -257,6 +277,8 @@ class Match:
         for slot in self.slots:
             if slot.status == expected:
                 slot.status = SlotStatus.NotReady
+                slot.skipped = False
+                slot.loaded = False
 
     def change_settings(self, new_match: bMatch):
         if self.freemod != new_match.freemod:
@@ -288,6 +310,10 @@ class Match:
             # Host is selecting new map
             self.logger.info('Host is selecting map...')
             self.unready_players()
+
+            self.previous_beatmap_id = self.beatmap_id
+            self.previous_beatmap_hash = self.beatmap_hash
+            self.previous_beatmap_name = self.beatmap_name
 
             self.beatmap_id = -1
             self.beatmap_hash = ""
@@ -439,6 +465,11 @@ class Match:
             return
 
         self.in_progress = True
+        self.score_queue = Queue()
+
+        # Execute score queue
+        threads.deferToThread(self._process_score_queue) \
+               .addErrback(self._score_queue_callback)
 
         self.logger.info('Match started')
         self.update()
@@ -522,3 +553,25 @@ class Match:
 
         self.starting = None
         self.start()
+
+    def _process_score_queue(self) -> None:
+        # NOTE: When the score packets don't get sent in the
+        #       right order, the match scoreboard will lock
+        #       up and the match cannot be finished.
+
+        while self.in_progress:
+            scoreframe = self.score_queue.get()
+
+            for p in self.players:
+                p.enqueue_score_update(scoreframe)
+
+            for p in app.session.players.in_lobby:
+                p.enqueue_score_update(scoreframe)
+
+            self.score_queue.task_done()
+
+    def _score_queue_callback(self, error: Failure) -> None:
+        self.logger.error(
+            f'Failed to process score queue: "{error.getErrorMessage()}"',
+            exc_info=error.value
+        )

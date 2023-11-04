@@ -42,7 +42,6 @@ from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
-from concurrent.futures import Future
 from threading import Timer
 from enum import Enum
 from copy import copy
@@ -50,6 +49,7 @@ from copy import copy
 from twisted.internet.error import ConnectionDone
 from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
+from twisted.internet import threads
 
 from app.clients.packets import PACKETS
 from app.clients import (
@@ -65,35 +65,6 @@ import bcrypt
 import utils
 import time
 import app
-
-def login_callback(future: Future):
-    if (e := future.exception()):
-        app.session.logger.error(
-            f'Exception in login thread {future}: {e}',
-            exc_info=e
-        )
-        raise e
-
-    app.session.logger.debug(
-        f'Login Result: {future}'
-    )
-
-def login_thread(func):
-    def wrapper(*args, **kwargs) -> Future:
-        try:
-            f = app.session.login_queue.submit(
-                func,
-                *args,
-                **kwargs
-            )
-            f.add_done_callback(
-                login_callback
-            )
-            return f
-        except RuntimeError:
-            exit()
-
-    return wrapper
 
 class Player(BanchoProtocol):
     def __init__(self, address: IPAddress) -> None:
@@ -499,7 +470,6 @@ class Player(BanchoProtocol):
 
         self.logger.debug(f'Assigned decoder with version b{version}')
 
-    @login_thread
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {client.version}.')
@@ -751,17 +721,23 @@ class Player(BanchoProtocol):
             )
             return
 
-        try:
-            handler_function = app.session.handlers[packet]
-            handler_function(
-               *[self, args] if args != None else
-                [self]
-            )
-        except Exception as e:
-            self.logger.error(
-                f'Failed to execute handler for packet "{packet.name}": {e}',
-                exc_info=e
-            )
+        if not (handler_function := app.session.handlers.get(packet)):
+            self.logger.warning(f'Could not find a handler function for "{packet}".')
+            return
+
+        deferred = threads.deferToThread(
+            handler_function,
+           *[self, args] if args != None else
+            [self]
+        )
+
+        deferred.addErrback(self.packet_callback)
+
+    def packet_callback(self, result: Failure):
+        self.logger.error(
+            f'Failed to execute handler function: "{result.getErrorMessage()}"',
+            exc_info=result.value
+        )
 
     def silence(self, duration_sec: int, reason: Optional[str] = None):
         duration = timedelta(seconds=duration_sec)

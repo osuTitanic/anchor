@@ -1,4 +1,5 @@
 
+from twisted.python.failure import Failure
 from app.common.constants import ANCHOR_ASCII_ART
 from app.common.database import DBScore
 from app.common.helpers import location
@@ -68,28 +69,8 @@ def is_local_ip(ip: str) -> bool:
 
     return False
 
-def update_player_location(geolocation: location.Geolocation) -> None:
-    """Will try to update the player's geolocation data"""
-    app.session.logger.debug('Updating player geolocation...')
-
-    for retry in range(5):
-        for player in app.session.players:
-            if player.address.host != geolocation.ip:
-                continue
-
-            player.client.ip = geolocation
-            app.session.logger.info(f'Updated geolocation of {player} ({geolocation.ip})')
-            app.session.players.send_player(player)
-            return
-
-        app.session.logger.debug('Failed to update player geolocation. Retrying...')
-        time.sleep(1)
-
-def load_geolocation_web(address: str) -> None:
-    """Fetch geolocation data from web and store it to cache"""
-    if not (result := location.fetch_web(address, is_local_ip(address))):
-        return
-
-    app.session.geolocation_cache[address] = result
-
-    update_player_location(result)
+def thread_callback(error: Failure):
+    app.session.logger.error(
+        f'Failed to execute thread: "{error.getErrorMessage()}"',
+        exc_info=error.value
+    )

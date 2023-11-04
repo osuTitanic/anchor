@@ -2,6 +2,7 @@
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol
+from twisted.internet import threads, reactor
 from twisted.python.failure import Failure
 
 from typing import Union, Optional
@@ -86,11 +87,15 @@ class BanchoProtocol(Protocol):
             self.dataReceived = self.packetDataReceived
 
             # Handle login
-            self.login_received(
+            deferred = threads.deferToThread(
+                self.login_received,
                 username.decode(),
                 password.decode(),
                 self.client
             )
+
+            deferred.addErrback(self.login_callback)
+            deferred.addTimeout(15, reactor)
         except Exception as e:
             self.logger.error(
                 f'Error on login: {e}',
@@ -193,18 +198,24 @@ class BanchoProtocol(Protocol):
 
             stream.write(data)
 
-            self.enqueue(stream.get())
+            reactor.callFromThread(self.enqueue, stream.get())
         except Exception as e:
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}',
                 exc_info=e
             )
 
-    def send_error(self, reason = -5, message = ""):
+    def login_callback(self, error: Failure):
+        self.logger.error(
+            f'Exception while logging in: "{error.getErrorMessage()}"',
+            exc_info=error.value
+        )
+
+    def login_received(self, username: str, md5: str, client: OsuClient):
         ...
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         ...
 
-    def login_received(self, username: str, md5: str, client: OsuClient):
+    def send_error(self, reason = -5, message = ""):
         ...
