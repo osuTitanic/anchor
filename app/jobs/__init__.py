@@ -21,8 +21,8 @@ class Jobs(ThreadPoolExecutor):
         self.logger.info(f'  - Starting job: "{fn.__name__}"')
         return future
 
-    def sleep(self, seconds: float):
-        for _ in range(seconds):
+    def sleep(self, seconds: int):
+        for _ in range(int(seconds)):
             if self._shutdown:
                 # Exit thread
                 exit()
