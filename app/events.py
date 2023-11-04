@@ -1,4 +1,5 @@
 
+import json
 import app
 
 @app.session.events.register('user_update')
@@ -40,6 +41,31 @@ def restrict(user_id: int, reason: str = ''):
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
     app.session.players.announce(message)
+
+@app.session.events.register('osu_error')
+def osu_error(user_id: int, error: dict):
+    if not (player := app.session.players.by_id(user_id)):
+        return
+
+    app.session.logger.warning(
+        f'Client error from "{player.name}":\n'
+        f'{json.dumps(error, indent=4)}'
+    )
+
+    # When a beatmap fails to load inside a match, the player
+    # gets forced to the menu screen. In this state, everything
+    # is a little buggy, but aborting the match fixes pretty much everything.
+    if player.match and player.match.in_progress:
+        if not player.match.in_progress:
+            return
+
+        player.match.abort()
+        player.match.chat.send_message(
+            app.session.bot_player,
+            f"Match was aborted, due to client error from {player.name}. "
+            "Please try again!",
+            ignore_privs=True
+        )
 
 @app.session.events.register('shutdown')
 def shutdown():
