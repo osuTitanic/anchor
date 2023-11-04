@@ -273,6 +273,7 @@ class Match:
         for slot in self.slots:
             if slot.status == expected:
                 slot.status = SlotStatus.NotReady
+                slot.skipped = False
                 slot.loaded = False
 
     def change_settings(self, new_match: bMatch):
