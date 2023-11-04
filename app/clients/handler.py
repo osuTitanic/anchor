@@ -1166,8 +1166,7 @@ def match_complete(player: Player):
     # Players that have been playing this round
     players = [
         slot.player for slot in player.match.slots
-        if slot.status.value & SlotStatus.Complete.value
-        and slot.has_player
+        if slot.completed
     ]
 
     # Wait for score queue to finish processing
