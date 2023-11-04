@@ -69,6 +69,10 @@ class Slot:
     def has_player(self) -> bool:
         return self.player is not None
 
+    @property
+    def completed(self) -> bool:
+        return self.status & SlotStatus.Complete and self.has_player
+
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status
