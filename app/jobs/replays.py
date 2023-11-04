@@ -1,7 +1,5 @@
 
 from app.common.database import DBScore
-
-import time
 import app
 
 def replays():
@@ -26,9 +24,4 @@ def replays():
                 app.session.storage.remove_replay(score.id)
                 last_id = score.id
 
-        for _ in range(30):
-            if app.session.jobs._shutdown:
-                exit()
-
-            time.sleep(1)
-
+        app.session.jobs.sleep(30)

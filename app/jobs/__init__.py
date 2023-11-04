@@ -22,13 +22,12 @@ class Jobs(ThreadPoolExecutor):
         return future
 
     def sleep(self, seconds: float):
-        while seconds > 0:
-            time.sleep(1)
-            seconds -= 1
-
+        for _ in range(seconds):
             if self._shutdown:
                 # Exit thread
                 exit()
+
+            time.sleep(1)
 
     def __future_callback(self, future: Future):
         if e := future.exception():
