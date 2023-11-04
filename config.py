@@ -21,6 +21,8 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 
 AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
 
+BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
+
 PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
