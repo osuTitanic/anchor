@@ -1127,7 +1127,6 @@ def player_failed(player: Player):
     for p in player.match.players:
         p.enqueue_player_failed(slot_id)
 
-# TODO: There have been some issues when running this inside a thread...
 @register(RequestPacket.MATCH_SCORE_UPDATE)
 def score_update(player: Player, scoreframe: bScoreFrame):
     if not player.match:
@@ -1142,11 +1141,7 @@ def score_update(player: Player, scoreframe: bScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    for p in player.match.players:
-        p.enqueue_score_update(scoreframe)
-
-    for p in session.players.in_lobby:
-        p.enqueue_score_update(scoreframe)
+    player.match.score_queue.put(scoreframe)
 
 @register(RequestPacket.MATCH_COMPLETE)
 def match_complete(player: Player):
@@ -1172,6 +1167,9 @@ def match_complete(player: Player):
         if slot.status.value & SlotStatus.Complete.value
         and slot.has_player
     ]
+
+    # Wait for score queue to finish processing
+    player.match.score_queue.join()
 
     player.match.unready_players(SlotStatus.Complete)
     player.match.in_progress = False

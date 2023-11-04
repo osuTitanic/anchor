@@ -1,8 +1,12 @@
 
+from twisted.python.failure import Failure
+from twisted.internet import threads
+
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
 from datetime import datetime
 from threading import Thread
+from queue import Queue
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -125,6 +129,7 @@ class Match:
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
+        self.score_queue = Queue()
 
     @classmethod
     def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
@@ -440,6 +445,10 @@ class Match:
 
         self.in_progress = True
 
+        # Execute score queue
+        threads.deferToThread(self._process_score_queue) \
+               .addErrback(self._score_queue_callback)
+
         self.logger.info('Match started')
         self.update()
 
@@ -522,3 +531,25 @@ class Match:
 
         self.starting = None
         self.start()
+
+    def _process_score_queue(self) -> None:
+        # NOTE: When the score packets don't get sent in the
+        #       right order, the match scoreboard will lock
+        #       up and the match cannot be finished.
+
+        while self.in_progress:
+            scoreframe = self.score_queue.get()
+
+            for p in self.players:
+                p.enqueue_score_update(scoreframe)
+
+            for p in app.session.players.in_lobby:
+                p.enqueue_score_update(scoreframe)
+
+            self.score_queue.task_done()
+
+    def _score_queue_callback(self, error: Failure) -> None:
+        self.logger.error(
+            f'Failed to process score queue: "{error.getErrorMessage()}"',
+            exc_info=error.value
+        )
