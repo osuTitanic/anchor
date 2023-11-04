@@ -44,5 +44,4 @@ def announcement(message: str):
 @app.session.events.register('shutdown')
 def shutdown():
     """Used to shutdown the event_listener thread"""
-    if app.session.jobs._shutdown:
-        exit()
+    exit()
