@@ -198,7 +198,7 @@ class BanchoProtocol(Protocol):
 
             stream.write(data)
 
-            self.enqueue(stream.get())
+            reactor.callFromThread(self.enqueue, stream.get())
         except Exception as e:
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}',
