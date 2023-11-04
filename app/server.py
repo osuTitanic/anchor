@@ -16,7 +16,9 @@ from .jobs import (
     pings
 )
 
+import signal
 import app
+import os
 
 class BanchoFactory(Factory):
     protocol = Player
@@ -65,6 +67,15 @@ class BanchoFactory(Factory):
 
         app.session.events.submit('shutdown')
         app.session.jobs.shutdown(cancel_futures=True, wait=False)
+
+        def force_exit(signal, frame):
+            app.session.logger.warning("Force exiting...")
+            os._exit(0)
+
+        signal.signal(signal.SIGINT, force_exit)
+
+        for thread in app.session.pool.threads:
+            app.session.logger.warning(f'Shutting down: "{thread.name}"')
 
     def buildProtocol(self, addr: IAddress) -> Optional[Protocol]:
         client = self.protocol(addr)
