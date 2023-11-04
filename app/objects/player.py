@@ -725,6 +725,12 @@ class Player(BanchoProtocol):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
             return
 
+        if packet.name == "MATCH_SCORE_UPDATE":
+            # Threading somehow messes with the packets, so
+            # we just execute it normally for now...
+            handler_function(*[self, args])
+            return
+
         deferred = threads.deferToThread(
             handler_function,
            *[self, args] if args != None else
