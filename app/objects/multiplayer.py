@@ -115,6 +115,10 @@ class Match:
         self.beatmap_name = beatmap_name
         self.beatmap_hash = beatmap_hash
 
+        self.previous_beatmap_id   = beatmap_id
+        self.previous_beatmap_name = beatmap_name
+        self.previous_beatmap_hash = beatmap_hash
+
         self.mods = Mods.NoMod
         self.mode = mode
         self.seed = seed
@@ -306,6 +310,10 @@ class Match:
             # Host is selecting new map
             self.logger.info('Host is selecting map...')
             self.unready_players()
+
+            self.previous_beatmap_id = self.beatmap_id
+            self.previous_beatmap_hash = self.beatmap_hash
+            self.previous_beatmap_name = self.beatmap_name
 
             self.beatmap_id = -1
             self.beatmap_hash = ""

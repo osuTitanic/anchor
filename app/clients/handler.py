@@ -762,6 +762,12 @@ def leave_match(player: Player):
         data={'user_id': player.id}
     )
 
+    if (player is player.match.host and player.match.beatmap_id == -1):
+        # Host was choosing beatmap; reset beatmap to previous
+        player.match.beatmap_id = player.match.previous_beatmap_id
+        player.match.beatmap_hash = player.match.previous_beatmap_hash
+        player.match.beatmap_name = player.match.previous_beatmap_name
+
     if all(slot.empty for slot in player.match.slots):
         player.enqueue_match_disband(player.match.id)
 
