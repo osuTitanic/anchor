@@ -629,6 +629,7 @@ def create_match(player: Player, bancho_match: bMatch):
     if player.match:
         player.logger.warning('Tried to create match, but was already inside one')
         player.enqueue_matchjoin_fail()
+        player.match.kick_player(player)
         return
 
     match = Match.from_bancho_match(bancho_match, player)
@@ -689,6 +690,7 @@ def join_match(player: Player, match_join: bMatchJoin):
         # Player already joined the match
         player.logger.warning(f'{player.name} tried to join a match, but is already inside one')
         player.enqueue_matchjoin_fail()
+        player.match.kick_player(player)
         return
 
     if player is not match.host:
