@@ -590,6 +590,35 @@ def mp_set(ctx: Context):
 
     return [f"Settings changed to {match.team_type.name}, {match.scoring_type.name}, {slot_size} slots."]
 
+@mp_commands.register(['size'])
+def mp_size(ctx: Context):
+    """<size> - Set the amount of available slots (1-8)"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <size>']
+
+    match = ctx.player.match
+    size = max(1, min(int(ctx.args[0]), 8))
+
+    for slot in match.slots[size:]:
+        if slot.has_player:
+            match.kick_player(slot.player)
+
+        slot.reset(SlotStatus.Locked)
+
+    for slot in match.slots[0:size]:
+        if slot.has_player:
+            continue
+
+        slot.reset()
+
+    if all(slot.empty for slot in match.slots):
+        match.close()
+        return ["Match was disbanded."]
+
+    match.update()
+
+    return [f"Changed slot size to {size}."]
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
