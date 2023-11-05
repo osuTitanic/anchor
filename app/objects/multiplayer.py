@@ -130,6 +130,7 @@ class Match:
         self.in_progress   = False
 
         self.slots = [Slot() for _ in range(8)]
+        self.banned_players = []
 
         self.starting: Optional[StartingTimers] = None
         self.db_match: Optional[DBMatch] = None
@@ -407,6 +408,12 @@ class Match:
         )
 
         self.update()
+
+    def ban_player(self, player: Player):
+        self.banned_players.append(player.id)
+
+        if player in self.players:
+            self.kick_player(player)
 
     def close(self):
         # Shutdown pending match timer

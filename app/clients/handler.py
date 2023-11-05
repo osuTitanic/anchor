@@ -687,10 +687,15 @@ def join_match(player: Player, match_join: bMatchJoin):
         return
 
     if player.match:
-        # Player already joined the match
+        # Player already joined a match
         player.logger.warning(f'{player.name} tried to join a match, but is already inside one')
         player.enqueue_matchjoin_fail()
         player.match.kick_player(player)
+        return
+
+    if player.id in match.banned_players:
+        player.logger.warning(f'{player.name} tried to join a match, but was banned from it')
+        player.enqueue_matchjoin_fail()
         return
 
     if player is not match.host:

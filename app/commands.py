@@ -474,6 +474,20 @@ def mp_kick(ctx: Context):
 
     return [f'Could not find the player "{name}".']
 
+@mp_commands.register(['ban', 'restrict'])
+def mp_ban(ctx: Context):
+    """<name> - Ban a player from the match"""
+    name = ' '.join(ctx.args[0:]).strip()
+
+    if name == app.session.bot_player.name:
+        return ["no."]
+
+    if not (player := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    player.match.ban_player(player)
+    return ["Player was banned from the match."]
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
