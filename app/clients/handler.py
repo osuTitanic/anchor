@@ -47,6 +47,7 @@ from datetime import datetime
 from threading import Thread
 from copy import copy
 
+import config
 import utils
 import time
 
@@ -670,6 +671,12 @@ def create_match(player: Player, bancho_match: bMatch):
         )
     )
 
+    match.chat.send_message(
+        session.bot_player,
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
+        ignore_privs=True
+    )
+
 @register(RequestPacket.JOIN_MATCH)
 def join_match(player: Player, match_join: bMatchJoin):
     if not (match := session.matches[match_join.match_id]):
@@ -687,10 +694,15 @@ def join_match(player: Player, match_join: bMatchJoin):
         return
 
     if player.match:
-        # Player already joined the match
+        # Player already joined a match
         player.logger.warning(f'{player.name} tried to join a match, but is already inside one')
         player.enqueue_matchjoin_fail()
         player.match.kick_player(player)
+        return
+
+    if (player.id in match.banned_players) and not player.is_admin:
+        player.logger.warning(f'{player.name} tried to join a match, but was banned from it')
+        player.enqueue_matchjoin_fail()
         return
 
     if player is not match.host:
@@ -800,6 +812,12 @@ def leave_match(player: Player):
                 if slot.status.value & SlotStatus.HasPlayer.value:
                     player.match.host = slot.player
                     player.match.host.enqueue_match_transferhost()
+
+            events.create(
+                player.match.db_match.id,
+                type=EventType.Host,
+                data={'old_host': player.id, 'new_host': player.match.host.id}
+            )
 
         player.match.update()
 
@@ -1255,9 +1273,21 @@ def tourney_match_info(player: Player, match_id: int):
     if not player.is_tourney_client:
         return
 
-    if not (match := session.matches[match_id]):
+    player.logger.debug(f'Requesting tourney match info ({match_id})')
+
+    if not (db_match := matches.fetch_by_id(match_id)):
+        player.logger.debug("Match not found.")
         return
 
+    if db_match.ended_at != None:
+        player.logger.debug("Match has already ended.")
+        return
+
+    if not (match := session.matches[db_match.bancho_id]):
+        player.logger.debug("Bancho match is not active.")
+        return
+
+    player.logger.debug("Match found. Sending to client...")
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)

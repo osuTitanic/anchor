@@ -10,6 +10,7 @@ from .common.database.repositories import (
     infringements,
     beatmapsets,
     beatmaps,
+    matches,
     clients,
     reports,
     events,
@@ -19,6 +20,7 @@ from .common.database.repositories import (
 )
 
 from .common.constants import (
+    MatchScoringTypes,
     MatchTeamTypes,
     Permissions,
     SlotStatus,
@@ -96,6 +98,12 @@ sets = [
     system_commands := CommandSet('system', 'System Commands')
 ]
 
+# TODO: !system deploy
+# TODO: !system restart
+# TODO: !system shutdown
+# TODO: !system stats
+# TODO: !system exec
+
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
     return ctx.player.is_admin
@@ -125,6 +133,7 @@ def inside_chat(ctx: Context) -> bool:
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
+           (ctx.player.is_tourney_manager) or \
            (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
@@ -210,10 +219,10 @@ def mp_start(ctx: Context):
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
-@mp_commands.register(['close', 'terminate', 'disband'], Permissions.Admin)
+@mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
-    ctx.player.match.logger.info('Match was closed by an admin.')
+    ctx.player.match.logger.info('Match was closed.')
     ctx.player.match.close()
 
     return ['Match was closed.']
@@ -226,8 +235,6 @@ def mp_abort(ctx: Context):
 
     ctx.player.match.abort()
     ctx.player.match.logger.info('Match was aborted.')
-
-    # TODO: Event
 
     return ['Match aborted.']
 
@@ -450,12 +457,262 @@ def mp_unlock(ctx: Context):
     ctx.player.match.update()
     return ['Locked all unused slots.']
 
-# TODO: !system maintanance
-# TODO: !system deploy
-# TODO: !system restart
-# TODO: !system shutdown
-# TODO: !system stats
-# TODO: !system exec
+@mp_commands.register(['kick', 'remove'])
+def mp_kick(ctx: Context):
+    """<name> - Kick a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    if name == app.session.bot_player.name:
+        return ["no."]
+
+    if name == ctx.player.name:
+        return ["no."]
+
+    for player in match.players:
+        if player.name != name:
+            continue
+
+        match.kick_player(player)
+
+        if all(slot.empty for slot in match.slots):
+            match.close()
+            match.logger.info('Match was disbanded.')
+
+        return ["Player was kicked from the match."]
+
+    return [f'Could not find the player "{name}".']
+
+@mp_commands.register(['ban', 'restrict'])
+def mp_ban(ctx: Context):
+    """<name> - Ban a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    if name == app.session.bot_player.name:
+        return ["no."]
+
+    if name == ctx.player.name:
+        return ["no."]
+
+    if not (player := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    match.ban_player(player)
+
+    if all(slot.empty for slot in match.slots):
+        match.close()
+        match.logger.info('Match was disbanded.')
+
+    return ["Player was banned from the match."]
+
+@mp_commands.register(['unban', 'unrestrict'])
+def mp_unban(ctx: Context):
+    """<name> - Unban a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    if not (player := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    if player.id not in match.banned_players:
+        return ['Player was not banned from the match.']
+
+    match.unban_player(player)
+
+    return ["Player was unbanned from the match."]
+
+@mp_commands.register(['name', 'setname'])
+def mp_name(ctx: Context):
+    """<name> - Change the match name"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    match.name = name
+    match.update()
+
+    matches.update(
+        match.db_match.id,
+        {
+            "name": name
+        }
+    )
+
+@mp_commands.register(['set'])
+def mp_set(ctx: Context):
+    """<teammode> (<scoremode>) (<size>)"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <teammode> (<scoremode>) (<size>)']
+
+    try:
+        match = ctx.player.match
+        match.team_type = MatchTeamTypes(int(ctx.args[0]))
+
+        if len(ctx.args) > 1:
+            match.scoring_type = MatchScoringTypes(int(ctx.args[1]))
+
+        if len(ctx.args) > 2:
+            size = max(1, min(int(ctx.args[2]), 8))
+
+            for slot in match.slots[size:]:
+                if slot.has_player:
+                    match.kick_player(slot.player)
+
+                slot.reset(SlotStatus.Locked)
+
+            for slot in match.slots[0:size]:
+                if slot.has_player:
+                    continue
+
+                slot.reset()
+
+            if all(slot.empty for slot in match.slots):
+                match.close()
+                return ["Match was disbanded."]
+
+        match.update()
+    except ValueError:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <teammode> (<scoremode>) (<size>)']
+
+    slot_size = len([slot for slot in match.slots if not slot.locked])
+
+    return [f"Settings changed to {match.team_type.name}, {match.scoring_type.name}, {slot_size} slots."]
+
+@mp_commands.register(['size'])
+def mp_size(ctx: Context):
+    """<size> - Set the amount of available slots (1-8)"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <size>']
+
+    match = ctx.player.match
+    size = max(1, min(int(ctx.args[0]), 8))
+
+    for slot in match.slots[size:]:
+        if slot.has_player:
+            match.kick_player(slot.player)
+
+        slot.reset(SlotStatus.Locked)
+
+    for slot in match.slots[0:size]:
+        if slot.has_player:
+            continue
+
+        slot.reset()
+
+    if all(slot.empty for slot in match.slots):
+        match.close()
+        return ["Match was disbanded."]
+
+    match.update()
+
+    return [f"Changed slot size to {size}."]
+
+@mp_commands.register(['move'])
+def mp_move(ctx: Context):
+    """<name> <slot> - Move a player to a slot"""
+    if len(ctx.args) <= 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <slot>']
+
+    match = ctx.player.match
+    name = ctx.args[0]
+    slot_id = max(1, min(int(ctx.args[1]), 8))
+
+    if not (player := match.get_player(name)):
+        return [f'Could not find player {name}.']
+
+    old_slot = match.get_slot(player)
+
+    # Check if slot is already used
+    if (slot := match.slots[slot_id-1]).has_player:
+        return [f'This slot is already in use by {slot.player.name}.']
+
+    slot.copy_from(old_slot)
+    old_slot.reset()
+
+    match.update()
+
+    return [f'Moved {player.name} into slot {slot_id}.']
+
+@mp_commands.register(['settings'])
+def mp_settings(ctx: Context):
+    """- View the current match settings"""
+    match = ctx.player.match
+    beatmap_link = f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]' \
+                    if match.beatmap_id > 0 else match.beatmap_name
+    return [
+        f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
+        f"Beatmap: {beatmap_link}",
+        f"Active Mods: +{match.mods.short}",
+        f"Team Mode: {match.team_type.name}",
+        f"Win Condition: {match.scoring_type.name}",
+        f"Players: {len(match.players)}",
+       *[
+            f"{match.slots.index(slot) + 1} ({slot.status.name}) - "
+            f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
+            f"{f' +{slot.mods.short}' if slot.mods > 0 else ' '} [{f'Host' if match.host == slot.player else ''}]"
+            for slot in match.slots
+            if slot.has_player
+        ]
+    ]
+
+@mp_commands.register(['team', 'setteam'])
+def mp_team(ctx: Context):
+    """<name> <color> - Set a players team color"""
+    if len(ctx.args) <= 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <color>']
+
+    match = ctx.player.match
+    name = ctx.args[0]
+    team = ctx.args[1].capitalize()
+
+    if team not in ("Red", "Blue", "Neutral"):
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <red/blue>']
+
+    if team == "Neutral" and match.ffa:
+        match.team_type = MatchTeamTypes.HeadToHead
+
+    elif team != "Neutral" and not match.ffa:
+        match.team_type = MatchTeamTypes.TeamVs
+
+    if not (player := match.get_player(name)):
+        return [f'Could not find player "{name}"']
+
+    slot = match.get_slot(player)
+    slot.team = SlotTeam[team]
+
+    match.update()
+
+    return [f"Moved {player.name} to team {team}."]
+
+@mp_commands.register(['password', 'setpassword', 'pass'])
+def mp_password(ctx: Context):
+    """(<password>) - (Re)set the match password"""
+    match = ctx.player.match
+
+    if not ctx.args:
+        match.password = ""
+        match.update()
+        return ["Match password was reset."]
+
+    match.password = ctx.args[0:]
+    match.update()
+
+    return ["Match password was set."]
+
+# TODO: Tourney rooms
+# TODO: Match refs
 
 def command(
     aliases: List[str],

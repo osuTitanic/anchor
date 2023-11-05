@@ -73,6 +73,10 @@ class Slot:
     def completed(self) -> bool:
         return self.status & SlotStatus.Complete and self.has_player
 
+    @property
+    def locked(self) -> bool:
+        return self.status == SlotStatus.Locked
+
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status
@@ -130,6 +134,7 @@ class Match:
         self.in_progress   = False
 
         self.slots = [Slot() for _ in range(8)]
+        self.banned_players = []
 
         self.starting: Optional[StartingTimers] = None
         self.db_match: Optional[DBMatch] = None
@@ -385,6 +390,14 @@ class Match:
             self.name = new_match.name
             self.logger.info(f'Name: {self.name}')
 
+            # Update match name
+            matches.update(
+                self.db_match.id,
+                {
+                    "name": self.name
+                }
+            )
+
         self.update()
 
     def kick_player(self, player: Player):
@@ -405,6 +418,31 @@ class Match:
             type=EventType.Kick,
             data={'user_id': player.id}
         )
+
+        if player == self.host:
+            # Transfer host to next player
+            for slot in self.slots:
+                if slot.status.value & SlotStatus.HasPlayer.value:
+                    self.host = slot.player
+                    self.host.enqueue_match_transferhost()
+
+            events.create(
+                self.db_match.id,
+                type=EventType.Host,
+                data={'old_host': player.id, 'new_host': self.host.id}
+            )
+
+        self.update()
+
+    def ban_player(self, player: Player):
+        self.banned_players.append(player.id)
+
+        if player in self.players:
+            self.kick_player(player)
+
+    def unban_player(self, player: Player):
+        if player.id in self.banned_players:
+            self.banned_players.remove(player.id)
 
     def close(self):
         # Shutdown pending match timer
@@ -505,6 +543,23 @@ class Match:
         # The join success packet will reset the players to the setup screen
         for player in players:
             player.enqueue_matchjoin_success(self.bancho_match)
+
+        start_event = events.fetch_last_by_type(
+            player.match.db_match.id,
+            type=EventType.Start
+        )
+
+        events.create(
+            player.match.db_match.id,
+            type=EventType.Abort,
+            data={
+                'beatmap_id': self.beatmap_id,
+                'beatmap_text': self.beatmap_name,
+                'beatmap_hash': self.beatmap_hash,
+                'start_time': start_event.data['start_time'],
+                'end_time': str(datetime.now())
+            }
+        )
 
         self.update()
 
