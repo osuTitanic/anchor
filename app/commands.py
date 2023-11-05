@@ -550,7 +550,7 @@ def mp_name(ctx: Context):
         }
     )
 
-@mp_commands.register(['set', 'settings'])
+@mp_commands.register(['set'])
 def mp_set(ctx: Context):
     """<teammode> (<scoremode>) (<size>)"""
     if len(ctx.args) <= 0:
@@ -644,6 +644,28 @@ def mp_move(ctx: Context):
     match.update()
 
     return [f'Moved {player.name} into slot {slot_id}.']
+
+@mp_commands.register(['settings'])
+def mp_settings(ctx: Context):
+    """- View the current match settings"""
+    match = ctx.player.match
+    beatmap_link = f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]' \
+                    if match.beatmap_id > 0 else match.beatmap_name
+    return [
+        f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
+        f"Beatmap: {beatmap_link}",
+        f"Active Mods: +{match.mods.short}",
+        f"Team Mode: {match.team_type.name}",
+        f"Win Condition: {match.scoring_type.name}",
+        f"Players: {len(match.players)}",
+       *[
+            f"{match.slots.index(slot) + 1} ({slot.status.name}) - "
+            f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
+            f"{f' +{slot.mods.short}' if slot.mods > 0 else ' '} [{f'Host' if match.host == slot.player else ''}]"
+            for slot in match.slots
+            if slot.has_player
+        ]
+    ]
 
 def command(
     aliases: List[str],
