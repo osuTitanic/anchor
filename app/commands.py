@@ -711,6 +711,7 @@ def mp_password(ctx: Context):
 
     return ["Match password was set."]
 
+# TODO: Tourney rooms
 # TODO: Match refs
 
 def command(
