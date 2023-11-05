@@ -693,7 +693,7 @@ def join_match(player: Player, match_join: bMatchJoin):
         player.match.kick_player(player)
         return
 
-    if player.id in match.banned_players:
+    if (player.id in match.banned_players) and not player.is_admin:
         player.logger.warning(f'{player.name} tried to join a match, but was banned from it')
         player.enqueue_matchjoin_fail()
         return
