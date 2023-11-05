@@ -96,6 +96,12 @@ sets = [
     system_commands := CommandSet('system', 'System Commands')
 ]
 
+# TODO: !system deploy
+# TODO: !system restart
+# TODO: !system shutdown
+# TODO: !system stats
+# TODO: !system exec
+
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
     return ctx.player.is_admin
@@ -450,13 +456,6 @@ def mp_unlock(ctx: Context):
 
     ctx.player.match.update()
     return ['Locked all unused slots.']
-
-# TODO: !system maintanance
-# TODO: !system deploy
-# TODO: !system restart
-# TODO: !system shutdown
-# TODO: !system stats
-# TODO: !system exec
 
 def command(
     aliases: List[str],
