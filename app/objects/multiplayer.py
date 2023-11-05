@@ -409,10 +409,6 @@ class Match:
 
         self.update()
 
-        if all(slot.empty for slot in self.slots):
-            self.close()
-            self.logger.info('Match was disbanded.')
-
     def ban_player(self, player: Player):
         self.banned_players.append(player.id)
 

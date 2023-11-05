@@ -461,15 +461,24 @@ def mp_unlock(ctx: Context):
 def mp_kick(ctx: Context):
     """<name> - Kick a player from the match"""
     name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
 
     if name == app.session.bot_player.name:
         return ["no."]
 
-    for player in ctx.player.match.players:
+    if name == ctx.player.name:
+        return ["no."]
+
+    for player in match.players:
         if player.name != name:
             continue
 
-        player.match.kick_player(player)
+        match.kick_player(player)
+
+        if all(slot.empty for slot in match.slots):
+            match.close()
+            match.logger.info('Match was disbanded.')
+
         return ["Player was kicked from the match."]
 
     return [f'Could not find the player "{name}".']
@@ -478,14 +487,23 @@ def mp_kick(ctx: Context):
 def mp_ban(ctx: Context):
     """<name> - Ban a player from the match"""
     name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
 
     if name == app.session.bot_player.name:
+        return ["no."]
+
+    if name == ctx.player.name:
         return ["no."]
 
     if not (player := app.session.players.by_name(name)):
         return [f'Could not find the player "{name}".']
 
-    player.match.ban_player(player)
+    match.ban_player(player)
+
+    if all(slot.empty for slot in match.slots):
+        match.close()
+        match.logger.info('Match was disbanded.')
+
     return ["Player was banned from the match."]
 
 def command(
