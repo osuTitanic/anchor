@@ -506,6 +506,22 @@ def mp_ban(ctx: Context):
 
     return ["Player was banned from the match."]
 
+@mp_commands.register(['unban', 'unrestrict'])
+def mp_unban(ctx: Context):
+    """<name> - Unban a player from the match"""
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    if not (player := app.session.players.by_name(name)):
+        return [f'Could not find the player "{name}".']
+
+    if player.id not in match.banned_players:
+        return ['Player was not banned from the match.']
+
+    match.unban_player(player)
+
+    return ["Player was unbanned from the match."]
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
