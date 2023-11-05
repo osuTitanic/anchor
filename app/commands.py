@@ -457,6 +457,23 @@ def mp_unlock(ctx: Context):
     ctx.player.match.update()
     return ['Locked all unused slots.']
 
+@mp_commands.register(['kick', 'remove'])
+def mp_kick(ctx: Context):
+    """<name> - Kick a player from the match"""
+    name = ' '.join(ctx.args[0:]).strip()
+
+    if name == app.session.bot_player.name:
+        return ["no."]
+
+    for player in ctx.player.match.players:
+        if player.name != name:
+            continue
+
+        player.match.kick_player(player)
+        return ["Player was kicked from the match."]
+
+    return [f'Could not find the player "{name}".']
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
