@@ -619,6 +619,32 @@ def mp_size(ctx: Context):
 
     return [f"Changed slot size to {size}."]
 
+@mp_commands.register(['move'])
+def mp_move(ctx: Context):
+    """<name> <slot> - Move a player to a slot"""
+    if len(ctx.args) <= 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <slot>']
+
+    match = ctx.player.match
+    name = ctx.args[0]
+    slot_id = max(1, min(int(ctx.args[1]), 8))
+
+    if not (player := match.get_player(name)):
+        return [f'Could not find player {name}.']
+
+    old_slot = match.get_slot(player)
+
+    # Check if slot is already used
+    if (slot := match.slots[slot_id-1]).has_player:
+        return [f'This slot is already in use by {slot.player.name}.']
+
+    slot.copy_from(old_slot)
+    old_slot.reset()
+
+    match.update()
+
+    return [f'Moved {player.name} into slot {slot_id}.']
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
