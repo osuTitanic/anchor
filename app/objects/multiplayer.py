@@ -386,6 +386,14 @@ class Match:
             self.name = new_match.name
             self.logger.info(f'Name: {self.name}')
 
+            # Update match name
+            matches.update(
+                self.db_match.id,
+                {
+                    "name": self.name
+                }
+            )
+
         self.update()
 
     def kick_player(self, player: Player):
