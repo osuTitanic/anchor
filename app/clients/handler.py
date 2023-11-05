@@ -806,6 +806,12 @@ def leave_match(player: Player):
                     player.match.host = slot.player
                     player.match.host.enqueue_match_transferhost()
 
+            events.create(
+                player.match.db_match.id,
+                type=EventType.Host,
+                data={'old_host': player.id, 'new_host': player.match.host.id}
+            )
+
         player.match.update()
 
     player.match = None
