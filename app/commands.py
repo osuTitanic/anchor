@@ -696,6 +696,21 @@ def mp_team(ctx: Context):
 
     return [f"Moved {player.name} to team {team}."]
 
+@mp_commands.register(['password', 'setpassword', 'pass'])
+def mp_password(ctx: Context):
+    """(<password>) - (Re)set the match password"""
+    match = ctx.player.match
+
+    if not ctx.args:
+        match.password = ""
+        match.update()
+        return ["Match password was reset."]
+
+    match.password = ctx.args[0:]
+    match.update()
+
+    return ["Match password was set."]
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
