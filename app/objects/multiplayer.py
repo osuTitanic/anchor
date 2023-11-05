@@ -428,6 +428,9 @@ class Match:
         if player in self.players:
             self.kick_player(player)
 
+    def unban_player(self, player: Player):
+        self.banned_players.remove(player)
+
     def close(self):
         # Shutdown pending match timer
         self.starting = None
