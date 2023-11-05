@@ -1275,8 +1275,16 @@ def tourney_match_info(player: Player, match_id: int):
 
     player.logger.debug(f'Requesting tourney match info ({match_id})')
 
-    if not (match := session.matches[match_id]):
-        player.logger.debug("Match was not found.")
+    if not (db_match := matches.fetch_by_id(match_id)):
+        player.logger.debug("Match not found.")
+        return
+
+    if db_match.ended_at != None:
+        player.logger.debug("Match has already ended.")
+        return
+
+    if not (match := session.matches[db_match.bancho_id]):
+        player.logger.debug("Bancho match is not active.")
         return
 
     player.logger.debug("Match found. Sending to client...")
