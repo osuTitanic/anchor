@@ -1255,13 +1255,13 @@ def tourney_match_info(player: Player, match_id: int):
     if not player.is_tourney_client:
         return
 
-    player.logger.info(f'Requesting tourney match info ({match_id})')
+    player.logger.debug(f'Requesting tourney match info ({match_id})')
 
     if not (match := session.matches[match_id]):
-        player.logger.warning("Match was not found.")
+        player.logger.debug("Match was not found.")
         return
 
-    player.logger.info("Match found. Sending to client...")
+    player.logger.debug("Match found. Sending to client...")
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
