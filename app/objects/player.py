@@ -308,6 +308,12 @@ class Player(BanchoProtocol):
             return Permissions.Admin in self.permissions
         return False
 
+    @property
+    def is_tourney_manager(self) -> bool:
+        if self.permissions is not None:
+            return Permissions.Tournament in self.permissions
+        return False
+
     def connectionMade(self):
         super().connectionMade()
         # Create connection timeout

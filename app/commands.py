@@ -125,6 +125,7 @@ def inside_chat(ctx: Context) -> bool:
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
+           (ctx.player.is_tourney_manager) or \
            (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
