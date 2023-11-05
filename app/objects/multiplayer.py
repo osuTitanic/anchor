@@ -73,6 +73,10 @@ class Slot:
     def completed(self) -> bool:
         return self.status & SlotStatus.Complete and self.has_player
 
+    @property
+    def locked(self) -> bool:
+        return self.status == SlotStatus.Locked
+
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status

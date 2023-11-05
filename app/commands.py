@@ -20,6 +20,7 @@ from .common.database.repositories import (
 )
 
 from .common.constants import (
+    MatchScoringTypes,
     MatchTeamTypes,
     Permissions,
     SlotStatus,
@@ -548,6 +549,46 @@ def mp_name(ctx: Context):
             "name": name
         }
     )
+
+@mp_commands.register(['set', 'settings'])
+def mp_set(ctx: Context):
+    """<teammode> (<scoremode>) (<size>)"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <teammode> (<scoremode>) (<size>)']
+
+    try:
+        match = ctx.player.match
+        match.team_type = MatchTeamTypes(int(ctx.args[0]))
+
+        if len(ctx.args) > 1:
+            match.scoring_type = MatchScoringTypes(int(ctx.args[1]))
+
+        if len(ctx.args) > 2:
+            size = max(1, min(int(ctx.args[2]), 8))
+
+            for slot in match.slots[size:]:
+                if slot.has_player:
+                    match.kick_player(slot.player)
+
+                slot.reset(SlotStatus.Locked)
+
+            for slot in match.slots[0:size]:
+                if slot.has_player:
+                    continue
+
+                slot.reset()
+
+            if all(slot.empty for slot in match.slots):
+                match.close()
+                return ["Match was disbanded."]
+
+        match.update()
+    except ValueError:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <teammode> (<scoremode>) (<size>)']
+
+    slot_size = len([slot for slot in match.slots if not slot.locked])
+
+    return [f"Settings changed to {match.team_type.name}, {match.scoring_type.name}, {slot_size} slots."]
 
 def command(
     aliases: List[str],
