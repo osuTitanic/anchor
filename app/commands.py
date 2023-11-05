@@ -10,6 +10,7 @@ from .common.database.repositories import (
     infringements,
     beatmapsets,
     beatmaps,
+    matches,
     clients,
     reports,
     events,
@@ -519,6 +520,22 @@ def mp_unban(ctx: Context):
     match.unban_player(player)
 
     return ["Player was unbanned from the match."]
+
+@mp_commands.register(['name', 'setname'])
+def mp_name(ctx: Context):
+    """<name> - Change the match name"""
+    name = ' '.join(ctx.args[0:]).strip()
+    match = ctx.player.match
+
+    match.name = name
+    match.update()
+
+    matches.update(
+        match.db_match.id,
+        {
+            "name": name
+        }
+    )
 
 def command(
     aliases: List[str],
