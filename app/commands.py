@@ -210,10 +210,10 @@ def mp_start(ctx: Context):
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
-@mp_commands.register(['close', 'terminate', 'disband'], Permissions.Admin)
+@mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
-    ctx.player.match.logger.info('Match was closed by an admin.')
+    ctx.player.match.logger.info('Match was closed.')
     ctx.player.match.close()
 
     return ['Match was closed.']
