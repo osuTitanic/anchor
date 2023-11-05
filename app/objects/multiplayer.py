@@ -532,6 +532,23 @@ class Match:
         for player in players:
             player.enqueue_matchjoin_success(self.bancho_match)
 
+        start_event = events.fetch_last_by_type(
+            player.match.db_match.id,
+            type=EventType.Start
+        )
+
+        events.create(
+            player.match.db_match.id,
+            type=EventType.Abort,
+            data={
+                'beatmap_id': self.beatmap_id,
+                'beatmap_text': self.beatmap_name,
+                'beatmap_hash': self.beatmap_hash,
+                'start_time': start_event.data['start_time'],
+                'end_time': str(datetime.now())
+            }
+        )
+
         self.update()
 
     def execute_timer(self) -> None:

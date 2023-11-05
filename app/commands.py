@@ -234,8 +234,6 @@ def mp_abort(ctx: Context):
     ctx.player.match.abort()
     ctx.player.match.logger.info('Match was aborted.')
 
-    # TODO: Event
-
     return ['Match aborted.']
 
 @mp_commands.register(['map', 'setmap', 'beatmap'])
