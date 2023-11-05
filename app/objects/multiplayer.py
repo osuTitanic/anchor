@@ -407,6 +407,19 @@ class Match:
             data={'user_id': player.id}
         )
 
+        if player == self.host:
+            # Transfer host to next player
+            for slot in self.slots:
+                if slot.status.value & SlotStatus.HasPlayer.value:
+                    self.host = slot.player
+                    self.host.enqueue_match_transferhost()
+
+            events.create(
+                self.db_match.id,
+                type=EventType.Host,
+                data={'old_host': player.id, 'new_host': self.host.id}
+            )
+
         self.update()
 
     def ban_player(self, player: Player):
