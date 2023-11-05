@@ -406,6 +406,8 @@ class Match:
             data={'user_id': player.id}
         )
 
+        self.update()
+
     def close(self):
         # Shutdown pending match timer
         self.starting = None
