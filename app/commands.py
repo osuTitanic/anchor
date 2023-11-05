@@ -459,6 +459,9 @@ def mp_unlock(ctx: Context):
 @mp_commands.register(['kick', 'remove'])
 def mp_kick(ctx: Context):
     """<name> - Kick a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
@@ -485,6 +488,9 @@ def mp_kick(ctx: Context):
 @mp_commands.register(['ban', 'restrict'])
 def mp_ban(ctx: Context):
     """<name> - Ban a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
@@ -508,6 +514,9 @@ def mp_ban(ctx: Context):
 @mp_commands.register(['unban', 'unrestrict'])
 def mp_unban(ctx: Context):
     """<name> - Unban a player from the match"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
@@ -524,6 +533,9 @@ def mp_unban(ctx: Context):
 @mp_commands.register(['name', 'setname'])
 def mp_name(ctx: Context):
     """<name> - Change the match name"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
