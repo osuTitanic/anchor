@@ -667,6 +667,35 @@ def mp_settings(ctx: Context):
         ]
     ]
 
+@mp_commands.register(['team', 'setteam'])
+def mp_team(ctx: Context):
+    """<name> <color> - Set a players team color"""
+    if len(ctx.args) <= 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <color>']
+
+    match = ctx.player.match
+    name = ctx.args[0]
+    team = ctx.args[1].capitalize()
+
+    if team not in ("Red", "Blue", "Neutral"):
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <red/blue>']
+
+    if team == "Neutral" and match.ffa:
+        match.team_type = MatchTeamTypes.HeadToHead
+
+    elif team != "Neutral" and not match.ffa:
+        match.team_type = MatchTeamTypes.TeamVs
+
+    if not (player := match.get_player(name)):
+        return [f'Could not find player "{name}"']
+
+    slot = match.get_slot(player)
+    slot.team = SlotTeam[team]
+
+    match.update()
+
+    return [f"Moved {player.name} to team {team}."]
+
 def command(
     aliases: List[str],
     p: Permissions = Permissions.Normal,
