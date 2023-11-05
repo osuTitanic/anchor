@@ -47,6 +47,7 @@ from datetime import datetime
 from threading import Thread
 from copy import copy
 
+import config
 import utils
 import time
 
@@ -668,6 +669,12 @@ def create_match(player: Player, bancho_match: bMatch):
             match.id,
             match.password
         )
+    )
+
+    match.chat.send_message(
+        session.bot_player,
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
+        ignore_privs=True
     )
 
 @register(RequestPacket.JOIN_MATCH)
