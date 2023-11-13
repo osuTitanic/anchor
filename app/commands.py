@@ -1230,13 +1230,15 @@ def execute(
     if not command.hidden and type(target) == Channel:
         target.send_message(
             player,
-            command_message
+            command_message,
+            submit_to_database=True
         )
 
         for message in command.response:
             target.send_message(
                 app.session.bot_player,
-                message
+                message,
+                submit_to_database=True
             )
         return
 
