@@ -429,7 +429,8 @@ class Player(BanchoProtocol):
             self.current_stats.pp,
             self.current_stats.rscore,
             self.object.country.lower(),
-            self.current_stats.tscore
+            self.current_stats.tscore,
+            self.current_stats.ppv1
         )
 
     def update_status_cache(self) -> None:
