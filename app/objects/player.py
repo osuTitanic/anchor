@@ -597,7 +597,7 @@ class Player(BanchoProtocol):
         # Update cache
         self.update_leaderboard_stats()
         self.update_status_cache()
-        user_cache.set_user_attributes(self.object)
+        user_cache.set_user(self.object)
 
         self.login_success()
 
