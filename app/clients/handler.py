@@ -260,7 +260,7 @@ def send_private_message(sender: Player, message: bMessage):
     if (parsed_message := message.content.strip()).startswith('!') \
         or target == session.bot_player:
         # A command was executed
-        commands.execute(player, channel, parsed_message)
+        commands.execute(sender, target, parsed_message)
         return
 
     # Limit message size
