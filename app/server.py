@@ -62,6 +62,9 @@ class BanchoFactory(Factory):
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
 
+        # Reset usercount
+        usercount.set(0)
+
         for player in app.session.players:
             status.delete(player.id)
 

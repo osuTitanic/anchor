@@ -44,7 +44,6 @@ from ..common.constants import (
 from typing import Callable, Tuple, List
 from twisted.internet import threads
 from datetime import datetime
-from threading import Thread
 from copy import copy
 
 import config
@@ -211,15 +210,7 @@ def send_message(player: Player, message: bMessage):
 
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
-        Thread(
-            target=commands.execute,
-            args=[
-                player,
-                channel,
-                parsed_message
-            ],
-            daemon=True
-        ).start()
+        commands.execute(player, channel, parsed_message)
         return
 
     channel.send_message(player, parsed_message)
@@ -269,15 +260,7 @@ def send_private_message(sender: Player, message: bMessage):
     if (parsed_message := message.content.strip()).startswith('!') \
         or target == session.bot_player:
         # A command was executed
-        Thread(
-            target=commands.execute,
-            args=[
-                sender,
-                target,
-                parsed_message
-            ],
-            daemon=True
-        ).start()
+        commands.execute(sender, target, parsed_message)
         return
 
     # Limit message size

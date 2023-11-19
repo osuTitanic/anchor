@@ -1,10 +1,12 @@
 
+from app.common.database.repositories import messages
 from app.common.objects import bMessage, bChannel
-from app.clients import DefaultResponsePacket
 from app.common.constants import Permissions
+from twisted.internet import threads
 
 import logging
 import config
+import utils
 import app
 
 class Channel:
@@ -117,7 +119,14 @@ class Channel:
 
         self.update()
 
-    def send_message(self, sender, message: str, ignore_privs=False, exclude_sender=True):
+    def send_message(
+        self,
+        sender,
+        message: str,
+        ignore_privs=False,
+        exclude_sender=True,
+        submit_to_database=False
+    ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
             sender.revoke_channel(self.display_name)
@@ -185,3 +194,13 @@ class Channel:
                         sender.id
                     )
                 )
+
+        if submit_to_database:
+            threads.deferToThread(
+                messages.create,
+                sender.name,
+                self.display_name,
+                message,
+            ).addErrback(
+                utils.thread_callback
+            )

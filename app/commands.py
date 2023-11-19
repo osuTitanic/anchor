@@ -877,7 +877,7 @@ def where(ctx: Context):
 
 @command(['stats'], hidden=False)
 def get_stats(ctx: Context):
-    """<name> - Get the stats of a player"""
+    """<username> - Get the stats of a player"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
 
@@ -896,6 +896,19 @@ def get_stats(ctx: Context):
         f'  Accuracy: {round(target.current_stats.acc * 100, 2)}%',
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
+
+@command(['client', 'version'], hidden=False)
+def get_client_version(ctx: Context):
+    """<username> - Get the version of the client that a player is currently using"""
+    if len(ctx.args) < 1:
+            return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return ['Player is not online']
+
+    return [f"{target.name} is playing on {target.client.version.string}"]
 
 @command(['monitor'], Permissions.Admin)
 def monitor(ctx: Context) -> Optional[List]:
@@ -1230,13 +1243,15 @@ def execute(
     if not command.hidden and type(target) == Channel:
         target.send_message(
             player,
-            command_message
+            command_message,
+            submit_to_database=True
         )
 
         for message in command.response:
             target.send_message(
                 app.session.bot_player,
-                message
+                message,
+                submit_to_database=True
             )
         return
 
