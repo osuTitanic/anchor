@@ -424,14 +424,8 @@ class Player(BanchoProtocol):
 
     def update_leaderboard_stats(self) -> None:
         leaderboards.update(
-            self.id,
-            self.status.mode.value,
-            self.current_stats.pp,
-            self.current_stats.rscore,
-            self.object.country.lower(),
-            self.current_stats.tscore,
-            self.current_stats.ppv1,
-            self.current_stats.playcount
+            self.current_stats,
+            self.object.country.lower()
         )
 
     def update_status_cache(self) -> None:
