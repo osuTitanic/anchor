@@ -41,7 +41,7 @@ from ..common.constants import (
     Mods
 )
 
-from typing import Callable, Tuple, List
+from typing import Callable, Tuple, Optional, List
 from twisted.internet import threads
 from datetime import datetime
 from copy import copy
@@ -56,6 +56,24 @@ def register(packet: RequestPacket) -> Callable:
         return func
 
     return wrapper
+
+def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
+    try:
+        if channel_name == '#spectator':
+            # Select spectator chat
+            return (player.spectating.spectator_chat
+                    if player.spectating else
+                        player.spectator_chat)
+
+        elif channel_name == '#multiplayer':
+            # Select multiplayer chat
+            return player.match.chat
+
+        # Resolve channel by name
+        if channel := session.channels.by_name(channel_name):
+            return channel
+    except AttributeError:
+        return
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
@@ -120,53 +138,17 @@ def request_status(player: Player):
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):
-    try:
-        channel = None
-
-        if channel_name == '#spectator':
-            if player.spectating:
-                channel = player.spectating.spectator_chat
-            else:
-                channel = player.spectator_chat
-
-        elif channel_name == '#multiplayer':
-            channel = player.match.chat
-    except AttributeError:
+    if not (channel := resolve_channel(channel_name, player)):
         player.revoke_channel(channel_name)
         return
-
-    if not channel:
-        channel = session.channels.by_name(channel_name)
-
-        if not channel:
-            player.revoke_channel(channel_name)
-            return
 
     channel.add(player)
 
 @register(RequestPacket.LEAVE_CHANNEL)
 def channel_leave(player: Player, channel_name: str, kick: bool = False):
-    try:
-        channel = None
-
-        if channel_name == '#spectator':
-            if player.spectating:
-                channel = player.spectating.spectator_chat
-            else:
-                channel = player.spectator_chat
-
-        elif channel_name == '#multiplayer':
-            channel = player.match.chat
-    except AttributeError:
+    if not (channel := resolve_channel(channel_name, player)):
         player.revoke_channel(channel_name)
         return
-
-    if not channel:
-        channel = session.channels.by_name(channel_name)
-
-        if not channel:
-            player.revoke_channel(channel_name)
-            return
 
     if kick:
         player.revoke_channel(channel_name)
@@ -175,27 +157,9 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 
 @register(RequestPacket.SEND_MESSAGE)
 def send_message(player: Player, message: bMessage):
-    try:
-        channel = None
-
-        if message.target == '#spectator':
-            if player.spectating:
-                channel = player.spectating.spectator_chat
-            else:
-                channel = player.spectator_chat
-
-        elif message.target == '#multiplayer':
-            channel = player.match.chat
-    except AttributeError:
+    if not (channel := resolve_channel(message.target, player)):
         player.revoke_channel(message.target)
         return
-
-    if not channel:
-        channel = session.channels.by_name(message.target)
-
-        if not channel:
-            player.revoke_channel(message.target)
-            return
 
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'

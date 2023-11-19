@@ -8,7 +8,6 @@ from typing import Optional
 import hashlib
 import utils
 import pytz
-import app
 import re
 
 class ClientVersion:
