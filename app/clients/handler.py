@@ -234,6 +234,10 @@ def send_private_message(sender: Player, message: bMessage):
         sender.revoke_channel(message.target)
         return
 
+    if target.id == sender.id:
+        # This is somehow possible in b1700
+        return
+
     if sender.silenced:
         sender.logger.warning(
             'Failed to send private message: Sender was silenced'
@@ -352,6 +356,10 @@ def add_friend(player: Player, target_id: int):
         return
 
     if abs(target.id) in player.friends:
+        return
+
+    if target.id == player.id:
+        # This is somehow possible in b1700
         return
 
     relationships.create(
