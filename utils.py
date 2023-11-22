@@ -1,15 +1,11 @@
 
 from twisted.python.failure import Failure
 from app.common.constants import ANCHOR_ASCII_ART
-from app.common.database import DBScore
 from app.common.helpers import location
-from datetime import datetime
 
-import hashlib
 import config
 import struct
 import socket
-import time
 import app
 import os
 

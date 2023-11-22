@@ -27,6 +27,8 @@ PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+SENDGRID_EMAIL = os.environ.get('SENDGRID_EMAIL')
 MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
 MENUICON_URL = os.environ.get('MENUICON_URL')
 

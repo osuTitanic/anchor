@@ -20,13 +20,8 @@ def index_ranks():
         for player in active_players:
             for stats in player.stats:
                 leaderboards.update(
-                    player.id,
-                    stats.mode,
-                    stats.pp,
-                    stats.rscore,
-                    player.country.lower(),
-                    stats.tscore,
-                    stats.ppv1
+                    stats,
+                    player.country.lower()
                 )
 
         app.session.logger.info('Index complete!')

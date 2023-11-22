@@ -1,4 +1,17 @@
 
+from app.common.cache import leaderboards
+from app.common.database.repositories import (
+    infringements,
+    clients,
+    scores,
+    stats,
+    users
+)
+
+from datetime import datetime
+from typing import Optional
+
+import config
 import json
 import app
 
@@ -31,11 +44,91 @@ def bot_message(message: str, target: str):
         )
 
 @app.session.events.register('restrict')
-def restrict(user_id: int, reason: str = ''):
+def restrict(
+    user_id: int,
+    reason: str = '',
+    autoban: bool = False,
+    until: Optional[datetime] = None
+) -> None:
+    if not (player := app.session.players.by_id(user_id)):
+        # Player is not online
+        player = users.fetch_by_id(user_id)
+
+        if not player:
+            # Player was not found
+            return
+
+        # Update user
+        users.update(player.id,
+            {
+                'restricted': True,
+                'permissions': 0
+            }
+        )
+
+        leaderboards.remove(
+            player.id,
+            player.country
+        )
+
+        stats.delete_all(player.id)
+        scores.hide_all(player.id)
+
+        # Update hardware
+        clients.update_all(player.id, {'banned': True})
+
+        # Add entry inside infringements table
+        infringements.create(
+            player.id,
+            action=0,
+            length=until,
+            description=reason,
+            is_permanent=True if not until else False
+        )
+
+        app.session.logger.warning(
+            f'{player.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
+        )
+        return
+
+    player.restrict(reason, until, autoban)
+
+@app.session.events.register('silence')
+def silence(user_id: int, duration: int, reason: str = ''):
     if not (player := app.session.players.by_id(user_id)):
         return
 
-    player.restrict(reason, autoban=True)
+    player.silence(duration, reason)
+
+@app.session.events.register('unrestrict')
+def unrestrict(user_id: int, restore_scores: bool = True):
+    if not (player := users.fetch_by_id(user_id)):
+        return
+
+    if not player.restricted:
+        return
+
+    users.update(player.id,
+        {
+            'restricted': False,
+            'permissions': 5 if config.FREE_SUPPORTER else 1
+        }
+    )
+
+    # Update hardware
+    clients.update_all(player.id, {'banned': False})
+
+    if restore_scores:
+        try:
+            scores.restore_hidden_scores(player.id)
+            stats.restore(player.id)
+        except Exception as e:
+            app.session.logger.error(
+                f'Failed to restore scores of player "{player.name}": {e}',
+                exc_info=e
+            )
+
+    app.session.logger.warning(f'Player "{player.name}" was unrestricted.')
 
 @app.session.events.register('announcement')
 def announcement(message: str):

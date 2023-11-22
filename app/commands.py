@@ -1058,6 +1058,9 @@ def restrict(ctx: Context) -> Optional[List]:
         stats.delete_all(player.id)
         scores.hide_all(player.id)
 
+        # Update hardware
+        clients.update_all(player.id, {'banned': True})
+
         # Add entry inside infringements table
         infringements.create(
             player.id,
