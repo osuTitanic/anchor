@@ -2,6 +2,7 @@
 from app.common.cache import leaderboards
 from app.common.database.repositories import (
     infringements,
+    clients,
     scores,
     stats,
     users
@@ -10,6 +11,7 @@ from app.common.database.repositories import (
 from datetime import datetime
 from typing import Optional
 
+import config
 import json
 import app
 
@@ -71,6 +73,9 @@ def restrict(
 
         stats.delete_all(player.id)
         scores.hide_all(player.id)
+
+        # Update hardware
+        clients.update_all(player.id, {'banned': True})
 
         # Add entry inside infringements table
         infringements.create(
