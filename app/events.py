@@ -40,7 +40,12 @@ def restrict(user_id: int, reason: str = '', autoban: bool = False, until: Optio
 
     player.restrict(reason, until, autoban)
 
+@app.session.events.register('silence')
+def silence(user_id: int, duration: int, reason: str = ''):
+    if not (player := app.session.players.by_id(user_id)):
+        return
 
+    player.silence(duration, reason)
 
 @app.session.events.register('announcement')
 def announcement(message: str):
