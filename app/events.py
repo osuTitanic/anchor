@@ -100,6 +100,36 @@ def silence(user_id: int, duration: int, reason: str = ''):
 
     player.silence(duration, reason)
 
+@app.session.events.register('unrestrict')
+def unrestrict(user_id: int, restore_scores: bool = True):
+    if not (player := users.fetch_by_id(user_id)):
+        return
+
+    if not player.restricted:
+        return
+
+    users.update(player.id,
+        {
+            'restricted': False,
+            'permissions': 5 if config.FREE_SUPPORTER else 1
+        }
+    )
+
+    # Update hardware
+    clients.update_all(player.id, {'banned': False})
+
+    if restore_scores:
+        try:
+            scores.restore_hidden_scores(player.id)
+            stats.restore(player.id)
+        except Exception as e:
+            app.session.logger.error(
+                f'Failed to restore scores of player "{player.name}": {e}',
+                exc_info=e
+            )
+
+    app.session.logger.warning(f'Player "{player.name}" was unrestricted.')
+
 @app.session.events.register('announcement')
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
