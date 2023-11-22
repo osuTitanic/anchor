@@ -1,4 +1,7 @@
 
+from datetime import datetime
+from typing import Optional
+
 import json
 import app
 
@@ -31,11 +34,13 @@ def bot_message(message: str, target: str):
         )
 
 @app.session.events.register('restrict')
-def restrict(user_id: int, reason: str = ''):
+def restrict(user_id: int, reason: str = '', autoban: bool = False, until: Optional[datetime] = None):
     if not (player := app.session.players.by_id(user_id)):
         return
 
-    player.restrict(reason, autoban=True)
+    player.restrict(reason, until, autoban)
+
+
 
 @app.session.events.register('announcement')
 def announcement(message: str):
