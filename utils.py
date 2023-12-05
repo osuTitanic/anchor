@@ -50,12 +50,12 @@ def thread_callback(error: Failure):
         exc_info=error.value
     )
 
-def valid_client_hash(hash: str) -> Optional[bool]:
+def valid_client_hash(hash: str) -> bool:
     if not (manifest := app.session.client_manifest):
         response = app.session.requests.get(f'http://osu.{config.DOMAIN_NAME}/clients/manifest.json')
 
         if not response.ok:
-            return
+            return True
 
         app.session.client_manifest = response.json()
         return valid_client_hash(hash)
