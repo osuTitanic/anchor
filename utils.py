@@ -51,13 +51,20 @@ def thread_callback(error: Failure):
     )
 
 def valid_client_hash(hash: str) -> bool:
-    if not (manifest := app.session.client_manifest):
-        response = app.session.requests.get(f'http://osu.{config.DOMAIN_NAME}/clients/manifest.json')
+    try:
+        if not (manifest := app.session.client_manifest):
+            response = app.session.requests.get(f'http://osu.{config.DOMAIN_NAME}/clients/manifest.json')
 
-        if not response.ok:
-            return True
+            if not response.ok:
+                return True
 
-        app.session.client_manifest = response.json()
-        return valid_client_hash(hash)
+            app.session.client_manifest = response.json()
+            return valid_client_hash(hash)
+
+    except ConnectionError:
+        app.session.logger.warning(
+            f'Failed to get client manifest from: "http://osu.{config.DOMAIN_NAME}/clients/manifest.json"'
+        )
+        return True
 
     return hash in manifest['hashes']
