@@ -41,7 +41,7 @@ class Players(List[Player]):
         self.send_player(player)
         if player.id not in self.ids or player.is_tourney_client:
             return super().append(player)
-    
+
     def remove(self, player: Player) -> None:
         try:
             return super().remove(player)
@@ -52,7 +52,7 @@ class Players(List[Player]):
         for p in self:
             if p not in immune:
                 p.enqueue(data)
-    
+
     def by_id(self, id: int) -> Optional[Player]:
         if id == 1:
             return app.session.bot_player
@@ -79,6 +79,9 @@ class Players(List[Player]):
 
     def get_all_tourney_clients(self, id: int) -> List[Player]:
         return [p for p in self.tourney_clients if p.id == id]
+
+    def get_rank_duplicates(self, rank: int, mode: int) -> List[Player]:
+        return [p for p in self if p.rank == rank and p.status.mode == mode]
 
     def send_packet(self, packet: Enum, *args):
         for p in self:
