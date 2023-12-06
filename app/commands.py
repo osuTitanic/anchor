@@ -118,6 +118,13 @@ def maintenance_mode(ctx: Context) -> List[str]:
         # Toggle maintenance value
         config.MAINTENANCE = not config.MAINTENANCE
 
+    if config.MAINTENANCE:
+        for player in app.session.players:
+            if player.is_admin:
+                continue
+
+            player.close_connection()
+
     return [
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
     ]
