@@ -19,15 +19,34 @@ import app
 def user_update(user_id: int):
     if not (player := app.session.players.by_id(user_id)):
         return
-    
+
     player.reload_object()
 
-    for player in app.session.players:
-        if player.client.version.date <= 377:
-            player.enqueue_presence(player, update=True)
+    duplicates = app.session.players.get_rank_duplicates(
+        player.rank,
+        player.status.mode
+    )
+
+    for p in duplicates:
+        if p.id == player.id:
             continue
 
-        player.enqueue_stats(player)
+        # We have found a player with the same rank
+        player.reload_object()
+
+        for p in app.session.players:
+            if p.client.version.date <= 377:
+                p.enqueue_presence(player, update=True)
+                continue
+
+            p.enqueue_stats(player)
+
+    for p in app.session.players:
+        if p.client.version.date <= 377:
+            p.enqueue_presence(player, update=True)
+            continue
+
+        p.enqueue_stats(player)
 
 @app.session.events.register('bot_message')
 def bot_message(message: str, target: str):
