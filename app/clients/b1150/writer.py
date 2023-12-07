@@ -26,5 +26,5 @@ class Writer(BaseWriter):
         self.stream.string(presence.username)
         self.stream.string(f'{stats.user_id}') # Avatar Filename
         self.stream.u8(presence.timezone + 24)
-        self.stream.string('test')
+        self.stream.string(presence.city)
         self.stream.u8(presence.permissions.value)

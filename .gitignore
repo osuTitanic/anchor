@@ -1,4 +1,5 @@
 __pycache__/
+build/
 *.py[cod]
 *$py.class
 
@@ -20,3 +21,4 @@ tests/
 
 TODO.txt
 .data
+.mypyc_cache

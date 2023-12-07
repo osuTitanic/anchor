@@ -431,7 +431,8 @@ class Player(BanchoProtocol):
     def update_status_cache(self) -> None:
         status.update(
             self.id,
-            self.status.bancho_status
+            self.status.bancho_status,
+            self.client.hash.string,
         )
 
     def send_error(self, reason=-5, message=""):
@@ -486,7 +487,15 @@ class Player(BanchoProtocol):
         # Check adapters md5
         adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
-        # TODO: Client hash verification
+        if not config.DISABLE_CLIENT_VERIFICATION and not self.is_admin:
+            if not utils.valid_client_hash(self.client.hash):
+                self.logger.warning('Login Failed: Unsupported client')
+                self.login_failed(
+                    LoginError.Authentication,
+                    message=strings.UNSUPPORTED_HASH
+                )
+                self.close_connection()
+                return
 
         if adapters_hash != client.hash.adapters_md5:
             self.transport.write('no.\r\n')

@@ -118,6 +118,13 @@ def maintenance_mode(ctx: Context) -> List[str]:
         # Toggle maintenance value
         config.MAINTENANCE = not config.MAINTENANCE
 
+    if config.MAINTENANCE:
+        for player in app.session.players:
+            if player.is_admin:
+                continue
+
+            player.close_connection()
+
     return [
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
     ]
@@ -1133,10 +1140,41 @@ def moderated(ctx: Context) -> Optional[List]:
 
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
+@command(['kick', 'disconnect'], Permissions.Admin, hidden=False)
+def kick(ctx: Context) -> Optional[List]:
+    """<username>"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    username = ' '.join(ctx.args[0:])
+
+    if not (player := app.session.players.by_name(username)):
+        return [f'User "{username}" was not found.']
+
+    player.close_connection()
+
+    return [f'{player.name} was disconnected from bancho.']
+
+@command(['kill', 'close'], Permissions.Admin, hidden=False)
+def kill(ctx: Context) -> Optional[List]:
+    """<username>"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    username = ' '.join(ctx.args[0:])
+
+    if not (player := app.session.players.by_name(username)):
+        return [f'User "{username}" was not found.']
+
+    player.object.permissions = 255
+    player.enqueue_permissions()
+    player.enqueue_ping()
+    player.close_connection()
+
+    return [f'{player.name} was disconnected from bancho.']
+
 # TODO: !recent
 # TODO: !rank
-# TODO: !kick
-# TODO: !kill
 # TODO: !faq
 # TODO: !top
 
