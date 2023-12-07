@@ -16,7 +16,7 @@ from .common.database.repositories import (
     events,
     scores,
     stats,
-    users,
+    users
 )
 
 from .common.constants import (
@@ -1172,6 +1172,43 @@ def kill(ctx: Context) -> Optional[List]:
     player.close_connection()
 
     return [f'{player.name} was disconnected from bancho.']
+
+@command(['multi', 'multiaccount'], Permissions.Admin)
+def multi(ctx: Context) -> Optional[List]:
+    """<username>"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+
+    username = ' '.join(ctx.args[0:])
+
+    if not (player := users.fetch_by_name(username)):
+        return [f'User "{username}" was not found.']
+
+    matches = {}
+
+    for client in clients.fetch_all(player.id):
+        hardware_matches = {
+            match.user_id:match for match in
+            clients.fetch_hardware_only(
+                client.adapters,
+                client.unique_id,
+                client.disk_signature
+            )
+            if match.user_id != player.id
+        }
+
+        matches.update(hardware_matches)
+
+    if not matches:
+        return ['This user does not have any hardware matches with other accounts.']
+
+    return [
+        f'This user has {len(matches)} hardware {"match" if len(matches) == 1 else "matches"} with other accounts:',
+        *[
+            f"https://osu.{config.DOMAIN_NAME}/u/{user_id} {'(Banned)' if match.banned else ''}"
+            for user_id, match in matches.items()
+        ]
+    ]
 
 # TODO: !recent
 # TODO: !rank
