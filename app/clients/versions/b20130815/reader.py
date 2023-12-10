@@ -50,19 +50,12 @@ class Reader(BaseReader):
         return [self.stream.s32() for _ in range(self.stream.s16())]
 
     def read_message(self) -> bMessage:
-        message = bMessage(
+        return bMessage(
             sender=self.stream.string(),
             content=self.stream.string(),
-            target=self.stream.string()
+            target=self.stream.string(),
+            sender_id=self.stream.s32()
         )
-
-        try:
-            message.sender_id = self.stream.s32()
-        except OverflowError:
-            # Workaround for older clients
-            pass
-
-        return message
 
     def read_status(self) -> bStatusUpdate:
         return bStatusUpdate(
