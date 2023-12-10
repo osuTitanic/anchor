@@ -453,12 +453,11 @@ def start_spectating(player: Player, player_id: int):
     if target.id == session.bot_player.id:
         return
 
-    # TODO: Check osu! mania support
-
     if (player.spectating) or (player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
         return
 
+    player.logger.info(f'Started spectating "{target.name}".')
     player.spectating = target
 
     # Join their channel
@@ -504,6 +503,7 @@ def stop_spectating(player: Player):
     #         player.spectating
     #     )
 
+    player.logger.info(f'Stopped spectating "{player.spectating.name}".')
     player.spectating = None
 
 @register(RequestPacket.CANT_SPECTATE)
@@ -511,6 +511,7 @@ def cant_spectate(player: Player):
     if not player.spectating:
         return
 
+    player.logger.info(f"Player is missing beatmap to spectate.")
     player.spectating.enqueue_cant_spectate(player.id)
 
     for p in player.spectating.spectators:
@@ -520,8 +521,6 @@ def cant_spectate(player: Player):
 def send_frames(player: Player, bundle: bReplayFrameBundle):
     if not player.spectators:
         return
-
-    # TODO: Check osu! mania support
 
     for p in player.spectators:
         p.enqueue_frames(bundle)
