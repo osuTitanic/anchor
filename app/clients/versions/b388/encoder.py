@@ -3,14 +3,15 @@ from app.common.objects import bBeatmapInfoReply
 
 from typing import Callable
 
-from ..b399 import Writer
+from .. import register_encoder
+
 from . import ResponsePacket
-from . import PACKETS
+from ..b399 import Writer
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[388][1][packet] = func
-        PACKETS[339][1][packet] = func
+        register_encoder(388, packet, func)
+        register_encoder(339, packet, func)
         return func
 
     return wrapper

@@ -1,7 +1,25 @@
 
-from ...packets import PACKETS
-from copy import deepcopy
+from ... import (
+    DefaultResponsePacket as ResponsePacket,
+    DefaultRequestPacket as RequestPacket
+)
 
-# Inherit packets from 20130329
-PACKETS[20121223] = deepcopy(PACKETS[20130329])
-PACKETS[20121203] = deepcopy(PACKETS[20130329])
+from .. import register_version
+
+register_version(
+    version=20121223,
+    protocol_version=13,
+    request_packets=RequestPacket,
+    response_packets=ResponsePacket,
+    inherit_from=20130118
+)
+
+register_version(
+    version=20121203,
+    protocol_version=13,
+    request_packets=RequestPacket,
+    response_packets=ResponsePacket,
+    inherit_from=20130118
+)
+
+# TODO: sender_id in bMessage was removed here

@@ -1,7 +1,7 @@
 
 from app.common.streams import StreamIn
 
-from ...packets import PACKETS
+from .. import register_decoder
 from . import RequestPacket
 from . import Reader
 
@@ -9,7 +9,7 @@ from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20120812][0][packet] = func
+        register_decoder(20120812, packet, func)
         return func
 
     return wrapper

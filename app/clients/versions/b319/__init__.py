@@ -7,12 +7,23 @@ from ..b323 import (
 from .writer import Writer
 from .reader import Reader
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 319
-PACKETS[319] = deepcopy(PACKETS[323])
-PACKETS[282] = deepcopy(PACKETS[323])
+register_version(
+    version=319,
+    protocol_version=0,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=323
+)
+
+register_version(
+    version=282,
+    protocol_version=0,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=323
+)
 
 from . import encoder
 from . import decoder

@@ -29,7 +29,7 @@ from app.common.constants import (
 
 from typing import List
 
-from ...reader import BaseReader
+from ..reader import BaseReader
 from . import RequestPacket
 
 class Reader(BaseReader):

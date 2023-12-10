@@ -19,7 +19,7 @@ from app.common.objects import (
 from typing import Optional, List
 
 from ..b1700.constants import Completeness
-from ...writer import BaseWriter
+from ..writer import BaseWriter
 from . import ResponsePacket
 
 class Writer(BaseWriter):

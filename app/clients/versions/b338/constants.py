@@ -1,5 +1,5 @@
 
-from ...packets import PacketEnum
+from .. import PacketEnum
 from enum import IntEnum
 
 class RequestPacket(PacketEnum):

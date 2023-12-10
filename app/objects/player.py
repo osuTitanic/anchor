@@ -51,7 +51,7 @@ from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
 from twisted.internet import threads
 
-from app.clients.packets import PACKETS
+from app.clients.versions import VERSIONS
 from app.clients import (
     DefaultResponsePacket,
     DefaultRequestPacket
@@ -83,8 +83,8 @@ class Player(BanchoProtocol):
 
         self.request_packets = DefaultRequestPacket
         self.packets = DefaultResponsePacket
-        self.decoders: Dict[Enum, Callable] = PACKETS[20130815][0]
-        self.encoders: Dict[Enum, Callable] = PACKETS[20130815][1]
+        self.decoders: Dict[Enum, Callable] = VERSIONS[20130815].decoders
+        self.encoders: Dict[Enum, Callable] = VERSIONS[20130815].encoders
 
         from .collections import Players
         from .multiplayer import Match
@@ -464,12 +464,17 @@ class Player(BanchoProtocol):
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
 
-        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[(
+        client_version = VERSIONS[
             version := min(
-                PACKETS.keys(),
+                VERSIONS.keys(),
                 key=lambda x:abs(x-version)
             )
-        )]
+        ]
+
+        self.request_packets = client_version.request_packets
+        self.packets = client_version.response_packets
+        self.decoders = client_version.decoders
+        self.encoders = client_version.encoders
 
         self.logger.debug(f'Assigned decoder with version b{version}')
 
@@ -528,7 +533,7 @@ class Player(BanchoProtocol):
             self.login_failed(LoginError.NotActivated)
             return
 
-        latest_supported_version = list(PACKETS.keys())[0]
+        latest_supported_version = list(VERSIONS.keys())[0]
 
         if (self.client.version.date > latest_supported_version) and not self.is_admin:
             self.logger.warning('Login Failed: Unsupported version')

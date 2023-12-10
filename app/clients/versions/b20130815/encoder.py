@@ -14,15 +14,16 @@ from app.common.objects import (
 )
 
 from .constants import ResponsePacket
-from ...packets import PACKETS
 from .writer import Writer
+
+from .. import register_encoder
 
 from typing import List, Optional, Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130815][1][packet] = func
-        PACKETS[20130401][1][packet] = func
+        register_encoder(20130815, packet, func)
+        register_encoder(20130401, packet, func)
         return func
 
     return wrapper

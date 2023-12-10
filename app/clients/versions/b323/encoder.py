@@ -6,14 +6,15 @@ from app.common.objects import (
 
 from typing import Callable
 
+from .. import register_encoder
 from . import ResponsePacket
-from . import PACKETS
 from . import Writer
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[323][1][packet] = func
+        register_encoder(323, packet, func)
         return func
+
     return wrapper
 
 @register(ResponsePacket.NEW_MATCH)

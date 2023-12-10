@@ -2,10 +2,9 @@
 from .versions.b20130815 import ResponsePacket as DefaultResponsePacket
 from .versions.b20130815 import RequestPacket as DefaultRequestPacket
 
-from .reader import BaseReader
-from .writer import BaseWriter
+from .versions.reader import BaseReader
+from .versions.writer import BaseWriter
 
-from . import packets
 from . import handler
 
 from .versions import b20130815

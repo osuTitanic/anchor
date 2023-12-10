@@ -9,15 +9,15 @@ from app.common.objects import (
 
 from typing import Callable, Optional
 
+from .. import register_encoder
 from . import ResponsePacket
-from . import PACKETS
 from . import Writer
 
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[483][1][packet] = func
-        PACKETS[402][1][packet] = func
+        register_encoder(483, packet, func)
+        register_encoder(402, packet, func)
         return func
 
     return wrapper

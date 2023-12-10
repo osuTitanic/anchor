@@ -7,12 +7,23 @@ from ..b338.constants import (
 from .writer import Writer
 from .reader import Reader
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 339
-PACKETS[337] = deepcopy(PACKETS[338])
-PACKETS[334] = deepcopy(PACKETS[338])
+register_version(
+    version=337,
+    protocol_version=0,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=338
+)
+
+register_version(
+    version=334,
+    protocol_version=0,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=338
+)
 
 from . import encoder
 from . import decoder

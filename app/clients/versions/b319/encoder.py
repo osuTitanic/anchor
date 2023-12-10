@@ -1,5 +1,5 @@
 
-from typing import Callable, Optional
+from typing import Callable
 
 from app.common.objects import (
     bUserPresence,
@@ -8,14 +8,14 @@ from app.common.objects import (
     bMessage,
 )
 
+from .. import register_encoder
 from . import ResponsePacket
-from . import PACKETS
 from . import Writer
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[319][1][packet] = func
-        PACKETS[282][1][packet] = func
+        register_encoder(319, packet, func)
+        register_encoder(282, packet, func)
         return func
 
     return wrapper

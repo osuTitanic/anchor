@@ -2,7 +2,7 @@
 
 from app.common.objects import bChannel
 
-from ...packets import PACKETS
+from .. import register_encoder
 from . import ResponsePacket
 from . import Writer
 
@@ -10,7 +10,7 @@ from typing import Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20120725][1][packet] = func
+        register_encoder(20120725, packet, func)
         return func
 
     return wrapper

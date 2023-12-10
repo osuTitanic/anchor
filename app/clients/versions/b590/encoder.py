@@ -1,16 +1,16 @@
 
 from app.common.objects import bMatch
 
+from .. import register_encoder
 from . import ResponsePacket
-from . import PACKETS
 from . import Writer
 
 from typing import Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[590][1][packet] = func
-        PACKETS[558][1][packet] = func
+        register_encoder(590, packet, func)
+        register_encoder(558, packet, func)
         return func
 
     return wrapper

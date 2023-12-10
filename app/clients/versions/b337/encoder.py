@@ -7,14 +7,14 @@ from app.common.objects import (
     bUserQuit
 )
 
+from .. import register_encoder
 from . import ResponsePacket
-from . import PACKETS
 from . import Writer
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[337][1][packet] = func
-        PACKETS[334][1][packet] = func
+        register_encoder(337, packet, func)
+        register_encoder(334, packet, func)
         return func
 
     return wrapper

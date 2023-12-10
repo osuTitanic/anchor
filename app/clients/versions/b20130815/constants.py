@@ -1,5 +1,5 @@
 
-from ...packets import PacketEnum
+from .. import PacketEnum
 
 class RequestPacket(PacketEnum):
     CHANGE_STATUS         = 0

@@ -2,15 +2,16 @@
 from app.common.constants import PresenceFilter, Mods
 from app.common.streams import StreamIn
 
+from .. import register_decoder
+
 from .constants import RequestPacket
-from ...packets import PACKETS
 from . import Reader
 
 from typing import Callable
 
 def register(packet: RequestPacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[338][0][packet] = func
+        register_decoder(338, packet, func)
         return func
 
     return wrapper

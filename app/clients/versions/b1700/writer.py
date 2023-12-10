@@ -18,7 +18,7 @@ from app.common.objects import (
 from typing import List, Optional
 
 from .constants import ResponsePacket, Completeness
-from ...writer import BaseWriter
+from ..writer import BaseWriter
 
 class Writer(BaseWriter):
     def __init__(self) -> None:

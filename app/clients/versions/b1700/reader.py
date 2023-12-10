@@ -29,7 +29,7 @@ from app.common.constants import (
 )
 
 from .constants import RequestPacket
-from ...reader import BaseReader
+from ..reader import BaseReader
 
 class Reader(BaseReader):
     def __init__(self, stream: StreamIn) -> None:

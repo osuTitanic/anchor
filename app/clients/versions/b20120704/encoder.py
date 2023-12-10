@@ -1,7 +1,7 @@
 
 from app.common.objects import bUserStats
 
-from ...packets import PACKETS
+from .. import register_encoder
 from . import ResponsePacket
 from . import Writer
 
@@ -9,8 +9,8 @@ from typing import Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20120704][1][packet] = func
-        PACKETS[1807][1][packet]     = func
+        register_encoder(20120704, packet, func)
+        register_encoder(1807, packet, func)
         return func
 
     return wrapper

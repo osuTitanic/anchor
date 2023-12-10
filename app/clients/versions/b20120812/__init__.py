@@ -7,11 +7,15 @@ from ... import (
 from .reader import Reader
 from .writer import Writer
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 20121008
-PACKETS[20120812] = deepcopy(PACKETS[20121008])
+register_version(
+    version=20120812,
+    protocol_version=10,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=20120916
+)
 
 from . import encoder
 from . import decoder

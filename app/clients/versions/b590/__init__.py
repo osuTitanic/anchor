@@ -7,12 +7,23 @@ from ..b1700.constants import (
 from .writer import Writer
 from .reader import Reader
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 591
-PACKETS[590] = deepcopy(PACKETS[591])
-PACKETS[558] = deepcopy(PACKETS[591])
+register_version(
+    version=590,
+    protocol_version=4,
+    request_packets=RequestPacket,
+    response_packets=ResponsePacket,
+    inherit_from=591
+)
+
+register_version(
+    version=558,
+    protocol_version=4,
+    request_packets=RequestPacket,
+    response_packets=ResponsePacket,
+    inherit_from=591
+)
 
 from . import encoder
 from . import decoder

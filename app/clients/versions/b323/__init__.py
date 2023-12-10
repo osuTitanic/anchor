@@ -7,14 +7,15 @@ from .constants import (
 from .writer import Writer
 from .reader import Reader
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 334
-PACKETS[323] = deepcopy(PACKETS[334])
-
-PACKETS[323][2] = RequestPacket
-PACKETS[323][3] = ResponsePacket
+register_version(
+    version=323,
+    protocol_version=0,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=334
+)
 
 from . import encoder
 from . import decoder

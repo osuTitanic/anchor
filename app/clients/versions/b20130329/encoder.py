@@ -1,7 +1,7 @@
 
 from app.common.objects import bReplayFrameBundle
 
-from ...packets import PACKETS
+from .. import register_encoder
 from . import ResponsePacket
 from . import Writer
 
@@ -9,8 +9,8 @@ from typing import Callable
 
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
-        PACKETS[20130329][1][packet] = func
-        PACKETS[20130118][1][packet] = func
+        register_encoder(20130329, packet, func)
+        register_encoder(20130118, packet, func)
         return func
 
     return wrapper

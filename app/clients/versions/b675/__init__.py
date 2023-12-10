@@ -6,11 +6,22 @@ from ..b1700.constants import (
 
 from .writer import Writer
 
-from ...packets import PACKETS
-from copy import deepcopy
+from .. import register_version
 
-# Inherit packets from 679
-PACKETS[675] = deepcopy(PACKETS[679])
-PACKETS[591] = deepcopy(PACKETS[679])
+register_version(
+    version=675,
+    protocol_version=4,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=679
+)
+
+register_version(
+    version=591,
+    protocol_version=4,
+    response_packets=ResponsePacket,
+    request_packets=RequestPacket,
+    inherit_from=679
+)
 
 from . import encoder
