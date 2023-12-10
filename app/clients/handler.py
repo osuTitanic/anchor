@@ -483,11 +483,12 @@ def stop_spectating(player: Player):
     if not player.spectating:
         return
 
+    if player in player.spectating.spectators:
+        # Remove from target
+        player.spectating.spectators.remove(player)
+
     # Leave spectator channel
     player.spectating.spectator_chat.remove(player)
-
-    # Remove from target
-    player.spectating.spectators.remove(player)
 
     # Enqueue to others
     for p in player.spectating.spectators:
@@ -498,10 +499,10 @@ def stop_spectating(player: Player):
 
     # If target has no spectators anymore
     # kick them from the spectator channel
-    if not player.spectating.spectators:
-        player.spectating.spectator_chat.remove(
-            player.spectating
-        )
+    # if not player.spectating.spectators:
+    #     player.spectating.spectator_chat.remove(
+    #         player.spectating
+    #     )
 
     player.spectating = None
 
