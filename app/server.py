@@ -11,7 +11,6 @@ from .objects.player import Player
 from .jobs import (
     rank_indexing,
     activities,
-    replays,
     events,
     pings
 )
@@ -49,7 +48,6 @@ class BanchoFactory(Factory):
 
         app.session.logger.info('Loading jobs...')
         app.session.jobs.submit(pings.ping_job)
-        app.session.jobs.submit(replays.replays)
         app.session.jobs.submit(events.event_listener)
         app.session.jobs.submit(rank_indexing.index_ranks)
         app.session.jobs.submit(activities.match_activity)

@@ -51,7 +51,7 @@ from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
 from twisted.internet import threads
 
-from app.clients.packets import PACKETS
+from app.clients import versions
 from app.clients import (
     DefaultResponsePacket,
     DefaultRequestPacket
@@ -81,10 +81,10 @@ class Player(BanchoProtocol):
         self.id = 0
         self.name = ""
 
-        self.request_packets = DefaultRequestPacket
         self.packets = DefaultResponsePacket
-        self.decoders: Dict[Enum, Callable] = PACKETS[20130815][0]
-        self.encoders: Dict[Enum, Callable] = PACKETS[20130815][1]
+        self.request_packets = DefaultRequestPacket
+        self.decoders: Dict[Enum, Callable] = versions.get_next_version(20130815).decoders
+        self.encoders: Dict[Enum, Callable] = versions.get_next_version(20130815).encoders
 
         from .collections import Players
         from .multiplayer import Match
@@ -464,14 +464,14 @@ class Player(BanchoProtocol):
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
 
-        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[(
-            version := min(
-                PACKETS.keys(),
-                key=lambda x:abs(x-version)
-            )
-        )]
+        client_version = versions.get_next_version(version)
 
-        self.logger.debug(f'Assigned decoder with version b{version}')
+        self.request_packets = client_version.request_packets
+        self.packets = client_version.response_packets
+        self.decoders = client_version.decoders
+        self.encoders = client_version.encoders
+
+        self.logger.debug(f'Assigned decoder with version b{client_version.version}')
 
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger = logging.getLogger(f'Player "{username}"')
@@ -528,7 +528,7 @@ class Player(BanchoProtocol):
             self.login_failed(LoginError.NotActivated)
             return
 
-        latest_supported_version = list(PACKETS.keys())[0]
+        latest_supported_version = list(versions.VERSIONS.keys())[0]
 
         if (self.client.version.date > latest_supported_version) and not self.is_admin:
             self.logger.warning('Login Failed: Unsupported version')
