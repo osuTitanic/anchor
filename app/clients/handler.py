@@ -453,7 +453,7 @@ def start_spectating(player: Player, player_id: int):
     if target.id == session.bot_player.id:
         return
 
-    if (player.spectating) or (player in target.spectators) and not player.is_tourney_client:
+    if (player.spectating or player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
         return
 
