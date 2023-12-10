@@ -5,6 +5,8 @@ from ... import (
 )
 
 from .. import register_version
+from .reader import Reader
+from .writer import Writer
 
 register_version(
     version=20121223,
@@ -22,4 +24,5 @@ register_version(
     inherit_from=20130118
 )
 
-# TODO: sender_id in bMessage was removed here
+from . import encoder
+from . import decoder
