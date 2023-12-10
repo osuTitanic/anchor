@@ -444,18 +444,20 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
 @register(RequestPacket.START_SPECTATING)
 def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
-        player.logger.warning('Player tried to spectate himself?')
+        player.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
 
     if not (target := session.players.by_id(player_id)):
+        player.logger.warning(f'Failed to start spectating: Player with id "{player_id}" was not found!')
         return
 
     if target.id == session.bot_player.id:
+        player.logger.warning(f'Tried to spectate {session.bot_player.name}.')
         return
 
     if (player.spectating or player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
-        return
+        # TODO: return here?
 
     player.logger.info(f'Started spectating "{target.name}".')
     player.spectating = target
@@ -480,6 +482,7 @@ def start_spectating(player: Player, player_id: int):
 @register(RequestPacket.STOP_SPECTATING)
 def stop_spectating(player: Player):
     if not player.spectating:
+        player.logger.warning('Failed to stop spectating: Player is not spectating!')
         return
 
     if player in player.spectating.spectators:
