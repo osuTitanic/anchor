@@ -22,7 +22,7 @@ register_version(
     protocol_version=17,
     response_packets=ResponsePacket,
     request_packets=RequestPacket,
-    inherit_from=20130118
+    inherit_from=20130815
 )
 
 from . import decoder
