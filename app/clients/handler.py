@@ -1215,7 +1215,7 @@ def match_complete(player: Player):
                         },
                         'place': rank + 1
                     }
-                    for rank, slot in enumerate(slots) if slot != None
+                    for rank, slot in enumerate(slots) if (slot != None) and (slot.player != None)
                 ]
             }
         )
