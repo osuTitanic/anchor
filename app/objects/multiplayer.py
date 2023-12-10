@@ -91,7 +91,7 @@ class Slot:
         self.loaded  = False
         self.skipped = False
 
-@dataclass
+@dataclass(slots=True)
 class StartingTimers:
     time: float
     thread: Thread

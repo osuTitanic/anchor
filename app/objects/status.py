@@ -9,7 +9,7 @@ from app.common.constants import (
 from dataclasses import dataclass
 from typing import List
 
-@dataclass
+@dataclass(slots=True)
 class Status:
     action: ClientStatus = ClientStatus.Idle
     text: str = ""

@@ -41,14 +41,14 @@ import random
 import time
 import app
 
-@dataclass
+@dataclass(slots=True)
 class Context:
     player: Player
     trigger: str
     target: Union[Channel, Player]
     args: List[str]
 
-@dataclass
+@dataclass(slots=True)
 class CommandResponse:
     response: List[str]
     hidden: bool
