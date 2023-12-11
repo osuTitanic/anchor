@@ -65,7 +65,7 @@ def register_encoder(
 
 def get_next_version(version: int) -> ClientVersion:
     return VERSIONS[
-        version := min(
+        min(
             VERSIONS.keys(),
             key=lambda x:abs(x-version)
         )
