@@ -32,6 +32,8 @@ from typing import List
 from ..reader import BaseReader
 from . import RequestPacket
 
+import config
+
 class Reader(BaseReader):
     def __init__(self, stream: StreamIn) -> None:
         self.stream = stream
@@ -146,7 +148,7 @@ class Reader(BaseReader):
         beatmap_id   = self.stream.s32()
         beatmap_hash = self.stream.string()
 
-        slot_status = [SlotStatus(self.stream.u8()) for _ in range(8)]
+        slot_status = [SlotStatus(self.stream.u8()) for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
 
         slot_id = [
             self.stream.s32()
@@ -160,8 +162,8 @@ class Reader(BaseReader):
         scoring_type = MatchScoringTypes.Combo
         team_type = MatchTeamTypes.HeadToHead
 
-        slot_team = [SlotTeam.Neutral for _ in range(8)]
-        slot_mods = [Mods.NoMod for _ in range(8)]
+        slot_team = [SlotTeam.Neutral for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
+        slot_mods = [Mods.NoMod for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
 
         slots = [
             bSlot(
@@ -170,7 +172,7 @@ class Reader(BaseReader):
                 slot_team[i],
                 slot_mods[i]
             )
-            for i in range(8)
+            for i in range(config.MULTIPLAYER_MAX_SLOTS)
         ]
 
         return bMatch(

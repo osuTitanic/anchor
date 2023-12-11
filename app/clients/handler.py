@@ -786,7 +786,7 @@ def change_slot(player: Player, slot_id: int):
     if not player.match:
         return
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     if player.match.slots[slot_id].status != SlotStatus.Open:
@@ -955,7 +955,7 @@ def lock(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     slot = player.match.slots[slot_id]
@@ -1004,7 +1004,7 @@ def transfer_host(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     if not (target := player.match.slots[slot_id].player):

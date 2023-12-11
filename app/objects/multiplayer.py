@@ -27,6 +27,7 @@ from .channel import Channel
 from .player import Player
 
 import logging
+import config
 import time
 import app
 
@@ -133,7 +134,7 @@ class Match:
         self.freemod       = False
         self.in_progress   = False
 
-        self.slots = [Slot() for _ in range(8)]
+        self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.banned_players = []
 
         self.starting: Optional[StartingTimers] = None

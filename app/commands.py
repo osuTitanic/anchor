@@ -571,7 +571,7 @@ def mp_set(ctx: Context):
             match.scoring_type = MatchScoringTypes(int(ctx.args[1]))
 
         if len(ctx.args) > 2:
-            size = max(1, min(int(ctx.args[2]), 8))
+            size = max(1, min(int(ctx.args[2]), config.MULTIPLAYER_MAX_SLOTS))
 
             for slot in match.slots[size:]:
                 if slot.has_player:
@@ -604,7 +604,7 @@ def mp_size(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <size>']
 
     match = ctx.player.match
-    size = max(1, min(int(ctx.args[0]), 8))
+    size = max(1, min(int(ctx.args[0]), config.MULTIPLAYER_MAX_SLOTS))
 
     for slot in match.slots[size:]:
         if slot.has_player:
@@ -634,7 +634,7 @@ def mp_move(ctx: Context):
 
     match = ctx.player.match
     name = ctx.args[0]
-    slot_id = max(1, min(int(ctx.args[1]), 8))
+    slot_id = max(1, min(int(ctx.args[1]), config.MULTIPLAYER_MAX_SLOTS))
 
     if not (player := match.get_player(name)):
         return [f'Could not find player {name}.']

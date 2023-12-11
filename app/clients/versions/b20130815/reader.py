@@ -31,6 +31,8 @@ from app.common.constants import (
 from .constants import RequestPacket
 from ..reader import BaseReader
 
+import config
+
 class Reader(BaseReader):
     def __init__(self, stream: StreamIn) -> None:
         self.stream = stream
@@ -137,8 +139,8 @@ class Reader(BaseReader):
         beatmap_id   = self.stream.s32()
         beatmap_hash = self.stream.string()
 
-        slot_status = [SlotStatus(self.stream.u8()) for _ in range(8)]
-        slot_team = [SlotTeam(self.stream.u8()) for _ in range(8)]
+        slot_status = [SlotStatus(self.stream.u8()) for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
+        slot_team = [SlotTeam(self.stream.u8()) for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         slot_id = [
             self.stream.s32()
             if (slot_status[i] & SlotStatus.HasPlayer) > 0 else -1
@@ -151,13 +153,13 @@ class Reader(BaseReader):
         scoring_type = MatchScoringTypes(self.stream.u8())
         team_type    = MatchTeamTypes(self.stream.u8())
 
-        slot_mods = [Mods.NoMod for _ in range(8)]
+        slot_mods = [Mods.NoMod for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
 
         try:
             freemod = self.stream.bool()
 
             if freemod:
-                slot_mods = [Mods(self.stream.u32()) for _ in range(8)]
+                slot_mods = [Mods(self.stream.u32()) for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         except OverflowError:
             # Workaround for old clients
             freemod = False
@@ -169,7 +171,7 @@ class Reader(BaseReader):
                 slot_team[i],
                 slot_mods[i]
             )
-            for i in range(8)
+            for i in range(config.MULTIPLAYER_MAX_SLOTS)
         ]
 
         try:

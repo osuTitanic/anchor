@@ -16,9 +16,10 @@ from app.common.constants import (
     Mods
 )
 
+from ..b337 import Reader as BaseReader
 from typing import List
 
-from ..b337 import Reader as BaseReader
+import config
 
 class Reader(BaseReader):
     def read_match(self) -> bMatch:
@@ -33,11 +34,11 @@ class Reader(BaseReader):
         beatmap_id   = self.stream.s32()
         beatmap_hash = self.stream.string()
 
-        slot_open = self.read_booleans()
-        slot_used = self.read_booleans()
-        slot_ready = self.read_booleans()
+        slot_open = self.read_booleans(config.MULTIPLAYER_MAX_SLOTS)
+        slot_used = self.read_booleans(config.MULTIPLAYER_MAX_SLOTS)
+        slot_ready = self.read_booleans(config.MULTIPLAYER_MAX_SLOTS)
 
-        slot_id = [self.stream.s32() if slot_used[i] else -1 for i in range(8)]
+        slot_id = [self.stream.s32() if slot_used[i] else -1 for i in range(config.MULTIPLAYER_MAX_SLOTS)]
 
         # Convert legacy slot booleans to SlotStatus enum
         slot_status = [
@@ -54,17 +55,17 @@ class Reader(BaseReader):
                 if slot_open[i]
                 else SlotStatus.Locked
             )
-            for i in range(8)
+            for i in range(config.MULTIPLAYER_MAX_SLOTS)
         ]
 
         slots = [
             bSlot(
                 slot_id[i],
                 slot_status[i],
-                [SlotTeam.Neutral for _ in range(8)],
-                [Mods.NoMod for _ in range(8)]
+                [SlotTeam.Neutral for _ in range(config.MULTIPLAYER_MAX_SLOTS)],
+                [Mods.NoMod for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
             )
-            for i in range(8)
+            for i in range(config.MULTIPLAYER_MAX_SLOTS)
         ]
 
         return bMatch(

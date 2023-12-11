@@ -565,8 +565,8 @@ class Player(BanchoProtocol):
             # Check amount of tourney clients that are online
             tourney_clients = app.session.players.get_all_tourney_clients(self.id)
 
-            if len(tourney_clients) >= 8:
-                self.logger.warning('Tried to log in with more than 8 tourney clients')
+            if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
+                self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
                 self.close_connection()
                 return
 
