@@ -132,10 +132,7 @@ class Channels(List[Channel]):
 
     def by_name(self, name: str) -> Channel | None:
         """Get a channel by name"""
-        for c in self:
-            if c.name == name:
-                return c
-        return None
+        return next((c for c in self if c.name == name), None)
 
     def append(self, c: Channel) -> None:
         """Append a channel to the collection"""
