@@ -597,9 +597,12 @@ def create_match(player: Player, bancho_match: bMatch):
     match.name = match.name[:50]
 
     if not session.matches.append(match):
-        player.logger.warning('Tried to create match, but max match limit was reached')
+        player.logger.warning('Failed to append match to collection')
         player.enqueue_matchjoin_fail()
         return
+
+    for index, slot in enumerate(bancho_match.slots):
+        match.slots[index].status = slot.status
 
     session.channels.append(
         c := Channel(
