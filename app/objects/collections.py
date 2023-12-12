@@ -126,30 +126,26 @@ class Channels(List[Channel]):
         return super().__iter__()
 
     @property
-    def names(self) -> Set[str]:
-        return {c.display_name for c in self}
-
-    @property
-    def topics(self) -> Set[str]:
-        return {c.topic for c in self}
-
-    @property
     def public(self) -> Set[Channel]:
+        """All publicly available channels"""
         return {c for c in self if c.public}
 
     def by_name(self, name: str) -> Channel | None:
+        """Get a channel by name"""
         for c in self:
             if c.name == name:
                 return c
         return None
 
     def append(self, c: Channel) -> None:
+        """Append a channel to the collection"""
         if not c:
             return
 
         if c not in self: return super().append(c)
 
     def remove(self, c: Channel) -> None:
+        """Remove a channel from the collection"""
         if not c:
             return
 
