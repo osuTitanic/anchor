@@ -3,7 +3,6 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.helpers import location
 
 from twisted.python.failure import Failure
-from typing import Optional
 
 import config
 import struct
