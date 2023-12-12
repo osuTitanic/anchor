@@ -1,9 +1,9 @@
 
+from __future__ import annotations
+
 from app.common.constants import OSU_VERSION
 from app.common.helpers import location
-
 from datetime import datetime
-from typing import Optional
 
 import hashlib
 import utils
@@ -11,7 +11,14 @@ import pytz
 import re
 
 class ClientVersion:
-    def __init__(self, match: re.Match, date: int, revision: Optional[int] = None, stream: Optional[str] = None, name: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        match: re.Match,
+        date: int,
+        revision: int | None = None,
+        stream: str | None = None,
+        name: str | None = None
+    ) -> None:
         self.revision = revision
         self.stream   = stream
         self.match    = match
@@ -45,7 +52,14 @@ class ClientVersion:
         )
 
 class ClientHash:
-    def __init__(self, md5: str, adapters: str, adapters_md5: str, uninstall_id: str, diskdrive_signature: str) -> None:
+    def __init__(
+        self,
+        md5: str,
+        adapters: str,
+        adapters_md5: str,
+        uninstall_id: str,
+        diskdrive_signature: str
+    ) -> None:
         self.diskdrive_signature = diskdrive_signature
         self.uninstall_id        = uninstall_id
         self.adapters_md5        = adapters_md5
@@ -99,7 +113,15 @@ class ClientHash:
         )
 
 class OsuClient:
-    def __init__(self, ip: location.Geolocation, version: ClientVersion, client_hash: ClientHash, utc_offset: int, display_city: bool, friendonly_dms: bool) -> None:
+    def __init__(
+        self,
+        ip: location.Geolocation,
+        version: ClientVersion,
+        client_hash: ClientHash,
+        utc_offset: int,
+        display_city: bool,
+        friendonly_dms: bool
+    ) -> None:
         self.friendonly_dms = friendonly_dms
         self.display_city   = display_city
         self.utc_offset     = utc_offset
