@@ -179,7 +179,7 @@ class Matches(List[Match | None]):
         """All currently active matches"""
         return [m for m in self if m]
 
-    def get_free(self) -> int:
+    def get_free(self) -> int | None:
         """Get a free match slot"""
         for index, match in enumerate(self):
             if match is None:
@@ -197,7 +197,6 @@ class Matches(List[Match | None]):
             # Add match to list if free slot was found
             match.id = free
             self[free] = match
-
             return True
 
         return False

@@ -128,11 +128,11 @@ class Match:
         self.mode = mode
         self.seed = seed
 
-        self.type          = MatchType.Standard
-        self.scoring_type  = MatchScoringTypes.Score
-        self.team_type     = MatchTeamTypes.HeadToHead
-        self.freemod       = False
-        self.in_progress   = False
+        self.type         = MatchType.Standard
+        self.scoring_type = MatchScoringTypes.Score
+        self.team_type    = MatchTeamTypes.HeadToHead
+        self.freemod      = False
+        self.in_progress  = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.banned_players = []
