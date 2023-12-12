@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from app.clients import (
     DefaultResponsePacket,
     DefaultRequestPacket
@@ -8,7 +10,6 @@ from enum import Enum
 from typing import (
     Iterable,
     Iterator,
-    Optional,
     List,
     Set
 )
@@ -53,28 +54,32 @@ class Players(List[Player]):
             if p not in immune:
                 p.enqueue(data)
 
-    def by_id(self, id: int) -> Optional[Player]:
+    def by_id(self, id: int) -> Player | None:
         if id == 1:
             return app.session.bot_player
 
         for p in self.normal_clients:
             if p.id == id:
                 return p
+
         for p in self.tourney_clients:
             if p.id == id:
                 return p
+
         return None
 
-    def by_name(self, name: str) -> Optional[Player]:
+    def by_name(self, name: str) -> Player | None:
         if name == app.session.bot_player.name:
             return app.session.bot_player
 
         for p in self.normal_clients:
             if p.name == name:
                 return p
+
         for p in self.tourney_clients:
             if p.name == name:
                 return p
+
         return None
 
     def get_all_tourney_clients(self, id: int) -> List[Player]:
@@ -132,7 +137,7 @@ class Channels(List[Channel]):
     def public(self) -> Set[Channel]:
         return {c for c in self if c.public}
 
-    def by_name(self, name: str) -> Optional[Channel]:
+    def by_name(self, name: str) -> Channel | None:
         for c in self:
             if c.name == name:
                 return c
@@ -159,9 +164,9 @@ class Channels(List[Channel]):
 
 from .multiplayer import Match
 
-class Matches(List[Optional[Match]]):
+class Matches(List[Match | None]):
     def __init__(self) -> None:
-        super().__init__([None] * 64)
+        super().__init__([None])
 
     def __iter__(self) -> Iterator[Match]:
         return super().__iter__()
@@ -171,28 +176,45 @@ class Matches(List[Optional[Match]]):
 
     @property
     def active(self) -> List[Match]:
+        """All currently active matches"""
         return [m for m in self if m]
 
-    def get_free(self) -> Optional[int]:
+    def get_free(self) -> int:
+        """Get a free match slot"""
         for index, match in enumerate(self):
             if match is None:
                 return index
-        return None
+
+        # Current match collection is full
+        # Create new match slot
+        super().append(None)
+
+        return (len(self) - 1)
 
     def append(self, match: Match) -> bool:
+        """Add match to collection and returns if successful"""
         if (free := self.get_free()) is not None:
             # Add match to list if free slot was found
             match.id = free
             self[free] = match
 
             return True
-        else:
-            return False
+
+        return False
 
     def remove(self, match: Match) -> None:
-        for index, _match in enumerate(self):
-            if match is _match:
+        """Remove match from collection and remove all trailing, inactive matches from the collection."""
+        for index, m in enumerate(self):
+            if match == m:
                 self[index] = None
                 break
+
+        # Remove all inactive trailing matches
+        for index in range(len(self) - 1, -1, -1):
+            if self[index] is not None:
+                break
+
+            # Remove inactive match
+            self.pop(index)
 
 # TODO: IRC Players
