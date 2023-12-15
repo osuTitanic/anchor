@@ -466,8 +466,9 @@ def start_spectating(player: Player, player_id: int):
     player.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
     target.spectator_chat.add(player)
 
-    # Enqueue to others
+    # Enqueue fellow spectators
     for p in target.spectators:
+        player.enqueue_fellow_spectator(p.id)
         p.enqueue_fellow_spectator(player.id)
 
     # Enqueue to target
