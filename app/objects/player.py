@@ -109,7 +109,9 @@ class Player(BanchoProtocol):
         return f'<Player ({self.id})>'
 
     def __eq__(self, other) -> bool:
-        return self.id == other.id
+        if other:
+            return self.id == other.id
+        return False
 
     def __hash__(self) -> int:
         return self.id
