@@ -38,6 +38,7 @@ from .objects.player import Player
 import timeago
 import config
 import random
+import utils
 import time
 import app
 import os
@@ -98,12 +99,6 @@ sets = [
     mp_commands := CommandSet('mp', 'Multiplayer Commands'),
     system_commands := CommandSet('system', 'System Commands')
 ]
-
-# TODO: !system deploy
-# TODO: !system restart
-# TODO: !system shutdown
-# TODO: !system stats
-# TODO: !system exec
 
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
@@ -201,6 +196,16 @@ def reload_config(ctx: Context) -> List[str]:
     config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 
     return ['Config was reloaded.']
+
+@system_commands.register(['exec', 'python'], Permissions.Admin)
+def execute(ctx: Context):
+    """<input> - Execute any python code"""
+    if not ctx.args:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <input>']
+
+    input = ' '.join(ctx.args)
+
+    return [str(eval(input))]
 
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
