@@ -168,7 +168,7 @@ def send_message(player: Player, message: bMessage):
         player.last_minute_stamp = time.time()
         player.messages_in_last_minute = 0
 
-    if player.messages_in_last_minute > 400:
+    if player.messages_in_last_minute > 150:
         player.silence(60, reason='Chat spamming')
         return
 
@@ -178,8 +178,7 @@ def send_message(player: Player, message: bMessage):
         return
 
     channel.send_message(player, parsed_message)
-
-    player.messages_in_last_minute += 1
+    player.update_activity()
 
     threads.deferToThread(
         messages.create,
@@ -190,7 +189,7 @@ def send_message(player: Player, message: bMessage):
         utils.thread_callback
     )
 
-    player.update_activity()
+    player.messages_in_last_minute += 1
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
