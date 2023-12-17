@@ -40,6 +40,7 @@ import config
 import random
 import time
 import app
+import os
 
 @dataclass(slots=True)
 class Context:
@@ -128,6 +129,78 @@ def maintenance_mode(ctx: Context) -> List[str]:
     return [
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
     ]
+
+@system_commands.register(['setenv', 'setcfg'], Permissions.Admin)
+def set_config_value(ctx: Context) -> List[str]:
+    """<env> <value> - Update a config value"""
+    if len(ctx.args) < 2:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env> <value>']
+
+    env_name = ctx.args[0]
+    value = ' '.join(ctx.args[1:])
+
+    config.dotenv.set_key('.env', env_name, value)
+    setattr(config, env_name, value)
+
+    if env_name.startswith('MENUICON'):
+        # Enqueue menu icon to all players
+        for player in app.session.players:
+            player.send_packet(
+                player.packets.MENU_ICON,
+                config.MENUICON_IMAGE,
+                config.MENUICON_URL
+            )
+
+    return ['Config was updated.']
+
+@system_commands.register(['getenv', 'getcfg', 'env', 'config', 'cfg'], Permissions.Admin)
+def get_config_value(ctx: Context) -> List[str]:
+    """<env> - Get a config value"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env>']
+
+    return [getattr(config, ctx.args[0])]
+
+@system_commands.register(['reloadcfg', 'reloadenv'], Permissions.Admin)
+def reload_config(ctx: Context) -> List[str]:
+    """- Reload the config"""
+
+    config.dotenv.load_dotenv(override=True)
+
+    config.POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+    config.POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
+    config.POSTGRES_USER = os.environ.get('POSTGRES_USER')
+    config.POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
+
+    config.POSTGRES_POOLSIZE = int(os.environ.get('POSTGRES_POOLSIZE', 10))
+    config.POSTGRES_POOLSIZE_OVERFLOW = int(os.environ.get('POSTGRES_POOLSIZE_OVERFLOW', 30))
+
+    config.S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY')
+    config.S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY')
+    config.S3_BASEURL    = os.environ.get('S3_BASEURL')
+
+    config.REDIS_HOST = os.environ.get('REDIS_HOST')
+    config.REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+    config.AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
+
+    config.BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
+    config.PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
+    config.DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
+
+    config.SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+    config.SENDGRID_EMAIL = os.environ.get('SENDGRID_EMAIL')
+    config.MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
+    config.MENUICON_URL = os.environ.get('MENUICON_URL')
+
+    config.DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
+    config.APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
+    config.SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
+    config.MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
+    config.FREE_SUPPORTER = eval(os.environ.get('FREE_SUPPORTER', 'True').capitalize())
+    config.S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
+    config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
+
+    return ['Config was reloaded.']
 
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
