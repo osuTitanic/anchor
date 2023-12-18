@@ -783,6 +783,9 @@ class Player(BanchoProtocol):
         # Update database
         users.update(self.id, {'silence_end': None})
 
+        inf = infringements.fetch_recent_by_action(self.id, action=1)
+        if inf: infringements.delete_by_id(inf.id)
+
     def restrict(
         self,
         reason: str | None = None,

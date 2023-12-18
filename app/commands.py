@@ -1101,6 +1101,10 @@ def unsilence(ctx: Context):
 
     users.update(player.id, {'silence_end': None})
 
+    # Delete infringements from website
+    inf = infringements.fetch_recent_by_action(player.id, action=1)
+    if inf: infringements.delete_by_id(inf.id)
+
     return [f'{player.name} was unsilenced.']
 
 @command(['restrict', 'ban'], Permissions.Admin, hidden=False)
