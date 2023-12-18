@@ -329,9 +329,6 @@ class Player(BanchoProtocol):
             super().connectionLost(reason)
             return
 
-        # Decrement usercount
-        usercount.decrement()
-
         if self.spectating:
             if not self.spectating:
                 return
@@ -361,6 +358,9 @@ class Player(BanchoProtocol):
         app.session.players.remove(self)
 
         status.delete(self.id)
+
+        # Update usercount
+        usercount.set(len(app.session.players.normal_clients))
 
         for channel in copy(self.channels):
             channel.remove(self)
@@ -656,8 +656,8 @@ class Player(BanchoProtocol):
         # Enqueue other players
         self.enqueue_players(app.session.players)
 
-        # Increment usercount
-        usercount.increment()
+        # Update usercount
+        usercount.set(len(app.session.players.normal_clients))
 
         self.logged_in = True
 
