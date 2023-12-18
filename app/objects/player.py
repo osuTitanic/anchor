@@ -589,7 +589,7 @@ class Player(BanchoProtocol):
         # Check for new hardware
         self.check_client()
 
-        if self.object.country == 'XX':
+        if self.object.country.lower() == 'xx':
             # User is logging in for the first time
             # Update their country value in the database
             self.logger.info('Updating country...')
