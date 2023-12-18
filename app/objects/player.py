@@ -589,15 +589,13 @@ class Player(BanchoProtocol):
         # Check for new hardware
         self.check_client()
 
-        if self.object.country.lower() == 'xx':
+        if self.object.country.upper() == 'XX':
             # User is logging in for the first time
             # Update their country value in the database
             self.logger.info('Updating country...')
             self.object.country = self.client.ip.country_code.upper()
-            users.update(
-                user_id=self.id,
-                updates={'country': self.object.country}
-            )
+            leaderboards.remove_country(self.id, self.object.country)
+            users.update(self.id, {'country': self.object.country})
 
         # Update cache
         self.update_leaderboard_stats()
