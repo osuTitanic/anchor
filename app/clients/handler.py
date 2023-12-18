@@ -365,80 +365,82 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
 
     # Fetch all matching beatmaps from database
 
-    for index, filename in enumerate(info.filenames):
-        if not (beatmap := beatmaps.fetch_by_file(filename)):
-            continue
+    with session.database.managed_session() as s:
+        for index, filename in enumerate(info.filenames):
+            if not (beatmap := beatmaps.fetch_by_file(filename, s)):
+                continue
 
-        maps.append((
-            index,
-            beatmap
-        ))
-
-    for id in info.beatmap_ids:
-        if not (beatmap := beatmaps.fetch_by_id(id)):
-            continue
-
-        maps.append((
-            -1,
-            beatmap
-        ))
-
-    player.logger.info(f'Got {len(maps)} beatmap requests')
-
-    # Create beatmap response
-
-    map_infos: List[bBeatmapInfo] = []
-
-    for index, beatmap in maps:
-        ranked = {
-            -2: 0, # Graveyard: Pending
-            -1: 0, # WIP: Pending
-             0: 0, # Pending: Pending
-             1: 1, # Ranked: Ranked
-             2: 2, # Approved: Approved
-             3: 2, # Qualified: Approved
-             4: 2, # Loved: Approved
-        }[beatmap.status]
-
-        # Get personal best in every mode for this beatmap
-        grades = {
-            0: Grade.N,
-            1: Grade.N,
-            2: Grade.N,
-            3: Grade.N
-        }
-
-        for mode in range(4):
-            personal_best = scores.fetch_personal_best(
-                beatmap.id,
-                player.id,
-                mode
-            )
-
-            if personal_best:
-                grades[mode] = Grade[personal_best.grade]
-
-        map_infos.append(
-            bBeatmapInfo(
+            maps.append((
                 index,
-                beatmap.id,
-                beatmap.set_id,
-                beatmap.set_id, # thread_id
-                ranked,
-                grades[0], # standard
-                grades[2], # fruits
-                grades[1], # taiko
-                grades[3], # mania
-                beatmap.md5
+                beatmap
+            ))
+
+        for id in info.beatmap_ids:
+            if not (beatmap := beatmaps.fetch_by_id(id, s)):
+                continue
+
+            maps.append((
+                -1,
+                beatmap
+            ))
+
+        player.logger.info(f'Got {len(maps)} beatmap requests')
+
+        # Create beatmap response
+
+        map_infos: List[bBeatmapInfo] = []
+
+        for index, beatmap in maps:
+            ranked = {
+                -2: 0, # Graveyard: Pending
+                -1: 0, # WIP: Pending
+                 0: 0, # Pending: Pending
+                 1: 1, # Ranked: Ranked
+                 2: 2, # Approved: Approved
+                 3: 2, # Qualified: Approved
+                 4: 2, # Loved: Approved
+            }[beatmap.status]
+
+            # Get personal best in every mode for this beatmap
+            grades = {
+                0: Grade.N,
+                1: Grade.N,
+                2: Grade.N,
+                3: Grade.N
+            }
+
+            for mode in range(4):
+                personal_best = scores.fetch_personal_best(
+                    beatmap.id,
+                    player.id,
+                    mode,
+                    session=s
+                )
+
+                if personal_best:
+                    grades[mode] = Grade[personal_best.grade]
+
+            map_infos.append(
+                bBeatmapInfo(
+                    index,
+                    beatmap.id,
+                    beatmap.set_id,
+                    beatmap.set_id, # thread_id
+                    ranked,
+                    grades[0], # standard
+                    grades[2], # fruits
+                    grades[1], # taiko
+                    grades[3], # mania
+                    beatmap.md5
+                )
             )
+
+        player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
+
+        player.send_packet(
+            player.packets.BEATMAP_INFO_REPLY,
+            bBeatmapInfoReply(map_infos)
         )
-
-    player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
-
-    player.send_packet(
-        player.packets.BEATMAP_INFO_REPLY,
-        bBeatmapInfoReply(map_infos)
-    )
 
 @register(RequestPacket.START_SPECTATING)
 def start_spectating(player: Player, player_id: int):
