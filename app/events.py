@@ -75,6 +75,7 @@ def restrict(
 
         if not player:
             # Player was not found
+            app.session.logger.warning('Failed to restrict user: User not found!')
             return
 
         # Update user
