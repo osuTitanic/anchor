@@ -62,6 +62,13 @@ def bot_message(message: str, target: str):
             ignore_privs=True
         )
 
+@app.session.events.register('logout')
+def logout(user_id: int):
+    if not (player := app.session.players.by_id(user_id)):
+        return
+
+    player.close_connection()
+
 @app.session.events.register('restrict')
 def restrict(
     user_id: int,
