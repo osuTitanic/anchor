@@ -61,9 +61,11 @@ def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
     try:
         if channel_name == '#spectator':
             # Select spectator chat
-            return (player.spectating.spectator_chat
-                    if player.spectating else
-                        player.spectator_chat)
+            return (
+                player.spectating.spectator_chat
+                if player.spectating else
+                   player.spectator_chat
+            )
 
         elif channel_name == '#multiplayer':
             # Select multiplayer chat
@@ -358,13 +360,11 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     maps: List[Tuple[int, DBBeatmap]] = []
 
     # Limit request filenames/ids
-
     if not ignore_limit:
         info.beatmap_ids = info.beatmap_ids[:100]
         info.filenames = info.filenames[:100]
 
     # Fetch all matching beatmaps from database
-
     with session.database.managed_session() as s:
         for index, filename in enumerate(info.filenames):
             if not (beatmap := beatmaps.fetch_by_file(filename, s)):
@@ -501,12 +501,7 @@ def stop_spectating(player: Player):
     # Enqueue to target
     player.spectating.enqueue_spectator_left(player.id)
 
-    # If target has no spectators anymore
-    # kick them from the spectator channel
-    # if not player.spectating.spectators:
-    #     player.spectating.spectator_chat.remove(
-    #         player.spectating
-    #     )
+    # TODO: Kick from spectator channel if no spectators left?
 
     player.logger.info(f'Stopped spectating "{player.spectating.name}".')
     player.spectating = None
