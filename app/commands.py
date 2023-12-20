@@ -38,6 +38,7 @@ from .objects.player import Player
 import timeago
 import config
 import random
+import shlex
 import time
 import app
 
@@ -1184,7 +1185,7 @@ def get_command(
     message: str
 ) -> Optional[CommandResponse]:
     # Parse command
-    trigger, *args = message.strip()[1:].split(' ')
+    trigger, *args = shlex.split(message.strip()[1:])
     trigger = trigger.lower()
 
     # Regular commands
