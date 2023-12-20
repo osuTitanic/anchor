@@ -92,8 +92,6 @@ class BanchoProtocol(Protocol):
                 username.decode(),
                 password.decode(),
                 self.client
-            ).addErrback(
-                utils.thread_callback
             )
 
             deferred.addErrback(self.login_callback)
