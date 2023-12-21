@@ -95,7 +95,9 @@ class BanchoProtocol(Protocol):
             )
 
             deferred.addErrback(self.login_callback)
-            deferred.addTimeout(15, reactor)
+
+            # TODO: Figure out why this causes issues
+            # deferred.addTimeout(15, reactor)
         except Exception as e:
             self.logger.error(
                 f'Error on login: {e}',
