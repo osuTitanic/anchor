@@ -138,7 +138,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
     users.update(player.id,
         {
             'restricted': False,
-            'permissions': 5 if config.FREE_SUPPORTER else 1
+            'permissions': 5
         }
     )
 

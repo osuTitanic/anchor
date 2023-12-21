@@ -192,7 +192,6 @@ def reload_config(ctx: Context) -> List[str]:
     config.APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
     config.SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
     config.MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
-    config.FREE_SUPPORTER = eval(os.environ.get('FREE_SUPPORTER', 'True').capitalize())
     config.S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
     config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 
@@ -1190,7 +1189,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
     users.update(player.id,
         {
             'restricted': False,
-            'permissions': 5 if config.FREE_SUPPORTER else 1
+            'permissions': 5
         }
     )
 

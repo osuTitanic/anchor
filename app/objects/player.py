@@ -164,34 +164,8 @@ class Player(BanchoProtocol):
 
     @property
     def supporter(self) -> bool:
-        if config.FREE_SUPPORTER:
-            return True
-
-        if self.object.supporter_end:
-            if self.remaining_supporter > 0:
-                return True
-
-            # Remove supporter
-            self.object.supporter_end = None
-            self.object.permissions = self.permissions & ~Permissions.Supporter
-
-            # Update database
-            users.update(self.id, {
-                'supporter_end': None,
-                'permissions': self.permissions.value
-            })
-
-            # Update client
-            # NOTE: Client will exit after it notices a permission change
-            self.enqueue_permissions()
-
-        return False
-
-    @property
-    def remaining_supporter(self) -> int:
-        if self.object.supporter_end:
-            return self.object.supporter_end.timestamp() - datetime.now().timestamp()
-        return 0
+        # NOTE: Supporter related code has been removed
+        return True
 
     @property
     def restricted(self) -> bool:
@@ -852,7 +826,7 @@ class Player(BanchoProtocol):
         users.update(self.id,
             {
                 'restricted': False,
-                'permissions': 5 if config.FREE_SUPPORTER else 1
+                'permissions': 5
             }
         )
 
@@ -863,7 +837,7 @@ class Player(BanchoProtocol):
         self.enqueue_silence_info(-1)
 
         self.object.restricted = False
-        self.object.permissions = 5 if config.FREE_SUPPORTER else 1
+        self.object.permissions = 5
 
     def update_activity(self):
         users.update(
