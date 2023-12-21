@@ -108,7 +108,9 @@ class Player(BanchoProtocol):
 
         self.messages_in_last_minute = 0
         self.last_minute_stamp = time.time()
+
         self.permissions = Permissions.NoPermissions
+        self.groups = []
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
@@ -490,9 +492,9 @@ class Player(BanchoProtocol):
             self.name = user.name
             self.stats = user.stats
             self.object = user
-            self.permissions = Permissions(
-                groups.get_player_permissions(self.id, session)
-            )
+
+            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
 
             if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
                 self.logger.warning('Login Failed: Authentication error')
