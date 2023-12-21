@@ -1026,7 +1026,7 @@ def monitor(ctx: Context) -> Optional[List]:
 
     return ['Player has been monitored']
 
-@command(['alert', 'announce', 'broadcast'], ['Admins'])
+@command(['alert', 'announce', 'broadcast'], ['Admins', 'Developers'])
 def alert(ctx: Context) -> Optional[List]:
     """<message> - Send a message to all players"""
 
@@ -1037,7 +1037,7 @@ def alert(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {len(app.session.players)} players.']
 
-@command(['alertuser'], ['Admins'])
+@command(['alertuser'], ['Admins', 'Developers'])
 def alertuser(ctx: Context) -> Optional[List]:
     """<username> <message> - Send a notification to a player"""
 
@@ -1053,7 +1053,7 @@ def alertuser(ctx: Context) -> Optional[List]:
 
     return [f'Alert was sent to {player.name}.']
 
-@command(['silence', 'mute'], ['Admins'], hidden=False)
+@command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def silence(ctx: Context) -> Optional[List]:
     """<username> <duration> (<reason>)"""
 
@@ -1098,7 +1098,7 @@ def silence(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was silenced for {time_string}']
 
-@command(['unsilence', 'unmute'], ['Admins'], hidden=False)
+@command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unsilence(ctx: Context):
     """- <username>"""
 
@@ -1122,7 +1122,7 @@ def unsilence(ctx: Context):
 
     return [f'{player.name} was unsilenced.']
 
-@command(['restrict', 'ban'], ['Admins'], hidden=False)
+@command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def restrict(ctx: Context) -> Optional[List]:
     """ <name> <length/permanent> (<reason>)"""
 
@@ -1182,7 +1182,7 @@ def restrict(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was restricted.']
 
-@command(['unrestrict', 'unban'], ['Admins'], hidden=False)
+@command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unrestrict(ctx: Context) -> Optional[List]:
     """<name> <restore scores (true/false)>"""
 
@@ -1224,7 +1224,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
 
     return [f'Player "{username}" was unrestricted.']
 
-@command(['moderated'], ['Admins'], hidden=False)
+@command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def moderated(ctx: Context) -> Optional[List]:
     """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
@@ -1237,7 +1237,7 @@ def moderated(ctx: Context) -> Optional[List]:
 
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
-@command(['kick', 'disconnect'], ['Admins'], hidden=False)
+@command(['kick', 'disconnect'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def kick(ctx: Context) -> Optional[List]:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1252,7 +1252,7 @@ def kick(ctx: Context) -> Optional[List]:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['kill', 'close'], ['Admins'], hidden=False)
+@command(['kill', 'close'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def kill(ctx: Context) -> Optional[List]:
     """<username>"""
     if len(ctx.args) <= 0:
