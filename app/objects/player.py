@@ -30,6 +30,7 @@ from app.common.database.repositories import (
     infringements,
     histories,
     clients,
+    groups,
     logins,
     scores,
     users,
@@ -107,6 +108,7 @@ class Player(BanchoProtocol):
 
         self.messages_in_last_minute = 0
         self.last_minute_stamp = time.time()
+        self.permissions = Permissions.NoPermissions
 
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
@@ -135,6 +137,10 @@ class Player(BanchoProtocol):
         player.id = -player.object.id # Negative user id -> IRC Player
         player.name = player.object.name
         player.stats  = player.object.stats
+
+        player.permissions = Permissions(
+            groups.get_player_permissions(1)
+        )
 
         player.client.ip.country_code = "OC"
         player.client.ip.city = "w00t p00t!"
@@ -197,12 +203,6 @@ class Player(BanchoProtocol):
                 return stats
         self.logger.warning('Failed to load current stats!')
         return None
-
-    @property
-    def permissions(self) -> Permissions | None:
-        if not self.object:
-            return
-        return Permissions(self.object.permissions)
 
     @property
     def friends(self) -> List[int]:
@@ -490,6 +490,9 @@ class Player(BanchoProtocol):
             self.name = user.name
             self.stats = user.stats
             self.object = user
+            self.permissions = Permissions(
+                groups.get_player_permissions(self.id, session)
+            )
 
             if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
                 self.logger.warning('Login Failed: Authentication error')
