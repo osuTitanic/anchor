@@ -13,6 +13,7 @@ from .common.database.repositories import (
     matches,
     clients,
     reports,
+    groups,
     events,
     scores,
     stats,
@@ -1155,12 +1156,18 @@ def restrict(ctx: Context) -> Optional[List]:
                 'permissions': 0
             }
         )
+
         leaderboards.remove(
             player.id,
             player.country
         )
+
         stats.delete_all(player.id)
         scores.hide_all(player.id)
+
+        # Remove permissions
+        groups.delete_entry(player.id, 999)
+        groups.delete_entry(player.id, 1000)
 
         # Update hardware
         clients.update_all(player.id, {'banned': True})
@@ -1207,6 +1214,10 @@ def unrestrict(ctx: Context) -> Optional[List]:
             'permissions': 5
         }
     )
+
+    # Add to player & supporter group
+    groups.create_entry(player.id, 999)
+    groups.create_entry(player.id, 1000)
 
     # Update hardware
     clients.update_all(player.id, {'banned': False})

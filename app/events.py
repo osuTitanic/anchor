@@ -4,6 +4,7 @@ from app.common.database.repositories import (
     infringements,
     clients,
     scores,
+    groups,
     stats,
     users
 )
@@ -93,6 +94,10 @@ def restrict(
             }
         )
 
+        # Remove permissions
+        groups.delete_entry(player.id, 999)
+        groups.delete_entry(player.id, 1000)
+
         leaderboards.remove(
             player.id,
             player.country
@@ -141,6 +146,10 @@ def unrestrict(user_id: int, restore_scores: bool = True):
             'permissions': 5
         }
     )
+
+    # Add to player & supporter group
+    groups.create_entry(player.id, 999)
+    groups.create_entry(player.id, 1000)
 
     # Update hardware
     clients.update_all(player.id, {'banned': False})

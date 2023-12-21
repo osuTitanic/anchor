@@ -780,6 +780,10 @@ class Player(BanchoProtocol):
             'permissions': 0
         })
 
+        # Remove permissions
+        groups.delete_entry(self.id, 999)
+        groups.delete_entry(self.id, 1000)
+
         # Update leaderboards
         leaderboards.remove(
             self.id,
@@ -834,6 +838,10 @@ class Player(BanchoProtocol):
                 'permissions': 5
             }
         )
+
+        # Add to player & supporter group
+        groups.create_entry(self.id, 999)
+        groups.create_entry(self.id, 1000)
 
         # Update hardware
         clients.update_all(self.id, {'banned': False})
