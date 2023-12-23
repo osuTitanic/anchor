@@ -22,10 +22,9 @@ IPAddress = Union[IPv4Address, IPv6Address]
 class BanchoProtocol(Protocol):
     """This class will be a base for receiving and parsing packets and logins."""
 
-    buffer  = b""
-    busy    = False
-    proxied = False
     connection_timeout = 20
+    buffer = b""
+    busy = False
 
     def __init__(self, address: IPAddress) -> None:
         self.logger = logging.getLogger(address.host)
@@ -95,9 +94,7 @@ class BanchoProtocol(Protocol):
             )
 
             deferred.addErrback(self.login_callback)
-
-            # TODO: Figure out why this causes issues
-            # deferred.addTimeout(15, reactor)
+            deferred.addTimeout(self.connection_timeout, reactor)
         except Exception as e:
             self.logger.error(
                 f'Error on login: {e}',
