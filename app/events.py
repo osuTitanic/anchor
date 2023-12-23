@@ -216,7 +216,7 @@ def link_discord_user(user_id: int, code: str):
     player.enqueue_message(
         bMessage(
             app.session.bot_player.name,
-            f'Your verification code is: "{code}".',
+            f'Your verification code is: "{code}". Please type it into discord to link your account!',
             player.name,
             sender_id=app.session.bot_player.id,
             is_private=True
