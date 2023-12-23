@@ -1,4 +1,5 @@
 
+from app.common.objects import bMessage
 from app.common.cache import leaderboards
 from app.common.database.repositories import (
     infringements,
@@ -12,7 +13,6 @@ from app.common.database.repositories import (
 from datetime import datetime
 from typing import Optional
 
-import config
 import json
 import app
 
@@ -202,6 +202,26 @@ def osu_error(user_id: int, error: dict):
             "Please try again!",
             ignore_privs=True
         )
+
+@app.session.events.register('link')
+def link_discord_user(user_id: int, code: str):
+    if not (player := app.session.players.by_id(user_id)):
+        app.session.logger.warning('Failed to link user to discord: Not Online!')
+        return
+
+    if player.object.discord_id:
+        app.session.logger.warning('Failed to link user to discord: Already Linked!')
+        return
+
+    player.enqueue_message(
+        bMessage(
+            app.session.bot_player.name,
+            f'Your verification code is: "{code}".',
+            player.name,
+            sender_id=app.session.bot_player.id,
+            is_private=True
+        )
+    )
 
 @app.session.events.register('shutdown')
 def shutdown():
