@@ -190,6 +190,7 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
     config.MAILGUN_EMAIL = os.environ.get('MAILGUN_EMAIL')
+    config.MAILGUN_URL = os.environ.get('MAILGUN_URL', 'api.eu.mailgun.net')
     config.MAILGUN_DOMAIN = config.MAILGUN_EMAIL.split('@')[-1]
 
     config.EMAILS_ENABLED = config.MAILGUN_API_KEY is not None or config.SENDGRID_API_KEY is not None

@@ -30,6 +30,7 @@ SENDGRID_EMAIL = os.environ.get('SENDGRID_EMAIL')
 
 MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
 MAILGUN_EMAIL = os.environ.get('MAILGUN_EMAIL')
+MAILGUN_URL = os.environ.get('MAILGUN_URL', 'api.eu.mailgun.net')
 MAILGUN_DOMAIN = MAILGUN_EMAIL.split('@')[-1]
 
 EMAILS_ENABLED = MAILGUN_API_KEY is not None or SENDGRID_API_KEY is not None
