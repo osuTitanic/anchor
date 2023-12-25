@@ -178,14 +178,23 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.REDIS_HOST = os.environ.get('REDIS_HOST')
     config.REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
-    config.AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
 
+    config.AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
     config.BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
     config.PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
+
     config.DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
     config.SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
     config.SENDGRID_EMAIL = os.environ.get('SENDGRID_EMAIL')
+
+    config.MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
+    config.MAILGUN_EMAIL = os.environ.get('MAILGUN_EMAIL')
+    config.MAILGUN_DOMAIN = config.MAILGUN_EMAIL.split('@')[-1]
+
+    config.EMAILS_ENABLED = config.MAILGUN_API_KEY is not None or config.SENDGRID_API_KEY is not None
+    config.EMAIL = config.MAILGUN_EMAIL or config.SENDGRID_EMAIL
+
     config.MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
     config.MENUICON_URL = os.environ.get('MENUICON_URL')
 

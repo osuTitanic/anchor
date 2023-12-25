@@ -12,14 +12,7 @@ import os
 
 def setup():
     app.session.logger.info(f'{ANCHOR_ASCII_ART}\n    anchor-{config.VERSION}\n')
-
     os.makedirs(config.DATA_PATH, exist_ok=True)
-
-    if config.SKIP_IP_DATABASE:
-        return
-
-    if not os.path.isfile(f'{config.DATA_PATH}/geolite.mmdb'):
-        location.download_database()
 
 def is_local_ip(ip: str) -> bool:
     private = (
