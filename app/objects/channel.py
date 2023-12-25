@@ -136,9 +136,9 @@ class Channel:
             return
 
         if self.moderated:
-            allowed_permissions = [Permissions.Admin, Permissions.Friend]
+            allowed_groups = ['Admins', 'Developers']
 
-            if not any([p in sender.permissions for p in allowed_permissions]):
+            if not any([group in sender.groups for group in allowed_groups]):
                 return
 
         if sender.silenced:

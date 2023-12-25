@@ -61,9 +61,11 @@ def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
     try:
         if channel_name == '#spectator':
             # Select spectator chat
-            return (player.spectating.spectator_chat
-                    if player.spectating else
-                        player.spectator_chat)
+            return (
+                player.spectating.spectator_chat
+                if player.spectating else
+                   player.spectator_chat
+            )
 
         elif channel_name == '#multiplayer':
             # Select multiplayer chat
@@ -168,7 +170,7 @@ def send_message(player: Player, message: bMessage):
         player.last_minute_stamp = time.time()
         player.messages_in_last_minute = 0
 
-    if player.messages_in_last_minute > 400:
+    if player.messages_in_last_minute > 150:
         player.silence(60, reason='Chat spamming')
         return
 
@@ -178,8 +180,7 @@ def send_message(player: Player, message: bMessage):
         return
 
     channel.send_message(player, parsed_message)
-
-    player.messages_in_last_minute += 1
+    player.update_activity()
 
     threads.deferToThread(
         messages.create,
@@ -190,7 +191,7 @@ def send_message(player: Player, message: bMessage):
         utils.thread_callback
     )
 
-    player.update_activity()
+    player.messages_in_last_minute += 1
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
@@ -359,114 +360,116 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     maps: List[Tuple[int, DBBeatmap]] = []
 
     # Limit request filenames/ids
-
     if not ignore_limit:
         info.beatmap_ids = info.beatmap_ids[:100]
         info.filenames = info.filenames[:100]
 
     # Fetch all matching beatmaps from database
+    with session.database.managed_session() as s:
+        for index, filename in enumerate(info.filenames):
+            if not (beatmap := beatmaps.fetch_by_file(filename, s)):
+                continue
 
-    for index, filename in enumerate(info.filenames):
-        if not (beatmap := beatmaps.fetch_by_file(filename)):
-            continue
-
-        maps.append((
-            index,
-            beatmap
-        ))
-
-    for id in info.beatmap_ids:
-        if not (beatmap := beatmaps.fetch_by_id(id)):
-            continue
-
-        maps.append((
-            -1,
-            beatmap
-        ))
-
-    player.logger.info(f'Got {len(maps)} beatmap requests')
-
-    # Create beatmap response
-
-    map_infos: List[bBeatmapInfo] = []
-
-    for index, beatmap in maps:
-        ranked = {
-            -2: 0, # Graveyard: Pending
-            -1: 0, # WIP: Pending
-             0: 0, # Pending: Pending
-             1: 1, # Ranked: Ranked
-             2: 2, # Approved: Approved
-             3: 2, # Qualified: Approved
-             4: 2, # Loved: Approved
-        }[beatmap.status]
-
-        # Get personal best in every mode for this beatmap
-        grades = {
-            0: Grade.N,
-            1: Grade.N,
-            2: Grade.N,
-            3: Grade.N
-        }
-
-        for mode in range(4):
-            personal_best = scores.fetch_personal_best(
-                beatmap.id,
-                player.id,
-                mode
-            )
-
-            if personal_best:
-                grades[mode] = Grade[personal_best.grade]
-
-        map_infos.append(
-            bBeatmapInfo(
+            maps.append((
                 index,
-                beatmap.id,
-                beatmap.set_id,
-                beatmap.set_id, # thread_id
-                ranked,
-                grades[0], # standard
-                grades[2], # fruits
-                grades[1], # taiko
-                grades[3], # mania
-                beatmap.md5
+                beatmap
+            ))
+
+        for id in info.beatmap_ids:
+            if not (beatmap := beatmaps.fetch_by_id(id, s)):
+                continue
+
+            maps.append((
+                -1,
+                beatmap
+            ))
+
+        player.logger.info(f'Got {len(maps)} beatmap requests')
+
+        # Create beatmap response
+
+        map_infos: List[bBeatmapInfo] = []
+
+        for index, beatmap in maps:
+            ranked = {
+                -2: 0, # Graveyard: Pending
+                -1: 0, # WIP: Pending
+                 0: 0, # Pending: Pending
+                 1: 1, # Ranked: Ranked
+                 2: 2, # Approved: Approved
+                 3: 2, # Qualified: Approved
+                 4: 2, # Loved: Approved
+            }[beatmap.status]
+
+            # Get personal best in every mode for this beatmap
+            grades = {
+                0: Grade.N,
+                1: Grade.N,
+                2: Grade.N,
+                3: Grade.N
+            }
+
+            for mode in range(4):
+                personal_best = scores.fetch_personal_best(
+                    beatmap.id,
+                    player.id,
+                    mode,
+                    session=s
+                )
+
+                if personal_best:
+                    grades[mode] = Grade[personal_best.grade]
+
+            map_infos.append(
+                bBeatmapInfo(
+                    index,
+                    beatmap.id,
+                    beatmap.set_id,
+                    beatmap.set_id, # thread_id
+                    ranked,
+                    grades[0], # standard
+                    grades[2], # fruits
+                    grades[1], # taiko
+                    grades[3], # mania
+                    beatmap.md5
+                )
             )
+
+        player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
+
+        player.send_packet(
+            player.packets.BEATMAP_INFO_REPLY,
+            bBeatmapInfoReply(map_infos)
         )
-
-    player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
-
-    player.send_packet(
-        player.packets.BEATMAP_INFO_REPLY,
-        bBeatmapInfoReply(map_infos)
-    )
 
 @register(RequestPacket.START_SPECTATING)
 def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
-        player.logger.warning('Player tried to spectate himself?')
+        player.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
 
     if not (target := session.players.by_id(player_id)):
+        player.logger.warning(f'Failed to start spectating: Player with id "{player_id}" was not found!')
         return
 
     if target.id == session.bot_player.id:
+        player.logger.warning(f'Tried to spectate {session.bot_player.name}.')
         return
 
-    # TODO: Check osu! mania support
-
-    if (player.spectating) or (player in target.spectators) and not player.is_tourney_client:
+    if (player.spectating or player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
-        return
+        # TODO: return here?
 
+    player.logger.info(f'Started spectating "{target.name}".')
     player.spectating = target
 
     # Join their channel
     player.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
     target.spectator_chat.add(player)
 
-    # Enqueue to others
+    # Enqueue fellow spectators
     for p in target.spectators:
+        player.enqueue_fellow_spectator(p.id)
         p.enqueue_fellow_spectator(player.id)
 
     # Enqueue to target
@@ -481,13 +484,15 @@ def start_spectating(player: Player, player_id: int):
 @register(RequestPacket.STOP_SPECTATING)
 def stop_spectating(player: Player):
     if not player.spectating:
+        player.logger.warning('Failed to stop spectating: Player is not spectating!')
         return
+
+    if player in player.spectating.spectators:
+        # Remove from target
+        player.spectating.spectators.remove(player)
 
     # Leave spectator channel
     player.spectating.spectator_chat.remove(player)
-
-    # Remove from target
-    player.spectating.spectators.remove(player)
 
     # Enqueue to others
     for p in player.spectating.spectators:
@@ -496,13 +501,9 @@ def stop_spectating(player: Player):
     # Enqueue to target
     player.spectating.enqueue_spectator_left(player.id)
 
-    # If target has no spectators anymore
-    # kick them from the spectator channel
-    if not player.spectating.spectators:
-        player.spectating.spectator_chat.remove(
-            player.spectating
-        )
+    # TODO: Kick from spectator channel if no spectators left?
 
+    player.logger.info(f'Stopped spectating "{player.spectating.name}".')
     player.spectating = None
 
 @register(RequestPacket.CANT_SPECTATE)
@@ -510,6 +511,7 @@ def cant_spectate(player: Player):
     if not player.spectating:
         return
 
+    player.logger.info(f"Player is missing beatmap to spectate.")
     player.spectating.enqueue_cant_spectate(player.id)
 
     for p in player.spectating.spectators:
@@ -519,8 +521,6 @@ def cant_spectate(player: Player):
 def send_frames(player: Player, bundle: bReplayFrameBundle):
     if not player.spectators:
         return
-
-    # TODO: Check osu! mania support
 
     for p in player.spectators:
         p.enqueue_frames(bundle)
@@ -594,9 +594,12 @@ def create_match(player: Player, bancho_match: bMatch):
     match.name = match.name[:50]
 
     if not session.matches.append(match):
-        player.logger.warning('Tried to create match, but max match limit was reached')
+        player.logger.warning('Failed to append match to collection')
         player.enqueue_matchjoin_fail()
         return
+
+    for index, slot in enumerate(bancho_match.slots):
+        match.slots[index].status = slot.status
 
     session.channels.append(
         c := Channel(
@@ -783,7 +786,7 @@ def change_slot(player: Player, slot_id: int):
     if not player.match:
         return
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     if player.match.slots[slot_id].status != SlotStatus.Open:
@@ -952,7 +955,7 @@ def lock(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     slot = player.match.slots[slot_id]
@@ -1001,7 +1004,7 @@ def transfer_host(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    if not 0 <= slot_id < 8:
+    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
     if not (target := player.match.slots[slot_id].player):
@@ -1215,7 +1218,7 @@ def match_complete(player: Player):
                         },
                         'place': rank + 1
                     }
-                    for rank, slot in enumerate(slots) if slot != None
+                    for rank, slot in enumerate(slots) if (slot != None) and (slot.player != None)
                 ]
             }
         )

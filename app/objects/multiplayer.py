@@ -27,6 +27,7 @@ from .channel import Channel
 from .player import Player
 
 import logging
+import config
 import time
 import app
 
@@ -91,7 +92,7 @@ class Slot:
         self.loaded  = False
         self.skipped = False
 
-@dataclass
+@dataclass(slots=True)
 class StartingTimers:
     time: float
     thread: Thread
@@ -127,13 +128,13 @@ class Match:
         self.mode = mode
         self.seed = seed
 
-        self.type          = MatchType.Standard
-        self.scoring_type  = MatchScoringTypes.Score
-        self.team_type     = MatchTeamTypes.HeadToHead
-        self.freemod       = False
-        self.in_progress   = False
+        self.type         = MatchType.Standard
+        self.scoring_type = MatchScoringTypes.Score
+        self.team_type    = MatchTeamTypes.HeadToHead
+        self.freemod      = False
+        self.in_progress  = False
 
-        self.slots = [Slot() for _ in range(8)]
+        self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.banned_players = []
 
         self.starting: Optional[StartingTimers] = None

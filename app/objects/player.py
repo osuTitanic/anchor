@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from app.common.constants import (
     PresenceFilter,
     Permissions,
@@ -28,6 +30,7 @@ from app.common.database.repositories import (
     infringements,
     histories,
     clients,
+    groups,
     logins,
     scores,
     users,
@@ -42,6 +45,7 @@ from app.objects import OsuClient, Status
 
 from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
 from threading import Timer
 from enum import Enum
 from copy import copy
@@ -51,7 +55,7 @@ from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
 from twisted.internet import threads
 
-from app.clients.packets import PACKETS
+from app.clients import versions
 from app.clients import (
     DefaultResponsePacket,
     DefaultRequestPacket
@@ -72,19 +76,19 @@ class Player(BanchoProtocol):
         self.logger = logging.getLogger(address.host)
         self.address = address
 
-        self.away_message: Optional[str] = None
-        self.client: Optional[OsuClient] = None
-        self.object: Optional[DBUser] = None
-        self.stats:  Optional[List[DBStats]] = None
+        self.stats:  List[DBStats] | None = None
+        self.away_message: str | None = None
+        self.client: OsuClient | None = None
+        self.object: DBUser | None = None
         self.status = Status()
 
         self.id = 0
         self.name = ""
 
-        self.request_packets = DefaultRequestPacket
         self.packets = DefaultResponsePacket
-        self.decoders: Dict[Enum, Callable] = PACKETS[20130815][0]
-        self.encoders: Dict[Enum, Callable] = PACKETS[20130815][1]
+        self.request_packets = DefaultRequestPacket
+        self.decoders: Dict[Enum, Callable] = versions.get_next_version(20130815).decoders
+        self.encoders: Dict[Enum, Callable] = versions.get_next_version(20130815).encoders
 
         from .collections import Players
         from .multiplayer import Match
@@ -94,22 +98,27 @@ class Player(BanchoProtocol):
         self.filter = PresenceFilter.All
 
         self.spectators = Players()
-        self.spectating: Optional[Player] = None
-        self.spectator_chat: Optional[Channel] = None
+        self.spectating: Player | None = None
+        self.spectator_chat: Channel | None = None
 
         self.in_lobby = False
         self.logged_in = False
-        self.match: Optional[Match] = None
+        self.match: Match | None = None
         self.last_response = time.time()
 
         self.messages_in_last_minute = 0
         self.last_minute_stamp = time.time()
 
+        self.permissions = Permissions.NoPermissions
+        self.groups = []
+
     def __repr__(self) -> str:
         return f'<Player ({self.id})>'
 
     def __eq__(self, other) -> bool:
-        return self.id == other.id
+        if other:
+            return self.id == other.id
+        return False
 
     def __hash__(self) -> int:
         return self.id
@@ -130,6 +139,10 @@ class Player(BanchoProtocol):
         player.id = -player.object.id # Negative user id -> IRC Player
         player.name = player.object.name
         player.stats  = player.object.stats
+
+        player.permissions = Permissions(
+            groups.get_player_permissions(1)
+        )
 
         player.client.ip.country_code = "OC"
         player.client.ip.city = "w00t p00t!"
@@ -159,34 +172,8 @@ class Player(BanchoProtocol):
 
     @property
     def supporter(self) -> bool:
-        if config.FREE_SUPPORTER:
-            return True
-
-        if self.object.supporter_end:
-            if self.remaining_supporter > 0:
-                return True
-
-            # Remove supporter
-            self.object.supporter_end = None
-            self.object.permissions = self.permissions & ~Permissions.Supporter
-
-            # Update database
-            users.update(self.id, {
-                'supporter_end': None,
-                'permissions': self.permissions.value
-            })
-
-            # Update client
-            # NOTE: Client will exit after it notices a permission change
-            self.enqueue_permissions()
-
-        return False
-
-    @property
-    def remaining_supporter(self) -> int:
-        if self.object.supporter_end:
-            return self.object.supporter_end.timestamp() - datetime.now().timestamp()
-        return 0
+        # NOTE: Supporter related code has been removed
+        return True
 
     @property
     def restricted(self) -> bool:
@@ -212,18 +199,12 @@ class Player(BanchoProtocol):
         return True
 
     @property
-    def current_stats(self) -> Optional[DBStats]:
+    def current_stats(self) -> DBStats | None:
         for stats in self.stats:
             if stats.mode == self.status.mode.value:
                 return stats
         self.logger.warning('Failed to load current stats!')
         return None
-
-    @property
-    def permissions(self) -> Optional[Permissions]:
-        if not self.object:
-            return
-        return Permissions(self.object.permissions)
 
     @property
     def friends(self) -> List[int]:
@@ -234,7 +215,7 @@ class Player(BanchoProtocol):
         return [app.session.players.by_id(id) for id in self.friends if id in app.session.players]
 
     @property
-    def user_presence(self) -> Optional[bUserPresence]:
+    def user_presence(self) -> bUserPresence | None:
         return bUserPresence(
             self.id,
             False,
@@ -252,7 +233,7 @@ class Player(BanchoProtocol):
         )
 
     @property
-    def user_stats(self) -> Optional[bUserStats]:
+    def user_stats(self) -> bUserStats:
         return bUserStats(
             self.id,
             bStatusUpdate(
@@ -327,9 +308,6 @@ class Player(BanchoProtocol):
             super().connectionLost(reason)
             return
 
-        # Decrement usercount
-        usercount.decrement()
-
         if self.spectating:
             if not self.spectating:
                 return
@@ -360,6 +338,9 @@ class Player(BanchoProtocol):
 
         status.delete(self.id)
 
+        # Update usercount
+        usercount.set(len(app.session.players.normal_clients))
+
         for channel in copy(self.channels):
             channel.remove(self)
 
@@ -382,7 +363,7 @@ class Player(BanchoProtocol):
 
         super().connectionLost(reason)
 
-    def close_connection(self, error: Optional[Exception] = None):
+    def close_connection(self, error: Exception | None = None):
         self.connectionLost()
         super().close_connection(error)
 
@@ -463,15 +444,14 @@ class Player(BanchoProtocol):
 
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
+        client_version = versions.get_next_version(version)
 
-        self.decoders, self.encoders, self.request_packets, self.packets = PACKETS[(
-            version := min(
-                PACKETS.keys(),
-                key=lambda x:abs(x-version)
-            )
-        )]
+        self.request_packets = client_version.request_packets
+        self.packets = client_version.response_packets
+        self.decoders = client_version.decoders
+        self.encoders = client_version.encoders
 
-        self.logger.debug(f'Assigned decoder with version b{version}')
+        self.logger.debug(f'Assigned decoder with version b{client_version.version}')
 
     def login_received(self, username: str, md5: str, client: OsuClient):
         self.logger = logging.getLogger(f'Player "{username}"')
@@ -502,104 +482,108 @@ class Player(BanchoProtocol):
             self.close_connection()
             return
 
-        if not (user := users.fetch_by_name(username)):
-            self.logger.warning('Login Failed: User not found')
-            self.login_failed(LoginError.Authentication)
-            return
-
-        self.id = user.id
-        self.name = user.name
-        self.stats = user.stats
-        self.object = user
-
-        if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
-            self.logger.warning('Login Failed: Authentication error')
-            self.login_failed(LoginError.Authentication)
-            return
-
-        if self.restricted:
-            self.logger.warning('Login Failed: Restricted')
-            self.login_failed(LoginError.Banned)
-            return
-
-        if not user.activated:
-            # TODO: Some clients may interpret this as being banned...?
-            self.logger.warning('Login Failed: Not activated')
-            self.login_failed(LoginError.NotActivated)
-            return
-
-        latest_supported_version = list(PACKETS.keys())[0]
-
-        if (self.client.version.date > latest_supported_version) and not self.is_admin:
-            self.logger.warning('Login Failed: Unsupported version')
-            self.login_failed(
-                LoginError.Authentication,
-                message=strings.UNSUPPORTED_VERSION
-            )
-            return
-
-        if config.MAINTENANCE:
-            if not self.is_admin:
-                self.logger.warning('Login Failed: Maintenance')
-                self.login_failed(
-                    LoginError.ServerError,
-                    message=strings.MAINTENANCE_MODE
-                )
-                return
-
-            self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
-
-        if not self.is_tourney_client:
-            if (other_user := app.session.players.by_id(user.id)):
-                # Another user is online with this account
-                other_user.login_failed(
-                    LoginError.Authentication,
-                    strings.LOGGED_IN_FROM_ANOTHER_LOCATION
-                )
-        else:
-            if not self.supporter:
-                # Trying to use tourney client without supporter
+        with app.session.database.managed_session() as session:
+            if not (user := users.fetch_by_name(username, session)):
+                self.logger.warning('Login Failed: User not found')
                 self.login_failed(LoginError.Authentication)
                 return
 
-            # Check amount of tourney clients that are online
-            tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+            self.id = user.id
+            self.name = user.name
+            self.stats = user.stats
+            self.object = user
 
-            if len(tourney_clients) >= 8:
-                self.logger.warning('Tried to log in with more than 8 tourney clients')
-                self.close_connection()
+            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+
+            if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
+                self.logger.warning('Login Failed: Authentication error')
+                self.login_failed(LoginError.Authentication)
                 return
 
-        self.status.mode = GameMode(self.object.preferred_mode)
+            if self.restricted:
+                self.logger.warning('Login Failed: Restricted')
+                self.login_failed(LoginError.Banned)
+                return
 
-        if not self.stats:
-            self.stats = [stats.create(self.id, mode) for mode in range(4)]
-            self.reload_object()
-            self.enqueue_silence_info(-1)
+            if not user.activated:
+                # TODO: Some clients may interpret this as being banned...?
+                self.logger.warning('Login Failed: Not activated')
+                self.login_failed(LoginError.NotActivated)
+                return
 
-        # Create login attempt in db
-        logins.create(
-            self.id,
-            self.address.host,
-            self.client.version.string
-        )
+            latest_supported_version = list(versions.VERSIONS.keys())[0]
 
-        # Check for new hardware
-        self.check_client()
+            if (self.client.version.date > latest_supported_version) and not self.is_admin:
+                self.logger.warning('Login Failed: Unsupported version')
+                self.login_failed(
+                    LoginError.Authentication,
+                    message=strings.UNSUPPORTED_VERSION
+                )
+                return
 
-        if self.object.country == 'XX':
-            # User is logging in for the first time
-            # Update their country value in the database
-            self.logger.info('Updating country...')
-            self.object.country = self.client.ip.country_code.upper()
-            users.update(
-                user_id=self.id,
-                updates={'country': self.object.country}
+            if config.MAINTENANCE:
+                if not self.is_admin:
+                    self.logger.warning('Login Failed: Maintenance')
+                    self.login_failed(
+                        LoginError.ServerError,
+                        message=strings.MAINTENANCE_MODE
+                    )
+                    return
+
+                self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
+
+            if not self.is_tourney_client:
+                if (other_user := app.session.players.by_id(user.id)):
+                    # Another user is online with this account
+                    return other_user.login_failed(
+                        LoginError.Authentication,
+                        strings.LOGGED_IN_FROM_ANOTHER_LOCATION
+                    )
+
+            else:
+                if not self.supporter:
+                    # Trying to use tourney client without supporter
+                    self.login_failed(LoginError.Authentication)
+                    return
+
+                # Check amount of tourney clients that are online
+                tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+
+                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
+                    self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
+                    self.close_connection()
+                    return
+
+            self.status.mode = GameMode(self.object.preferred_mode)
+
+            if not self.stats:
+                self.stats = [stats.create(self.id, mode, session) for mode in range(4)]
+                self.reload_object()
+                self.enqueue_silence_info(-1)
+
+            # Create login attempt in db
+            logins.create(
+                self.id,
+                self.address.host,
+                self.client.version.string,
+                session
             )
 
-        # Update cache
-        self.update_leaderboard_stats()
-        self.update_status_cache()
+            # Check for new hardware
+            self.check_client(session)
+
+            if self.object.country.upper() == 'XX':
+                # User is logging in for the first time
+                # Update their country value in the database
+                self.logger.info('Updating country...')
+                self.object.country = self.client.ip.country_code.upper()
+                leaderboards.remove_country(self.id, self.object.country)
+                users.update(self.id, {'country': self.object.country}, session)
+
+            # Update cache
+            self.update_leaderboard_stats()
+            self.update_status_cache()
 
         self.login_success()
 
@@ -619,13 +603,8 @@ class Player(BanchoProtocol):
         # Remove avatar so that it can be reloaded
         app.session.redis.delete(f'avatar:{self.id}')
 
-        # Update latest activity
         self.update_activity()
-
-        # Protocol Version
         self.send_packet(self.packets.PROTOCOL_VERSION, 18)
-
-        # User ID
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
 
         # Menu Icon
@@ -635,18 +614,13 @@ class Player(BanchoProtocol):
             config.MENUICON_URL
         )
 
-        # Permissions
         self.enqueue_permissions()
+        self.enqueue_friends()
 
-        # Presence
+        # User & Bot Presence
         self.enqueue_presence(self)
         self.enqueue_stats(self)
-
-        # Bot presence
         self.enqueue_irc_player(app.session.bot_player)
-
-        # Friends
-        self.enqueue_friends()
 
         # Append to player collection
         app.session.players.append(self)
@@ -654,13 +628,15 @@ class Player(BanchoProtocol):
         # Enqueue other players
         self.enqueue_players(app.session.players)
 
-        # Increment usercount
-        usercount.increment()
+        # Update usercount
+        usercount.set(len(app.session.players.normal_clients))
 
         self.logged_in = True
 
+        # Enqueue all public channels
         for channel in app.session.channels.public:
             if channel.can_read(self.permissions):
+                # Check if channel should be autojoined
                 if channel.name in config.AUTOJOIN_CHANNELS:
                     self.enqueue_channel(channel, autojoin=True)
                     channel.add(self)
@@ -679,12 +655,13 @@ class Player(BanchoProtocol):
         for player in app.session.players.in_lobby:
             self.enqueue_lobby_join(player.id)
 
-    def check_client(self):
+    def check_client(self, session: Session | None = None):
         client = clients.fetch_without_executable(
             self.id,
             self.client.hash.adapters_md5,
             self.client.hash.uninstall_id,
-            self.client.hash.diskdrive_signature
+            self.client.hash.diskdrive_signature,
+            session=session
         )
 
         if not client:
@@ -699,10 +676,11 @@ class Player(BanchoProtocol):
                 self.client.hash.md5,
                 self.client.hash.adapters_md5,
                 self.client.hash.uninstall_id,
-                self.client.hash.diskdrive_signature
+                self.client.hash.diskdrive_signature,
+                session=session
             )
 
-        # TODO: Check banned hardware
+        # TODO: Check banned hardware / Multiaccounting
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         if self.is_bot:
@@ -750,7 +728,7 @@ class Player(BanchoProtocol):
             exc_info=result.value
         )
 
-    def silence(self, duration_sec: int, reason: Optional[str] = None):
+    def silence(self, duration_sec: int, reason: str | None = None):
         duration = timedelta(seconds=duration_sec)
 
         if not self.object.silence_end:
@@ -784,7 +762,15 @@ class Player(BanchoProtocol):
         # Update database
         users.update(self.id, {'silence_end': None})
 
-    def restrict(self, reason: Optional[str] = None, until: Optional[datetime] = None, autoban: bool = False):
+        inf = infringements.fetch_recent_by_action(self.id, action=1)
+        if inf: infringements.delete_by_id(inf.id)
+
+    def restrict(
+        self,
+        reason: str | None = None,
+        until: datetime | None = None,
+        autoban: bool = False
+    ) -> None:
         self.object.restricted = True
         self.object.permissions = 0
 
@@ -793,6 +779,10 @@ class Player(BanchoProtocol):
             'restricted': True,
             'permissions': 0
         })
+
+        # Remove permissions
+        groups.delete_entry(self.id, 999)
+        groups.delete_entry(self.id, 1000)
 
         # Update leaderboards
         leaderboards.remove(
@@ -845,9 +835,13 @@ class Player(BanchoProtocol):
         users.update(self.id,
             {
                 'restricted': False,
-                'permissions': 5 if config.FREE_SUPPORTER else 1
+                'permissions': 5
             }
         )
+
+        # Add to player & supporter group
+        groups.create_entry(self.id, 999)
+        groups.create_entry(self.id, 1000)
 
         # Update hardware
         clients.update_all(self.id, {'banned': False})
@@ -856,7 +850,7 @@ class Player(BanchoProtocol):
         self.enqueue_silence_info(-1)
 
         self.object.restricted = False
-        self.object.permissions = 5 if config.FREE_SUPPORTER else 1
+        self.object.permissions = 5
 
     def update_activity(self):
         users.update(
