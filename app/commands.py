@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, NamedTuple, Callable
+from typing import List, NamedTuple, Callable
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
 from dataclasses import dataclass
