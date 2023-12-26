@@ -25,6 +25,7 @@ from app.common.constants import strings, level
 from app.common.cache import leaderboards
 from app.common.cache import usercount
 from app.common.cache import status
+from app.common import officer
 
 from app.common.database.repositories import (
     infringements,
@@ -751,7 +752,7 @@ class Player(BanchoProtocol):
             description=reason
         )
 
-        self.logger.info(
+        officer.call(
             f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. Reason: "{reason}"'
         )
 
@@ -827,8 +828,8 @@ class Player(BanchoProtocol):
             description=f'{"Autoban: " if autoban else ""}{reason}'
         )
 
-        self.logger.warning(
-            f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
+        officer.call(
+            f'{self.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
         )
 
     def unrestrict(self) -> None:

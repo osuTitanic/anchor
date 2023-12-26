@@ -7,6 +7,7 @@ from datetime import timedelta, datetime
 from dataclasses import dataclass
 from threading import Thread
 
+from .common import officer
 from .common.cache import leaderboards
 from .common.database.repositories import (
     infringements,
@@ -1192,6 +1193,8 @@ def restrict(ctx: Context) -> List | None:
             description=reason,
             is_permanent=True if not until else False
         )
+
+        officer.call(f'{player.name} was restricted. Reason: "{reason}"')
     else:
         # Player is online
         player.restrict(

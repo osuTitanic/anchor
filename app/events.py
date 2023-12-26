@@ -1,4 +1,5 @@
 
+from app.common import officer
 from app.common.objects import bMessage
 from app.common.cache import leaderboards
 from app.common.database.repositories import (
@@ -83,7 +84,7 @@ def restrict(
 
         if not player:
             # Player was not found
-            app.session.logger.warning('Failed to restrict user: User not found!')
+            officer.call(f'Failed to restrict user with id {user_id}: User not found!')
             return
 
         # Update user
@@ -118,8 +119,8 @@ def restrict(
             is_permanent=True if not until else False
         )
 
-        app.session.logger.warning(
-            f'{player.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
+        officer.call(
+            f'{player.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
         )
         return
 
@@ -164,7 +165,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
                 exc_info=e
             )
 
-    app.session.logger.warning(f'Player "{player.name}" was unrestricted.')
+    officer.call(f'Player "{player.name}" was unrestricted.')
 
 @app.session.events.register('announcement')
 def announcement(message: str):
