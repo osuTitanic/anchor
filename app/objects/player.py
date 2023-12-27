@@ -688,7 +688,7 @@ class Player(BanchoProtocol):
                 )
 
         # Reset multiaccounting lock
-        app.session.redis.set(f'multiaccounting:{self.id}', False)
+        app.session.redis.set(f'multiaccounting:{self.id}', 1)
 
         # Check for multiaccounting
         matches = clients.fetch_hardware_only(
@@ -714,7 +714,7 @@ class Player(BanchoProtocol):
                 f'Multiaccounting detected for "{self.name}": '
                 f'{self.client.hash.string} ({len(matches)} matches)'
             )
-            app.session.redis.set(f'multiaccounting:{self.id}', True)
+            app.session.redis.set(f'multiaccounting:{self.id}', 0)
             self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
