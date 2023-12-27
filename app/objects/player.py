@@ -43,6 +43,7 @@ from app.common.streams import StreamIn
 
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
+from app.common import mail
 
 from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
@@ -667,7 +668,6 @@ class Player(BanchoProtocol):
 
         if not client:
             # New hardware detected
-            # TODO: Send email to user
             self.logger.warning(
                 f'New hardware detected: {self.client.hash.string}'
             )
@@ -682,6 +682,12 @@ class Player(BanchoProtocol):
             )
 
         # TODO: Check banned hardware / Multiaccounting
+            if self.current_stats.playcount > 0:
+                mail.send_new_location_email(
+                    self.object,
+                    self.client.ip.country_name
+                )
+
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         if self.is_bot:
