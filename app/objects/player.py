@@ -681,13 +681,41 @@ class Player(BanchoProtocol):
                 session=session
             )
 
-        # TODO: Check banned hardware / Multiaccounting
             if self.current_stats.playcount > 0:
                 mail.send_new_location_email(
                     self.object,
                     self.client.ip.country_name
                 )
 
+        # Reset multiaccounting lock
+        app.session.redis.set(f'multiaccounting:{self.id}', False)
+
+        # Check for multiaccounting
+        matches = clients.fetch_hardware_only(
+            self.client.hash.adapters_md5,
+            self.client.hash.uninstall_id,
+            self.client.hash.diskdrive_signature,
+            session=session
+        )
+
+        # Filter out current user
+        matches = [match for match in matches if match.user_id != self.id]
+        banned_matches = [match for match in matches if match.banned]
+
+        if banned_matches:
+            # User tries to log into an account with banned hardware matches
+            self.restrict('Multiaccounting', autoban=True)
+            return
+
+        if matches:
+            # User was detected to be multiaccounting
+            # If user tries to submit a score, they will be restricted
+            officer.call(
+                f'Multiaccounting detected for "{self.name}": '
+                f'{self.client.hash.string} ({len(matches)} matches)'
+            )
+            app.session.redis.set(f'multiaccounting:{self.id}', True)
+            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         if self.is_bot:
