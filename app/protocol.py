@@ -82,6 +82,13 @@ class BanchoProtocol(Protocol):
                 self.address.host
             )
 
+            if not self.client:
+                self.logger.warning(
+                    f'Failed to parse client: "{client.decode()}"'
+                )
+                self.close_connection()
+                return
+
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
 
