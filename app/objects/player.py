@@ -286,16 +286,12 @@ class Player(BanchoProtocol):
         return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
 
     @property
-    def is_admin(self) -> bool:
-        if self.permissions is not None:
-            return Permissions.Admin in self.permissions
-        return False
+    def group_names(self) -> List[str]:
+        return [group.name for group in self.groups]
 
     @property
-    def is_tourney_manager(self) -> bool:
-        if self.permissions is not None:
-            return Permissions.Tournament in self.permissions
-        return False
+    def is_admin(self) -> bool:
+        return 'Admins' in self.group_names
 
     def connectionMade(self):
         super().connectionMade()
