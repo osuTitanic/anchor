@@ -1,10 +1,13 @@
 
-from typing import List, Union, Optional, NamedTuple, Callable
+from __future__ import annotations
+
+from typing import List, NamedTuple, Callable
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
 from dataclasses import dataclass
 from threading import Thread
 
+from .common import officer
 from .common.cache import leaderboards
 from .common.database.repositories import (
     infringements,
@@ -49,7 +52,7 @@ import os
 class Context:
     player: Player
     trigger: str
-    target: Union[Channel, Player]
+    target: Channel | Player
     args: List[str]
 
 @dataclass(slots=True)
@@ -62,7 +65,7 @@ class Command(NamedTuple):
     callback: Callable
     groups: List[str]
     hidden: bool
-    doc: Optional[str]
+    doc: str | None
 
 class CommandSet:
     def __init__(self, trigger: str, doc: str) -> None:
@@ -229,7 +232,6 @@ def inside_chat(ctx: Context) -> bool:
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
     return (ctx.player is ctx.player.match.host) or \
-           (ctx.player.is_tourney_manager) or \
            (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
@@ -834,7 +836,7 @@ def command(
     return wrapper
 
 @command(['help', 'h', ''])
-def help(ctx: Context) -> Optional[List]:
+def help(ctx: Context) -> List | None:
     """- Shows this message"""
     response = []
 
@@ -884,7 +886,7 @@ def help(ctx: Context) -> Optional[List]:
     return response
 
 @command(['roll'], hidden=False)
-def roll(ctx: Context) -> Optional[List]:
+def roll(ctx: Context) -> List | None:
     """<number> - Roll a dice and get random result from 1 to <number> (default 100)"""
     max_roll = 100
 
@@ -900,7 +902,7 @@ def roll(ctx: Context) -> Optional[List]:
     return [f'{ctx.player.name} rolls {random.randrange(0, max_roll+1)}!']
 
 @command(['report'])
-def report(ctx: Context) -> Optional[List]:
+def report(ctx: Context) -> List | None:
     """<username> <reason>"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <username> (<reason>)']
@@ -1022,7 +1024,7 @@ def get_client_version(ctx: Context):
     return [f"{target.name} is playing on {target.client.version.string}"]
 
 @command(['monitor'], ['Admins'])
-def monitor(ctx: Context) -> Optional[List]:
+def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
 
     if len(ctx.args) < 1:
@@ -1038,7 +1040,7 @@ def monitor(ctx: Context) -> Optional[List]:
     return ['Player has been monitored']
 
 @command(['alert', 'announce', 'broadcast'], ['Admins', 'Developers'])
-def alert(ctx: Context) -> Optional[List]:
+def alert(ctx: Context) -> List | None:
     """<message> - Send a message to all players"""
 
     if not ctx.args:
@@ -1049,7 +1051,7 @@ def alert(ctx: Context) -> Optional[List]:
     return [f'Alert was sent to {len(app.session.players)} players.']
 
 @command(['alertuser'], ['Admins', 'Developers'])
-def alertuser(ctx: Context) -> Optional[List]:
+def alertuser(ctx: Context) -> List | None:
     """<username> <message> - Send a notification to a player"""
 
     if len(ctx.args) < 2:
@@ -1065,7 +1067,7 @@ def alertuser(ctx: Context) -> Optional[List]:
     return [f'Alert was sent to {player.name}.']
 
 @command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def silence(ctx: Context) -> Optional[List]:
+def silence(ctx: Context) -> List | None:
     """<username> <duration> (<reason>)"""
 
     if len(ctx.args) < 2:
@@ -1134,7 +1136,7 @@ def unsilence(ctx: Context):
     return [f'{player.name} was unsilenced.']
 
 @command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def restrict(ctx: Context) -> Optional[List]:
+def restrict(ctx: Context) -> List | None:
     """ <name> <length/permanent> (<reason>)"""
 
     if len(ctx.args) < 2:
@@ -1190,6 +1192,8 @@ def restrict(ctx: Context) -> Optional[List]:
             description=reason,
             is_permanent=True if not until else False
         )
+
+        officer.call(f'{player.name} was restricted. Reason: "{reason}"')
     else:
         # Player is online
         player.restrict(
@@ -1200,7 +1204,7 @@ def restrict(ctx: Context) -> Optional[List]:
     return [f'{player.name} was restricted.']
 
 @command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def unrestrict(ctx: Context) -> Optional[List]:
+def unrestrict(ctx: Context) -> List | None:
     """<name> <restore scores (true/false)>"""
 
     if len(ctx.args) < 1:
@@ -1246,7 +1250,7 @@ def unrestrict(ctx: Context) -> Optional[List]:
     return [f'Player "{username}" was unrestricted.']
 
 @command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def moderated(ctx: Context) -> Optional[List]:
+def moderated(ctx: Context) -> List | None:
     """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
         return [f'Invalid syntax: !{ctx.trigger} <on/off>']
@@ -1259,7 +1263,7 @@ def moderated(ctx: Context) -> Optional[List]:
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
 @command(['kick', 'disconnect'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def kick(ctx: Context) -> Optional[List]:
+def kick(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
@@ -1274,7 +1278,7 @@ def kick(ctx: Context) -> Optional[List]:
     return [f'{player.name} was disconnected from bancho.']
 
 @command(['kill', 'close'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
-def kill(ctx: Context) -> Optional[List]:
+def kill(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
@@ -1292,7 +1296,7 @@ def kill(ctx: Context) -> Optional[List]:
     return [f'{player.name} was disconnected from bancho.']
 
 @command(['multi', 'multiaccount', 'hardware'], ['Admins'])
-def multi(ctx: Context) -> Optional[List]:
+def multi(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
@@ -1335,9 +1339,9 @@ def multi(ctx: Context) -> Optional[List]:
 
 def get_command(
     player: Player,
-    target: Union[Channel, Player],
+    target: Channel | Player,
     message: str
-) -> Optional[CommandResponse]:
+) -> CommandResponse | None:
     # Parse command
     trigger, *args = shlex.split(message.strip()[1:])
     trigger = trigger.lower()
@@ -1428,7 +1432,7 @@ def get_command(
 
 def execute(
     player: Player,
-    target: Union[Channel, Player],
+    target: Channel | Player,
     command_message: str
 ):
     if not command_message.startswith('!'):

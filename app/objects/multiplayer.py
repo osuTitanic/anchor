@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from twisted.python.failure import Failure
 from twisted.internet import threads
 
@@ -33,8 +35,8 @@ import app
 
 class Slot:
     def __init__(self) -> None:
-        self.last_frame: Optional[bScoreFrame] = None
-        self.player: Optional[Player] = None
+        self.last_frame: bScoreFrame | None = None
+        self.player: Player | None = None
         self.status     = SlotStatus.Open
         self.team       = SlotTeam.Neutral
         self.mods       = Mods.NoMod
@@ -137,9 +139,9 @@ class Match:
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.banned_players = []
 
-        self.starting: Optional[StartingTimers] = None
-        self.db_match: Optional[DBMatch] = None
-        self.chat: Optional[Channel] = None
+        self.starting: StartingTimers | None = None
+        self.db_match: DBMatch | None = None
+        self.chat: Channel | None = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
@@ -196,7 +198,7 @@ class Match:
         return f'[{self.url} {self.name}]'
 
     @property
-    def host_slot(self) -> Optional[Slot]:
+    def host_slot(self) -> Slot | None:
         for slot in self.slots:
             if slot.status.value & SlotStatus.HasPlayer.value and slot.player is self.host:
                 return slot
@@ -228,35 +230,35 @@ class Match:
             )
         ]
 
-    def get_slot(self, player: Player) -> Optional[Slot]:
+    def get_slot(self, player: Player) -> Slot | None:
         for slot in self.slots:
             if player is slot.player:
                 return slot
 
         return None
 
-    def get_slot_id(self, player: Player) -> Optional[int]:
+    def get_slot_id(self, player: Player) -> int | None:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return index
 
         return None
 
-    def get_slot_with_id(self, player: Player) -> Optional[Tuple[Slot, int]]:
+    def get_slot_with_id(self, player: Player) -> Tuple[Slot, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
 
         return None, None
 
-    def get_free(self) -> Optional[int]:
+    def get_free(self) -> int | None:
         for index, slot in enumerate(self.slots):
             if slot.status == SlotStatus.Open:
                 return index
 
         return None
 
-    def get_player(self, name: str) -> Optional[Player]:
+    def get_player(self, name: str) -> Player | None:
         for player in self.players:
             if player.name == name:
                 return player
@@ -614,6 +616,13 @@ class Match:
         # NOTE: When the score packets don't get sent in the
         #       right order, the match scoreboard will lock
         #       up and the match cannot be finished.
+
+        # Wait until all players have loaded
+        while not all(self.loaded_players):
+            if not self.in_progress:
+                # Match was aborted
+                return
+            time.sleep(0.5)
 
         while self.in_progress:
             scoreframe = self.score_queue.get()

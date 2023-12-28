@@ -5,7 +5,7 @@ from twisted.internet.protocol import Protocol
 from twisted.internet import threads, reactor
 from twisted.python.failure import Failure
 
-from typing import Union, Optional
+from typing import Optional
 from enum import Enum
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
@@ -17,7 +17,7 @@ import config
 import utils
 import gzip
 
-IPAddress = Union[IPv4Address, IPv6Address]
+IPAddress = IPv4Address | IPv6Address
 
 class BanchoProtocol(Protocol):
     """This class will be a base for receiving and parsing packets and logins."""
@@ -81,6 +81,13 @@ class BanchoProtocol(Protocol):
                 client.decode(),
                 self.address.host
             )
+
+            if not self.client:
+                self.logger.warning(
+                    f'Failed to parse client: "{client.decode()}"'
+                )
+                self.close_connection()
+                return
 
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived

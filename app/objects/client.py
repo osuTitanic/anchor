@@ -131,7 +131,8 @@ class OsuClient:
 
     @classmethod
     def from_string(cls, line: str, ip: str):
-        args = line.split('|')
+        if len(args := line.split('|')) < 2:
+            return
 
         # Sent in every client version
         build_version = args[0]

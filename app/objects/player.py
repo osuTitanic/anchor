@@ -25,6 +25,7 @@ from app.common.constants import strings, level
 from app.common.cache import leaderboards
 from app.common.cache import usercount
 from app.common.cache import status
+from app.common import officer
 
 from app.common.database.repositories import (
     infringements,
@@ -42,6 +43,7 @@ from app.common.streams import StreamIn
 
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
+from app.common import mail
 
 from typing import Optional, Callable, List, Dict, Set
 from datetime import datetime, timedelta
@@ -116,7 +118,9 @@ class Player(BanchoProtocol):
         return f'<Player ({self.id})>'
 
     def __eq__(self, other) -> bool:
-        if other:
+        if isinstance(other, int):
+            return self.id == other
+        if isinstance(other, Player):
             return self.id == other.id
         return False
 
@@ -212,7 +216,7 @@ class Player(BanchoProtocol):
 
     @property
     def online_friends(self):
-        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players]
+        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players.ids]
 
     @property
     def user_presence(self) -> bUserPresence | None:
@@ -285,15 +289,11 @@ class Player(BanchoProtocol):
 
     @property
     def is_admin(self) -> bool:
-        if self.permissions is not None:
-            return Permissions.Admin in self.permissions
-        return False
+        return 'Admins' in self.groups
 
     @property
-    def is_tourney_manager(self) -> bool:
-        if self.permissions is not None:
-            return Permissions.Tournament in self.permissions
-        return False
+    def is_verified(self) -> bool:
+        return 'Verified' in self.groups
 
     def connectionMade(self):
         super().connectionMade()
@@ -664,9 +664,15 @@ class Player(BanchoProtocol):
             session=session
         )
 
+        matches = clients.fetch_hardware_only(
+            self.client.hash.adapters_md5,
+            self.client.hash.uninstall_id,
+            self.client.hash.diskdrive_signature,
+            session=session
+        )
+
         if not client:
             # New hardware detected
-            # TODO: Send email to user
             self.logger.warning(
                 f'New hardware detected: {self.client.hash.string}'
             )
@@ -680,7 +686,38 @@ class Player(BanchoProtocol):
                 session=session
             )
 
-        # TODO: Check banned hardware / Multiaccounting
+            user_matches = [match for match in matches if match.user_id == self.id]
+
+            if self.current_stats.playcount > 0 and not user_matches:
+                mail.send_new_location_email(
+                    self.object,
+                    self.client.ip.country_name
+                )
+
+        # Reset multiaccounting lock
+        app.session.redis.set(f'multiaccounting:{self.id}', 0)
+
+        # Filter out current user
+        other_matches = [match for match in matches if match.user_id != self.id]
+        banned_matches = [match for match in other_matches if match.banned]
+
+        if banned_matches and not self.is_verified:
+            # User tries to log into an account with banned hardware matches
+            self.restrict('Multiaccounting', autoban=True)
+            return
+
+        if other_matches:
+            # User was detected to be multiaccounting
+            # If user tries to submit a score, they will be restricted
+            # Users who are verified will not be restricted
+            officer.call(
+                f'Multiaccounting detected for "{self.name}": '
+                f'{self.client.hash.string} ({len(other_matches)} matches)'
+            )
+
+            if not self.is_verified:
+                app.session.redis.set(f'multiaccounting:{self.id}', 1)
+                self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         if self.is_bot:
@@ -751,7 +788,7 @@ class Player(BanchoProtocol):
             description=reason
         )
 
-        self.logger.info(
+        officer.call(
             f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. Reason: "{reason}"'
         )
 
@@ -827,8 +864,8 @@ class Player(BanchoProtocol):
             description=f'{"Autoban: " if autoban else ""}{reason}'
         )
 
-        self.logger.warning(
-            f'{self.name} got {"auto-" if autoban else ""}restricted. Reason: {reason}'
+        officer.call(
+            f'{self.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
         )
 
     def unrestrict(self) -> None:
