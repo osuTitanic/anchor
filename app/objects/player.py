@@ -286,12 +286,12 @@ class Player(BanchoProtocol):
         return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
 
     @property
-    def group_names(self) -> List[str]:
-        return [group.name for group in self.groups]
+    def is_admin(self) -> bool:
+        return 'Admins' in self.groups
 
     @property
-    def is_admin(self) -> bool:
-        return 'Admins' in self.group_names
+    def is_verified(self) -> bool:
+        return 'Verified' in self.groups
 
     def connectionMade(self):
         super().connectionMade()
@@ -662,6 +662,13 @@ class Player(BanchoProtocol):
             session=session
         )
 
+        matches = clients.fetch_hardware_only(
+            self.client.hash.adapters_md5,
+            self.client.hash.uninstall_id,
+            self.client.hash.diskdrive_signature,
+            session=session
+        )
+
         if not client:
             # New hardware detected
             self.logger.warning(
@@ -686,19 +693,11 @@ class Player(BanchoProtocol):
         # Reset multiaccounting lock
         app.session.redis.set(f'multiaccounting:{self.id}', 0)
 
-        # Check for multiaccounting
-        matches = clients.fetch_hardware_only(
-            self.client.hash.adapters_md5,
-            self.client.hash.uninstall_id,
-            self.client.hash.diskdrive_signature,
-            session=session
-        )
-
         # Filter out current user
         matches = [match for match in matches if match.user_id != self.id]
         banned_matches = [match for match in matches if match.banned]
 
-        if banned_matches:
+        if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
             self.restrict('Multiaccounting', autoban=True)
             return
@@ -706,12 +705,15 @@ class Player(BanchoProtocol):
         if matches:
             # User was detected to be multiaccounting
             # If user tries to submit a score, they will be restricted
+            # Users who are verified will not be restricted
             officer.call(
                 f'Multiaccounting detected for "{self.name}": '
                 f'{self.client.hash.string} ({len(matches)} matches)'
             )
-            app.session.redis.set(f'multiaccounting:{self.id}', 1)
-            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+
+            if not self.is_verified:
+                app.session.redis.set(f'multiaccounting:{self.id}', 1)
+                self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         if self.is_bot:
