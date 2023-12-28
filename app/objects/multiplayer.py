@@ -617,6 +617,11 @@ class Match:
         #       right order, the match scoreboard will lock
         #       up and the match cannot be finished.
 
+        while not all(self.loaded_players):
+            # Wait until all players have loaded
+            time.sleep(0.25)
+            continue
+
         while self.in_progress:
             scoreframe = self.score_queue.get()
 
