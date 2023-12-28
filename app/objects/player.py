@@ -684,7 +684,9 @@ class Player(BanchoProtocol):
                 session=session
             )
 
-            if self.current_stats.playcount > 0 and not matches:
+            user_matches = [match for match in matches if match.user_id == self.id]
+
+            if self.current_stats.playcount > 0 and not user_matches:
                 mail.send_new_location_email(
                     self.object,
                     self.client.ip.country_name
@@ -694,21 +696,21 @@ class Player(BanchoProtocol):
         app.session.redis.set(f'multiaccounting:{self.id}', 0)
 
         # Filter out current user
-        matches = [match for match in matches if match.user_id != self.id]
-        banned_matches = [match for match in matches if match.banned]
+        other_matches = [match for match in matches if match.user_id != self.id]
+        banned_matches = [match for match in other_matches if match.banned]
 
         if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
             self.restrict('Multiaccounting', autoban=True)
             return
 
-        if matches:
+        if other_matches:
             # User was detected to be multiaccounting
             # If user tries to submit a score, they will be restricted
             # Users who are verified will not be restricted
             officer.call(
                 f'Multiaccounting detected for "{self.name}": '
-                f'{self.client.hash.string} ({len(matches)} matches)'
+                f'{self.client.hash.string} ({len(other_matches)} matches)'
             )
 
             if not self.is_verified:
