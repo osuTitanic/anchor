@@ -214,7 +214,7 @@ class Player(BanchoProtocol):
 
     @property
     def online_friends(self):
-        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players]
+        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players.ids]
 
     @property
     def user_presence(self) -> bUserPresence | None:
