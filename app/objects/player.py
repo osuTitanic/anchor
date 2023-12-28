@@ -684,7 +684,7 @@ class Player(BanchoProtocol):
                 session=session
             )
 
-            if self.current_stats.playcount > 0:
+            if self.current_stats.playcount > 0 and not matches:
                 mail.send_new_location_email(
                     self.object,
                     self.client.ip.country_name
