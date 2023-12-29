@@ -2,7 +2,7 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
-from ..common.database.objects import DBBeatmap
+from ..common.database.objects import DBBeatmap, DBScore
 from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
@@ -13,7 +13,6 @@ from ..common.database.repositories import (
     beatmaps,
     messages,
     matches,
-    scores,
     events
 )
 
@@ -364,30 +363,51 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
         info.beatmap_ids = info.beatmap_ids[:100]
         info.filenames = info.filenames[:100]
 
+    total_maps = len(info.beatmap_ids) + len(info.filenames)
+
+    if total_maps <= 0:
+        return
+
+    player.logger.info(
+        f'Got {total_maps} beatmap requests'
+    )
+
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
+        filename_beatmaps = s.query(DBBeatmap) \
+            .filter(DBBeatmap.filename.in_(info.filenames)) \
+            .all()
+
+        found_beatmaps = {
+            beatmap.filename:beatmap
+            for beatmap in filename_beatmaps
+        }
+
         for index, filename in enumerate(info.filenames):
-            if not (beatmap := beatmaps.fetch_by_file(filename, s)):
+            if filename not in found_beatmaps:
                 continue
 
+            # The client will identify the beatmaps by their index
+            # in the "beatmapInfoSendList" array for the filenames
             maps.append((
                 index,
-                beatmap
+                found_beatmaps[filename]
             ))
 
-        for id in info.beatmap_ids:
-            if not (beatmap := beatmaps.fetch_by_id(id, s)):
-                continue
+        id_beatmaps = s.query(DBBeatmap) \
+            .filter(DBBeatmap.id.in_(info.beatmap_ids)) \
+            .all()
 
+        for beatmap in id_beatmaps:
+            # For the ids, the client doesn't require the index
+            # and we can just set it to -1, so that it will lookup
+            # the beatmap by its id
             maps.append((
                 -1,
                 beatmap
             ))
 
-        player.logger.info(f'Got {len(maps)} beatmap requests')
-
         # Create beatmap response
-
         map_infos: List[bBeatmapInfo] = []
 
         for index, beatmap in maps:
@@ -410,15 +430,15 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             }
 
             for mode in range(4):
-                personal_best = scores.fetch_personal_best(
-                    beatmap.id,
-                    player.id,
-                    mode,
-                    session=s
-                )
+                grade = s.query(DBScore.grade) \
+                    .filter(DBScore.beatmap_id == beatmap.id) \
+                    .filter(DBScore.user_id == player.id) \
+                    .filter(DBScore.mode == mode) \
+                    .filter(DBScore.status == 3) \
+                    .scalar()
 
-                if personal_best:
-                    grades[mode] = Grade[personal_best.grade]
+                if grade:
+                    grades[mode] = Grade[grade]
 
             map_infos.append(
                 bBeatmapInfo(
@@ -435,7 +455,9 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                 )
             )
 
-        player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
+        player.logger.info(
+            f'Sending reply with {len(map_infos)} beatmaps'
+        )
 
         player.send_packet(
             player.packets.BEATMAP_INFO_REPLY,
