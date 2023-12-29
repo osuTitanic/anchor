@@ -38,7 +38,7 @@ SQLAlchemy==2.0.23
 starkbank-ecdsa==2.2.0
 timeago==1.0.16
 titanic-pp-py==0.0.3
-Twisted @ git+https://github.com/twisted/twisted.git@c0c6440827c47797415b6ddf5bbf0b60a203da02
+Twisted==22.10.0
 typing-extensions==4.9.0
 urllib3==1.26.18
 yarl==1.9.4
