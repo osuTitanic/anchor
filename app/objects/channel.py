@@ -1,5 +1,6 @@
 
 from app.common.database.repositories import messages
+from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
 from twisted.internet import threads
@@ -155,6 +156,18 @@ class Channel:
 
         if not self.can_write(sender.permissions) and not ignore_privs:
             sender.logger.warning(f'Failed to send message: "{message}".')
+            return
+
+        has_bad_words = any([
+            word in message.lower()
+            for word in BAD_WORDS
+        ])
+
+        if has_bad_words:
+            sender.silence(
+                duration_sec=60 * 10,
+                reason='Auto-silenced for using bad words in chat.'
+            )
             return
 
         # Limit message size
