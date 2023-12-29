@@ -136,7 +136,13 @@ class Channel:
             return
 
         if self.moderated:
-            allowed_groups = ['Admins', 'Developers']
+            allowed_groups = [
+                'Admins',
+                'Developers',
+                'Beatmap Approval Team',
+                'Global Moderator Team',
+                'Tournament Manager Team'
+            ]
 
             if not any([group in sender.groups for group in allowed_groups]):
                 return
