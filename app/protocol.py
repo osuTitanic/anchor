@@ -92,16 +92,12 @@ class BanchoProtocol(Protocol):
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
 
-            # Handle login
-            deferred = threads.deferToThread(
-                self.login_received,
+            # # Handle login
+            self.login_received(
                 username.decode(),
                 password.decode(),
                 self.client
             )
-
-            deferred.addErrback(self.login_callback)
-            deferred.addTimeout(self.connection_timeout, reactor)
         except Exception as e:
             self.logger.error(
                 f'Error on login: {e}',
@@ -203,8 +199,7 @@ class BanchoProtocol(Protocol):
                 stream.header(packet, len(data))
 
             stream.write(data)
-
-            reactor.callFromThread(self.enqueue, stream.get())
+            self.enqueue(stream.get())
         except Exception as e:
             self.logger.error(
                 f'Could not send packet "{packet.name}": {e}',

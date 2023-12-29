@@ -752,13 +752,10 @@ class Player(BanchoProtocol):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
             return
 
-        deferred = threads.deferToThread(
-            handler_function,
-           *[self, args] if args != None else
-            [self]
-        )
-
-        deferred.addErrback(self.packet_callback)
+        if args != None:
+            handler_function(self, args)
+        else:
+            handler_function(self)
 
     def packet_callback(self, result: Failure):
         self.logger.error(
