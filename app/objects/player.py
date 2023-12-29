@@ -464,9 +464,6 @@ class Player(BanchoProtocol):
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
-        # Check adapters md5
-        adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
-
         if not config.DISABLE_CLIENT_VERIFICATION and not self.is_admin:
             if not utils.valid_client_hash(self.client.hash):
                 self.logger.warning('Login Failed: Unsupported client')
@@ -477,10 +474,14 @@ class Player(BanchoProtocol):
                 self.close_connection()
                 return
 
-        if adapters_hash != client.hash.adapters_md5:
-            self.transport.write('no.\r\n')
-            self.close_connection()
-            return
+        if client.hash.adapters != 'runningunderwine':
+            # Check adapters md5
+            adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
+
+            if adapters_hash != client.hash.adapters_md5:
+                self.transport.write(b'no.\r\n')
+                self.close_connection()
+                return
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_name(username, session)):
