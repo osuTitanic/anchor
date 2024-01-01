@@ -5,11 +5,8 @@ from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
 from app.common import officer
 
-from twisted.internet import threads
-
 import logging
 import config
-import utils
 import app
 
 class Channel:
@@ -218,11 +215,8 @@ class Channel:
                 )
 
         if submit_to_database:
-            threads.deferToThread(
-                messages.create,
+            messages.create(
                 sender.name,
                 self.display_name,
-                message,
-            ).addErrback(
-                utils.thread_callback
+                message
             )
