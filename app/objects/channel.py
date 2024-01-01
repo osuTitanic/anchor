@@ -3,6 +3,8 @@ from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
+from app.common import officer
+
 from twisted.internet import threads
 
 import logging
@@ -168,6 +170,7 @@ class Channel:
                 duration_sec=60 * 10,
                 reason='Auto-silenced for using bad words in chat.'
             )
+            officer.call(f'Message: {message}')
             return
 
         # Limit message size
