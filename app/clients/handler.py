@@ -164,11 +164,11 @@ def send_message(player: Player, message: bMessage):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
-    if (time.time() - player.last_minute_stamp) > 60:
+    if (time.time() - player.last_minute_stamp) > 10:
         player.last_minute_stamp = time.time()
-        player.messages_in_last_minute = 0
+        player.recent_message_count = 0
 
-    if player.messages_in_last_minute > 150:
+    if player.recent_message_count > 35:
         player.silence(60, reason='Chat spamming')
         return
 
@@ -184,7 +184,7 @@ def send_message(player: Player, message: bMessage):
     )
 
     player.update_activity()
-    player.messages_in_last_minute += 1
+    player.recent_message_count += 1
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
@@ -213,9 +213,9 @@ def send_private_message(sender: Player, message: bMessage):
 
     if (time.time() - sender.last_minute_stamp) > 60:
         sender.last_minute_stamp = time.time()
-        sender.messages_in_last_minute = 0
+        sender.recent_message_count = 0
 
-    if sender.messages_in_last_minute > 400:
+    if sender.recent_message_count > 35:
         sender.silence(60, reason='Chat spamming')
         return
 
@@ -250,7 +250,7 @@ def send_private_message(sender: Player, message: bMessage):
         )
     )
 
-    sender.messages_in_last_minute += 1
+    sender.recent_message_count += 1
 
     # Send to their tourney clients
     for client in session.players.get_all_tourney_clients(target.id):
