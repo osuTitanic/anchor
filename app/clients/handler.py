@@ -41,7 +41,6 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, Optional, List
-from twisted.internet import threads
 from datetime import datetime
 from copy import copy
 
@@ -178,18 +177,13 @@ def send_message(player: Player, message: bMessage):
         commands.execute(player, channel, parsed_message)
         return
 
-    channel.send_message(player, parsed_message)
-    player.update_activity()
-
-    threads.deferToThread(
-        messages.create,
-        player.name,
-        channel.name,
-        message.content
-    ).addErrback(
-        utils.thread_callback
+    channel.send_message(
+        player,
+        parsed_message,
+        submit_to_database=True
     )
 
+    player.update_activity()
     player.messages_in_last_minute += 1
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
@@ -275,13 +269,10 @@ def send_private_message(sender: Player, message: bMessage):
 
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
 
-    threads.deferToThread(
-        messages.create,
+    messages.create(
         sender.name,
         target.name,
         message.content
-    ).addErrback(
-        utils.thread_callback
     )
 
     sender.update_activity()
