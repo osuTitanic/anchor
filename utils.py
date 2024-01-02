@@ -1,18 +1,10 @@
 
-from app.common.constants import ANCHOR_ASCII_ART
-from app.common.helpers import location
-
 from twisted.python.failure import Failure
 
 import config
 import struct
 import socket
 import app
-import os
-
-def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART}\n    anchor-{config.VERSION}\n')
-    os.makedirs(config.DATA_PATH, exist_ok=True)
 
 def is_local_ip(ip: str) -> bool:
     private = (
