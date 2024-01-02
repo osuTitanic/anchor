@@ -143,7 +143,7 @@ def request_status(player: Player):
 def handle_channel_join(player: Player, channel_name: str):
     client_channels = [
         '#userlog',
-        '#highlights'
+        '#highlight'
     ]
 
     if channel_name in client_channels:
@@ -171,7 +171,7 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 def send_message(player: Player, message: bMessage):
     client_channels = [
         '#userlog',
-        '#highlights'
+        '#highlight'
     ]
 
     if message.target in client_channels:
