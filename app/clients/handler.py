@@ -670,13 +670,13 @@ def create_match(player: Player, bancho_match: bMatch):
 
 @register(RequestPacket.JOIN_MATCH)
 def join_match(player: Player, match_join: bMatchJoin):
-    if not (match := session.matches[match_join.match_id]):
-        # Match was not found
+    if session.matches.exists(match_join.match_id):
         player.logger.warning(f'{player.name} tried to join a match that does not exist')
         player.enqueue_matchjoin_fail()
         player.enqueue_match_disband(match_join.match_id)
         return
 
+    match = session.matches[match_join.match_id]
     match.last_activity = time.time()
 
     if player.is_tourney_client:
@@ -1274,9 +1274,11 @@ def tourney_match_info(player: Player, match_id: int):
         player.logger.debug("Match has already ended.")
         return
 
-    if not (match := session.matches[db_match.bancho_id]):
+    if session.matches.exists(db_match.id):
         player.logger.debug("Bancho match is not active.")
         return
+
+    match = session.matches[db_match.bancho_id]
 
     player.logger.debug("Match found. Sending to client...")
     player.enqueue_match(match.bancho_match)
