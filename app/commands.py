@@ -204,7 +204,6 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
     config.APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
-    config.SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
     config.MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
     config.S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
     config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
