@@ -1,12 +1,11 @@
 
 from __future__ import annotations
 
-from app.common.constants.regexes import OSU_VERSION
 from app.common.constants import ANCHOR_WEB_RESPONSE
-from app.common.streams import StreamIn, StreamOut
-from app.objects import OsuClient
+from app.common.streams import StreamIn
 from app.objects.client import OsuClient
 from app.objects.player import Player
+from app.objects import OsuClient
 
 from twisted.web.resource import Resource
 from twisted.web.http import Request
