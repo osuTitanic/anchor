@@ -61,7 +61,7 @@ def resolve_ip_address(request: Request):
         forwards = request.requestHeaders.getRawHeaders("X-Forwarded-For")
 
     if forwards:
-        ip = forwards.split(",")[0]
+        ip = forwards[0]
     else:
         ip = request.requestHeaders.getRawHeaders("X-Real-IP")
 
