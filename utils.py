@@ -55,21 +55,13 @@ def valid_client_hash(hash: str) -> bool:
     return hash in manifest['hashes']
 
 def resolve_ip_address(request: Request):
-    ip = request.requestHeaders.getRawHeaders("CF-Connecting-IP")
+    if ip := request.requestHeaders.getRawHeaders("CF-Connecting-IP"):
+        return ip[0]
 
-    if ip is None:
-        forwards = request.requestHeaders.getRawHeaders("X-Forwarded-For")
+    if forwards := request.requestHeaders.getRawHeaders("X-Forwarded-For"):
+        return forwards[0]
 
-        if forwards:
-            ip = forwards[0]
-        else:
-            ip = request.requestHeaders.getRawHeaders("X-Real-IP")
-    else:
-        ip = ip[0]
+    if ip := request.requestHeaders.getRawHeaders("X-Real-IP"):
+        return ip[0]
 
-    if ip is None:
-        ip = request.getClientAddress().host
-    else:
-        ip = ip[0]
-
-    return ip.strip()
+    return request.getClientAddress().host.strip()
