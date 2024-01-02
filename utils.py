@@ -60,10 +60,10 @@ def resolve_ip_address(request: Request):
     if ip is None:
         forwards = request.requestHeaders.getRawHeaders("X-Forwarded-For")
 
-    if forwards:
-        ip = forwards[0]
-    else:
-        ip = request.requestHeaders.getRawHeaders("X-Real-IP")
+        if forwards:
+            ip = forwards[0]
+        else:
+            ip = request.requestHeaders.getRawHeaders("X-Real-IP")
 
     if ip is None:
         ip = request.getClientAddress().host
