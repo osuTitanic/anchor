@@ -1,5 +1,6 @@
 
 from twisted.python.failure import Failure
+from twisted.web.http import Request
 
 import config
 import struct
@@ -52,3 +53,19 @@ def valid_client_hash(hash: str) -> bool:
         return True
 
     return hash in manifest['hashes']
+
+def resolve_ip_address(request: Request):
+    ip = request.requestHeaders.getRawHeaders("CF-Connecting-IP")
+
+    if ip is None:
+        forwards = request.requestHeaders.getRawHeaders("X-Forwarded-For")
+
+    if forwards:
+        ip = forwards.split(",")[0]
+    else:
+        ip = request.requestHeaders.getRawHeaders("X-Real-IP")
+
+    if ip is None:
+        ip = request.getClientAddress().host
+
+    return ip.strip()
