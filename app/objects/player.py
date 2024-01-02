@@ -471,6 +471,7 @@ class Player:
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {client.version}.')
         self.last_response = time.time()
+        self.client = client
 
         # Get decoders and encoders
         self.get_client(client.version.date)
