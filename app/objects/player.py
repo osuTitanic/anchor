@@ -1127,12 +1127,18 @@ class Player:
         )
 
     def enqueue_lobby_join(self, player_id: int):
+        if self.client.version.date > 20130815:
+            return
+
         self.send_packet(
             self.packets.LOBBY_JOIN,
             player_id
         )
 
     def enqueue_lobby_part(self, player_id: int):
+        if self.client.version.date > 20130815:
+            return
+
         self.send_packet(
             self.packets.LOBBY_PART,
             player_id
