@@ -1,12 +1,12 @@
 
 from app.common.database.repositories import messages
+from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
-from twisted.internet import threads
+from app.common import officer
 
 import logging
 import config
-import utils
 import app
 
 class Channel:
@@ -136,7 +136,13 @@ class Channel:
             return
 
         if self.moderated:
-            allowed_groups = ['Admins', 'Developers']
+            allowed_groups = [
+                'Admins',
+                'Developers',
+                'Beatmap Approval Team',
+                'Global Moderator Team',
+                'Tournament Manager Team'
+            ]
 
             if not any([group in sender.groups for group in allowed_groups]):
                 return
@@ -149,6 +155,19 @@ class Channel:
 
         if not self.can_write(sender.permissions) and not ignore_privs:
             sender.logger.warning(f'Failed to send message: "{message}".')
+            return
+
+        has_bad_words = any([
+            word in message.lower()
+            for word in BAD_WORDS
+        ])
+
+        if has_bad_words:
+            sender.silence(
+                duration_sec=60 * 10,
+                reason='Auto-silenced for using bad words in chat.'
+            )
+            officer.call(f'Message: {message}')
             return
 
         # Limit message size
@@ -183,7 +202,7 @@ class Channel:
 
             # Send to their tourney clients
             for client in app.session.players.get_all_tourney_clients(user.id):
-                if client.address.port == user.address.port:
+                if client.port == user.port:
                     continue
 
                 client.enqueue_message(
@@ -196,11 +215,8 @@ class Channel:
                 )
 
         if submit_to_database:
-            threads.deferToThread(
-                messages.create,
+            messages.create(
                 sender.name,
                 self.display_name,
-                message,
-            ).addErrback(
-                utils.thread_callback
+                message
             )

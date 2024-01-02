@@ -2,7 +2,7 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
-from ..common.database.objects import DBBeatmap
+from ..common.database.objects import DBBeatmap, DBScore
 from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
@@ -13,7 +13,6 @@ from ..common.database.repositories import (
     beatmaps,
     messages,
     matches,
-    scores,
     events
 )
 
@@ -42,7 +41,6 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, Optional, List
-from twisted.internet import threads
 from datetime import datetime
 from copy import copy
 
@@ -140,6 +138,15 @@ def request_status(player: Player):
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):
+    client_channels = [
+        '#userlog',
+        '#highlights'
+    ]
+
+    if channel_name in client_channels:
+        player.join_success(channel_name)
+        return
+
     if not (channel := resolve_channel(channel_name, player)):
         player.revoke_channel(channel_name)
         return
@@ -159,6 +166,14 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 
 @register(RequestPacket.SEND_MESSAGE)
 def send_message(player: Player, message: bMessage):
+    client_channels = [
+        '#userlog',
+        '#highlights'
+    ]
+
+    if message.target in client_channels:
+        return
+
     if not (channel := resolve_channel(message.target, player)):
         player.revoke_channel(message.target)
         return
@@ -166,11 +181,11 @@ def send_message(player: Player, message: bMessage):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
-    if (time.time() - player.last_minute_stamp) > 60:
+    if (time.time() - player.last_minute_stamp) > 10:
         player.last_minute_stamp = time.time()
-        player.messages_in_last_minute = 0
+        player.recent_message_count = 0
 
-    if player.messages_in_last_minute > 150:
+    if player.recent_message_count > 35:
         player.silence(60, reason='Chat spamming')
         return
 
@@ -179,19 +194,14 @@ def send_message(player: Player, message: bMessage):
         commands.execute(player, channel, parsed_message)
         return
 
-    channel.send_message(player, parsed_message)
-    player.update_activity()
-
-    threads.deferToThread(
-        messages.create,
-        player.name,
-        channel.name,
-        message.content
-    ).addErrback(
-        utils.thread_callback
+    channel.send_message(
+        player,
+        parsed_message,
+        submit_to_database=True
     )
 
-    player.messages_in_last_minute += 1
+    player.update_activity()
+    player.recent_message_count += 1
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
@@ -220,9 +230,9 @@ def send_private_message(sender: Player, message: bMessage):
 
     if (time.time() - sender.last_minute_stamp) > 60:
         sender.last_minute_stamp = time.time()
-        sender.messages_in_last_minute = 0
+        sender.recent_message_count = 0
 
-    if sender.messages_in_last_minute > 400:
+    if sender.recent_message_count > 35:
         sender.silence(60, reason='Chat spamming')
         return
 
@@ -257,11 +267,11 @@ def send_private_message(sender: Player, message: bMessage):
         )
     )
 
-    sender.messages_in_last_minute += 1
+    sender.recent_message_count += 1
 
     # Send to their tourney clients
     for client in session.players.get_all_tourney_clients(target.id):
-        if client.address.port == target.address.port:
+        if client.port == target.port:
             continue
 
         client.enqueue_message(
@@ -276,13 +286,10 @@ def send_private_message(sender: Player, message: bMessage):
 
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
 
-    threads.deferToThread(
-        messages.create,
+    messages.create(
         sender.name,
         target.name,
         message.content
-    ).addErrback(
-        utils.thread_callback
     )
 
     sender.update_activity()
@@ -364,30 +371,51 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
         info.beatmap_ids = info.beatmap_ids[:100]
         info.filenames = info.filenames[:100]
 
+    total_maps = len(info.beatmap_ids) + len(info.filenames)
+
+    if total_maps <= 0:
+        return
+
+    player.logger.info(
+        f'Got {total_maps} beatmap requests'
+    )
+
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
+        filename_beatmaps = s.query(DBBeatmap) \
+            .filter(DBBeatmap.filename.in_(info.filenames)) \
+            .all()
+
+        found_beatmaps = {
+            beatmap.filename:beatmap
+            for beatmap in filename_beatmaps
+        }
+
         for index, filename in enumerate(info.filenames):
-            if not (beatmap := beatmaps.fetch_by_file(filename, s)):
+            if filename not in found_beatmaps:
                 continue
 
+            # The client will identify the beatmaps by their index
+            # in the "beatmapInfoSendList" array for the filenames
             maps.append((
                 index,
-                beatmap
+                found_beatmaps[filename]
             ))
 
-        for id in info.beatmap_ids:
-            if not (beatmap := beatmaps.fetch_by_id(id, s)):
-                continue
+        id_beatmaps = s.query(DBBeatmap) \
+            .filter(DBBeatmap.id.in_(info.beatmap_ids)) \
+            .all()
 
+        for beatmap in id_beatmaps:
+            # For the ids, the client doesn't require the index
+            # and we can just set it to -1, so that it will lookup
+            # the beatmap by its id
             maps.append((
                 -1,
                 beatmap
             ))
 
-        player.logger.info(f'Got {len(maps)} beatmap requests')
-
         # Create beatmap response
-
         map_infos: List[bBeatmapInfo] = []
 
         for index, beatmap in maps:
@@ -410,15 +438,15 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             }
 
             for mode in range(4):
-                personal_best = scores.fetch_personal_best(
-                    beatmap.id,
-                    player.id,
-                    mode,
-                    session=s
-                )
+                grade = s.query(DBScore.grade) \
+                    .filter(DBScore.beatmap_id == beatmap.id) \
+                    .filter(DBScore.user_id == player.id) \
+                    .filter(DBScore.mode == mode) \
+                    .filter(DBScore.status == 3) \
+                    .scalar()
 
-                if personal_best:
-                    grades[mode] = Grade[personal_best.grade]
+                if grade:
+                    grades[mode] = Grade[grade]
 
             map_infos.append(
                 bBeatmapInfo(
@@ -435,7 +463,9 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                 )
             )
 
-        player.logger.info(f'Sending reply with {len(map_infos)} beatmaps')
+        player.logger.info(
+            f'Sending reply with {len(map_infos)} beatmaps'
+        )
 
         player.send_packet(
             player.packets.BEATMAP_INFO_REPLY,

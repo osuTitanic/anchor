@@ -6,6 +6,7 @@ from typing import Optional
 from .common.database.repositories import channels
 from .common.cache import status, usercount
 from .objects.channel import Channel
+from .protocol import BanchoProtocol
 from .objects.player import Player
 
 from .jobs import (
@@ -20,7 +21,7 @@ import app
 import os
 
 class BanchoFactory(Factory):
-    protocol = Player
+    protocol = BanchoProtocol
 
     def startFactory(self):
         app.session.logger.info('Loading channels...')

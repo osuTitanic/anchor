@@ -38,24 +38,19 @@ from app.common.database.repositories import (
     stats
 )
 
-from app.protocol import BanchoProtocol, IPAddress
-from app.common.streams import StreamIn
-
+from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 from app.common import mail
 
-from typing import Optional, Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from threading import Timer
 from enum import Enum
 from copy import copy
 
 from twisted.internet.error import ConnectionDone
-from twisted.internet.address import IPv4Address
 from twisted.python.failure import Failure
-from twisted.internet import threads
 
 from app.clients import versions
 from app.clients import (
@@ -70,13 +65,15 @@ import config
 import bcrypt
 import utils
 import time
+import gzip
 import app
 
-class Player(BanchoProtocol):
-    def __init__(self, address: IPAddress) -> None:
-        self.is_local = utils.is_local_ip(address.host)
-        self.logger = logging.getLogger(address.host)
+class Player:
+    def __init__(self, address: str, port: int) -> None:
+        self.is_local = utils.is_local_ip(address)
+        self.logger = logging.getLogger(address)
         self.address = address
+        self.port = port
 
         self.stats:  List[DBStats] | None = None
         self.away_message: str | None = None
@@ -108,14 +105,14 @@ class Player(BanchoProtocol):
         self.match: Match | None = None
         self.last_response = time.time()
 
-        self.messages_in_last_minute = 0
+        self.recent_message_count = 0
         self.last_minute_stamp = time.time()
 
         self.permissions = Permissions.NoPermissions
         self.groups = []
 
     def __repr__(self) -> str:
-        return f'<Player ({self.id})>'
+        return f'<Player "{self.name}" ({self.id})>'
 
     def __eq__(self, other) -> bool:
         if isinstance(other, int):
@@ -129,14 +126,8 @@ class Player(BanchoProtocol):
 
     @classmethod
     def bot_player(cls):
-        player = Player(
-            IPv4Address(
-                'TCP',
-                '127.0.0.1',
-                1337
-            )
-        )
-
+        # TODO: Refactor bot related code to IRC client
+        player = Player('127.0.0.1', 1337)
         player.object = users.fetch_by_id(1)
         player.client = OsuClient.empty()
 
@@ -155,6 +146,7 @@ class Player(BanchoProtocol):
 
     @property
     def is_bot(self) -> bool:
+        # TODO: Refactor bot related code to IRC client
         return True if self.id == -1 else False
 
     @property
@@ -212,14 +204,21 @@ class Player(BanchoProtocol):
 
     @property
     def friends(self) -> List[int]:
-        return [rel.target_id for rel in self.object.relationships if rel.status == 0]
+        return [
+            rel.target_id
+            for rel in self.object.relationships
+            if rel.status == 0
+        ]
 
     @property
-    def online_friends(self):
-        return [app.session.players.by_id(id) for id in self.friends if id in app.session.players.ids]
+    def online_friends(self) -> List["Player"]:
+        return [
+            app.session.players.by_id(id)
+            for id in self.friends if id in app.session.players.ids
+        ]
 
     @property
-    def user_presence(self) -> bUserPresence | None:
+    def user_presence(self) -> bUserPresence:
         return bUserPresence(
             self.id,
             False,
@@ -295,17 +294,22 @@ class Player(BanchoProtocol):
     def is_verified(self) -> bool:
         return 'Verified' in self.groups
 
-    def connectionMade(self):
-        super().connectionMade()
-        # Create connection timeout
-        Timer(
-            self.connection_timeout,
-            self.check_connection
-        ).start()
+    def enqueue(self, data: bytes):
+        """
+        Enqueues the given data to the client.
+        This needs to be implemented by the inheriting class.
+        """
+        ...
+
+    def close_connection(self, error: Exception | None = None):
+        """
+        This will close the connection to the client.
+        This needs to be implemented by the inheriting class.
+        """
+        self.connectionLost(error)
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         if not self.logged_in:
-            super().connectionLost(reason)
             return
 
         if self.spectating:
@@ -361,20 +365,52 @@ class Player(BanchoProtocol):
         if self.match:
             app.clients.handler.leave_match(self)
 
-        super().connectionLost(reason)
+    def send_packet(self, packet: Enum, *args) -> None:
+        if self.is_bot:
+            return
 
-    def close_connection(self, error: Exception | None = None):
-        self.connectionLost()
-        super().close_connection(error)
+        try:
+            stream = StreamOut()
+            data = self.encoders[packet](*args)
 
-    def check_connection(self):
-        """Check if user has logged in and log out if they haven't"""
-        if not self.object:
-            self.transport.write(b'no.\r\n')
-            self.close_connection()
+            self.logger.debug(
+                f'<- "{packet.name}": {str(list(args)).removeprefix("[").removesuffix("]")}'
+            )
+
+            if self.client.version.date <= 323:
+                # In version b323 and below, the compression is enabled by default
+                data = gzip.compress(data)
+                stream.legacy_header(packet, len(data))
+            else:
+                stream.header(packet, len(data))
+
+            stream.write(data)
+            self.enqueue(stream.get())
+        except Exception as e:
+            self.logger.error(
+                f'Could not send packet "{packet.name}": {e}',
+                exc_info=e
+            )
+
+    def send_error(self, reason=-5, message=""):
+        """This will send a login reply packet with an optional message to the player"""
+        if self.encoders and message:
+            self.send_packet(
+                self.packets.ANNOUNCE,
+                message
+            )
+
+        self.send_packet(
+            self.packets.LOGIN_REPLY,
+            reason
+        )
+
+    def login_failed(self, reason=LoginError.ServerError, message=""):
+        self.send_error(reason.value, message)
+        self.close_connection()
 
     def reload_object(self) -> DBUser:
-        """Reload player stats from database"""
+        """Reload player object from database"""
         self.object = users.fetch_by_id(self.id)
         self.stats = self.object.stats
 
@@ -404,43 +440,19 @@ class Player(BanchoProtocol):
             histories.update_rank(self.current_stats, self.object.country)
 
     def update_leaderboard_stats(self) -> None:
+        """Updates the player's stats inside the redis leaderboard"""
         leaderboards.update(
             self.current_stats,
             self.object.country.lower()
         )
 
     def update_status_cache(self) -> None:
+        """Updates the player's status inside the cache"""
         status.update(
             self.id,
             self.status.bancho_status,
             self.client.hash.string,
         )
-
-    def send_error(self, reason=-5, message=""):
-        if self.encoders and message:
-            self.send_packet(
-                self.packets.ANNOUNCE,
-                message
-            )
-
-        self.send_packet(
-            self.packets.LOGIN_REPLY,
-            reason
-        )
-
-    def send_packet(self, packet_type: Enum, *args):
-        if self.is_bot:
-            return
-
-        return super().send_packet(
-            packet_type,
-            self.encoders,
-            *args
-        )
-
-    def login_failed(self, reason = LoginError.ServerError, message = ""):
-        self.send_error(reason.value, message)
-        self.close_connection()
 
     def get_client(self, version: int):
         """Figure out packet sender/decoder, closest to version of client"""
@@ -464,9 +476,6 @@ class Player(BanchoProtocol):
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
-        # Check adapters md5
-        adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
-
         if not config.DISABLE_CLIENT_VERIFICATION and not self.is_admin:
             if not utils.valid_client_hash(self.client.hash):
                 self.logger.warning('Login Failed: Unsupported client')
@@ -477,10 +486,14 @@ class Player(BanchoProtocol):
                 self.close_connection()
                 return
 
-        if adapters_hash != client.hash.adapters_md5:
-            self.transport.write('no.\r\n')
-            self.close_connection()
-            return
+        if client.hash.adapters != 'runningunderwine':
+            # Check adapters md5
+            adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
+
+            if adapters_hash != client.hash.adapters_md5:
+                self.transport.write(b'no.\r\n')
+                self.close_connection()
+                return
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_name(username, session)):
@@ -536,7 +549,7 @@ class Player(BanchoProtocol):
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id(user.id)):
                     # Another user is online with this account
-                    return other_user.login_failed(
+                    other_user.login_failed(
                         LoginError.Authentication,
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
@@ -544,7 +557,7 @@ class Player(BanchoProtocol):
             else:
                 if not self.supporter:
                     # Trying to use tourney client without supporter
-                    self.login_failed(LoginError.Authentication)
+                    self.login_failed(LoginError.TestBuild)
                     return
 
                 # Check amount of tourney clients that are online
@@ -565,7 +578,7 @@ class Player(BanchoProtocol):
             # Create login attempt in db
             logins.create(
                 self.id,
-                self.address.host,
+                self.address,
                 self.client.version.string,
                 session
             )
@@ -585,6 +598,7 @@ class Player(BanchoProtocol):
             self.update_leaderboard_stats()
             self.update_status_cache()
 
+        self.logged_in = True
         self.login_success()
 
     def login_success(self):
@@ -630,8 +644,6 @@ class Player(BanchoProtocol):
 
         # Update usercount
         usercount.set(len(app.session.players.normal_clients))
-
-        self.logged_in = True
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -751,19 +763,10 @@ class Player(BanchoProtocol):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
             return
 
-        deferred = threads.deferToThread(
-            handler_function,
-           *[self, args] if args != None else
-            [self]
-        )
-
-        deferred.addErrback(self.packet_callback)
-
-    def packet_callback(self, result: Failure):
-        self.logger.error(
-            f'Failed to execute handler function: "{result.getErrorMessage()}"',
-            exc_info=result.value
-        )
+        if args != None:
+            handler_function(self, args)
+        else:
+            handler_function(self)
 
     def silence(self, duration_sec: int, reason: str | None = None):
         duration = timedelta(seconds=duration_sec)
