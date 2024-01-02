@@ -202,7 +202,7 @@ class Channel:
 
             # Send to their tourney clients
             for client in app.session.players.get_all_tourney_clients(user.id):
-                if client.address.port == user.address.port:
+                if client.port == user.port:
                     continue
 
                 client.enqueue_message(

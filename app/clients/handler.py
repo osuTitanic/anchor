@@ -271,7 +271,7 @@ def send_private_message(sender: Player, message: bMessage):
 
     # Send to their tourney clients
     for client in session.players.get_all_tourney_clients(target.id):
-        if client.address.port == target.address.port:
+        if client.port == target.port:
             continue
 
         client.enqueue_message(
