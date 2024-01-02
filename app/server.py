@@ -3,7 +3,7 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.interfaces import IAddress
 from typing import Optional
 
-from .protocol import BanchoProtocol
+from .tcp import BanchoProtocol
 
 import app
 
