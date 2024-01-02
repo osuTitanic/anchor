@@ -37,7 +37,11 @@ class HttpPlayer(Player):
         return data
 
     def login_received(self, username: str, md5: str, client: OsuClient) -> None:
-        super().login_received(username, md5, client)
+        super().login_received(
+            username,
+            md5,
+            client
+        )
 
         if self.logged_in:
             self.token = str(uuid.uuid4())
@@ -129,9 +133,8 @@ class HttpBanchoProtocol(Resource):
             return self.handle_login_request(request)
 
         if not (player := app.session.players.by_token(osu_token)):
-            request.setResponseCode(401)
             # Tell client to reconnect immediately
-            return b'W\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
+            return b'\x56\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
 
         self.player = player
         return self.handle_request(request)
