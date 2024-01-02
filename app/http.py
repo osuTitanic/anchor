@@ -25,24 +25,24 @@ class HttpPlayer(Player):
 
     @property
     def connected(self) -> bool:
-        return bool(self.token)
+        return self.token != ""
 
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
     def dequeue(self) -> bytes:
-        data = b''
+        data = b""
         while not self.queue.empty():
             data += self.queue.get()
         return data
 
-    def login_received(self, username: str, md5: str, client: OsuClient):
+    def login_received(self, username: str, md5: str, client: OsuClient) -> None:
         super().login_received(username, md5, client)
 
         if self.logged_in:
             self.token = str(uuid.uuid4())
 
-    def close_connection(self, error: Exception | None = None):
+    def close_connection(self, error: Exception | None = None) -> None:
         if error:
             self.send_error(message=str(error) if config.DEBUG else None)
             self.logger.warning(f'Closing connection -> <{self.address}>')
@@ -55,7 +55,7 @@ class HttpPlayer(Player):
 class HttpBanchoProtocol(Resource):
     isLeaf = True
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.player: HttpPlayer | None = None
         self.children = {}
 
@@ -70,16 +70,23 @@ class HttpBanchoProtocol(Resource):
         client = OsuClient.from_string(client_data, ip_address)
 
         try:
-            self.player = HttpPlayer(ip_address, request.getClientAddress().port)
-            self.player.login_received(username, password, client)
+            self.player = HttpPlayer(
+                ip_address,
+                request.getClientAddress().port
+            )
+
+            self.player.login_received(
+                username,
+                password,
+                client
+            )
         except Exception as e:
             request.setResponseCode(500)
+            self.player.send_error()
             self.player.logger.error(
                 f'Login failed: {e}', exc_info=e
             )
-            return
 
-        request.setResponseCode(200)
         request.setHeader('cho-token', self.player.token)
         return self.player.dequeue()
 
@@ -116,11 +123,13 @@ class HttpBanchoProtocol(Resource):
     def render_POST(self, request: Request) -> bytes:
         request.setHeader('server', 'bancho')
         request.setHeader('cho-protocol', '18')
+        request.setResponseCode(200)
 
         if not (osu_token := request.getHeader('osu-token')):
             return self.handle_login_request(request)
 
         if not (player := app.session.players.by_token(osu_token)):
+            request.setResponseCode(401)
             # Tell client to reconnect immediately
             return b'W\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
 
