@@ -24,6 +24,10 @@ class HttpPlayer(Player):
         self.queue = Queue()
         self.token = ""
 
+    @property
+    def connected(self) -> bool:
+        return bool(self.token)
+
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
