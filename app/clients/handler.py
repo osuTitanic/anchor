@@ -45,7 +45,6 @@ from datetime import datetime
 from copy import copy
 
 import config
-import utils
 import time
 
 def register(packet: RequestPacket) -> Callable:
@@ -77,11 +76,15 @@ def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
-    pass
+    # NOTE: This was switched to a PING packet in b20130821
+    #       due to the new http bancho server
+    if player.client.version.date > 20130815:
+        player.enqueue_ping()
 
 @register(RequestPacket.EXIT)
 def exit(player: Player, updating: bool):
     player.update_activity()
+    player.close_connection()
 
 @register(RequestPacket.RECEIVE_UPDATES)
 def receive_updates(player: Player, filter: PresenceFilter):
@@ -140,7 +143,7 @@ def request_status(player: Player):
 def handle_channel_join(player: Player, channel_name: str):
     client_channels = [
         '#userlog',
-        '#highlights'
+        '#highlight'
     ]
 
     if channel_name in client_channels:
@@ -168,7 +171,7 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 def send_message(player: Player, message: bMessage):
     client_channels = [
         '#userlog',
-        '#highlights'
+        '#highlight'
     ]
 
     if message.target in client_channels:
@@ -667,13 +670,13 @@ def create_match(player: Player, bancho_match: bMatch):
 
 @register(RequestPacket.JOIN_MATCH)
 def join_match(player: Player, match_join: bMatchJoin):
-    if not (match := session.matches[match_join.match_id]):
-        # Match was not found
+    if not session.matches.exists(match_join.match_id):
         player.logger.warning(f'{player.name} tried to join a match that does not exist')
         player.enqueue_matchjoin_fail()
         player.enqueue_match_disband(match_join.match_id)
         return
 
+    match = session.matches[match_join.match_id]
     match.last_activity = time.time()
 
     if player.is_tourney_client:
@@ -1271,9 +1274,11 @@ def tourney_match_info(player: Player, match_id: int):
         player.logger.debug("Match has already ended.")
         return
 
-    if not (match := session.matches[db_match.bancho_id]):
+    if not session.matches.exists(db_match.id):
         player.logger.debug("Bancho match is not active.")
         return
+
+    match = session.matches[db_match.bancho_id]
 
     player.logger.debug("Match found. Sending to client...")
     player.enqueue_match(match.bancho_match)

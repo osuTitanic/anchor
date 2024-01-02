@@ -14,6 +14,7 @@ from typing import (
     Set
 )
 
+from ..http import HttpPlayer
 from .player import Player
 
 import app
@@ -37,6 +38,14 @@ class Players(List[Player]):
     @property
     def normal_clients(self) -> List[Player]:
         return [p for p in self if not p.is_tourney_client]
+
+    @property
+    def http_clients(self) -> List[HttpPlayer]:
+        return [p for p in self if isinstance(p, HttpPlayer)]
+
+    @property
+    def tcp_clients(self) -> List[Player]:
+        return [p for p in self if not isinstance(p, HttpPlayer)]
 
     def append(self, player: Player) -> None:
         """Append a player to the collection"""
@@ -83,6 +92,14 @@ class Players(List[Player]):
 
         for p in self.tourney_clients:
             if p.name == name:
+                return p
+
+        return None
+
+    def by_token(self, token: str) -> Player | None:
+        """Get a player by token"""
+        for p in self.http_clients:
+            if p.token == token:
                 return p
 
         return None
@@ -215,5 +232,12 @@ class Matches(List[Match | None]):
 
             # Remove inactive match
             self.pop(index)
+
+    def exists(self, match_id: int) -> bool:
+        """Check if a match exists"""
+        try:
+            return self[match_id] is not None
+        except IndexError:
+            return False
 
 # TODO: IRC Players
