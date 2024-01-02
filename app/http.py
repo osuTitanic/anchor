@@ -59,7 +59,7 @@ class HttpBanchoProtocol(Resource):
         self.player: HttpPlayer | None = None
         self.children = {}
 
-    def handle_login_request(self, request: Request):
+    def handle_login_request(self, request: Request) -> bytes:
         request.setHeader('cho-token', '')
 
         username, password, client_data = (
@@ -81,9 +81,9 @@ class HttpBanchoProtocol(Resource):
 
         request.setResponseCode(200)
         request.setHeader('cho-token', self.player.token)
-        request.write(self.player.dequeue())
+        return self.player.dequeue()
 
-    def handle_request(self, request: Request):
+    def handle_request(self, request: Request) -> bytes:
         stream = StreamIn(request.content.read())
 
         try:
@@ -106,14 +106,14 @@ class HttpBanchoProtocol(Resource):
                 f'Failed to parse packet: {e}', exc_info=e
             )
 
-        request.write(self.player.dequeue())
+        return self.player.dequeue()
 
-    def render_GET(self, request: Request):
+    def render_GET(self, request: Request) -> bytes:
         request.setHeader('content-type', 'text/html; charset=utf-8')
         request.setHeader('server', 'bancho')
         return ANCHOR_WEB_RESPONSE.encode('utf-8')
 
-    def render_POST(self, request: Request):
+    def render_POST(self, request: Request) -> bytes:
         request.setHeader('server', 'bancho')
         request.setHeader('cho-protocol', '18')
 
@@ -122,8 +122,7 @@ class HttpBanchoProtocol(Resource):
 
         if not (player := app.session.players.by_token(osu_token)):
             # Tell client to reconnect immediately
-            request.write(b'W\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00')
-            return
+            return b'W\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
 
         self.player = player
         return self.handle_request(request)
