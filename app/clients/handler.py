@@ -138,6 +138,15 @@ def request_status(player: Player):
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):
+    client_channels = [
+        '#userlog',
+        '#highlights'
+    ]
+
+    if channel_name in client_channels:
+        player.join_success(channel_name)
+        return
+
     if not (channel := resolve_channel(channel_name, player)):
         player.revoke_channel(channel_name)
         return
@@ -157,6 +166,14 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 
 @register(RequestPacket.SEND_MESSAGE)
 def send_message(player: Player, message: bMessage):
+    client_channels = [
+        '#userlog',
+        '#highlights'
+    ]
+
+    if message.target in client_channels:
+        return
+
     if not (channel := resolve_channel(message.target, player)):
         player.revoke_channel(message.target)
         return
