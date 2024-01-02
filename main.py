@@ -8,7 +8,7 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.objects.channel import Channel
 from app.objects.player import Player
-from app.server import BanchoFactory
+from app.server import TcpBanchoFactory
 from app.jobs import (
     rank_indexing,
     activities,
@@ -30,7 +30,8 @@ logging.basicConfig(
 )
 
 def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART}\n    anchor-{config.VERSION}\n')
+    app.session.logger.info(ANCHOR_ASCII_ART)
+    app.session.logger.info(f'anchor-{config.VERSION}')
     os.makedirs(config.DATA_PATH, exist_ok=True)
 
     app.session.logger.info('Loading channels...')
@@ -85,7 +86,7 @@ def shutdown():
         app.session.logger.warning(f'Shutting down: "{thread.name}"')
 
 def main():
-    factory = BanchoFactory()
+    factory = TcpBanchoFactory()
 
     for port in config.PORTS:
         reactor.listenTCP(port, factory)

@@ -7,7 +7,7 @@ from .protocol import BanchoProtocol
 
 import app
 
-class BanchoFactory(Factory):
+class TcpBanchoFactory(Factory):
     protocol = BanchoProtocol
 
     def startFactory(self):
