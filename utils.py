@@ -1,20 +1,17 @@
 
-from app.common.constants import ANCHOR_ASCII_ART
-from app.common.helpers import location
-
 from twisted.python.failure import Failure
+from twisted.web.http import Request
 
 import config
 import struct
 import socket
 import app
-import os
-
-def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART}\n    anchor-{config.VERSION}\n')
-    os.makedirs(config.DATA_PATH, exist_ok=True)
 
 def is_local_ip(ip: str) -> bool:
+    if ':' in ip:
+        # TODO: IPv6 parsing
+        return False
+
     private = (
         [ 2130706432, 4278190080 ], # 127.0.0.0
         [ 3232235520, 4294901760 ], # 192.168.0.0
@@ -60,3 +57,15 @@ def valid_client_hash(hash: str) -> bool:
         return True
 
     return hash in manifest['hashes']
+
+def resolve_ip_address(request: Request):
+    if ip := request.requestHeaders.getRawHeaders("CF-Connecting-IP"):
+        return ip[0]
+
+    if forwards := request.requestHeaders.getRawHeaders("X-Forwarded-For"):
+        return forwards[0]
+
+    if ip := request.requestHeaders.getRawHeaders("X-Real-IP"):
+        return ip[0]
+
+    return request.getClientAddress().host.strip()

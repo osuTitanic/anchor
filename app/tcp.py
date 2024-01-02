@@ -16,7 +16,7 @@ import gzip
 
 IPAddress = IPv4Address | IPv6Address
 
-class BanchoProtocol(Player, Protocol):
+class TcpBanchoProtocol(Player, Protocol):
     """This class implements the tcp bancho connection."""
 
     connection_timeout = 20

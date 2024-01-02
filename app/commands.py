@@ -184,7 +184,7 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
     config.BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
-    config.PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
+    config.TCP_PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
 
     config.DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
@@ -204,7 +204,6 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
     config.APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
-    config.SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
     config.MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
     config.S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
     config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())

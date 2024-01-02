@@ -21,7 +21,8 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 
 AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
-PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
+TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
+HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
@@ -41,7 +42,6 @@ MENUICON_URL = os.environ.get('MENUICON_URL')
 
 DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
 APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
-SKIP_IP_DATABASE = eval(os.environ.get('SKIP_IP_DATABASE', 'False').capitalize())
 MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
 S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
 DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
@@ -53,4 +53,4 @@ IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18
-VERSION = '1.1.0'
+VERSION = 'dev'

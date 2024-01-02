@@ -4,8 +4,8 @@ from __future__ import annotations
 from twisted.python.failure import Failure
 from twisted.internet import threads
 
-from typing import Optional, Tuple, List
 from dataclasses import dataclass
+from typing import Tuple, List
 from datetime import datetime
 from threading import Thread
 from queue import Queue
@@ -219,8 +219,8 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        # Clients in version b323 and below don't have the MATCH_LOAD_COMPLETE
-        # packet so we can just ignore them...
+        # NOTE: Clients in version b323 and below don't have the
+        #       MATCH_LOAD_COMPLETE packet so we can just ignore them
         return [
             slot.loaded
             for slot in self.slots
@@ -262,6 +262,7 @@ class Match:
         for player in self.players:
             if player.name == name:
                 return player
+
         return None
 
     def update(self, lobby=True) -> None:

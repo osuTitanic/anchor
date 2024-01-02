@@ -115,10 +115,12 @@ class Player:
         return f'<Player "{self.name}" ({self.id})>'
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, int):
-            return self.id == other
         if isinstance(other, Player):
             return self.id == other.id
+        if isinstance(other, int):
+            return self.id == other
+        if isinstance(other, str):
+            return self.name == other
         return False
 
     def __hash__(self) -> int:
@@ -469,6 +471,7 @@ class Player:
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {client.version}.')
         self.last_response = time.time()
+        self.client = client
 
         # Get decoders and encoders
         self.get_client(client.version.date)
@@ -1124,12 +1127,18 @@ class Player:
         )
 
     def enqueue_lobby_join(self, player_id: int):
+        if self.client.version.date > 20130815:
+            return
+
         self.send_packet(
             self.packets.LOBBY_JOIN,
             player_id
         )
 
     def enqueue_lobby_part(self, player_id: int):
+        if self.client.version.date > 20130815:
+            return
+
         self.send_packet(
             self.packets.LOBBY_PART,
             player_id
