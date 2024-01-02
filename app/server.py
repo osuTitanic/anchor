@@ -3,12 +3,12 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.interfaces import IAddress
 from typing import Optional
 
-from .tcp import BanchoProtocol
+from .tcp import TcpBanchoProtocol
 
 import app
 
 class TcpBanchoFactory(Factory):
-    protocol = BanchoProtocol
+    protocol = TcpBanchoProtocol
 
     def startFactory(self):
         app.session.logger.info(f'Starting factory: {self}')
