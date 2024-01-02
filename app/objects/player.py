@@ -293,6 +293,22 @@ class Player:
         return 'Admins' in self.groups
 
     @property
+    def is_dev(self) -> bool:
+        return 'Developers' in self.groups
+
+    @property
+    def is_bat(self) -> bool:
+        return 'Beatmap Approval Team' in self.groups
+
+    @property
+    def is_moderator(self) -> bool:
+        return 'Global Moderator Team' in self.groups
+
+    @property
+    def is_staff(self) -> bool:
+        return any([self.is_admin, self.is_dev, self.is_moderator])
+
+    @property
     def is_verified(self) -> bool:
         return 'Verified' in self.groups
 
@@ -479,7 +495,7 @@ class Player:
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
-        if not config.DISABLE_CLIENT_VERIFICATION and not self.is_admin:
+        if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
             if not utils.valid_client_hash(self.client.hash):
                 self.logger.warning('Login Failed: Unsupported client')
                 self.login_failed(
@@ -530,7 +546,7 @@ class Player:
 
             latest_supported_version = list(versions.VERSIONS.keys())[0]
 
-            if (self.client.version.date > latest_supported_version) and not self.is_admin:
+            if (self.client.version.date > latest_supported_version) and not self.is_staff:
                 self.logger.warning('Login Failed: Unsupported version')
                 self.login_failed(
                     LoginError.Authentication,
@@ -539,7 +555,7 @@ class Player:
                 return
 
             if config.MAINTENANCE:
-                if not self.is_admin:
+                if not self.is_staff:
                     self.logger.warning('Login Failed: Maintenance')
                     self.login_failed(
                         LoginError.ServerError,
