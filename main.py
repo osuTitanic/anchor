@@ -4,11 +4,12 @@ from twisted.internet import reactor
 from app.common.database.repositories import channels
 from app.common.cache import status, usercount
 
+from app.server import TcpBanchoFactory, HttpBanchoFactory
+
 from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.objects.channel import Channel
 from app.objects.player import Player
-from app.server import TcpBanchoFactory
 from app.jobs import (
     rank_indexing,
     activities,
@@ -86,10 +87,13 @@ def shutdown():
         app.session.logger.warning(f'Shutting down: "{thread.name}"')
 
 def main():
-    factory = TcpBanchoFactory()
+    http_factory = HttpBanchoFactory()
+    tcp_factory = TcpBanchoFactory()
+
+    reactor.listenTCP(config.HTTP_PORT, http_factory)
 
     for port in config.TCP_PORTS:
-        reactor.listenTCP(port, factory)
+        reactor.listenTCP(port, tcp_factory)
 
     reactor.addSystemEventTrigger('before', 'startup', setup)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
