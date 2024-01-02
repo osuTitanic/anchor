@@ -88,7 +88,7 @@ def shutdown():
 def main():
     factory = TcpBanchoFactory()
 
-    for port in config.PORTS:
+    for port in config.TCP_PORTS:
         reactor.listenTCP(port, factory)
 
     reactor.addSystemEventTrigger('before', 'startup', setup)
