@@ -66,6 +66,10 @@ class HttpBanchoProtocol(Resource):
     def handle_login_request(self, request: Request) -> bytes:
         request.setHeader('cho-token', '')
 
+        if request.getHeader('User-Agent') != 'osu!':
+            request.setResponseCode(403)
+            return b''
+
         username, password, client_data = (
             request.content.read().decode().splitlines()
         )
