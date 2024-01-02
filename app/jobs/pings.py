@@ -8,7 +8,7 @@ TIMEOUT_SECS  = 45
 def ping():
     next_ping = time.time() - PING_INTERVAL
 
-    for player in app.session.players:
+    for player in app.session.players.tcp_clients:
         if player.is_bot:
             continue
 
@@ -24,8 +24,14 @@ def ping():
 
         last_response = (time.time() - player.last_response)
 
-        # Check timeout
         if (last_response >= TIMEOUT_SECS):
+            player.logger.warning('Client timed out...')
+            player.close_connection()
+
+    for player in app.session.players.http_clients:
+        last_response = (time.time() - player.last_response)
+
+        if last_response >= TIMEOUT_SECS:
             player.logger.warning('Client timed out...')
             player.close_connection()
 
