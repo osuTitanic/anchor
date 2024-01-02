@@ -8,6 +8,10 @@ import socket
 import app
 
 def is_local_ip(ip: str) -> bool:
+    if ':' in ip:
+        # TODO: IPv6 parsing
+        return False
+
     private = (
         [ 2130706432, 4278190080 ], # 127.0.0.0
         [ 3232235520, 4294901760 ], # 192.168.0.0
