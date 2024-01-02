@@ -233,4 +233,11 @@ class Matches(List[Match | None]):
             # Remove inactive match
             self.pop(index)
 
+    def exists(self, match_id: int) -> bool:
+        """Check if a match exists"""
+        try:
+            return self[match_id] is not None
+        except IndexError:
+            return False
+
 # TODO: IRC Players
