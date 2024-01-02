@@ -7,7 +7,6 @@ from app.common.constants import (
 )
 
 from dataclasses import dataclass
-from typing import List
 
 @dataclass(slots=True)
 class Status:
