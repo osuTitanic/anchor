@@ -470,6 +470,7 @@ class Player:
             self.id,
             self.status.bancho_status,
             self.client.hash.string,
+            self.client.version.date
         )
 
     def get_client(self, version: int):
