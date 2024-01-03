@@ -792,6 +792,9 @@ class Player:
             handler_function(self)
 
     def silence(self, duration_sec: int, reason: str | None = None):
+        if self.is_bot:
+            return
+
         duration = timedelta(seconds=duration_sec)
 
         if not self.object.silence_end:
