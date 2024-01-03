@@ -552,6 +552,9 @@ class Player:
                     LoginError.Authentication,
                     message=strings.UNSUPPORTED_VERSION
                 )
+                officer.call(
+                    f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
+                )
                 return
 
             if config.MAINTENANCE:
