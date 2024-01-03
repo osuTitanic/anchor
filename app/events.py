@@ -164,6 +164,10 @@ def unrestrict(user_id: int, restore_scores: bool = True):
                 f'Failed to restore scores of player "{player.name}": {e}',
                 exc_info=e
             )
+            officer.call(
+                f'Failed to restore scores of player "{player.name}": {e}',
+                exc_info=e
+            )
 
     officer.call(f'Player "{player.name}" was unrestricted.')
 

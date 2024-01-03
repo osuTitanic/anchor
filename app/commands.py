@@ -1244,6 +1244,10 @@ def unrestrict(ctx: Context) -> List | None:
                 f'Failed to restore scores of player "{player.name}": {e}',
                 exc_info=e
             )
+            officer.call(
+                f'Failed to restore scores of player "{player.name}": {e}',
+                exc_info=e
+            )
             return ['Failed to restore scores, but player was unrestricted.']
 
     return [f'Player "{username}" was unrestricted.']

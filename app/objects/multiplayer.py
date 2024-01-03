@@ -24,6 +24,7 @@ from app.common.constants import (
 from app.common.database.repositories import beatmaps, events, matches
 from app.common.objects import bMatch, bSlot, bScoreFrame
 from app.common.database import DBMatch
+from app.common import officer
 
 from .channel import Channel
 from .player import Player
@@ -638,6 +639,10 @@ class Match:
 
     def _score_queue_callback(self, error: Failure) -> None:
         self.logger.error(
+            f'Failed to process score queue: "{error.getErrorMessage()}"',
+            exc_info=error.value
+        )
+        officer.call(
             f'Failed to process score queue: "{error.getErrorMessage()}"',
             exc_info=error.value
         )
