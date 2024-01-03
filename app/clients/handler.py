@@ -77,10 +77,7 @@ def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
-    # NOTE: This was switched to a PING packet in b20130821
-    #       due to the new http bancho server
-    if player.client.version.date > 20130815:
-        player.enqueue_ping()
+    pass # lol
 
 @register(RequestPacket.EXIT)
 def exit(player: Player, updating: bool):
