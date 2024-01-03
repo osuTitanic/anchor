@@ -7,6 +7,7 @@ from twisted.internet.protocol import Protocol
 from twisted.python.failure import Failure
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
+from app.common.helpers import location
 from app.common.streams import StreamIn
 from app.objects.player import Player
 from app.objects import OsuClient
@@ -25,6 +26,7 @@ class TcpBanchoProtocol(Player, Protocol):
 
     def __init__(self, address: IPAddress) -> None:
         super().__init__(address.host, address.port)
+        self.is_local = location.is_local_ip(address.host)
 
     def connectionMade(self):
         if not self.is_local or config.DEBUG:
@@ -65,8 +67,8 @@ class TcpBanchoProtocol(Player, Protocol):
     def close_connection(self, error: Exception | None = None):
         if not self.is_local or config.DEBUG:
             if error:
-                self.send_error(message=str(error) if config.DEBUG else None)
                 self.logger.warning(f'Closing connection -> <{self.address}>')
+                self.send_error()
             else:
                 self.logger.info(f'Closing connection -> <{self.address}>')
 

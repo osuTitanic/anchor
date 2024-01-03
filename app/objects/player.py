@@ -70,7 +70,6 @@ import app
 
 class Player:
     def __init__(self, address: str, port: int) -> None:
-        self.is_local = utils.is_local_ip(address)
         self.logger = logging.getLogger(address)
         self.address = address
         self.port = port

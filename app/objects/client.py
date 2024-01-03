@@ -150,10 +150,7 @@ class OsuClient:
         except (ValueError, IndexError):
             pass
 
-        geolocation = location.fetch_geolocation(
-            ip=ip,
-            is_local=utils.is_local_ip(ip)
-        )
+        geolocation = location.fetch_geolocation(ip)
 
         utc_offset = int(
             datetime.now(
@@ -173,7 +170,7 @@ class OsuClient:
     @classmethod
     def empty(cls):
         return OsuClient(
-            location.fetch_geolocation('127.0.0.1', True),
+            location.fetch_geolocation('127.0.0.1'),
             ClientVersion(OSU_VERSION.match('b1337'), 1337),
             ClientHash('', '', '', '', ''),
             0,
