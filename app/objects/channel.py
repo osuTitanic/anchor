@@ -162,7 +162,7 @@ class Channel:
             for word in BAD_WORDS
         ])
 
-        if has_bad_words:
+        if has_bad_words and not sender.is_bot:
             sender.silence(
                 duration_sec=60 * 10,
                 reason='Auto-silenced for using bad words in chat.'
