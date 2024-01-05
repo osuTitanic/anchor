@@ -29,15 +29,3 @@ def valid_client_hash(hash: str) -> bool:
         return True
 
     return hash in manifest['hashes']
-
-def resolve_ip_address(request: Request):
-    if ip := request.requestHeaders.getRawHeaders("CF-Connecting-IP"):
-        return ip[0]
-
-    if forwards := request.requestHeaders.getRawHeaders("X-Forwarded-For"):
-        return forwards[0]
-
-    if ip := request.requestHeaders.getRawHeaders("X-Real-IP"):
-        return ip[0]
-
-    return request.getClientAddress().host.strip()

@@ -5,6 +5,7 @@ from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.common.streams import StreamIn
 from app.objects.client import OsuClient
 from app.objects.player import Player
+from app.common.helpers import ip
 from app.objects import OsuClient
 
 from twisted.web.resource import Resource
@@ -12,7 +13,6 @@ from twisted.web.http import Request
 from queue import Queue
 
 import config
-import utils
 import gzip
 import uuid
 import app
@@ -74,7 +74,7 @@ class HttpBanchoProtocol(Resource):
             request.content.read().decode().splitlines()
         )
 
-        ip_address = utils.resolve_ip_address(request)
+        ip_address = ip.resolve_ip_address_twisted(request)
         client = OsuClient.from_string(client_data, ip_address)
 
         try:
