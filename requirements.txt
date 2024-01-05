@@ -33,7 +33,7 @@ requests==2.31.0
 s3transfer==0.10.0
 sendgrid==6.11.0
 six==1.16.0
-SQLAlchemy==2.0.24
+SQLAlchemy==2.0.25
 starkbank-ecdsa==2.2.0
 timeago==1.0.16
 titanic-pp-py==0.0.6
