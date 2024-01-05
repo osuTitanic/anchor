@@ -496,7 +496,7 @@ class Player:
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
         if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
-            if not utils.valid_client_hash(self.client.hash):
+            if not utils.valid_client_hash(self.client.hash.md5):
                 self.logger.warning('Login Failed: Unsupported client')
                 self.login_failed(
                     LoginError.Authentication,
