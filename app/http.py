@@ -95,6 +95,11 @@ class HttpBanchoProtocol(Resource):
                 f'Login failed: {e}', exc_info=e
             )
 
+        cf_country_header = request.getHeader('CF-IPCountry')
+
+        if cf_country_header not in ('XX', 'T1', None):
+            self.player.client.ip.country_code = cf_country_header
+
         request.setHeader('cho-token', self.player.token)
         return self.player.dequeue()
 
