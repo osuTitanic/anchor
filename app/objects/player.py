@@ -495,16 +495,6 @@ class Player:
         # Send protocol version
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
-        if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
-            if not utils.valid_client_hash(self.client.hash):
-                self.logger.warning('Login Failed: Unsupported client')
-                self.login_failed(
-                    LoginError.Authentication,
-                    message=strings.UNSUPPORTED_HASH
-                )
-                self.close_connection()
-                return
-
         if client.hash.adapters != 'runningunderwine':
             # Check adapters md5
             adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
@@ -567,6 +557,18 @@ class Player:
                     return
 
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
+
+            if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
+                # Check client's executable hash
+                # (Admins can bypass this check)
+                if not utils.valid_client_hash(self.client.hash.md5):
+                    self.logger.warning('Login Failed: Unsupported client')
+                    self.login_failed(
+                        LoginError.Authentication,
+                        message=strings.UNSUPPORTED_HASH
+                    )
+                    self.close_connection()
+                    return
 
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id(user.id)):
