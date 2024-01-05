@@ -4,9 +4,9 @@ async-timeout==4.0.3
 attrs==23.2.0
 Automat==22.10.0
 bcrypt==4.1.2
-boto3==1.34.11
+boto3==1.34.13
 boto3-type-annotations-with-docs==0.3.1
-botocore==1.34.11
+botocore==1.34.13
 certifi==2023.11.17
 chardet==5.2.0
 charset-normalizer==3.3.2
@@ -33,11 +33,11 @@ requests==2.31.0
 s3transfer==0.10.0
 sendgrid==6.11.0
 six==1.16.0
-SQLAlchemy==2.0.24
+SQLAlchemy==2.0.25
 starkbank-ecdsa==2.2.0
 timeago==1.0.16
 titanic-pp-py==0.0.6
-Twisted==22.10.0
+Twisted==23.10.0
 typing-extensions==4.9.0
 urllib3==1.26.18
 yarl==1.9.4

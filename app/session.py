@@ -38,7 +38,7 @@ bot_player = None
 
 requests = Session()
 requests.headers = {
-    'User-Agent': f'deck-{config.VERSION}'
+    'User-Agent': f'bancho-{config.VERSION}'
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
