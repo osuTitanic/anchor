@@ -38,10 +38,10 @@ from app.common.database.repositories import (
     stats
 )
 
+from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
-from app.common.helpers import clients
 from app.common import mail
 
 from typing import Callable, List, Dict, Set
@@ -562,7 +562,7 @@ class Player:
 
             if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
                 # Check client's executable hash (Admins can bypass this check)
-                if not clients.is_valid_client_hash(self.client.hash.md5):
+                if not client_utils.is_valid_client_hash(self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
                         LoginError.UpdateNeeded,
