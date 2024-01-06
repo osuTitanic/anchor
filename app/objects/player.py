@@ -550,6 +550,7 @@ class Player:
 
             if config.MAINTENANCE:
                 if not self.is_staff:
+                    # Bancho is in maintenance mode
                     self.logger.warning('Login Failed: Maintenance')
                     self.login_failed(
                         LoginError.ServerError,
@@ -564,8 +565,11 @@ class Player:
                 if not clients.is_valid_client_hash(self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
-                        LoginError.Authentication,
+                        LoginError.UpdateNeeded,
                         message=strings.UNSUPPORTED_HASH
+                    )
+                    officer.call(
+                        f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
                     )
                     self.close_connection()
                     return
