@@ -38,6 +38,7 @@ from app.common.database.repositories import (
     stats
 )
 
+from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
@@ -549,6 +550,7 @@ class Player:
 
             if config.MAINTENANCE:
                 if not self.is_staff:
+                    # Bancho is in maintenance mode
                     self.logger.warning('Login Failed: Maintenance')
                     self.login_failed(
                         LoginError.ServerError,
@@ -559,13 +561,15 @@ class Player:
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
             if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
-                # Check client's executable hash
-                # (Admins can bypass this check)
-                if not utils.valid_client_hash(self.client.hash.md5):
+                # Check client's executable hash (Admins can bypass this check)
+                if not client_utils.is_valid_client_hash(self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
-                        LoginError.Authentication,
+                        LoginError.UpdateNeeded,
                         message=strings.UNSUPPORTED_HASH
+                    )
+                    officer.call(
+                        f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
                     )
                     self.close_connection()
                     return

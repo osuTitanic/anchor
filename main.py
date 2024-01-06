@@ -67,6 +67,11 @@ def setup():
     # Reset usercount
     usercount.set(0)
 
+    # Reset player statuses
+    for key in status.get_all():
+        player_id = key.split(':')[-1]
+        status.delete(player_id)
+
 def shutdown():
     # Reset usercount
     usercount.set(0)
