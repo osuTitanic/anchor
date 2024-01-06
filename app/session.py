@@ -9,7 +9,7 @@ from .jobs import Jobs
 from twisted.python.threadpool import ThreadPool
 from twisted.internet import reactor
 
-from typing import Callable, Optional, Dict
+from typing import Callable, Dict
 from requests import Session
 from redis import Redis
 
@@ -51,5 +51,3 @@ storage = Storage()
 players = Players()
 matches = Matches()
 jobs = Jobs()
-
-client_manifest: Optional[dict] = None
