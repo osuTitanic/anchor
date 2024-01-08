@@ -312,6 +312,10 @@ class Player:
     def is_verified(self) -> bool:
         return 'Verified' in self.groups
 
+    @property
+    def has_preview_access(self) -> bool:
+        return 'Preview' in self.groups
+
     def enqueue(self, data: bytes):
         """
         Enqueues the given data to the client.
@@ -501,7 +505,9 @@ class Player:
             adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
             if adapters_hash != client.hash.adapters_md5:
-                self.transport.write(b'no.\r\n')
+                officer.call(
+                    f'Player tried to log in with a modified adapters file: {adapters_hash}'
+                )
                 self.close_connection()
                 return
 
@@ -537,7 +543,12 @@ class Player:
 
             latest_supported_version = list(versions.VERSIONS.keys())[0]
 
-            if (self.client.version.date > latest_supported_version) and not self.is_staff:
+            if (
+                (self.client.version.date > latest_supported_version)
+                and not config.DISABLE_CLIENT_VERIFICATION
+                and not self.is_staff
+                and not self.has_preview_access
+            ):
                 self.logger.warning('Login Failed: Unsupported version')
                 self.login_failed(
                     LoginError.Authentication,
@@ -560,7 +571,11 @@ class Player:
 
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
+            if (
+                not config.DISABLE_CLIENT_VERIFICATION
+                and not self.is_staff
+                and not self.has_preview_access
+            ):
                 # Check client's executable hash (Admins can bypass this check)
                 if not client_utils.is_valid_client_hash(self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
