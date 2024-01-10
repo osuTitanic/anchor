@@ -116,11 +116,10 @@ class Player:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Player):
-            return self.id == other.id
-        if isinstance(other, int):
-            return self.id == other
-        if isinstance(other, str):
-            return self.name == other
+            return (
+                self.id == other.id and
+                self.port == other.port
+            )
         return False
 
     def __hash__(self) -> int:
