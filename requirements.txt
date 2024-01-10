@@ -20,7 +20,7 @@ hyperlink==21.0.0
 idna==3.6
 incremental==22.10.0
 jmespath==1.0.1
-maxminddb==2.5.1
+maxminddb==2.5.2
 multidict==6.0.4
 psycopg2==2.9.9
 python-dateutil==2.8.2
