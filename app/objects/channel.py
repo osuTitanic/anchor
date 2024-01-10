@@ -37,6 +37,12 @@ class Channel:
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
 
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, other) -> bool:
+        return self.name == other.name
+
     @property
     def display_name(self) -> str:
         """This is what will be shown to the client"""
@@ -100,7 +106,7 @@ class Channel:
             player.revoke_channel(self.display_name)
 
         player.channels.add(self)
-        self.users.append(player)
+        self.users.add(player)
         self.update()
 
         if not no_response:
@@ -151,7 +157,7 @@ class Channel:
             sender.logger.warning(
                 'Failed to send message: Sender was silenced'
             )
-            return 
+            return
 
         if not self.can_write(sender.permissions) and not ignore_privs:
             sender.logger.warning(f'Failed to send message: "{message}".')

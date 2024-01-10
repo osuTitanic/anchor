@@ -59,12 +59,12 @@ from app.clients import (
     DefaultRequestPacket
 )
 
+import itertools
 import hashlib
 import timeago
 import logging
 import config
 import bcrypt
-import utils
 import time
 import gzip
 import app
@@ -679,7 +679,7 @@ class Player:
         self.enqueue_irc_player(app.session.bot_player)
 
         # Append to player collection
-        app.session.players.append(self)
+        app.session.players.add(self)
 
         # Enqueue other players
         self.enqueue_players(app.session.players)
@@ -984,13 +984,18 @@ class Player:
                 self.enqueue_presence(player)
             return
 
-        n = max(1, 150)
+        player_chunks = itertools.zip_longest(
+            *[iter(players)] * 128
+        )
 
-        # Split players into chunks to avoid any buffer overflows
-        for chunk in (players[i:i+n] for i in range(0, len(players), n)):
+        for chunk in player_chunks:
             self.send_packet(
                 self.packets.USER_PRESENCE_BUNDLE,
-                [player.id for player in chunk]
+                [
+                    player.id
+                    for player in chunk
+                    if player != None
+                ]
             )
 
     def enqueue_irc_player(self, player):

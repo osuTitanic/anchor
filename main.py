@@ -52,7 +52,7 @@ def setup():
 
     app.session.logger.info('Loading bot...')
 
-    app.session.players.append(
+    app.session.players.add(
         bot_player := Player.bot_player()
     )
     app.session.bot_player = bot_player
