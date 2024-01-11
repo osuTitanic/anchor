@@ -1,6 +1,9 @@
 
+from __future__ import annotations
+
 from app.common import officer
 from app.common.objects import bMessage
+from app.common.constants import GameMode
 from app.common.cache import leaderboards
 from app.common.database.repositories import (
     infringements,
@@ -18,9 +21,13 @@ import json
 import app
 
 @app.session.events.register('user_update')
-def user_update(user_id: int):
+def user_update(user_id: int, mode: int | None = None):
     if not (player := app.session.players.by_id(user_id)):
         return
+
+    if mode != None:
+        # Assign new mode to the player
+        player.status.mode = GameMode(mode)
 
     player.reload_object()
 
