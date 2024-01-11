@@ -118,13 +118,6 @@ def stats_request(player: Player, players: List[int]):
 
 @register(RequestPacket.CHANGE_STATUS)
 def change_status(player: Player, status: bStatusUpdate):
-    if player.status.mode != status.mode:
-        # Enqueue a user update, to fix stats for older clients
-        session.events.submit(
-            'user_update',
-            user_id=player.id
-        )
-
     player.status.checksum = status.beatmap_checksum
     player.status.beatmap = status.beatmap_id
     player.status.action = status.action
