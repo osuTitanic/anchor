@@ -125,9 +125,9 @@ class Players(Set[Player | HttpPlayer]):
         for p in self:
             p.enqueue_players(players)
 
-    def send_presence(self, player: Player):
+    def send_presence(self, player: Player, update: bool = False):
         for p in self:
-            p.enqueue_presence(player)
+            p.enqueue_presence(player, update)
 
     def send_stats(self, player: Player):
         for p in self:
