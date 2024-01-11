@@ -30,10 +30,16 @@ class HttpPlayer(Player):
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
-    def dequeue(self) -> bytes:
+    def dequeue(self, max: int = 4096) -> bytes:
         data = b""
+
         while not self.queue.empty():
             data += self.queue.get()
+
+            if len(data) > max:
+                # Let client perform fast-read
+                break
+
         return data
 
     def login_received(self, username: str, md5: str, client: OsuClient) -> None:

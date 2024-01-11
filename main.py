@@ -52,7 +52,7 @@ def setup():
 
     app.session.logger.info('Loading bot...')
 
-    app.session.players.append(
+    app.session.players.add(
         bot_player := Player.bot_player()
     )
     app.session.bot_player = bot_player
@@ -88,13 +88,11 @@ def shutdown():
 
     signal.signal(signal.SIGINT, force_exit)
 
-    for thread in app.session.pool.threads:
-        app.session.logger.warning(f'Shutting down: "{thread.name}"')
-
 def main():
     http_factory = HttpBanchoFactory()
     tcp_factory = TcpBanchoFactory()
 
+    reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
     reactor.listenTCP(config.HTTP_PORT, http_factory)
 
     for port in config.TCP_PORTS:

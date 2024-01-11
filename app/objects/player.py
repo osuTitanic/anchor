@@ -59,12 +59,12 @@ from app.clients import (
     DefaultRequestPacket
 )
 
+import itertools
 import hashlib
 import timeago
 import logging
 import config
 import bcrypt
-import utils
 import time
 import gzip
 import app
@@ -116,11 +116,10 @@ class Player:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Player):
-            return self.id == other.id
-        if isinstance(other, int):
-            return self.id == other
-        if isinstance(other, str):
-            return self.name == other
+            return (
+                self.id == other.id and
+                self.port == other.port
+            )
         return False
 
     def __hash__(self) -> int:
@@ -312,6 +311,10 @@ class Player:
     def is_verified(self) -> bool:
         return 'Verified' in self.groups
 
+    @property
+    def has_preview_access(self) -> bool:
+        return 'Preview' in self.groups
+
     def enqueue(self, data: bytes):
         """
         Enqueues the given data to the client.
@@ -501,7 +504,9 @@ class Player:
             adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
             if adapters_hash != client.hash.adapters_md5:
-                self.transport.write(b'no.\r\n')
+                officer.call(
+                    f'Player tried to log in with a modified adapters file: {adapters_hash}'
+                )
                 self.close_connection()
                 return
 
@@ -537,7 +542,12 @@ class Player:
 
             latest_supported_version = list(versions.VERSIONS.keys())[0]
 
-            if (self.client.version.date > latest_supported_version) and not self.is_staff:
+            if (
+                (self.client.version.date > latest_supported_version)
+                and not config.DISABLE_CLIENT_VERIFICATION
+                and not self.is_staff
+                and not self.has_preview_access
+            ):
                 self.logger.warning('Login Failed: Unsupported version')
                 self.login_failed(
                     LoginError.Authentication,
@@ -560,7 +570,11 @@ class Player:
 
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            if not config.DISABLE_CLIENT_VERIFICATION and not self.is_staff:
+            if (
+                not config.DISABLE_CLIENT_VERIFICATION
+                and not self.is_staff
+                and not self.has_preview_access
+            ):
                 # Check client's executable hash (Admins can bypass this check)
                 if not client_utils.is_valid_client_hash(self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
@@ -665,7 +679,7 @@ class Player:
         self.enqueue_irc_player(app.session.bot_player)
 
         # Append to player collection
-        app.session.players.append(self)
+        app.session.players.add(self)
 
         # Enqueue other players
         self.enqueue_players(app.session.players)
@@ -970,13 +984,18 @@ class Player:
                 self.enqueue_presence(player)
             return
 
-        n = max(1, 150)
+        player_chunks = itertools.zip_longest(
+            *[iter(players)] * 128
+        )
 
-        # Split players into chunks to avoid any buffer overflows
-        for chunk in (players[i:i+n] for i in range(0, len(players), n)):
+        for chunk in player_chunks:
             self.send_packet(
                 self.packets.USER_PRESENCE_BUNDLE,
-                [player.id for player in chunk]
+                [
+                    player.id
+                    for player in chunk
+                    if player != None
+                ]
             )
 
     def enqueue_irc_player(self, player):

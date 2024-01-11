@@ -38,6 +38,7 @@ from .objects.multiplayer import StartingTimers
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
+from .tcp import TcpBanchoProtocol
 
 import timeago
 import config
@@ -1470,7 +1471,7 @@ def execute(
     player.logger.info(f'[{app.session.bot_player.name}]: {", ".join(command.response)}')
 
     target_name = target.name \
-        if type(target) == Player \
+        if type(target) == TcpBanchoProtocol \
         else target.display_name
 
     # Send to sender

@@ -17,47 +17,65 @@ from typing import (
 from ..http import HttpPlayer
 from .player import Player
 
+import threading
 import app
 
-class Players(List[Player]):
+class Players(Set[Player | HttpPlayer]):
+    def __init__(self):
+        self.lock = threading.Lock()
+        super().__init__()
+
     def __iter__(self) -> Iterator[Player]:
-        return super().__iter__()
+        with self.lock:
+            players = iter(list(super().__iter__()))
+        return players
+
+    def __len__(self) -> int:
+        with self.lock:
+            return len(list(super().__iter__()))
+
+    def __contains__(self, player: Player) -> bool:
+        with self.lock:
+            return super().__contains__(player)
+
+    def __repr__(self) -> str:
+        with self.lock:
+            return f'<Players ({len(self)})>'
 
     @property
     def ids(self) -> Set[int]:
         return {p.id for p in self}
 
     @property
-    def in_lobby(self) -> List[Player]:
-        return [p for p in self if p.in_lobby]
+    def in_lobby(self) -> Set[Player]:
+        return {p for p in self if p.in_lobby}
 
     @property
-    def tourney_clients(self) -> List[Player]:
-        return [p for p in self if p.is_tourney_client]
+    def tourney_clients(self) -> Set[Player]:
+        return {p for p in self if p.is_tourney_client}
 
     @property
-    def normal_clients(self) -> List[Player]:
-        return [p for p in self if not p.is_tourney_client]
+    def normal_clients(self) -> Set[Player]:
+        return {p for p in self if not p.is_tourney_client}
 
     @property
-    def http_clients(self) -> List[HttpPlayer]:
-        return [p for p in self if isinstance(p, HttpPlayer)]
+    def http_clients(self) -> Set[HttpPlayer]:
+        return {p for p in self if isinstance(p, HttpPlayer)}
 
     @property
-    def tcp_clients(self) -> List[Player]:
-        return [p for p in self if not isinstance(p, HttpPlayer)]
+    def tcp_clients(self) -> Set[Player]:
+        return {p for p in self if not isinstance(p, HttpPlayer)}
 
-    def append(self, player: Player) -> None:
+    def add(self, player: Player) -> None:
         """Append a player to the collection"""
         self.send_player(player)
-        if player.id not in self.ids or player.is_tourney_client:
-            return super().append(player)
+        return super().add(player)
 
     def remove(self, player: Player) -> None:
         """Remove a player from the collection"""
         try:
             return super().remove(player)
-        except ValueError:
+        except (ValueError, KeyError):
             pass
 
     def enqueue(self, data: bytes, immune = []) -> None:
@@ -68,41 +86,24 @@ class Players(List[Player]):
 
     def by_id(self, id: int) -> Player | None:
         """Get a player by id"""
-        if id == 1:
-            return app.session.bot_player
-
-        for p in self.normal_clients:
-            if p.id == id:
-                return p
-
-        for p in self.tourney_clients:
-            if p.id == id:
-                return p
-
-        return None
+        return next(
+            (p for p in self if p.id == id),
+            (app.session.bot_player if id == 1 else None)
+        )
 
     def by_name(self, name: str) -> Player | None:
         """Get a player by name"""
-        if name == app.session.bot_player.name:
-            return app.session.bot_player
-
-        for p in self.normal_clients:
-            if p.name == name:
-                return p
-
-        for p in self.tourney_clients:
-            if p.name == name:
-                return p
-
-        return None
+        return next(
+            (p for p in self if p.name == name),
+            (app.session.bot_player if name == app.session.bot_player.name else None)
+        )
 
     def by_token(self, token: str) -> Player | None:
         """Get a player by token"""
-        for p in self.http_clients:
-            if p.token == token:
-                return p
-
-        return None
+        return next(
+            (p for p in self.http_clients if p.token == token),
+            None
+        )
 
     def get_all_tourney_clients(self, id: int) -> List[Player]:
         """Get all tourney clients for a player id"""
@@ -124,9 +125,9 @@ class Players(List[Player]):
         for p in self:
             p.enqueue_players(players)
 
-    def send_presence(self, player: Player):
+    def send_presence(self, player: Player, update: bool = False):
         for p in self:
-            p.enqueue_presence(player)
+            p.enqueue_presence(player, update)
 
     def send_stats(self, player: Player):
         for p in self:
@@ -145,7 +146,7 @@ class Players(List[Player]):
 
 from .channel import Channel
 
-class Channels(List[Channel]):
+class Channels(Set[Channel]):
     def __iter__(self) -> Iterator[Channel]:
         return super().__iter__()
 
@@ -163,7 +164,8 @@ class Channels(List[Channel]):
         if not c:
             return
 
-        if c not in self: return super().append(c)
+        if c not in self:
+            return super().add(c)
 
     def remove(self, c: Channel) -> None:
         """Remove a channel from the collection"""
@@ -174,10 +176,11 @@ class Channels(List[Channel]):
         for p in c.users:
             p.revoke_channel(c.display_name)
 
-        if c in self: return super().remove(c)
+        if c in self:
+            return super().remove(c)
 
     def extend(self, channels: Iterable[Channel]) -> None:
-        return super().extend(channels)
+        return super().update(channels)
 
 from .multiplayer import Match
 
