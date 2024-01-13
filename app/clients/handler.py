@@ -728,7 +728,10 @@ def join_match(player: Player, match_join: bMatchJoin):
     events.create(
         match.db_match.id,
         type=EventType.Join,
-        data={'user_id': player.id}
+        data={
+            'user_id': player.id,
+            'name': player.name
+        }
     )
 
     match.logger.info(f'{player.name} joined')
@@ -760,7 +763,10 @@ def leave_match(player: Player):
     events.create(
         player.match.db_match.id,
         type=EventType.Leave,
-        data={'user_id': player.id}
+        data={
+            'user_id': player.id,
+            'name': player.name
+        }
     )
 
     if (player is player.match.host and player.match.beatmap_id == -1):
@@ -805,7 +811,10 @@ def leave_match(player: Player):
             events.create(
                 player.match.db_match.id,
                 type=EventType.Host,
-                data={'old_host': player.id, 'new_host': player.match.host.id}
+                data={
+                    'previous': {'id': player.id, 'name': player.name},
+                    'new': {'id': player.match.host.id, 'name': player.match.host.name}
+                }
             )
 
         player.match.update()
@@ -1042,13 +1051,20 @@ def transfer_host(player: Player, slot_id: int):
         player.match.logger.warning('Host tried to transfer host into an empty slot?')
         return
 
+    if target is player.match.host:
+        player.match.host.enqueue_match_transferhost()
+        return
+
     player.match.host = target
     player.match.host.enqueue_match_transferhost()
 
     events.create(
         player.match.db_match.id,
         type=EventType.Host,
-        data={'user_id': target.id, 'previous': player.id}
+        data={
+            'new': {'id': target.id, 'name': target.name},
+            'previous': {'id': player.id, 'name': player.name}
+        }
     )
 
     player.match.logger.info(f'Changed host to: {target.name}')
@@ -1209,6 +1225,15 @@ def match_complete(player: Player):
         slots = [slot for slot in player.match.slots if slot.last_frame]
         slots.sort(key=ranking_type, reverse=True)
 
+        match_results = [
+            (rank, slot)
+            for rank, slot in enumerate(slots)
+            if (slot != None) and (slot.player != None)
+        ]
+
+        if not match_results:
+            return
+
         events.create(
             player.match.db_match.id,
             type=EventType.Result,
@@ -1249,7 +1274,7 @@ def match_complete(player: Player):
                         },
                         'place': rank + 1
                     }
-                    for rank, slot in enumerate(slots) if (slot != None) and (slot.player != None)
+                    for rank, slot in match_results
                 ]
             }
         )

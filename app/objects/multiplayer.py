@@ -421,7 +421,10 @@ class Match:
         events.create(
             self.db_match.id,
             type=EventType.Kick,
-            data={'user_id': player.id}
+            data={
+                'user_id': player.id,
+                'name': player.name
+            }
         )
 
         if player == self.host:
@@ -434,7 +437,10 @@ class Match:
             events.create(
                 self.db_match.id,
                 type=EventType.Host,
-                data={'old_host': player.id, 'new_host': self.host.id}
+                data={
+                    'new': {'id': self.host.id, 'name': self.host.name},
+                    'previous': {'id': player.id, 'name': player.name}
+                }
             )
 
         self.update()
