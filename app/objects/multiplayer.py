@@ -478,7 +478,7 @@ class Match:
 
         last_game = events.fetch_last_by_type(
             self.db_match.id,
-            type=EventType.Start
+            type=EventType.Result
         )
 
         if not last_game:

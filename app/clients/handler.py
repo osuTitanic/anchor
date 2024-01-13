@@ -789,7 +789,7 @@ def leave_match(player: Player):
 
         last_game = events.fetch_last_by_type(
             match_id,
-            type=EventType.Start
+            type=EventType.Result
         )
 
         if not last_game:
