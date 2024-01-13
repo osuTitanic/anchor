@@ -1225,6 +1225,15 @@ def match_complete(player: Player):
         slots = [slot for slot in player.match.slots if slot.last_frame]
         slots.sort(key=ranking_type, reverse=True)
 
+        match_results = [
+            (rank, slot)
+            for rank, slot in enumerate(slots)
+            if (slot != None) and (slot.player != None)
+        ]
+
+        if not match_results:
+            return
+
         events.create(
             player.match.db_match.id,
             type=EventType.Result,
@@ -1265,7 +1274,7 @@ def match_complete(player: Player):
                         },
                         'place': rank + 1
                     }
-                    for rank, slot in enumerate(slots) if (slot != None) and (slot.player != None)
+                    for rank, slot in match_results
                 ]
             }
         )
