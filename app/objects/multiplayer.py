@@ -423,7 +423,7 @@ class Match:
             type=EventType.Kick,
             data={
                 'user_id': player.id,
-                'username': player.name
+                'name': player.name
             }
         )
 
