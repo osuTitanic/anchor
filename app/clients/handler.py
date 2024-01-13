@@ -1051,6 +1051,10 @@ def transfer_host(player: Player, slot_id: int):
         player.match.logger.warning('Host tried to transfer host into an empty slot?')
         return
 
+    if target is player.match.host:
+        player.match.host.enqueue_match_transferhost()
+        return
+
     player.match.host = target
     player.match.host.enqueue_match_transferhost()
 

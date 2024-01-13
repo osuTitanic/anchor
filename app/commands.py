@@ -443,6 +443,9 @@ def mp_host(ctx: Context):
     if not (target := match.get_player(name)):
         return ['Could not find this player.']
 
+    if target is match.host:
+        return ['You are already the host.']
+
     events.create(
         match.db_match.id,
         type=EventType.Host,
