@@ -728,7 +728,10 @@ def join_match(player: Player, match_join: bMatchJoin):
     events.create(
         match.db_match.id,
         type=EventType.Join,
-        data={'user_id': player.id}
+        data={
+            'user_id': player.id,
+            'name': player.name
+        }
     )
 
     match.logger.info(f'{player.name} joined')
@@ -760,7 +763,10 @@ def leave_match(player: Player):
     events.create(
         player.match.db_match.id,
         type=EventType.Leave,
-        data={'user_id': player.id}
+        data={
+            'user_id': player.id,
+            'name': player.name
+        }
     )
 
     if (player is player.match.host and player.match.beatmap_id == -1):
@@ -805,7 +811,10 @@ def leave_match(player: Player):
             events.create(
                 player.match.db_match.id,
                 type=EventType.Host,
-                data={'old_host': player.id, 'new_host': player.match.host.id}
+                data={
+                    'previous': {'id': player.id, 'name': player.name},
+                    'new': {'id': player.match.host.id, 'name': player.match.host.name}
+                }
             )
 
         player.match.update()
@@ -1048,7 +1057,10 @@ def transfer_host(player: Player, slot_id: int):
     events.create(
         player.match.db_match.id,
         type=EventType.Host,
-        data={'user_id': target.id, 'previous': player.id}
+        data={
+            'new': {'id': target.id, 'name': target.name},
+            'previous': {'id': player.id, 'name': player.name}
+        }
     )
 
     player.match.logger.info(f'Changed host to: {target.name}')

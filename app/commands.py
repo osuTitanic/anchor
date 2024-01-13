@@ -446,7 +446,10 @@ def mp_host(ctx: Context):
     events.create(
         match.db_match.id,
         type=EventType.Host,
-        data={'old_host': target.id, 'new_host': match.host.id}
+        data={
+            'previous': {'id': target.id, 'name': target.name},
+            'new': {'id': match.host.id, 'name': match.host.name}
+        }
     )
 
     match.host = target
