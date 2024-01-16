@@ -102,7 +102,7 @@ class Writer(BaseWriter):
 
     def write_replayframe(self, frame: bReplayFrame):
         self.stream.u8(frame.button_state.value)
-        self.stream.u8(frame.taiko_byte)
+        self.stream.u8(frame.legacy_byte)
         self.stream.float(frame.mouse_x)
         self.stream.float(frame.mouse_y)
         self.stream.s32(frame.time)

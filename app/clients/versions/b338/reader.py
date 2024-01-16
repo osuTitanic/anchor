@@ -95,7 +95,7 @@ class Reader(BaseReader):
 
         return bReplayFrame(
             button_state=button_state,
-            taiko_byte=0,
+            legacy_byte=0,
             mouse_x=self.stream.float(),
             mouse_y=self.stream.float(),
             time=self.stream.s32()
