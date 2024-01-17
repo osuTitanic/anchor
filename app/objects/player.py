@@ -540,24 +540,6 @@ class Player:
                 self.login_failed(LoginError.NotActivated)
                 return
 
-            latest_supported_version = list(versions.VERSIONS.keys())[0]
-
-            if (
-                (self.client.version.date > latest_supported_version)
-                and not config.DISABLE_CLIENT_VERIFICATION
-                and not self.is_staff
-                and not self.has_preview_access
-            ):
-                self.logger.warning('Login Failed: Unsupported version')
-                self.login_failed(
-                    LoginError.Authentication,
-                    message=strings.UNSUPPORTED_VERSION
-                )
-                officer.call(
-                    f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
-                )
-                return
-
             if config.MAINTENANCE:
                 if not self.is_staff:
                     # Bancho is in maintenance mode
