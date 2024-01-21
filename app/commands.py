@@ -1217,7 +1217,7 @@ def unrestrict(ctx: Context) -> List | None:
         return [f'Invalid syntax: !{ctx.trigger} <name> <restore scores (true/false)>']
 
     username = ctx.args[0]
-    restore_scores = False
+    restore_scores = True
 
     if len(ctx.args) > 1:
         restore_scores = eval(ctx.args[1].capitalize())
