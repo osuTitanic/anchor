@@ -1,4 +1,5 @@
 
+from app.common import officer
 import time
 import app
 
@@ -6,7 +7,7 @@ PING_INTERVAL = 10
 TIMEOUT_SECS  = 45
 
 def ping():
-    next_ping = time.time() - PING_INTERVAL
+    next_ping = (time.time() - PING_INTERVAL)
 
     for player in app.session.players.tcp_clients:
         if player.is_bot:
@@ -40,5 +41,9 @@ def ping_job():
         if app.session.jobs._shutdown:
             exit()
 
+        try:
+            ping()
+        except Exception as e:
+            officer.call(f'Ping job failed: {e}', exc_info=e)
+
         time.sleep(1)
-        ping()
