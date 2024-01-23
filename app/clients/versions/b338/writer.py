@@ -82,7 +82,7 @@ class Writer(BaseWriter):
         self.stream.float(stats.accuracy)
         self.stream.s32(stats.playcount)
         self.stream.s64(stats.tscore)
-        self.stream.s32(stats.rank)
+        self.stream.u16(stats.rank)
 
     def write_quit(self, state: bUserQuit):
         self.stream.s32(state.user_id)

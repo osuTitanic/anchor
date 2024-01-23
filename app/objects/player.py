@@ -127,23 +127,24 @@ class Player:
 
     @classmethod
     def bot_player(cls):
-        # TODO: Refactor bot related code to IRC client
-        player = Player('127.0.0.1', 1337)
-        player.object = users.fetch_by_id(1)
-        player.client = OsuClient.empty()
+        with app.session.database.managed_session() as session:
+            # TODO: Refactor bot related code to IRC client
+            player = Player('127.0.0.1', 6969)
+            player.object = users.fetch_by_id(1, session=session)
+            player.client = OsuClient.empty()
 
-        player.id = -player.object.id # Negative user id -> IRC Player
-        player.name = player.object.name
-        player.stats  = player.object.stats
+            player.id = -player.object.id # Negative UserId -> IRC Player
+            player.name = player.object.name
+            player.stats  = player.object.stats
 
-        player.permissions = Permissions(
-            groups.get_player_permissions(1)
-        )
+            player.permissions = Permissions(
+                groups.get_player_permissions(1, session=session)
+            )
 
-        player.client.ip.country_code = "OC"
-        player.client.ip.city = "w00t p00t!"
+            player.client.ip.country_code = "OC"
+            player.client.ip.city = "w00t p00t!"
 
-        return player
+            return player
 
     @property
     def is_bot(self) -> bool:
@@ -432,14 +433,20 @@ class Player:
 
     def reload_object(self) -> DBUser:
         """Reload player object from database"""
-        self.object = users.fetch_by_id(self.id)
-        self.stats = self.object.stats
+        with app.session.database.managed_session() as session:
+            self.object = users.fetch_by_id(self.id, session=session)
+            self.stats = self.object.stats
 
-        self.update_leaderboard_stats()
-        self.update_status_cache()
-        self.reload_rank()
+            # Preload relationships
+            self.object.target_relationships
+            self.object.relationships
+            self.object.groups
 
-        return self.object
+            self.update_leaderboard_stats()
+            self.update_status_cache()
+            self.reload_rank()
+
+            return self.object
 
     def reload_rank(self) -> None:
         """Reload player rank from cache and update it if needed"""
@@ -521,6 +528,11 @@ class Player:
             self.stats = user.stats
             self.object = user
 
+            # Preload relationships
+            self.object.target_relationships
+            self.object.relationships
+            self.object.groups
+
             self.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
 
@@ -538,24 +550,6 @@ class Player:
                 # TODO: Some clients may interpret this as being banned...?
                 self.logger.warning('Login Failed: Not activated')
                 self.login_failed(LoginError.NotActivated)
-                return
-
-            latest_supported_version = list(versions.VERSIONS.keys())[0]
-
-            if (
-                (self.client.version.date > latest_supported_version)
-                and not config.DISABLE_CLIENT_VERIFICATION
-                and not self.is_staff
-                and not self.has_preview_access
-            ):
-                self.logger.warning('Login Failed: Unsupported version')
-                self.login_failed(
-                    LoginError.Authentication,
-                    message=strings.UNSUPPORTED_VERSION
-                )
-                officer.call(
-                    f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
-                )
                 return
 
             if config.MAINTENANCE:
