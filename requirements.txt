@@ -24,7 +24,7 @@ maxminddb==2.5.1
 multidict==6.0.4
 psycopg2==2.9.9
 python-dateutil==2.8.2
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 python-http-client==3.3.7
 pytimeparse==1.1.8
 pytz==2023.3.post1
