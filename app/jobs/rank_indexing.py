@@ -12,16 +12,17 @@ def index_ranks():
     """
 
     if not leaderboards.top_players(0):
-        # Redis cache was flushed
-        active_players = users.fetch_all()
+        with app.session.database.managed_session() as session:
+            # Redis cache was flushed
+            active_players = users.fetch_all(session=session)
 
-        app.session.logger.info(f'Indexing player ranks... ({len(active_players)})')
+            app.session.logger.info(f'Indexing player ranks... ({len(active_players)})')
 
-        for player in active_players:
-            for stats in player.stats:
-                leaderboards.update(
-                    stats,
-                    player.country.lower()
-                )
+            for player in active_players:
+                for stats in player.stats:
+                    leaderboards.update(
+                        stats,
+                        player.country.lower()
+                    )
 
-        app.session.logger.info('Index complete!')
+            app.session.logger.info('Index complete!')
