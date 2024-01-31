@@ -133,7 +133,7 @@ class Player:
             player.object = users.fetch_by_id(1, session=session)
             player.client = OsuClient.empty()
 
-            player.id = -player.object.id # Negative UserId -> IRC Player
+            player.id = -player.object.id
             player.name = player.object.name
             player.stats  = player.object.stats
 
@@ -148,8 +148,7 @@ class Player:
 
     @property
     def is_bot(self) -> bool:
-        # TODO: Refactor bot related code to IRC client
-        return True if self.id == -1 else False
+        return self.object.is_bot if self.object else False
 
     @property
     def silenced(self) -> bool:
