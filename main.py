@@ -89,14 +89,18 @@ def shutdown():
     signal.signal(signal.SIGINT, force_exit)
 
 def main():
-    http_factory = HttpBanchoFactory()
-    tcp_factory = TcpBanchoFactory()
+    try:
+        http_factory = HttpBanchoFactory()
+        tcp_factory = TcpBanchoFactory()
 
-    reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
-    reactor.listenTCP(config.HTTP_PORT, http_factory)
+        reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
+        reactor.listenTCP(config.HTTP_PORT, http_factory)
 
-    for port in config.TCP_PORTS:
-        reactor.listenTCP(port, tcp_factory)
+        for port in config.TCP_PORTS:
+            reactor.listenTCP(port, tcp_factory)
+    except Exception as e:
+        app.session.logger.error(f'Failed to start server: "{e}"')
+        exit(1)
 
     reactor.addSystemEventTrigger('before', 'startup', setup)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
