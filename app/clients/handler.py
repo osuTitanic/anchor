@@ -1282,28 +1282,30 @@ def match_complete(player: Player):
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
 def tourney_match_info(player: Player, match_id: int):
     if not player.supporter:
+        player.logger.warning('Tried to request tourney match info, but was not supporter.')
         return
 
     if not player.is_tourney_client:
+        player.logger.warning('Tried to request tourney match info, but was not in tourney client.')
         return
 
     player.logger.debug(f'Requesting tourney match info ({match_id})')
 
     if not (db_match := matches.fetch_by_id(match_id)):
-        player.logger.debug("Match not found.")
+        player.logger.warning(f'Tried to request tourney match info, but match with id "{match_id}" was not found.')
         return
 
     if db_match.ended_at != None:
-        player.logger.debug("Match has already ended.")
+        player.logger.warning('Tried to request tourney match info, but match has already ended.')
         return
 
-    if not session.matches.exists(db_match.id):
-        player.logger.debug("Bancho match is not active.")
+    if not session.matches.exists(db_match.bancho_id):
+        player.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
         return
 
     match = session.matches[db_match.bancho_id]
 
-    player.logger.debug("Match found. Sending to client...")
+    player.logger.debug(f'Got tournament match info request for "{match.name}".')
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
