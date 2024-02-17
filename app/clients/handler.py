@@ -1299,13 +1299,13 @@ def tourney_match_info(player: Player, match_id: int):
         player.logger.warning('Tried to request tourney match info, but match has already ended.')
         return
 
-    if not session.matches.exists(db_match.id):
+    if not session.matches.exists(db_match.bancho_id):
         player.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
         return
 
     match = session.matches[db_match.bancho_id]
 
-    player.logger.info(f'Got tournament match info request for "{match.name}".')
+    player.logger.debug(f'Got tournament match info request for "{match.name}".')
     player.enqueue_match(match.bancho_match)
 
 @register(RequestPacket.ERROR_REPORT)
