@@ -850,13 +850,9 @@ class Player:
         autoban: bool = False
     ) -> None:
         self.object.restricted = True
-        self.object.permissions = 0
 
         # Update database
-        users.update(self.id, {
-            'restricted': True,
-            'permissions': 0
-        })
+        users.update(self.id, {'restricted': True})
 
         # Remove permissions
         groups.delete_entry(self.id, 999)
@@ -910,12 +906,8 @@ class Player:
         )
 
     def unrestrict(self) -> None:
-        users.update(self.id,
-            {
-                'restricted': False,
-                'permissions': 5
-            }
-        )
+        users.update(self.id, {'restricted': False})
+        self.object.restricted = False
 
         # Add to player & supporter group
         groups.create_entry(self.id, 999)
@@ -926,9 +918,6 @@ class Player:
 
         # Update client
         self.enqueue_silence_info(-1)
-
-        self.object.restricted = False
-        self.object.permissions = 5
 
     def update_activity(self):
         users.update(

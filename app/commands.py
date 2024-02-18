@@ -1165,15 +1165,9 @@ def restrict(ctx: Context) -> List | None:
             return [f'Player "{username}" was not found']
 
         player.restricted = True
-        player.permissions = 0
 
         # Update user
-        users.update(player.id,
-            {
-                'restricted': True,
-                'permissions': 0
-            }
-        )
+        users.update(player.id, {'restricted': True})
 
         leaderboards.remove(
             player.id,
@@ -1228,12 +1222,7 @@ def unrestrict(ctx: Context) -> List | None:
     if not player.restricted:
         return [f'Player "{username}" is not restricted.']
 
-    users.update(player.id,
-        {
-            'restricted': False,
-            'permissions': 5
-        }
-    )
+    users.update(player.id, {'restricted': False})
 
     # Add to player & supporter group
     groups.create_entry(player.id, 999)

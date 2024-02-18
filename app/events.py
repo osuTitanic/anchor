@@ -95,12 +95,7 @@ def restrict(
             return
 
         # Update user
-        users.update(player.id,
-            {
-                'restricted': True,
-                'permissions': 0
-            }
-        )
+        users.update(player.id, {'restricted': True})
 
         # Remove permissions
         groups.delete_entry(player.id, 999)
@@ -148,12 +143,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
     if not player.restricted:
         return
 
-    users.update(player.id,
-        {
-            'restricted': False,
-            'permissions': 5
-        }
-    )
+    users.update(player.id, {'restricted': False})
 
     # Add to player & supporter group
     groups.create_entry(player.id, 999)
