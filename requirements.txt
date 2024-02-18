@@ -6,7 +6,7 @@ twisted==23.10.0
 redis==5.0.1
 requests==2.31.0
 boto3-type-annotations-with-docs==0.3.1
-boto3==1.34.43
+boto3==1.34.44
 pytz==2024.1
 pytimeparse==1.1.8
 geoip2==4.8.0
