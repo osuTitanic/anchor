@@ -1,6 +1,6 @@
 titanic-pp-py==0.0.6
 psycopg2-binary==2.9.9
-sqlalchemy==2.0.26
+sqlalchemy==2.0.27
 python-dotenv==1.0.1
 twisted==23.10.0
 redis==5.0.1
