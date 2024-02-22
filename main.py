@@ -13,8 +13,7 @@ from app.objects.player import Player
 from app.jobs import (
     activities,
     events,
-    pings,
-    ranks
+    pings
 )
 
 import logging
@@ -61,7 +60,6 @@ def setup():
     app.session.logger.info('Loading jobs...')
     app.session.jobs.submit(pings.ping_job)
     app.session.jobs.submit(events.event_listener)
-    app.session.jobs.submit(ranks.index_ranks)
     app.session.jobs.submit(activities.match_activity)
 
     # Reset usercount
