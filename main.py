@@ -70,6 +70,14 @@ def setup():
         player_id = key.split(':')[-1]
         status.delete(player_id)
 
+def before_shutdown(*args):
+    for player in app.session.players:
+        player.enqueue_server_restart(8 * 1000)
+
+    reactor.callLater(0.5, reactor.stop)
+
+signal.signal(signal.SIGINT, before_shutdown)
+
 def shutdown():
     # Reset usercount
     usercount.set(0)

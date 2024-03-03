@@ -20,4 +20,6 @@ RUN pip install -r requirements.txt
 # Copy source code
 COPY . .
 
+STOPSIGNAL SIGINT
+
 CMD ["python3", "main.py"]
