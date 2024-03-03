@@ -1258,3 +1258,6 @@ class Player:
 
     def enqueue_monitor(self):
         self.send_packet(self.packets.MONITOR)
+
+    def enqueue_server_restart(self, retry_ms: int):
+        self.send_packet(self.packets.RESTART, retry_ms)
