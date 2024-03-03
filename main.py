@@ -77,7 +77,6 @@ def before_shutdown(*args):
     reactor.callLater(0.5, reactor.stop)
 
 signal.signal(signal.SIGINT, before_shutdown)
-signal.signal(signal.SIGTERM, before_shutdown)
 
 def shutdown():
     # Reset usercount
