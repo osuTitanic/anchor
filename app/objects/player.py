@@ -569,7 +569,7 @@ class Player:
                 and not self.has_preview_access
             ):
                 # Check client's executable hash (Admins can bypass this check)
-                if not client_utils.is_valid_client_hash(self.client.hash.md5):
+                if not client_utils.is_valid_client_hash(self.client.version.date, self.client.hash.md5):
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
                         LoginError.UpdateNeeded,
