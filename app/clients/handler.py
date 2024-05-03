@@ -1311,7 +1311,7 @@ def tourney_match_info(player: Player, match_id: int):
 @register(RequestPacket.ERROR_REPORT)
 def bancho_error(player: Player, error: str):
     session.logger.error(f'Bancho Error Report:\n{error}')
-    officer.call(f'Bancho Error Report:\n```{error}```')
+    officer.call(f'Bancho Error Report:\n```c#\n{error}```')
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
