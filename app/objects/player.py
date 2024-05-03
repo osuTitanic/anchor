@@ -517,7 +517,7 @@ class Player:
                 return
 
         with app.session.database.managed_session() as session:
-            if not (user := users.fetch_by_name(username, session)):
+            if not (user := users.fetch_by_name_case_insensitive(username, session)):
                 self.logger.warning('Login Failed: User not found')
                 self.login_failed(LoginError.Authentication)
                 return
