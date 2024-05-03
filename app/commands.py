@@ -1236,15 +1236,16 @@ def unrestrict(ctx: Context) -> List | None:
             scores.restore_hidden_scores(player.id)
             stats.restore(player.id)
         except Exception as e:
-            app.session.logger.error(
-                f'Failed to restore scores of player "{player.name}": {e}',
-                exc_info=e
-            )
             officer.call(
                 f'Failed to restore scores of player "{player.name}": {e}',
                 exc_info=e
             )
-            return ['Failed to restore scores, but player was unrestricted.']
+
+    for user_stats in stats.fetch_all(player.id):
+        leaderboards.update(
+            user_stats,
+            player.country
+        )
 
     return [f'Player "{username}" was unrestricted.']
 
@@ -1429,8 +1430,6 @@ def get_command(
                         response,
                         command.hidden
                     )
-
-    return None
 
 def execute(
     player: Player,
