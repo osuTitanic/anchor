@@ -72,7 +72,7 @@ def setup():
 
 def before_shutdown(*args):
     for player in app.session.players:
-        player.enqueue_server_restart(8 * 1000)
+        player.enqueue_server_restart(15 * 1000)
 
     reactor.callLater(0.5, reactor.stop)
 
