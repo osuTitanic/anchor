@@ -48,6 +48,9 @@ def match_start(match: bMatch):
 
 @register(ResponsePacket.USER_STATS)
 def send_stats(stats: bUserStats, presence: Optional[bUserPresence] = None):
+    # Add cap for total score to prevent client from crashing
+    stats.tscore = min(stats.tscore, 17705429347)
+
     writer = Writer()
     if presence:
         writer.write_presence(presence, stats)

@@ -10,7 +10,7 @@ from . import Writer
 def register(packet: ResponsePacket) -> Callable:
     def wrapper(func) -> Callable:
         register_encoder(675, packet, func)
-        register_encoder(591, packet, func)
+        register_encoder(657, packet, func)
         return func
 
     return wrapper

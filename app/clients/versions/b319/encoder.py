@@ -22,6 +22,9 @@ def register(packet: ResponsePacket) -> Callable:
 
 @register(ResponsePacket.USER_STATS)
 def send_stats(stats: bUserStats, presence: bUserPresence, update: bool = False):
+    # Add cap for total score to prevent client from crashing
+    stats.tscore = min(stats.tscore, 17705429347)
+
     writer = Writer()
     writer.write_presence(presence, stats, update)
     return writer.stream.get()
