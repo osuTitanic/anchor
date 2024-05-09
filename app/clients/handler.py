@@ -420,14 +420,19 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
         map_infos: List[bBeatmapInfo] = []
 
         for index, beatmap in maps:
+            if beatmap.status <= -3:
+                # Not submitted
+                continue
+
             ranked = {
-                -2: 0, # Graveyard: Pending
-                -1: 0, # WIP: Pending
-                 0: 0, # Pending: Pending
-                 1: 1, # Ranked: Ranked
-                 2: 2, # Approved: Approved
-                 3: 2, # Qualified: Approved
-                 4: 2, # Loved: Approved
+                -3: -1, # Not submitted
+                -2: 0,  # Graveyard: Pending
+                -1: 0,  # WIP: Pending
+                 0: 0,  # Pending: Pending
+                 1: 1,  # Ranked: Ranked
+                 2: 2,  # Approved: Approved
+                 3: 2,  # Qualified: Approved
+                 4: 2,  # Loved: Approved
             }[beatmap.status]
 
             # Get personal best in every mode for this beatmap
