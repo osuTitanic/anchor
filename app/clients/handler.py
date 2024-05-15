@@ -206,6 +206,11 @@ def send_message(player: Player, message: bMessage):
 
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
+    if message.target == 'peppy':
+        # This could be an internal osu! anti-cheat message
+        officer.call(f'{sender.name} tried to message peppy: "{message.content}"')
+        return
+
     if not (target := session.players.by_name(message.target)):
         sender.revoke_channel(message.target)
         return
