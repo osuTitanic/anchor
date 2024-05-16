@@ -20,3 +20,21 @@ def message(message: bMessage):
     writer = Writer()
     writer.write_message(message)
     return writer.stream.get()
+
+@register(ResponsePacket.TARGET_IS_SILENCED)
+def target_silenced(msg: bMessage):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
+
+@register(ResponsePacket.USER_DM_BLOCKED)
+def dm_blocked(msg: bMessage):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
+
+@register(ResponsePacket.INVITE)
+def match_invite(msg: bMessage):
+    writer = Writer()
+    writer.write_message(msg)
+    return writer.stream.get()
