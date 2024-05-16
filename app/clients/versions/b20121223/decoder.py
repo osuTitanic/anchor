@@ -22,3 +22,7 @@ def message(stream: StreamIn):
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def private_message(stream: StreamIn):
     return Reader(stream).read_message()
+
+@register(RequestPacket.SET_AWAY_MESSAGE)
+def away_message(stream: StreamIn):
+    return Reader(stream).read_message()
