@@ -76,14 +76,14 @@ class HttpBanchoProtocol(Resource):
             request.setResponseCode(403)
             return b''
 
-        username, password, client_data = (
-            request.content.read().decode().splitlines()
-        )
-
-        ip_address = ip.resolve_ip_address_twisted(request)
-        client = OsuClient.from_string(client_data, ip_address)
-
         try:
+            username, password, client_data = (
+                request.content.read().decode().splitlines()
+            )
+
+            ip_address = ip.resolve_ip_address_twisted(request)
+            client = OsuClient.from_string(client_data, ip_address)
+
             self.player = HttpPlayer(
                 ip_address,
                 request.getClientAddress().port
