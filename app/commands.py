@@ -1435,7 +1435,7 @@ def execute(
     player: Player,
     target: Channel | Player,
     command_message: str
-):
+) -> None:
     if not command_message.startswith('!'):
         command_message = f'!{command_message}'
 

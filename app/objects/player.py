@@ -148,24 +148,32 @@ class Player:
 
     @property
     def is_bot(self) -> bool:
-        return self.object.is_bot if self.object else False
+        return (
+            self.object.is_bot
+            if self.object else False
+        )
 
     @property
     def silenced(self) -> bool:
-        if self.object.silence_end:
-            if self.remaining_silence > 0:
-                return True
-            else:
-                # User is not silenced anymore
-                self.unsilence()
-                return False
-        return False
+        if not self.object.silence_end:
+            return False
+
+        if self.remaining_silence < 0:
+            # User is not silenced anymore
+            self.unsilence()
+            return False
+
+        return True
 
     @property
     def remaining_silence(self) -> int:
-        if self.object.silence_end:
-            return self.object.silence_end.timestamp() - datetime.now().timestamp()
-        return 0
+        if not self.object.silence_end:
+            return 0
+
+        return (
+            self.object.silence_end.timestamp() -
+            datetime.now().timestamp()
+        )
 
     @property
     def supporter(self) -> bool:
@@ -197,11 +205,13 @@ class Player:
 
     @property
     def current_stats(self) -> DBStats | None:
-        for stats in self.stats:
-            if stats.mode == self.status.mode.value:
-                return stats
-        self.logger.warning('Failed to load current stats!')
-        return None
+        return next(
+            (
+                stats for stats in self.stats
+                if stats.mode == self.status.mode.value
+            ),
+            None
+        )
 
     @property
     def friends(self) -> List[int]:
