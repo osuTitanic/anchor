@@ -148,7 +148,7 @@ class HttpBanchoProtocol(Resource):
             return self.handle_login_request(request)
 
         if not (player := app.session.players.by_token(osu_token)):
-            # Tell client to reconnect immediately
+            # Tell client to reconnect immediately (restart packet)
             return b'\x56\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
 
         self.player = player
