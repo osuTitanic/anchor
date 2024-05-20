@@ -225,5 +225,5 @@ class Channel:
             messages.create(
                 sender.name,
                 self.display_name,
-                message
+                message[:512]
             )

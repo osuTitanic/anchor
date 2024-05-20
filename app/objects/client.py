@@ -6,7 +6,6 @@ from app.common.helpers import location
 from datetime import datetime
 
 import hashlib
-import utils
 import pytz
 import re
 
