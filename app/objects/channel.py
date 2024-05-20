@@ -1,8 +1,14 @@
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.objects.player import Player
+
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
+from app.objects import collections
 from app.common import officer
 
 import logging
@@ -29,10 +35,7 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-
-        from .collections import Players
-
-        self.users = Players()
+        self.users = collections.Players()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -76,6 +79,7 @@ class Channel:
 
     def update(self):
         if not self.public:
+            # Only enqueue to users in this channel
             for player in self.users:
                 player.enqueue_channel(
                     self.bancho_channel,
@@ -90,7 +94,7 @@ class Channel:
                     autojoin=False
                 )
 
-    def add(self, player, no_response: bool = False):
+    def add(self, player: "Player", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
 
@@ -114,11 +118,8 @@ class Channel:
 
         self.logger.info(f'{player.name} joined')
 
-    def remove(self, player) -> None:
-        try:
-            self.users.remove(player)
-        except ValueError:
-            pass
+    def remove(self, player: "Player") -> None:
+        self.users.remove(player)
 
         if self in player.channels:
             player.channels.remove(self)
@@ -127,7 +128,7 @@ class Channel:
 
     def send_message(
         self,
-        sender,
+        sender: "Player",
         message: str,
         ignore_privs=False,
         exclude_sender=True,
