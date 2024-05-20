@@ -390,7 +390,6 @@ class Match:
         if self.mode != new_match.mode:
             self.mode = new_match.mode
             self.logger.info(f'Mode: {self.mode.formatted}')
-            # TODO: Check osu! mania support
 
         if self.name != new_match.name:
             self.name = new_match.name
@@ -500,8 +499,6 @@ class Match:
 
             if slot.status == SlotStatus.NotReady:
                 continue
-
-            # TODO: Check osu! mania support
 
             slot.player.enqueue_match_start(self.bancho_match)
 
