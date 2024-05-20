@@ -387,9 +387,6 @@ class Player:
             app.clients.handler.leave_match(self)
 
     def send_packet(self, packet: Enum, *args) -> None:
-        if self.is_bot:
-            return
-
         try:
             stream = StreamOut()
             data = self.encoders[packet](*args)
@@ -767,9 +764,6 @@ class Player:
                 self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
-        if self.is_bot:
-            return
-
         self.last_response = time.time()
 
         try:
