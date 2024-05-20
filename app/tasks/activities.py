@@ -6,9 +6,9 @@ MATCH_TIMEOUT_MINUTES = 15
 MATCH_TIMEOUT_SECONDS = MATCH_TIMEOUT_MINUTES * 60
 
 def match_activity():
-    """This job will close any matches that have not been active in the last 15 minutes."""
+    """This task will close any matches that have not been active in the last 15 minutes."""
     while True:
-        if app.session.jobs._shutdown:
+        if app.session.tasks._shutdown:
             exit()
 
         for match in app.session.matches.active:
@@ -23,4 +23,4 @@ def match_activity():
                 )
                 match.close()
 
-        app.session.jobs.sleep(5)
+        app.session.tasks.sleep(5)

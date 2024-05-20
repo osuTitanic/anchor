@@ -10,7 +10,7 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.objects.channel import Channel
 from app.objects.player import Player
-from app.jobs import (
+from app.tasks import (
     activities,
     events,
     pings
@@ -57,10 +57,10 @@ def setup():
     app.session.bot_player = bot_player
     app.session.logger.info(f'  - {bot_player.name}')
 
-    app.session.logger.info('Loading jobs...')
-    app.session.jobs.submit(pings.ping_job)
-    app.session.jobs.submit(events.event_listener)
-    app.session.jobs.submit(activities.match_activity)
+    app.session.logger.info('Loading task...')
+    app.session.tasks.submit(pings.ping_task)
+    app.session.tasks.submit(events.event_listener)
+    app.session.tasks.submit(activities.match_activity)
 
     # Reset usercount
     usercount.set(0)
@@ -86,7 +86,7 @@ def shutdown():
         status.delete(player.id)
 
     app.session.events.submit('shutdown')
-    app.session.jobs.shutdown(cancel_futures=True, wait=False)
+    app.session.tasks.shutdown(cancel_futures=True, wait=False)
 
     def force_exit(signal, frame):
         app.session.logger.warning("Force exiting...")

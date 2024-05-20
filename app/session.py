@@ -4,7 +4,7 @@ from .common.cache.events import EventQueue
 from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
-from .jobs import Jobs
+from .tasks import Tasks
 
 from typing import Callable, Dict
 from requests import Session
@@ -44,4 +44,4 @@ channels = Channels()
 storage = Storage()
 players = Players()
 matches = Matches()
-jobs = Jobs()
+tasks = Tasks()

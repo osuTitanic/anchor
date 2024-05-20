@@ -8,7 +8,7 @@ TIMEOUT_SECS  = 45
 
 def ping():
     """
-    This job will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
+    This task will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
     For http clients, we can just check if they have responded within the timeout period, and close the connection if not.
     """
     next_ping = (time.time() - PING_INTERVAL)
@@ -40,13 +40,13 @@ def ping():
             player.logger.warning('Client timed out!')
             player.close_connection()
 
-def ping_job():
+def ping_task():
     while True:
-        if app.session.jobs._shutdown:
+        if app.session.tasks._shutdown:
             exit()
 
         try:
             ping()
             time.sleep(1)
         except Exception as e:
-            officer.call(f'Ping job failed: {e}', exc_info=e)
+            officer.call(f'Ping task failed: {e}', exc_info=e)
