@@ -689,14 +689,16 @@ class Player:
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if channel.can_read(self.permissions):
-                # Check if channel should be autojoined
-                if channel.name in config.AUTOJOIN_CHANNELS:
-                    self.enqueue_channel(channel, autojoin=True)
-                    channel.add(self)
-                    continue
+            if not channel.can_read(self.permissions):
+                continue
 
-                self.enqueue_channel(channel)
+            # Check if channel should be autojoined
+            if channel.name in config.AUTOJOIN_CHANNELS:
+                self.enqueue_channel(channel, autojoin=True)
+                channel.add(self)
+                continue
+
+            self.enqueue_channel(channel)
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
 
@@ -804,8 +806,9 @@ class Player:
 
         if args != None:
             handler_function(self, args)
-        else:
-            handler_function(self)
+            return
+
+        handler_function(self)
 
     def silence(self, duration_sec: int, reason: str | None = None):
         if self.is_bot:
@@ -1260,8 +1263,11 @@ class Player:
             message
         )
 
+    def enqueue_server_restart(self, retry_ms: int):
+        self.send_packet(
+            self.packets.RESTART,
+            retry_ms
+        )
+
     def enqueue_monitor(self):
         self.send_packet(self.packets.MONITOR)
-
-    def enqueue_server_restart(self, retry_ms: int):
-        self.send_packet(self.packets.RESTART, retry_ms)
