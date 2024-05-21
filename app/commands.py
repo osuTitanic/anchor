@@ -44,7 +44,6 @@ import timeago
 import config
 import random
 import shlex
-import utils
 import time
 import app
 import os
