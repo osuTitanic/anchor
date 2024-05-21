@@ -88,10 +88,16 @@ def receive_updates(player: Player, filter: PresenceFilter):
     player.filter = filter
 
     if filter.value <= 0:
+        # Client set filter to "None"
+        # No players will be sent
         return
 
-    players = session.players if filter == PresenceFilter.All else \
-              player.online_friends
+    # Account for player filter
+    players = (
+        session.players
+        if filter == PresenceFilter.All
+        else player.online_friends
+    )
 
     player.enqueue_players(players, stats_only=True)
 
@@ -315,17 +321,18 @@ def away_message(player: Player, message: bMessage):
                 is_private=True
             )
         )
-    else:
-        player.away_message = None
-        player.enqueue_message(
-            bMessage(
-                session.bot_player.name,
-                'You are no longer marked as being away',
-                session.bot_player.name,
-                session.bot_player.id,
-                is_private=True
-            )
+        return
+
+    player.away_message = None
+    player.enqueue_message(
+        bMessage(
+            session.bot_player.name,
+            'You are no longer marked as being away',
+            session.bot_player.name,
+            session.bot_player.id,
+            is_private=True
         )
+    )
 
 @register(RequestPacket.ADD_FRIEND)
 def add_friend(player: Player, target_id: int):
@@ -381,9 +388,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     if total_maps <= 0:
         return
 
-    player.logger.info(
-        f'Got {total_maps} beatmap requests'
-    )
+    player.logger.info(f'Got {total_maps} beatmap requests')
 
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
@@ -463,12 +468,12 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                     index,
                     beatmap.id,
                     beatmap.set_id,
-                    beatmap.set_id, # thread_id
+                    beatmap.set_id, # ThreadId
                     ranked,
-                    grades[0], # standard
-                    grades[2], # fruits
-                    grades[1], # taiko
-                    grades[3], # mania
+                    grades[0], # Standard
+                    grades[2], # Fruits
+                    grades[1], # Taiko
+                    grades[3], # Mania
                     beatmap.md5
                 )
             )
@@ -498,7 +503,6 @@ def start_spectating(player: Player, player_id: int):
 
     if (player.spectating or player in target.spectators) and not player.is_tourney_client:
         stop_spectating(player)
-        # TODO: return here?
 
     player.logger.info(f'Started spectating "{target.name}".')
     player.spectating = target
@@ -594,7 +598,6 @@ def invite(player: Player, target_id: int):
         return
 
     # TODO: Check invite spams
-
     target.enqueue_invite(
         bMessage(
             player.name,
@@ -756,10 +759,11 @@ def leave_match(player: Player):
     slot = player.match.get_slot(player)
     assert slot is not None
 
-    if slot.status == SlotStatus.Locked:
-        status = SlotStatus.Locked
-    else:
-        status = SlotStatus.Open
+    status = (
+        SlotStatus.Locked
+        if slot.status == SlotStatus.Locked
+        else SlotStatus.Open
+    )
 
     slot.reset(status)
 
@@ -785,12 +789,12 @@ def leave_match(player: Player):
         player.match.beatmap_name = player.match.previous_beatmap_name
 
     if all(slot.empty for slot in player.match.slots):
+        # No players in match anymore -> Disband match
         player.enqueue_match_disband(player.match.id)
 
         for p in session.players.in_lobby:
             p.enqueue_match_disband(player.match.id)
 
-        # Match is empty
         session.matches.remove(player.match)
         player.match.starting = None
 
@@ -809,25 +813,26 @@ def leave_match(player: Player):
             events.create(match_id, type=EventType.Disband)
 
         player.match.logger.info('Match was disbanded.')
-    else:
-        if player is player.match.host:
-            # Player was host, transfer to next player
-            for slot in player.match.slots:
-                if slot.status.value & SlotStatus.HasPlayer.value:
-                    player.match.host = slot.player
-                    player.match.host.enqueue_match_transferhost()
+        player.match = None
+        return
 
-            events.create(
-                player.match.db_match.id,
-                type=EventType.Host,
-                data={
-                    'previous': {'id': player.id, 'name': player.name},
-                    'new': {'id': player.match.host.id, 'name': player.match.host.name}
-                }
-            )
+    if player is player.match.host:
+        # Player was host, transfer to next player
+        for slot in player.match.slots:
+            if slot.status.value & SlotStatus.HasPlayer.value:
+                player.match.host = slot.player
+                player.match.host.enqueue_match_transferhost()
 
-        player.match.update()
+        events.create(
+            player.match.db_match.id,
+            type=EventType.Host,
+            data={
+                'previous': {'id': player.id, 'name': player.name},
+                'new': {'id': player.match.host.id, 'name': player.match.host.name}
+            }
+        )
 
+    player.match.update()
     player.match = None
 
 @register(RequestPacket.MATCH_CHANGE_SLOT)
@@ -914,7 +919,7 @@ def change_mods(player: Player, mods: Mods):
 
     if player.match.freemod:
         if player is player.match.host:
-            # Onky keep SpeedMods
+            # Only keep SpeedMods
             player.match.mods = mods & Mods.SpeedMods
 
             # There is a bug, where DT and NC are enabled at the same time
@@ -1016,10 +1021,11 @@ def lock(player: Player, slot_id: int):
     if slot.has_player:
         player.match.kick_player(slot.player)
 
-    if slot.status == SlotStatus.Locked:
-        slot.status = SlotStatus.Open
-    else:
-        slot.status = SlotStatus.Locked
+    slot.status = (
+        SlotStatus.Open
+        if slot.status == SlotStatus.Locked
+        else SlotStatus.Locked
+    )
 
     player.match.update()
 
