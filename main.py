@@ -1,7 +1,7 @@
 
 from twisted.internet import reactor
 
-from app.common.database.repositories import channels
+from app.common.database.repositories import channels, wrapper
 from app.common.cache import status, usercount
 
 from app.server import TcpBanchoFactory, HttpBanchoFactory
@@ -24,9 +24,11 @@ import os
 
 logging.basicConfig(
     handlers=[Console, File],
-    level=logging.DEBUG
+    level=(
+        logging.DEBUG
         if config.DEBUG
         else logging.INFO
+    )
 )
 
 def setup():
@@ -57,7 +59,7 @@ def setup():
     app.session.bot_player = bot_player
     app.session.logger.info(f'  - {bot_player.name}')
 
-    app.session.logger.info('Loading task...')
+    app.session.logger.info('Loading tasks...')
     app.session.tasks.submit(pings.ping_task)
     app.session.tasks.submit(events.event_listener)
     app.session.tasks.submit(activities.match_activity)
@@ -72,6 +74,8 @@ def setup():
 
 def before_shutdown(*args):
     for player in app.session.players:
+        # Enqueue server restart packet to all players
+        # They should reconnect after 15 seconds
         player.enqueue_server_restart(15 * 1000)
 
     reactor.callLater(0.5, reactor.stop)
@@ -88,27 +92,30 @@ def shutdown():
     app.session.events.submit('shutdown')
     app.session.tasks.shutdown(cancel_futures=True, wait=False)
 
-    def force_exit(signal, frame):
+    def force_exit(*args):
         app.session.logger.warning("Force exiting...")
         os._exit(0)
 
     signal.signal(signal.SIGINT, force_exit)
 
+def on_startup_fail(e: Exception):
+    app.session.logger.fatal(f'Failed to start server: "{e}"')
+    reactor.stop()
+
+@wrapper.exception_wrapper(on_startup_fail)
+def setup_servers():
+    http_factory = HttpBanchoFactory()
+    tcp_factory = TcpBanchoFactory()
+
+    reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
+    reactor.listenTCP(config.HTTP_PORT, http_factory)
+
+    for port in config.TCP_PORTS:
+        reactor.listenTCP(port, tcp_factory)
+
 def main():
-    try:
-        http_factory = HttpBanchoFactory()
-        tcp_factory = TcpBanchoFactory()
-
-        reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
-        reactor.listenTCP(config.HTTP_PORT, http_factory)
-
-        for port in config.TCP_PORTS:
-            reactor.listenTCP(port, tcp_factory)
-    except Exception as e:
-        app.session.logger.error(f'Failed to start server: "{e}"')
-        exit(1)
-
     reactor.addSystemEventTrigger('before', 'startup', setup)
+    reactor.addSystemEventTrigger('before', 'startup', setup_servers)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
     reactor.run()
 
