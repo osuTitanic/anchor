@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, NamedTuple, Callable
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
+from twisted.internet import threads
 from dataclasses import dataclass
 from threading import Thread
 
@@ -38,7 +39,6 @@ from .objects.multiplayer import StartingTimers
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
-from .tcp import TcpBanchoProtocol
 
 import timeago
 import config
@@ -1350,37 +1350,39 @@ def get_command(
 
     # Regular commands
     for command in commands:
-        if trigger in command.triggers:
-            has_permissions = any(
-                group in command.groups
-                for group in player.groups
+        if trigger not in command.triggers:
+            continue
+
+        has_permissions = any(
+            group in command.groups
+            for group in player.groups
+        )
+
+        if not has_permissions:
+            return
+
+        # Try running the command
+        try:
+            response = command.callback(
+                Context(
+                    player,
+                    trigger,
+                    target,
+                    args
+                )
+            )
+        except Exception as e:
+            player.logger.error(
+                f'Command error: {e}',
+                exc_info=e
             )
 
-            if not has_permissions:
-                return
+            response = ['An error occurred while running this command.']
 
-            # Try running the command
-            try:
-                response = command.callback(
-                    Context(
-                        player,
-                        trigger,
-                        target,
-                        args
-                    )
-                )
-            except Exception as e:
-                player.logger.error(
-                    f'Command error: {e}',
-                    exc_info=e
-                )
-
-                response = ['An error occurred while running this command.']
-
-            return CommandResponse(
-                response,
-                command.hidden
-            )
+        return CommandResponse(
+            response,
+            command.hidden
+        )
 
     try:
         set_trigger, trigger, *args = trigger, *args
@@ -1393,42 +1395,45 @@ def get_command(
             continue
 
         for command in set.commands:
-            if trigger in command.triggers:
-                has_permissions = any(
-                    group in command.groups
-                    for group in player.groups
-                )
+            if trigger not in command.triggers:
+                continue
 
-                if not has_permissions:
-                    continue
+            has_permissions = any(
+                group in command.groups
+                for group in player.groups
+            )
 
-                ctx = Context(
-                    player,
-                    trigger,
-                    target,
-                    args
-                )
+            if not has_permissions:
+                continue
 
-                # Check set conditions
-                for condition in set.conditions:
-                    if not condition(ctx):
-                        break
-                else:
-                    # Try running the command
-                    try:
-                        response = command.callback(ctx)
-                    except Exception as e:
-                        player.logger.error(
-                            f'Command error: {e}',
-                            exc_info=e
-                        )
+            ctx = Context(
+                player,
+                trigger,
+                target,
+                args
+            )
 
-                        response = ['An error occurred while running this command.']
+            # Check set conditions
+            for condition in set.conditions:
+                if not condition(ctx):
+                    break
 
-                    return CommandResponse(
-                        response,
-                        command.hidden
+            else:
+                # Try running the command
+                try:
+                    response = command.callback(ctx)
+                except Exception as e:
+                    player.logger.error(
+                        f'Command error: {e}',
+                        exc_info=e
                     )
+
+                    response = ['An error occurred while running this command.']
+
+                return CommandResponse(
+                    response,
+                    command.hidden
+                )
 
 def execute(
     player: Player,
@@ -1438,12 +1443,26 @@ def execute(
     if not command_message.startswith('!'):
         command_message = f'!{command_message}'
 
-    command = get_command(
+    threads.deferToThread(
+        get_command,
         player,
         target,
         command_message
+    ).addCallback(
+        lambda result: on_command_done(
+            result,
+            player,
+            target,
+            command_message
+        )
     )
 
+def on_command_done(
+    command: CommandResponse,
+    player: Player,
+    target: Channel | Player,
+    command_message: str
+) -> None:
     if not command:
         return
 
