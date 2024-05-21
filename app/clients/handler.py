@@ -3,6 +3,7 @@ from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
 from ..common.database.objects import DBBeatmap, DBScore
+from ..common.database.repositories import wrapper
 from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
@@ -55,25 +56,23 @@ def register(packet: RequestPacket) -> Callable:
 
     return wrapper
 
+@wrapper.exception_wrapper()
 def resolve_channel(channel_name: str, player: Player) -> Optional[Channel]:
-    try:
-        if channel_name == '#spectator':
-            # Select spectator chat
-            return (
-                player.spectating.spectator_chat
-                if player.spectating else
-                   player.spectator_chat
-            )
+    if channel_name == '#spectator':
+        # Select spectator chat
+        return (
+            player.spectating.spectator_chat
+            if player.spectating else
+               player.spectator_chat
+        )
 
-        elif channel_name == '#multiplayer':
-            # Select multiplayer chat
-            return player.match.chat
+    elif channel_name == '#multiplayer':
+        # Select multiplayer chat
+        return player.match.chat
 
-        # Resolve channel by name
-        if channel := session.channels.by_name(channel_name):
-            return channel
-    except AttributeError:
-        return
+    # Resolve channel by name
+    if channel := session.channels.by_name(channel_name):
+        return channel
 
 @register(RequestPacket.PONG)
 def pong(player: Player):
