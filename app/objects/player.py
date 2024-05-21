@@ -148,24 +148,32 @@ class Player:
 
     @property
     def is_bot(self) -> bool:
-        return self.object.is_bot if self.object else False
+        return (
+            self.object.is_bot
+            if self.object else False
+        )
 
     @property
     def silenced(self) -> bool:
-        if self.object.silence_end:
-            if self.remaining_silence > 0:
-                return True
-            else:
-                # User is not silenced anymore
-                self.unsilence()
-                return False
-        return False
+        if not self.object.silence_end:
+            return False
+
+        if self.remaining_silence < 0:
+            # User is not silenced anymore
+            self.unsilence()
+            return False
+
+        return True
 
     @property
     def remaining_silence(self) -> int:
-        if self.object.silence_end:
-            return self.object.silence_end.timestamp() - datetime.now().timestamp()
-        return 0
+        if not self.object.silence_end:
+            return 0
+
+        return (
+            self.object.silence_end.timestamp() -
+            datetime.now().timestamp()
+        )
 
     @property
     def supporter(self) -> bool:
@@ -197,11 +205,13 @@ class Player:
 
     @property
     def current_stats(self) -> DBStats | None:
-        for stats in self.stats:
-            if stats.mode == self.status.mode.value:
-                return stats
-        self.logger.warning('Failed to load current stats!')
-        return None
+        return next(
+            (
+                stats for stats in self.stats
+                if stats.mode == self.status.mode.value
+            ),
+            None
+        )
 
     @property
     def friends(self) -> List[int]:
@@ -387,9 +397,6 @@ class Player:
             app.clients.handler.leave_match(self)
 
     def send_packet(self, packet: Enum, *args) -> None:
-        if self.is_bot:
-            return
-
         try:
             stream = StreamOut()
             data = self.encoders[packet](*args)
@@ -682,14 +689,16 @@ class Player:
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if channel.can_read(self.permissions):
-                # Check if channel should be autojoined
-                if channel.name in config.AUTOJOIN_CHANNELS:
-                    self.enqueue_channel(channel, autojoin=True)
-                    channel.add(self)
-                    continue
+            if not channel.can_read(self.permissions):
+                continue
 
-                self.enqueue_channel(channel)
+            # Check if channel should be autojoined
+            if channel.name in config.AUTOJOIN_CHANNELS:
+                self.enqueue_channel(channel, autojoin=True)
+                channel.add(self)
+                continue
+
+            self.enqueue_channel(channel)
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
 
@@ -767,9 +776,6 @@ class Player:
                 self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
-        if self.is_bot:
-            return
-
         self.last_response = time.time()
 
         try:
@@ -800,8 +806,9 @@ class Player:
 
         if args != None:
             handler_function(self, args)
-        else:
-            handler_function(self)
+            return
+
+        handler_function(self)
 
     def silence(self, duration_sec: int, reason: str | None = None):
         if self.is_bot:
@@ -1256,8 +1263,11 @@ class Player:
             message
         )
 
+    def enqueue_server_restart(self, retry_ms: int):
+        self.send_packet(
+            self.packets.RESTART,
+            retry_ms
+        )
+
     def enqueue_monitor(self):
         self.send_packet(self.packets.MONITOR)
-
-    def enqueue_server_restart(self, retry_ms: int):
-        self.send_packet(self.packets.RESTART, retry_ms)

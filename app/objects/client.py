@@ -6,7 +6,6 @@ from app.common.helpers import location
 from datetime import datetime
 
 import hashlib
-import utils
 import pytz
 import re
 
@@ -130,9 +129,9 @@ class OsuClient:
         self.ip             = ip
 
     @classmethod
-    def from_string(cls, line: str, ip: str):
+    def from_string(cls, line: str, ip: str) -> "OsuClient":
         if len(args := line.split('|')) < 2:
-            return
+            return OsuClient.empty()
 
         # Sent in every client version
         build_version = args[0]
@@ -168,10 +167,10 @@ class OsuClient:
         )
 
     @classmethod
-    def empty(cls):
+    def empty(cls) -> "OsuClient":
         return OsuClient(
             location.fetch_geolocation('127.0.0.1'),
-            ClientVersion(OSU_VERSION.match('b1337'), 1337),
+            ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
             ClientHash('', '', '', '', ''),
             0,
             True,

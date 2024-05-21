@@ -21,6 +21,7 @@ def beatmap_info_reply(reply: bBeatmapInfoReply):
     for info in reply.beatmaps:
         # Approved status does not exist
         info.ranked = {
+            -1: -1,
             0: 0,
             1: 1,
             2: 1

@@ -57,13 +57,6 @@ class TcpBanchoProtocol(Player, Protocol):
                 exc_info=e
             )
 
-    def send_web_response(self):
-        self.enqueue('\r\n'.join([
-            'HTTP/1.1 200 OK',
-            'content-type: text/html',
-            ANCHOR_WEB_RESPONSE
-        ]).encode())
-
     def close_connection(self, error: Exception | None = None):
         if not self.is_local or config.DEBUG:
             if error:
@@ -88,12 +81,6 @@ class TcpBanchoProtocol(Player, Protocol):
         try:
             self.buffer += data.replace(b'\r', b'')
             self.busy = True
-
-            if data.startswith(b'GET /'):
-                # We received a web request
-                self.send_web_response()
-                self.close_connection()
-                return
 
             if self.buffer.count(b'\n') < 3:
                 return
