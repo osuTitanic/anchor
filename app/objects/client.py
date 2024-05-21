@@ -170,7 +170,7 @@ class OsuClient:
     def empty(cls) -> "OsuClient":
         return OsuClient(
             location.fetch_geolocation('127.0.0.1'),
-            ClientVersion(OSU_VERSION.match('b1337'), 1337),
+            ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
             ClientHash('', '', '', '', ''),
             0,
             True,
