@@ -74,6 +74,10 @@ class TcpBanchoProtocol(Player, Protocol):
         packetDataReceived to handle bancho packets.
         """
 
+        if data.startswith(b'GET /'):
+            self.handleHttpRequest(data)
+            return
+
         if self.busy:
             self.buffer += data
             return
@@ -170,3 +174,9 @@ class TcpBanchoProtocol(Player, Protocol):
 
         finally:
             self.busy = False
+
+    def handleHttpRequest(self, data: bytes) -> None:
+        self.logger.debug(f'Recieved http request: {data}')
+        self.enqueue(b'HTTP/1.1 302 Found\r\n')
+        self.enqueue(f'Location: http://c.{config.DOMAIN_NAME}\r\n'.encode())
+        self.close_connection()
