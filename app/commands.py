@@ -1290,7 +1290,6 @@ def kill(ctx: Context) -> List | None:
     player.permissions = Permissions(255)
     player.enqueue_permissions()
     player.enqueue_ping()
-    reactor.callLater(15, player.close_connection)
 
     return [f'{player.name} was disconnected from bancho.']
 
