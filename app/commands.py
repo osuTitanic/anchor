@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from typing import List, NamedTuple, Callable
+from twisted.internet import threads, reactor
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
-from twisted.internet import threads
 from dataclasses import dataclass
 from threading import Thread
 
@@ -1290,7 +1290,7 @@ def kill(ctx: Context) -> List | None:
     player.permissions = Permissions(255)
     player.enqueue_permissions()
     player.enqueue_ping()
-    player.close_connection()
+    reactor.callLater(15, player.close_connection)
 
     return [f'{player.name} was disconnected from bancho.']
 
