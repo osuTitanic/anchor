@@ -1068,7 +1068,7 @@ def get_client_version(ctx: Context):
     """<username> - Get the version of the client that a player is currently using"""
     target = ctx.player
 
-    if len(ctx.args) > 1:
+    if len(ctx.args) > 0:
         # Select a different player
         name = ' '.join(ctx.args[0:])
 
