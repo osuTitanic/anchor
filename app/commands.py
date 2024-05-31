@@ -1015,6 +1015,53 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
+@command(['recent', 'r', 'last'])
+def recent(ctx: Context):
+    target_player = ctx.player
+
+    if ctx.args:
+        name = ' '.join(ctx.args[0:])
+
+        if not (target_player := app.session.players.by_name(name)):
+            return ['Player is not online']
+
+    with app.session.database.managed_session() as session:
+        recent_scores = scores.fetch_recent_all(
+            user_id=target_player.id,
+            limit=1,
+            session=session
+        )
+
+        if not recent_scores:
+            return ['No recent scores found.']
+
+        score = recent_scores[0]
+        passed = score.failtime is None
+
+        response = [
+            f"[{GameMode(score.mode).formatted}] "
+            f"{score.beatmap.link} "
+            f"{score.max_combo}/{score.beatmap.max_combo} "
+            f"{score.acc * 100:.2f}%"
+            f'{(f" +{Mods(score.mods).short}" if score.mods else "")}'
+        ]
+
+        if passed:
+            rank = scores.fetch_score_index_by_id(
+                score.id,
+                score.beatmap_id,
+                score.mode,
+                score.mods,
+                session=session
+            ) or 'NA'
+            response.append(f"{score.grade} ({score.pp:.2f}pp #{rank})")
+
+        else:
+            completion = max(1, score.failtime) / (max(1, score.beatmap.total_length) * 1000)
+            response.append(f"{score.grade} ({completion * 100:.2f}% complete)")
+
+        return [" | ".join(response)]
+
 @command(['client', 'version'], hidden=False)
 def get_client_version(ctx: Context):
     """<username> - Get the version of the client that a player is currently using"""
@@ -1330,7 +1377,6 @@ def multi(ctx: Context) -> List | None:
         ]
     ]
 
-# TODO: !recent
 # TODO: !rank
 # TODO: !faq
 # TODO: !top
