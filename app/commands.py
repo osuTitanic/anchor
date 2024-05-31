@@ -1017,6 +1017,7 @@ def get_stats(ctx: Context):
 
 @command(['recent', 'r', 'last'])
 def recent(ctx: Context):
+    """- Get informationa about your last score"""
     target_player = ctx.player
 
     if ctx.args:
