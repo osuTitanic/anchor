@@ -1066,13 +1066,14 @@ def recent(ctx: Context):
 @command(['client', 'version'], hidden=False)
 def get_client_version(ctx: Context):
     """<username> - Get the version of the client that a player is currently using"""
-    if len(ctx.args) < 1:
-            return [f'Invalid syntax: !{ctx.trigger} <username>']
+    target = ctx.player
 
-    name = ' '.join(ctx.args[0:])
+    if len(ctx.args) > 1:
+        # Select a different player
+        name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
-        return ['Player is not online']
+        if not (target := app.session.players.by_name(name)):
+            return ['Player is not online']
 
     return [f"{target.name} is playing on {target.client.version.string}"]
 
