@@ -1015,7 +1015,7 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
-@command(['recent', 'r', 'last'])
+@command(['recent', 'r', 'last'], hidden=False)
 def recent(ctx: Context):
     """- Get information about your last score"""
     target_player = ctx.player
