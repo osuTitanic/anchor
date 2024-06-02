@@ -117,7 +117,6 @@ class Match:
         self.id       = id
         self.name     = name
         self.password = password
-
         self.host = host
 
         self.beatmap_id   = beatmap_id
@@ -276,20 +275,24 @@ class Match:
                 update=True
             )
 
+        if not lobby:
+            return
+
         # Enqueue to lobby players
-        if lobby:
-            for player in app.session.players.in_lobby:
-                player.enqueue_match(
-                    self.bancho_match,
-                    update=True
-                )
+        for player in app.session.players.in_lobby:
+            player.enqueue_match(
+                self.bancho_match,
+                update=True
+            )
 
     def unready_players(self, expected = SlotStatus.Ready):
         for slot in self.slots:
-            if slot.status == expected:
-                slot.status = SlotStatus.NotReady
-                slot.skipped = False
-                slot.loaded = False
+            if slot.status != expected:
+                continue
+
+            slot.status = SlotStatus.NotReady
+            slot.skipped = False
+            slot.loaded = False
 
     def change_settings(self, new_match: bMatch):
         if self.freemod != new_match.freemod:
@@ -300,12 +303,14 @@ class Match:
 
             if self.freemod:
                 for slot in self.slots:
-                    if slot.status.value & SlotStatus.HasPlayer.value:
-                        # Set current mods to every player inside the match, if they are not speed mods
-                        slot.mods = self.mods & ~Mods.SpeedMods
+                    if not (slot.status.value & SlotStatus.HasPlayer.value):
+                        continue
 
-                        # TODO: Fix for older clients without freemod support
-                        # slot.mods = []
+                    # Set current mods to every player inside the match, if they are not speed mods
+                    slot.mods = self.mods & ~Mods.SpeedMods
+
+                    # TODO: Fix for older clients without freemod support
+                    # slot.mods = []
 
                 # The speedmods are kept in the match mods
                 self.mods = self.mods & ~Mods.FreeModAllowed
@@ -642,10 +647,6 @@ class Match:
             self.score_queue.task_done()
 
     def _score_queue_callback(self, error: Failure) -> None:
-        self.logger.error(
-            f'Failed to process score queue: "{error.getErrorMessage()}"',
-            exc_info=error.value
-        )
         officer.call(
             f'Failed to process score queue: "{error.getErrorMessage()}"',
             exc_info=error.value
