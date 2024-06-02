@@ -403,9 +403,7 @@ class Match:
             # Update match name
             matches.update(
                 self.db_match.id,
-                {
-                    "name": self.name
-                }
+                {"name": self.name}
             )
 
         self.update()
