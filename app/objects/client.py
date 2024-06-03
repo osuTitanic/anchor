@@ -171,7 +171,7 @@ class OsuClient:
         return OsuClient(
             location.fetch_geolocation('127.0.0.1'),
             ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
-            ClientHash.empty(20136969),
+            ClientHash.empty('b20136969'),
             0,
             True,
             False
