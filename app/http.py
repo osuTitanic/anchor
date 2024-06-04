@@ -20,6 +20,7 @@ import app
 class HttpPlayer(Player):
     def __init__(self, address: str, port: int) -> None:
         super().__init__(address, port)
+        self.protocol = 'http'
         self.queue = Queue()
         self.token = ""
 

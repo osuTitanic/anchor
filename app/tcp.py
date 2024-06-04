@@ -27,6 +27,7 @@ class TcpBanchoProtocol(Player, Protocol):
     def __init__(self, address: IPAddress) -> None:
         super().__init__(address.host, address.port)
         self.is_local = location.is_local_ip(address.host)
+        self.protocol = 'tcp'
 
     def connectionMade(self):
         if not self.is_local or config.DEBUG:
