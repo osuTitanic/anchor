@@ -749,6 +749,14 @@ def join_match(player: Player, match_join: bMatchJoin):
     match.logger.info(f'{player.name} joined')
     match.update()
 
+    player.track(
+        'match_join',
+        {
+            'match_id': match.db_match.id,
+            'match_name': match.name
+        }
+    )
+
 @register(RequestPacket.LEAVE_MATCH)
 def leave_match(player: Player):
     if not player.match:
@@ -779,6 +787,14 @@ def leave_match(player: Player):
         data={
             'user_id': player.id,
             'name': player.name
+        }
+    )
+
+    player.track(
+        'match_leave',
+        {
+            'match_id': player.match.db_match.id,
+            'match_name': player.match.name
         }
     )
 
@@ -1111,6 +1127,18 @@ def match_start(player: Player):
         return
 
     player.match.start()
+    player.track(
+        'match_start',
+        {
+            'match_id': player.match.db_match.id,
+            'match_name': player.match.name,
+            'beatmap_id': player.match.beatmap_id,
+            'beatmap_name': player.match.beatmap_name,
+            'beatmap_hash': player.match.beatmap_hash,
+            'mode': player.match.mode.name,
+            'mods': player.match.mods.short
+        }
+    )
 
 @register(RequestPacket.MATCH_LOAD_COMPLETE)
 def load_complete(player: Player):
