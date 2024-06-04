@@ -540,6 +540,14 @@ def start_spectating(player: Player, player_id: int):
     if target not in target.spectator_chat.users and not player.is_tourney_client:
         target.spectator_chat.add(target)
 
+    player.track(
+        'start_spectating',
+        {
+            'target_id': target.id,
+            'target_name': target.name
+        }
+    )
+
 @register(RequestPacket.STOP_SPECTATING)
 def stop_spectating(player: Player):
     if not player.spectating:
@@ -564,6 +572,14 @@ def stop_spectating(player: Player):
 
     player.logger.info(f'Stopped spectating "{player.spectating.name}".')
     player.spectating = None
+
+    player.track(
+        'stop_spectating',
+        {
+            'target_id': player.spectating.id,
+            'target_name': player.spectating.name
+        }
+    )
 
 @register(RequestPacket.CANT_SPECTATE)
 def cant_spectate(player: Player):
