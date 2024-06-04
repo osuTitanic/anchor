@@ -72,6 +72,16 @@ class ClientHash:
     def string(self) -> str:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
 
+    @property
+    def device_id(self) -> str:
+        return hashlib.sha1(
+            ':'.join([
+                self.adapters_md5,
+                self.uninstall_id,
+                self.diskdrive_signature
+            ]).encode()
+        ).hexdigest()
+
     @classmethod
     def empty(cls, build_version: str):
         return ClientHash(
@@ -127,6 +137,10 @@ class OsuClient:
         self.version        = version
         self.hash           = client_hash
         self.ip             = ip
+
+    @property
+    def is_wine(self) -> bool:
+        return self.hash.adapters == 'runningunderwine'
 
     @classmethod
     def from_string(cls, line: str, ip: str) -> "OsuClient":
