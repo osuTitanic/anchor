@@ -209,6 +209,14 @@ def send_message(player: Player, message: bMessage):
     player.update_activity()
     player.recent_message_count += 1
 
+    player.track(
+        'message',
+        {
+            'channel': channel.name,
+            'content': message.content
+        }
+    )
+
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
     if message.target == 'peppy':
@@ -304,6 +312,13 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
     sender.update_activity()
+    sender.track(
+        'message',
+        {
+            'target': target.name,
+            'content': message.content
+        }
+    )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 def away_message(player: Player, message: bMessage):
