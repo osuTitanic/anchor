@@ -45,6 +45,7 @@ from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 from app.common import mail
 
+from dataclasses import asdict, is_dataclass
 from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -813,11 +814,12 @@ class Player:
             return
 
         self.track(
-            'bancho_packet',
-            {
-                'packet': packet.name,
-                'length': stream.size()
-            }
+            f'bancho_{packet.name.lower()}',
+            event_properties=(
+                asdict(args)
+                if is_dataclass(args)
+                else {'data': args}
+            )
         )
 
         if not (handler_function := app.session.handlers.get(packet)):

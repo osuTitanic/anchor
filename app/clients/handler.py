@@ -209,14 +209,6 @@ def send_message(player: Player, message: bMessage):
     player.update_activity()
     player.recent_message_count += 1
 
-    player.track(
-        'message',
-        {
-            'channel': channel.name,
-            'content': message.content
-        }
-    )
-
 @register(RequestPacket.SEND_PRIVATE_MESSAGE)
 def send_private_message(sender: Player, message: bMessage):
     if message.target == 'peppy':
@@ -312,13 +304,6 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
     sender.update_activity()
-    sender.track(
-        'message',
-        {
-            'target': target.name,
-            'content': message.content
-        }
-    )
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
 def away_message(player: Player, message: bMessage):
@@ -540,14 +525,6 @@ def start_spectating(player: Player, player_id: int):
     if target not in target.spectator_chat.users and not player.is_tourney_client:
         target.spectator_chat.add(target)
 
-    player.track(
-        'start_spectating',
-        {
-            'target_id': target.id,
-            'target_name': target.name
-        }
-    )
-
 @register(RequestPacket.STOP_SPECTATING)
 def stop_spectating(player: Player):
     if not player.spectating:
@@ -572,14 +549,6 @@ def stop_spectating(player: Player):
 
     player.logger.info(f'Stopped spectating "{player.spectating.name}".')
     player.spectating = None
-
-    player.track(
-        'stop_spectating',
-        {
-            'target_id': player.spectating.id,
-            'target_name': player.spectating.name
-        }
-    )
 
 @register(RequestPacket.CANT_SPECTATE)
 def cant_spectate(player: Player):
@@ -780,14 +749,6 @@ def join_match(player: Player, match_join: bMatchJoin):
     match.logger.info(f'{player.name} joined')
     match.update()
 
-    player.track(
-        'match_join',
-        {
-            'match_id': match.db_match.id,
-            'match_name': match.name
-        }
-    )
-
 @register(RequestPacket.LEAVE_MATCH)
 def leave_match(player: Player):
     if not player.match:
@@ -818,14 +779,6 @@ def leave_match(player: Player):
         data={
             'user_id': player.id,
             'name': player.name
-        }
-    )
-
-    player.track(
-        'match_leave',
-        {
-            'match_id': player.match.db_match.id,
-            'match_name': player.match.name
         }
     )
 
@@ -1158,18 +1111,6 @@ def match_start(player: Player):
         return
 
     player.match.start()
-    player.track(
-        'match_start',
-        {
-            'match_id': player.match.db_match.id,
-            'match_name': player.match.name,
-            'beatmap_id': player.match.beatmap_id,
-            'beatmap_name': player.match.beatmap_name,
-            'beatmap_hash': player.match.beatmap_hash,
-            'mode': player.match.mode.name,
-            'mods': player.match.mods.short
-        }
-    )
 
 @register(RequestPacket.MATCH_LOAD_COMPLETE)
 def load_complete(player: Player):
