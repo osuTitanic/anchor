@@ -814,12 +814,15 @@ class Player:
             return
 
         self.track(
-            f'bancho_{packet.name.lower()}',
-            event_properties=(
-                asdict(args)
-                if is_dataclass(args)
-                else {'data': args}
-            )
+            f'bancho_packet',
+            event_properties={
+                'packet_name': packet.name,
+                'content': (
+                    asdict(args)
+                    if is_dataclass(args)
+                    else args
+                )
+            }
         )
 
         if not (handler_function := app.session.handlers.get(packet)):
