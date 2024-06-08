@@ -80,7 +80,7 @@ class ResponsePacket(PacketEnum):
     MATCH_JOIN_FAIL                 = 38
     FELLOW_SPECTATOR_JOINED         = 43
     FELLOW_SPECTATOR_LEFT           = 44
-    ALL_PLAYERS_LOADED              = 46 # Unused (Use 53 instead)
+    ALL_PLAYERS_LOADED              = 46 # Unused (Use 54 instead)
     MATCH_START                     = 47
     MATCH_SCORE_UPDATE              = 49
     MATCH_TRANSFER_HOST             = 51
