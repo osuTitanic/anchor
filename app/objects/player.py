@@ -38,12 +38,14 @@ from app.common.database.repositories import (
     stats
 )
 
+from app.common.helpers import analytics
 from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 from app.common import mail
 
+from dataclasses import asdict, is_dataclass
 from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -72,6 +74,7 @@ import app
 class Player:
     def __init__(self, address: str, port: int) -> None:
         self.logger = logging.getLogger(address)
+        self.protocol = ''
         self.address = address
         self.port = port
 
@@ -342,6 +345,11 @@ class Player:
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         if not self.logged_in:
             return
+
+        self.track(
+            'bancho_disconnect',
+            {'reason': reason.getErrorMessage() if reason else 'Logout'}
+        )
 
         if self.spectating:
             if not self.spectating:
@@ -711,6 +719,11 @@ class Player:
         for player in app.session.players.in_lobby:
             self.enqueue_lobby_join(player.id)
 
+        self.track(
+            'bancho_login',
+            {'login_type': self.protocol}
+        )
+
     def check_client(self, session: Session | None = None):
         client = clients.fetch_without_executable(
             self.id,
@@ -799,6 +812,18 @@ class Player:
                 exc_info=e
             )
             return
+
+        self.track(
+            f'bancho_packet',
+            event_properties={
+                'packet_name': packet.name,
+                'content': (
+                    asdict(args)
+                    if is_dataclass(args)
+                    else args
+                )
+            }
+        )
 
         if not (handler_function := app.session.handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
@@ -931,6 +956,23 @@ class Player:
             user_id=self.id,
             updates={
                 'latest_activity': datetime.now()
+            }
+        )
+
+    def track(self, event: str, event_properties: dict) -> None:
+        analytics.track(
+            event,
+            user_id=self.id,
+            ip=self.address,
+            device_id=self.client.hash.device_id,
+            app_version=self.client.version.string,
+            platform='linux' if self.client.is_wine else 'windows',
+            event_properties=event_properties,
+            user_properties={
+                'user_id': self.id,
+                'username': self.name,
+                'country': self.object.country,
+                'groups': self.groups
             }
         )
 

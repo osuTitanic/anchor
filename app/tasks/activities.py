@@ -17,10 +17,12 @@ def match_activity():
 
             last_activity = (time.time() - match.last_activity)
 
-            if last_activity > MATCH_TIMEOUT_SECONDS:
-                match.logger.warning(
-                    f'Match was not active in the last {MATCH_TIMEOUT_MINUTES} minutes. Closing...'
-                )
-                match.close()
+            if last_activity < MATCH_TIMEOUT_SECONDS:
+                continue
+
+            match.logger.warning(
+                f'Match was not active in the last {MATCH_TIMEOUT_MINUTES} minutes. Closing...'
+            )
+            match.close()
 
         app.session.tasks.sleep(5)

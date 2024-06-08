@@ -37,6 +37,8 @@ MAILGUN_DOMAIN = MAILGUN_EMAIL.split('@')[-1]
 EMAILS_ENABLED = MAILGUN_API_KEY is not None or SENDGRID_API_KEY is not None
 EMAIL = MAILGUN_EMAIL or SENDGRID_EMAIL
 
+AMPLITUDE_API_KEY = os.environ.get('AMPLITUDE_API_KEY')
+
 MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
 MENUICON_URL = os.environ.get('MENUICON_URL')
 
@@ -47,6 +49,7 @@ S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
 DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 
 OFFICER_WEBHOOK_URL = os.environ.get('OFFICER_WEBHOOK_URL')
+EVENT_WEBHOOK_URL = os.environ.get('EVENT_WEBHOOK_URL')
 
 IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
 

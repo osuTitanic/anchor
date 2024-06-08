@@ -27,6 +27,7 @@ class TcpBanchoProtocol(Player, Protocol):
     def __init__(self, address: IPAddress) -> None:
         super().__init__(address.host, address.port)
         self.is_local = location.is_local_ip(address.host)
+        self.protocol = 'tcp'
 
     def connectionMade(self):
         if not self.is_local or config.DEBUG:
@@ -73,6 +74,10 @@ class TcpBanchoProtocol(Player, Protocol):
         Will handle the initial login request and then switch to
         packetDataReceived to handle bancho packets.
         """
+
+        if data.startswith(b'GET /'):
+            self.handleHttpRequest(data)
+            return
 
         if self.busy:
             self.buffer += data
@@ -170,3 +175,9 @@ class TcpBanchoProtocol(Player, Protocol):
 
         finally:
             self.busy = False
+
+    def handleHttpRequest(self, data: bytes) -> None:
+        self.logger.debug(f'Recieved http request: {data}')
+        self.enqueue(b'HTTP/1.1 302 Found\r\n')
+        self.enqueue(f'Location: http://c.{config.DOMAIN_NAME}\r\n'.encode())
+        self.close_connection()

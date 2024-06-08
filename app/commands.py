@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from typing import List, NamedTuple, Callable
+from twisted.internet import threads, reactor
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
-from twisted.internet import threads
 from dataclasses import dataclass
 from threading import Thread
 
@@ -1015,16 +1015,65 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
+@command(['recent', 'r', 'last'], hidden=False)
+def recent(ctx: Context):
+    """- Get information about your last score"""
+    target_player = ctx.player
+
+    if ctx.args:
+        name = ' '.join(ctx.args[0:])
+
+        if not (target_player := app.session.players.by_name(name)):
+            return ['Player is not online']
+
+    with app.session.database.managed_session() as session:
+        recent_scores = scores.fetch_recent_all(
+            user_id=target_player.id,
+            limit=1,
+            session=session
+        )
+
+        if not recent_scores:
+            return ['No recent scores found.']
+
+        score = recent_scores[0]
+        passed = score.failtime is None
+
+        response = [
+            f"[{GameMode(score.mode).formatted}] "
+            f"{score.beatmap.link} "
+            f"{score.max_combo}/{score.beatmap.max_combo} "
+            f"{score.acc * 100:.2f}%"
+            f'{(f" +{Mods(score.mods).short}" if score.mods else "")}'
+        ]
+
+        if passed:
+            rank = scores.fetch_score_index_by_id(
+                score.id,
+                score.beatmap_id,
+                score.mode,
+                score.mods,
+                session=session
+            ) or 'NA'
+            response.append(f"{score.grade} ({score.pp:.2f}pp #{rank})")
+
+        else:
+            completion = max(1, score.failtime) / (max(1, score.beatmap.total_length) * 1000)
+            response.append(f"{score.grade} ({completion * 100:.2f}% complete)")
+
+        return [" | ".join(response)]
+
 @command(['client', 'version'], hidden=False)
 def get_client_version(ctx: Context):
     """<username> - Get the version of the client that a player is currently using"""
-    if len(ctx.args) < 1:
-            return [f'Invalid syntax: !{ctx.trigger} <username>']
+    target = ctx.player
 
-    name = ' '.join(ctx.args[0:])
+    if len(ctx.args) > 0:
+        # Select a different player
+        name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
-        return ['Player is not online']
+        if not (target := app.session.players.by_name(name)):
+            return ['Player is not online']
 
     return [f"{target.name} is playing on {target.client.version.string}"]
 
@@ -1290,7 +1339,6 @@ def kill(ctx: Context) -> List | None:
     player.permissions = Permissions(255)
     player.enqueue_permissions()
     player.enqueue_ping()
-    player.close_connection()
 
     return [f'{player.name} was disconnected from bancho.']
 
@@ -1331,7 +1379,6 @@ def multi(ctx: Context) -> List | None:
         ]
     ]
 
-# TODO: !recent
 # TODO: !rank
 # TODO: !faq
 # TODO: !top
