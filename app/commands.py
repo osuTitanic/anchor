@@ -1145,9 +1145,7 @@ def silence(ctx: Context) -> List | None:
 
         users.update(
             player.id,
-            {
-                'silence_end': player.silence_end
-            }
+            {'silence_end': player.silence_end}
         )
 
         silence_end = player.silence_end
@@ -1159,6 +1157,9 @@ def silence(ctx: Context) -> List | None:
             length=(datetime.now() + timedelta(seconds=duration)),
             description=reason
         )
+
+    if not silence_end:
+        return [f'Failed to silence {player.name}.']
 
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
