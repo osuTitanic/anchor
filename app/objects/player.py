@@ -348,7 +348,7 @@ class Player:
 
         self.track(
             'bancho_disconnect',
-            {'reason': reason.getErrorMessage() if reason else 'Logout'}
+            {'reason': str(reason)}
         )
 
         if self.spectating:
@@ -380,8 +380,6 @@ class Player:
         app.session.players.remove(self)
 
         status.delete(self.id)
-
-        # Update usercount
         usercount.set(len(app.session.players.normal_clients))
 
         for channel in copy(self.channels):
