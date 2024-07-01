@@ -317,16 +317,16 @@ class Player:
         return 'Global Moderator Team' in self.groups
 
     @property
-    def is_staff(self) -> bool:
-        return any([self.is_admin, self.is_dev, self.is_moderator])
+    def has_preview_access(self) -> bool:
+        return 'Preview' in self.groups
 
     @property
     def is_verified(self) -> bool:
-        return 'Verified' in self.groups
+        return 'Verified' in self.groups or self.is_staff
 
     @property
-    def has_preview_access(self) -> bool:
-        return 'Preview' in self.groups
+    def is_staff(self) -> bool:
+        return any([self.is_admin, self.is_dev, self.is_moderator])
 
     def enqueue(self, data: bytes):
         """
@@ -782,9 +782,11 @@ class Player:
                 f'{self.client.hash.string} ({len(other_matches)} matches)'
             )
 
-            if not self.is_verified:
-                app.session.redis.set(f'multiaccounting:{self.id}', 1)
-                self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+            if self.is_verified:
+                return
+
+            app.session.redis.set(f'multiaccounting:{self.id}', 1)
+            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         self.last_response = time.time()
