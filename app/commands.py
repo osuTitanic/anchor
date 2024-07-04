@@ -1491,18 +1491,17 @@ def execute(
     if not command_message.startswith('!'):
         command_message = f'!{command_message}'
 
-    threads.deferToThread(
-        get_command,
+    result = get_command(
         player,
         target,
         command_message
-    ).addCallback(
-        lambda result: on_command_done(
-            result,
-            player,
-            target,
-            command_message
-        )
+    )
+
+    on_command_done(
+        result,
+        player,
+        target,
+        command_message
     )
 
 def on_command_done(
