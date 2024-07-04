@@ -6,6 +6,7 @@ from app.clients import (
     DefaultRequestPacket
 )
 
+from twisted.internet import reactor
 from enum import Enum
 from typing import (
     Iterable,
@@ -18,6 +19,7 @@ from ..http import HttpPlayer
 from .player import Player
 
 import threading
+import config
 import app
 
 class Players(Set[Player | HttpPlayer]):
@@ -217,6 +219,7 @@ class Matches(List[Match | None]):
             # Add match to list if free slot was found
             match.id = free
             self[free] = match
+            self.update_reactor_threadpool()
             return True
 
         return False
@@ -236,11 +239,24 @@ class Matches(List[Match | None]):
             # Remove inactive match
             self.pop(index)
 
+        # Update reactor threadpool size
+        self.update_reactor_threadpool()
+
     def exists(self, match_id: int) -> bool:
         """Check if a match exists"""
         try:
             return self[match_id] is not None
         except IndexError:
             return False
+
+    def update_reactor_threadpool(self) -> None:
+        """
+        Update the reactor threadpool based on the number of active matches.
+        This is due to matches requiring a separate thread to handle the score queue.
+        """
+        reactor.getThreadPool().adjustPoolsize(
+            config.BANCHO_WORKERS,
+            config.BANCHO_WORKERS + len(self.active)
+        )
 
 # TODO: IRC Players
