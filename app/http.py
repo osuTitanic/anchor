@@ -122,7 +122,9 @@ class HttpBanchoProtocol(Resource):
 
         request.setHeader('cho-token', self.player.token)
         request.write(self.player.dequeue())
-        request.finish()
+
+        if not request.finished:
+            request.finish()
 
     def on_login_error(self, request: Request, error: Exception) -> None:
         request.setResponseCode(500)
