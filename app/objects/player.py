@@ -761,6 +761,9 @@ class Player:
                     self.client.ip.country_name
                 )
 
+        if config.ALLOW_MULTIACCOUNTING:
+            return
+
         # Reset multiaccounting lock
         app.session.redis.set(f'multiaccounting:{self.id}', 0)
 
