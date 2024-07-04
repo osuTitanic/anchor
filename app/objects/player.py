@@ -1011,30 +1011,31 @@ class Player:
         )
 
     def enqueue_players(self, players: list, stats_only: bool = False):
-        if app.session.bot_player in players:
-            players.remove(app.session.bot_player)
+        if self.client.version.date <= 1717:
+            action = (
+                self.enqueue_stats
+                if stats_only
+                else self.enqueue_presence
+            )
 
-        if self.client.version.date <= 1710:
-            if stats_only:
-                for player in players:
-                    self.enqueue_stats(player)
-            else:
-                for player in players:
-                    self.enqueue_presence(player)
+            for player in players:
+                action(player)
+
+            # Account for bUserStats update in b1717
             return
 
-        # TODO: Enqueue irc players
-
         if self.client.version.date <= 20121223:
-            # USER_PRESENCE_BUNDLE is not supported anymore
             for player in players:
                 self.enqueue_presence(player)
+
+            # Presence bundle is not supported
             return
 
         player_chunks = itertools.zip_longest(
             *[iter(players)] * 128
         )
 
+        # Send players in bundles of user ids
         for chunk in player_chunks:
             self.send_packet(
                 self.packets.USER_PRESENCE_BUNDLE,
@@ -1044,6 +1045,8 @@ class Player:
                     if player != None
                 ]
             )
+
+        # TODO: Enqueue irc players
 
     def enqueue_irc_player(self, player):
         if self.client.version.date <= 1710:
