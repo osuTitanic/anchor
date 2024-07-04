@@ -5,8 +5,8 @@ from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol
 from twisted.python.failure import Failure
+from twisted.internet import threads
 
-from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.common.helpers import location
 from app.common.streams import StreamIn
 from app.objects.player import Player
@@ -113,10 +113,16 @@ class TcpBanchoProtocol(Player, Protocol):
             self.dataReceived = self.packetDataReceived
 
             # Handle login
-            super().login_received(
+            threads.deferToThread(
+                super().login_received,
                 username.decode(),
                 password.decode(),
                 self.client
+            ).addErrback(
+                lambda failiure: (
+                    self.logger.error(f'Error on login: {failiure.getErrorMessage()}'),
+                    self.close_connection(failiure.value)
+                )
             )
         except Exception as e:
             self.logger.error(
