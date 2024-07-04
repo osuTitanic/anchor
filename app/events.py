@@ -44,6 +44,10 @@ def user_update(user_id: int, mode: int | None = None):
         player.reload_object()
 
         for p in app.session.players:
+            if p.client.version.date > 20121223:
+                # Client will request the stats themselves
+                continue
+
             if p.client.version.date <= 377:
                 p.enqueue_presence(player, update=True)
                 continue
@@ -51,6 +55,10 @@ def user_update(user_id: int, mode: int | None = None):
             p.enqueue_stats(player)
 
     for p in app.session.players:
+        if p.client.version.date > 20121223:
+            # Client will request the stats themselves
+            continue
+
         if p.client.version.date <= 377:
             p.enqueue_presence(player, update=True)
             continue
