@@ -290,11 +290,6 @@ class Player:
 
     @property
     def rank(self) -> int:
-        if self.client.version.date > 833 and \
-           self.current_stats.pp <= 0:
-            # Newer clients don't display rank 0
-            return 0
-
         return self.current_stats.rank
 
     @property
@@ -1091,9 +1086,18 @@ class Player:
             )
             return
 
+        presence = player.user_presence
+
+        if (
+            self.client.version.date > 833 and
+            self.current_stats.pp <= 0
+        ):
+            # Newer clients don't display rank 0
+            presence.rank = 0
+
         self.send_packet(
             self.packets.USER_PRESENCE,
-            player.user_presence
+            presence
         )
 
     def enqueue_stats(self, player):
@@ -1105,9 +1109,18 @@ class Player:
             )
             return
 
+        stats = player.user_stats
+
+        if (
+            self.client.version.date > 833 and
+            stats.pp <= 0
+        ):
+            # Newer clients don't display rank 0
+            stats.rank = 0
+
         self.send_packet(
             self.packets.USER_STATS,
-            player.user_stats
+            stats
         )
 
     def enqueue_quit(self, user_quit: bUserQuit):
