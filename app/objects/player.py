@@ -54,6 +54,7 @@ from copy import copy
 
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
+from twisted.internet import threads
 
 from app.clients import versions
 from app.clients import (
@@ -836,7 +837,19 @@ class Player:
             handler_function(self, args)
             return
 
-        handler_function(self)
+        # Run handler function in a separate thread
+        threads.deferToThread(
+            handler_function,
+            self
+        ).addErrback(
+            lambda failure: (
+                officer.call(
+                    f'Error while handling packet: {failure}',
+                    exc_info=failure.value
+                ),
+                self.close_connection(failure.value)
+            )
+        )
 
     def silence(self, duration_sec: int, reason: str | None = None):
         if self.is_bot:
