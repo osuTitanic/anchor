@@ -15,10 +15,7 @@ def ping():
     For http clients, we can just check if they have responded within the timeout period, and close the connection if not.
     """
     threadpool = reactor.getThreadPool()
-
-    if len(threadpool.waiters) <= config.BANCHO_WORKERS / 2:
-        # Server is under heavy load, skip pings
-        return
+    disable_timeouts = threadpool.workers > config.BANCHO_WORKERS / 2
 
     next_ping = (time.time() - PING_INTERVAL)
 
@@ -38,14 +35,14 @@ def ping():
 
         last_response = (time.time() - player.last_response)
 
-        if (last_response >= TIMEOUT_SECS):
+        if (last_response >= TIMEOUT_SECS) and not disable_timeouts:
             player.logger.warning('Client timed out!')
             player.close_connection()
 
     for player in app.session.players.http_clients:
         last_response = (time.time() - player.last_response)
 
-        if last_response >= TIMEOUT_SECS:
+        if (last_response >= TIMEOUT_SECS) and not disable_timeouts:
             player.logger.warning('Client timed out!')
             player.close_connection()
 
