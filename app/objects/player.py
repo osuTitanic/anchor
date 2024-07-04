@@ -1175,7 +1175,7 @@ class Player:
     def enqueue_silence_info(self, remaining_time: int):
         self.send_packet(
             self.packets.SILENCE_INFO,
-            remaining_time
+            min(remaining_time, 2147483647)
         )
 
     def enqueue_friends(self):
