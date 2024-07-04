@@ -1,5 +1,8 @@
 
+from twisted.internet import reactor
 from app.common import officer
+
+import config
 import time
 import app
 
@@ -11,6 +14,12 @@ def ping():
     This task will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
     For http clients, we can just check if they have responded within the timeout period, and close the connection if not.
     """
+    threadpool = reactor.getThreadPool()
+
+    if len(threadpool.waiters) <= config.BANCHO_WORKERS / 2:
+        # Server is under heavy load, skip pings
+        return
+
     next_ping = (time.time() - PING_INTERVAL)
 
     for player in app.session.players.tcp_clients:
