@@ -211,7 +211,7 @@ def reload_config(ctx: Context) -> List[str]:
     return ['Config was reloaded.']
 
 @system_commands.register(['exec', 'python'], ['Admins'])
-def execute(ctx: Context):
+def execute_console(ctx: Context):
     """<input> - Execute any python code"""
     if not ctx.args:
         return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <input>']
