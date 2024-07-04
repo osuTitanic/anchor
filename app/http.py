@@ -8,8 +8,11 @@ from app.objects.player import Player
 from app.common.helpers import ip
 from app.objects import OsuClient
 
+from twisted.web.server import NOT_DONE_YET
+from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
+from twisted.internet import threads
 from queue import Queue
 
 import config
@@ -90,25 +93,45 @@ class HttpBanchoProtocol(Resource):
                 request.getClientAddress().port
             )
 
-            self.player.login_received(
+            deferred = threads.deferToThread(
+                self.player.login_received,
                 username,
                 password,
                 client
             )
-        except Exception as e:
-            request.setResponseCode(500)
-            self.player.send_error()
-            self.player.logger.error(
-                f'Login failed: {e}', exc_info=e
+
+            deferred.addErrback(
+                lambda f: self.on_login_error(request, f.value)
             )
 
+            deferred.addCallback(
+                lambda _: self.on_login_done(request)
+            )
+        except Exception as e:
+            self.on_login_error(
+                request, e
+            )
+
+        return NOT_DONE_YET
+
+    def on_login_done(self, request: Request) -> None:
         cf_country_header = request.getHeader('CF-IPCountry')
 
         if cf_country_header not in ('XX', 'T1', None):
             self.player.client.ip.country_code = cf_country_header
 
         request.setHeader('cho-token', self.player.token)
-        return self.player.dequeue()
+        request.write(self.player.dequeue())
+        request.finish()
+
+    def on_login_error(self, request: Request, error: Exception) -> None:
+        request.setResponseCode(500)
+        self.player.send_error()
+        self.player.logger.error(
+            f'Login failed: {error}',
+            exc_info=error
+        )
+        self.on_login_done(request)
 
     def handle_request(self, request: Request) -> bytes:
         stream = StreamIn(request.content.read())
