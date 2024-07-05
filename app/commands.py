@@ -211,7 +211,7 @@ def reload_config(ctx: Context) -> List[str]:
     return ['Config was reloaded.']
 
 @system_commands.register(['exec', 'python'], ['Admins'])
-def execute(ctx: Context):
+def execute_console(ctx: Context):
     """<input> - Execute any python code"""
     if not ctx.args:
         return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <input>']
@@ -1145,9 +1145,7 @@ def silence(ctx: Context) -> List | None:
 
         users.update(
             player.id,
-            {
-                'silence_end': player.silence_end
-            }
+            {'silence_end': player.silence_end}
         )
 
         silence_end = player.silence_end
@@ -1159,6 +1157,9 @@ def silence(ctx: Context) -> List | None:
             length=(datetime.now() + timedelta(seconds=duration)),
             description=reason
         )
+
+    if not silence_end:
+        return [f'Failed to silence {player.name}.']
 
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
@@ -1490,18 +1491,17 @@ def execute(
     if not command_message.startswith('!'):
         command_message = f'!{command_message}'
 
-    threads.deferToThread(
-        get_command,
+    result = get_command(
         player,
         target,
         command_message
-    ).addCallback(
-        lambda result: on_command_done(
-            result,
-            player,
-            target,
-            command_message
-        )
+    )
+
+    on_command_done(
+        result,
+        player,
+        target,
+        command_message
     )
 
 def on_command_done(

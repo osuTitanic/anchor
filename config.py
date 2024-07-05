@@ -43,6 +43,7 @@ MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
 MENUICON_URL = os.environ.get('MENUICON_URL')
 
 DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
+ALLOW_MULTIACCOUNTING = eval(os.environ.get('ALLOW_MULTIACCOUNTING', 'False').capitalize())
 APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
 MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
 S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())

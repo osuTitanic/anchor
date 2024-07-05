@@ -54,6 +54,7 @@ from copy import copy
 
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
+from twisted.internet import threads
 
 from app.clients import versions
 from app.clients import (
@@ -289,11 +290,6 @@ class Player:
 
     @property
     def rank(self) -> int:
-        if self.client.version.date > 833 and \
-           self.current_stats.pp <= 0:
-            # Newer clients don't display rank 0
-            return 0
-
         return self.current_stats.rank
 
     @property
@@ -317,16 +313,16 @@ class Player:
         return 'Global Moderator Team' in self.groups
 
     @property
-    def is_staff(self) -> bool:
-        return any([self.is_admin, self.is_dev, self.is_moderator])
+    def has_preview_access(self) -> bool:
+        return 'Preview' in self.groups
 
     @property
     def is_verified(self) -> bool:
-        return 'Verified' in self.groups
+        return 'Verified' in self.groups or self.is_staff
 
     @property
-    def has_preview_access(self) -> bool:
-        return 'Preview' in self.groups
+    def is_staff(self) -> bool:
+        return any([self.is_admin, self.is_dev, self.is_moderator])
 
     def enqueue(self, data: bytes):
         """
@@ -348,7 +344,7 @@ class Player:
 
         self.track(
             'bancho_disconnect',
-            {'reason': reason.getErrorMessage() if reason else 'Logout'}
+            {'reason': str(reason)}
         )
 
         if self.spectating:
@@ -380,8 +376,6 @@ class Player:
         app.session.players.remove(self)
 
         status.delete(self.id)
-
-        # Update usercount
         usercount.set(len(app.session.players.normal_clients))
 
         for channel in copy(self.channels):
@@ -763,6 +757,9 @@ class Player:
                     self.client.ip.country_name
                 )
 
+        if config.ALLOW_MULTIACCOUNTING:
+            return
+
         # Reset multiaccounting lock
         app.session.redis.set(f'multiaccounting:{self.id}', 0)
 
@@ -784,9 +781,11 @@ class Player:
                 f'{self.client.hash.string} ({len(other_matches)} matches)'
             )
 
-            if not self.is_verified:
-                app.session.redis.set(f'multiaccounting:{self.id}', 1)
-                self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+            if self.is_verified:
+                return
+
+            app.session.redis.set(f'multiaccounting:{self.id}', 1)
+            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
     def packet_received(self, packet_id: int, stream: StreamIn):
         self.last_response = time.time()
@@ -833,7 +832,19 @@ class Player:
             handler_function(self, args)
             return
 
-        handler_function(self)
+        # Run handler function in a separate thread
+        threads.deferToThread(
+            handler_function,
+            self
+        ).addErrback(
+            lambda failure: (
+                officer.call(
+                    f'Error while handling packet: {failure}',
+                    exc_info=failure.value
+                ),
+                self.close_connection(failure.value)
+            )
+        )
 
     def silence(self, duration_sec: int, reason: str | None = None):
         if self.is_bot:
@@ -995,30 +1006,31 @@ class Player:
         )
 
     def enqueue_players(self, players: list, stats_only: bool = False):
-        if app.session.bot_player in players:
-            players.remove(app.session.bot_player)
+        if self.client.version.date <= 1717:
+            action = (
+                self.enqueue_stats
+                if stats_only
+                else self.enqueue_presence
+            )
 
-        if self.client.version.date <= 1710:
-            if stats_only:
-                for player in players:
-                    self.enqueue_stats(player)
-            else:
-                for player in players:
-                    self.enqueue_presence(player)
+            for player in players:
+                action(player)
+
+            # Account for bUserStats update in b1717
             return
 
-        # TODO: Enqueue irc players
-
         if self.client.version.date <= 20121223:
-            # USER_PRESENCE_BUNDLE is not supported anymore
             for player in players:
                 self.enqueue_presence(player)
+
+            # Presence bundle is not supported
             return
 
         player_chunks = itertools.zip_longest(
             *[iter(players)] * 128
         )
 
+        # Send players in bundles of user ids
         for chunk in player_chunks:
             self.send_packet(
                 self.packets.USER_PRESENCE_BUNDLE,
@@ -1028,6 +1040,8 @@ class Player:
                     if player != None
                 ]
             )
+
+        # TODO: Enqueue irc players
 
     def enqueue_irc_player(self, player):
         if self.client.version.date <= 1710:
@@ -1072,9 +1086,18 @@ class Player:
             )
             return
 
+        presence = player.user_presence
+
+        if (
+            self.client.version.date > 833 and
+            self.current_stats.pp <= 0
+        ):
+            # Newer clients don't display rank 0
+            presence.rank = 0
+
         self.send_packet(
             self.packets.USER_PRESENCE,
-            player.user_presence
+            presence
         )
 
     def enqueue_stats(self, player):
@@ -1086,9 +1109,18 @@ class Player:
             )
             return
 
+        stats = player.user_stats
+
+        if (
+            self.client.version.date > 833 and
+            stats.pp <= 0
+        ):
+            # Newer clients don't display rank 0
+            stats.rank = 0
+
         self.send_packet(
             self.packets.USER_STATS,
-            player.user_stats
+            stats
         )
 
     def enqueue_quit(self, user_quit: bUserQuit):
@@ -1159,7 +1191,7 @@ class Player:
     def enqueue_silence_info(self, remaining_time: int):
         self.send_packet(
             self.packets.SILENCE_INFO,
-            remaining_time
+            min(remaining_time, 2147483647)
         )
 
     def enqueue_friends(self):

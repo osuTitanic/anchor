@@ -191,7 +191,7 @@ def send_message(player: Player, message: bMessage):
         player.last_minute_stamp = time.time()
         player.recent_message_count = 0
 
-    if player.recent_message_count > 35:
+    if player.recent_message_count > 35 and not player.is_bot:
         player.silence(60, reason='Chat spamming')
         return
 
@@ -243,7 +243,7 @@ def send_private_message(sender: Player, message: bMessage):
         sender.last_minute_stamp = time.time()
         sender.recent_message_count = 0
 
-    if sender.recent_message_count > 35:
+    if sender.recent_message_count > 35 and not sender.is_bot:
         sender.silence(60, reason='Chat spamming')
         return
 
