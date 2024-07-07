@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+from typing import List
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.common.streams import StreamIn
@@ -9,10 +10,10 @@ from app.common.helpers import ip
 from app.objects import OsuClient
 
 from twisted.web.server import NOT_DONE_YET
-from twisted.python.failure import Failure
+from twisted.internet import threads, reactor
+from twisted.internet.defer import Deferred
 from twisted.web.resource import Resource
 from twisted.web.http import Request
-from twisted.internet import threads
 from queue import Queue
 
 import config
@@ -86,79 +87,112 @@ class HttpBanchoProtocol(Resource):
             )
 
             ip_address = ip.resolve_ip_address_twisted(request)
-            client = OsuClient.from_string(client_data, ip_address)
 
             self.player = HttpPlayer(
                 ip_address,
                 request.getClientAddress().port
             )
 
+            self.player.client = OsuClient.from_string(
+                client_data,
+                ip_address
+            )
+
             deferred = threads.deferToThread(
                 self.player.login_received,
                 username,
                 password,
-                client
+                self.player.client
             )
 
             deferred.addErrback(
-                lambda f: self.on_login_error(request, f.value)
+                lambda f: self.on_request_error(request, f.value)
             )
 
             deferred.addCallback(
                 lambda _: self.on_login_done(request)
             )
         except Exception as e:
-            self.on_login_error(
+            return self.on_request_error(
                 request, e
             )
 
         return NOT_DONE_YET
 
-    def on_login_done(self, request: Request) -> None:
+    def handle_request(self, request: Request) -> bytes:
+        deferred = threads.deferToThread(
+            self.process_packets,
+            request.content.read()
+        )
+
+        deferred.addErrback(
+            lambda f: self.on_request_error(request, f.value)
+        )
+
+        deferred.addCallback(
+            lambda _: self.on_request_done(request)
+        )
+
+        return NOT_DONE_YET
+
+    def process_packets(self, content: bytes):
+        stream = StreamIn(content)
+
+        while not stream.eof():
+            packet = stream.u16()
+            compression = stream.bool()
+            payload = stream.read(stream.u32())
+
+            if compression:
+                payload = gzip.decompress(payload)
+
+            self.player.packet_received(
+                packet_id=packet,
+                stream=StreamIn(payload)
+            )
+
+    def on_request_done(self, request: Request) -> None:
         cf_country_header = request.getHeader('CF-IPCountry')
 
         if cf_country_header not in ('XX', 'T1', None):
+            # Player is using a VPN or proxy
             self.player.client.ip.country_code = cf_country_header
 
-        request.setHeader('cho-token', self.player.token)
-        request.write(self.player.dequeue())
+        if request._disconnected:
+            self.player.logger.warning('Client disconnected before response')
+            return
 
-        if not request.finished:
-            request.finish()
+        if request.finished:
+            self.player.logger.warning('Request finished before response')
+            return
 
-    def on_login_error(self, request: Request, error: Exception) -> None:
+        reactor.callFromThread(
+            lambda: (
+                request.write(self.player.dequeue()),
+                request.finish()
+            )
+        )
+
+    def on_request_error(
+        self,
+        request: Request,
+        error: Exception
+    ) -> None:
         request.setResponseCode(500)
         self.player.send_error()
         self.player.logger.error(
-            f'Login failed: {error}',
+            f'Failed to process request: {error}',
             exc_info=error
         )
-        self.on_login_done(request)
+        self.on_request_done(request)
 
-    def handle_request(self, request: Request) -> bytes:
-        stream = StreamIn(request.content.read())
+    def on_login_done(self, request: Request) -> None:
+        request.setHeader('cho-token', self.player.token)
+        self.on_request_done(request)
 
-        try:
-            while not stream.eof():
-                packet = stream.u16()
-                compression = stream.bool()
-                payload = stream.read(stream.u32())
-
-                if compression:
-                    payload = gzip.decompress(payload)
-
-                self.player.packet_received(
-                    packet_id=packet,
-                    stream=StreamIn(payload)
-                )
-        except Exception as e:
-            request.setResponseCode(500)
-            self.player.send_error()
-            self.player.logger.error(
-                f'Failed to parse packet: {e}', exc_info=e
-            )
-
-        return self.player.dequeue()
+    def force_reconnect(self) -> bytes:
+        """Force a client to reconnect, using the Restart packet."""
+        return b'\x56\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
 
     def render_GET(self, request: Request) -> bytes:
         request.setHeader('content-type', 'text/html; charset=utf-8')
@@ -175,7 +209,11 @@ class HttpBanchoProtocol(Resource):
 
         if not (player := app.session.players.by_token(osu_token)):
             # Tell client to reconnect immediately (restart packet)
-            return b'\x56\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00'
+            return self.force_reconnect()
+
+        if not player.logged_in:
+            request.setResponseCode(403)
+            return b''
 
         self.player = player
         return self.handle_request(request)
