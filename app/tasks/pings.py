@@ -15,7 +15,7 @@ def ping():
     For http clients, we can just check if they have responded within the timeout period, and close the connection if not.
     """
     threadpool = reactor.getThreadPool()
-    disable_timeouts = threadpool.workers > config.BANCHO_WORKERS / 2
+    disable_timeouts = len(threadpool.waiters) < config.BANCHO_WORKERS / 2
 
     next_ping = (time.time() - PING_INTERVAL)
 
