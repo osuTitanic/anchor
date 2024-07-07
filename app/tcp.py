@@ -4,8 +4,8 @@ from __future__ import annotations
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol
+from twisted.internet import threads, reactor
 from twisted.python.failure import Failure
-from twisted.internet import threads
 
 from app.common.helpers import location
 from app.common.streams import StreamIn
@@ -20,7 +20,7 @@ IPAddress = IPv4Address | IPv6Address
 class TcpBanchoProtocol(Player, Protocol):
     """This class implements the tcp bancho connection."""
 
-    connection_timeout = 20
+    request_timeout = 20
     buffer = b""
     busy = False
 
@@ -51,7 +51,7 @@ class TcpBanchoProtocol(Player, Protocol):
 
     def enqueue(self, data: bytes):
         try:
-            self.transport.write(data)
+            reactor.callFromThread(self.transport.write, data)
         except Exception as e:
             self.logger.error(
                 f'Could not write to transport layer: {e}',
@@ -59,15 +59,12 @@ class TcpBanchoProtocol(Player, Protocol):
             )
 
     def close_connection(self, error: Exception | None = None):
-        if not self.is_local or config.DEBUG:
-            if error:
-                self.logger.warning(f'Closing connection -> <{self.address}>')
-                self.send_error()
-            else:
-                self.logger.info(f'Closing connection -> <{self.address}>')
+        if error:
+            self.send_error()
 
-        self.transport.loseConnection()
-        super().connectionLost(error)
+        self.logger.info(f'Closing connection -> <{self.address}>')
+        reactor.callFromThread(self.transport.loseConnection)
+        super().connectionLost(Failure(error or ConnectionDone()))
 
     def dataReceived(self, data: bytes):
         """
@@ -112,16 +109,17 @@ class TcpBanchoProtocol(Player, Protocol):
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
 
-            # Handle login
-            threads.deferToThread(
+            deferred = threads.deferToThread(
                 super().login_received,
                 username.decode(),
                 password.decode(),
                 self.client
-            ).addErrback(
-                lambda failiure: (
-                    self.logger.error(f'Error on login: {failiure.getErrorMessage()}'),
-                    self.close_connection(failiure.value)
+            )
+
+            deferred.addErrback(
+                lambda f: (
+                    self.logger.error(f'Error on login: {f.getErrorMessage()}', exc_info=f.value),
+                    self.close_connection(f.value)
                 )
             )
         except Exception as e:
@@ -168,9 +166,17 @@ class TcpBanchoProtocol(Player, Protocol):
                 # Update buffer
                 self.buffer = stream.readall()
 
-                self.packet_received(
+                deferred = threads.deferToThread(
+                    self.packet_received,
                     packet_id=packet,
                     stream=StreamIn(payload)
+                )
+
+                deferred.addErrback(
+                    lambda f: (
+                        self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                        self.close_connection(f.value)
+                    )
                 )
         except Exception as e:
             self.logger.error(

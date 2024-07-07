@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+from app.objects.player import Player
 from app.common import officer
 from app.common.objects import bMessage
 from app.common.constants import GameMode
@@ -20,6 +21,18 @@ from typing import Optional
 import json
 import app
 
+def enqueue_stats(player: Player):
+    for p in app.session.players:
+        if p.client.version.date > 20121223 and p.id != player.id:
+            # Client will request the stats themselves
+            continue
+
+        if p.client.version.date <= 377:
+            p.enqueue_presence(player, update=True)
+            continue
+
+        p.enqueue_stats(player)
+
 @app.session.events.register('user_update')
 def user_update(user_id: int, mode: int | None = None):
     if not (player := app.session.players.by_id(user_id)):
@@ -30,6 +43,7 @@ def user_update(user_id: int, mode: int | None = None):
         player.status.mode = GameMode(mode)
 
     player.reload_object()
+    enqueue_stats(player)
 
     duplicates = app.session.players.get_rank_duplicates(
         player.rank,
@@ -42,28 +56,7 @@ def user_update(user_id: int, mode: int | None = None):
 
         # We have found a player with the same rank
         player.reload_object()
-
-        for p in app.session.players:
-            if p.client.version.date > 20121223:
-                # Client will request the stats themselves
-                continue
-
-            if p.client.version.date <= 377:
-                p.enqueue_presence(player, update=True)
-                continue
-
-            p.enqueue_stats(player)
-
-    for p in app.session.players:
-        if p.client.version.date > 20121223:
-            # Client will request the stats themselves
-            continue
-
-        if p.client.version.date <= 377:
-            p.enqueue_presence(player, update=True)
-            continue
-
-        p.enqueue_stats(player)
+        enqueue_stats(player)
 
 @app.session.events.register('bot_message')
 def bot_message(message: str, target: str):

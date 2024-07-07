@@ -812,6 +812,9 @@ class Player:
             )
             return
 
+        if not self.logged_in:
+            return
+
         self.track(
             f'bancho_packet',
             event_properties={
@@ -832,19 +835,7 @@ class Player:
             handler_function(self, args)
             return
 
-        # Run handler function in a separate thread
-        threads.deferToThread(
-            handler_function,
-            self
-        ).addErrback(
-            lambda failure: (
-                officer.call(
-                    f'Error while handling packet: {failure}',
-                    exc_info=failure.value
-                ),
-                self.close_connection(failure.value)
-            )
-        )
+        return handler_function(self)
 
     def silence(self, duration_sec: int, reason: str | None = None):
         if self.is_bot:
@@ -983,7 +974,8 @@ class Player:
                 'user_id': self.id,
                 'username': self.name,
                 'country': self.object.country,
-                'groups': self.groups
+                'groups': self.groups,
+                'is_bot': self.is_bot
             }
         )
 
