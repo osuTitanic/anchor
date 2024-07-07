@@ -974,7 +974,8 @@ class Player:
                 'user_id': self.id,
                 'username': self.name,
                 'country': self.object.country,
-                'groups': self.groups
+                'groups': self.groups,
+                'is_bot': self.is_bot
             }
         )
 
