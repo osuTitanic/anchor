@@ -812,6 +812,9 @@ class Player:
             )
             return
 
+        if not self.logged_in:
+            return
+
         self.track(
             f'bancho_packet',
             event_properties={
