@@ -51,7 +51,7 @@ class TcpBanchoProtocol(Player, Protocol):
 
     def enqueue(self, data: bytes):
         try:
-            self.transport.write(data)
+            reactor.callFromThread(self.transport.write, data)
         except Exception as e:
             self.logger.error(
                 f'Could not write to transport layer: {e}',
