@@ -10,8 +10,9 @@ from app.common.helpers import ip
 from app.objects import OsuClient
 
 from twisted.web.server import NOT_DONE_YET
+from twisted.internet.error import ConnectionDone
 from twisted.internet import threads, reactor
-from twisted.internet.defer import Deferred
+from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
 from queue import Queue
@@ -59,13 +60,11 @@ class HttpPlayer(Player):
 
     def close_connection(self, error: Exception | None = None) -> None:
         if error:
-            self.send_error(message=str(error) if config.DEBUG else None)
-            self.logger.warning(f'Closing connection -> <{self.address}>')
-        else:
-            self.logger.info(f'Closing connection -> <{self.address}>')
+            self.send_error()
 
+        self.logger.info(f'Closing connection -> <{self.address}>')
         self.token = ""
-        super().connectionLost(error)
+        super().connectionLost(Failure(error or ConnectionDone()))
 
 class HttpBanchoProtocol(Resource):
     isLeaf = True
