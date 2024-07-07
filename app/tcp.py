@@ -59,15 +59,12 @@ class TcpBanchoProtocol(Player, Protocol):
             )
 
     def close_connection(self, error: Exception | None = None):
-        if not self.is_local or config.DEBUG:
-            if error:
-                self.logger.warning(f'Closing connection -> <{self.address}>')
-                self.send_error()
-            else:
-                self.logger.info(f'Closing connection -> <{self.address}>')
+        if error:
+            self.send_error()
 
-        self.transport.loseConnection()
-        super().connectionLost(error)
+        self.logger.info(f'Closing connection -> <{self.address}>')
+        reactor.callFromThread(self.transport.loseConnection)
+        super().connectionLost(Failure(error or ConnectionDone()))
 
     def dataReceived(self, data: bytes):
         """
