@@ -757,7 +757,7 @@ class Player:
                     self.client.ip.country_name
                 )
 
-        if config.ALLOW_MULTIACCOUNTING:
+        if config.ALLOW_MULTIACCOUNTING or self.is_bot:
             return
 
         # Reset multiaccounting lock
