@@ -43,6 +43,7 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, Optional, List
+from sqlalchemy.orm import selectinload
 from datetime import datetime
 from copy import copy
 
@@ -393,6 +394,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
         filename_beatmaps = s.query(DBBeatmap) \
+            .options(selectinload(DBBeatmap.beatmapset)) \
             .filter(DBBeatmap.filename.in_(info.filenames)) \
             .all()
 
@@ -413,6 +415,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             ))
 
         id_beatmaps = s.query(DBBeatmap) \
+            .options(selectinload(DBBeatmap.beatmapset)) \
             .filter(DBBeatmap.id.in_(info.beatmap_ids)) \
             .all()
 
