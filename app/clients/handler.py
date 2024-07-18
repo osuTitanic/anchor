@@ -759,8 +759,8 @@ def leave_match(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     status = (
         SlotStatus.Locked
@@ -851,8 +851,8 @@ def change_slot(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     player.match.slots[slot_id].copy_from(slot)
     slot.reset()
@@ -929,15 +929,13 @@ def change_mods(player: Player, mods: Mods):
             if Mods.DoubleTime|Mods.Nightcore in player.match.mods:
                 player.match.mods &= ~Mods.DoubleTime
 
-        slot = player.match.get_slot(player)
-        assert slot is not None
+        if slot := player.match.get_slot(player):
+            # Only keep mods that are "FreeModAllowed"
+            slot.mods = mods & Mods.FreeModAllowed
 
-        # Only keep mods that are "FreeModAllowed"
-        slot.mods = mods & Mods.FreeModAllowed
-
-        player.match.logger.info(
-            f'{player.name} changed their mods to {slot.mods.short}'
-        )
+            player.match.logger.info(
+                f'{player.name} changed their mods to {slot.mods.short}'
+            )
     else:
         if player is not player.match.host:
             player.logger.warning(f'{player.name} tried to change mods, but was not host')
@@ -965,8 +963,8 @@ def ready(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.Ready
     player.match.update()
@@ -979,8 +977,8 @@ def not_ready(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.NotReady
     player.match.update()
@@ -996,8 +994,8 @@ def no_beatmap(player: Player):
         # Beatmap is being selected by the host
         return
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.NoMap
     player.match.update()
@@ -1042,8 +1040,8 @@ def change_team(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.team = {
         SlotTeam.Blue: SlotTeam.Red,
@@ -1123,8 +1121,8 @@ def load_complete(player: Player):
     if not player.match.in_progress:
         return
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.loaded = True
 
@@ -1146,7 +1144,9 @@ def skip(player: Player):
         return
 
     slot, id = player.match.get_slot_with_id(player)
-    assert slot is not None
+
+    if not slot:
+        return
 
     slot.skipped = True
 
@@ -1182,7 +1182,9 @@ def score_update(player: Player, scoreframe: bScoreFrame):
         return
 
     slot, id = player.match.get_slot_with_id(player)
-    assert slot is not None
+
+    if not slot:
+        return
 
     if not slot.is_playing:
         return
@@ -1202,8 +1204,8 @@ def match_complete(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.Complete
 
