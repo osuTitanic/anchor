@@ -468,7 +468,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                     index,
                     beatmap.id,
                     beatmap.set_id,
-                    beatmap.set_id, # ThreadId
+                    beatmap.beatmapset.topic_id or beatmap.set_id,
                     ranked,
                     grades[0], # Standard
                     grades[2], # Fruits
