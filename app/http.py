@@ -11,10 +11,10 @@ from app.objects import OsuClient
 
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet.error import ConnectionDone
-from twisted.internet import threads, reactor
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
+from twisted.internet import threads
 from queue import Queue
 
 import gzip
@@ -103,12 +103,9 @@ class HttpBanchoProtocol(Resource):
                 self.player.client
             )
 
-            deferred.addErrback(
+            deferred.addCallbacks(
+                lambda _: self.on_login_done(request),
                 lambda f: self.on_request_error(request, f)
-            )
-
-            deferred.addCallback(
-                lambda _: self.on_login_done(request)
             )
         except Exception as e:
             request.setResponseCode(500)
@@ -124,21 +121,18 @@ class HttpBanchoProtocol(Resource):
     def handle_request(self, request: Request) -> bytes:
         deferred = threads.deferToThread(
             self.process_packets,
-            request.content.read()
+            request
         )
 
-        deferred.addErrback(
+        deferred.addCallbacks(
+            lambda _: self.on_request_done(request),
             lambda f: self.on_request_error(request, f)
-        )
-
-        deferred.addCallback(
-            lambda _: self.on_request_done(request)
         )
 
         return NOT_DONE_YET
 
-    def process_packets(self, content: bytes):
-        stream = StreamIn(content)
+    def process_packets(self, request: Request):
+        stream = StreamIn(request.content.read())
 
         while not stream.eof():
             packet = stream.u16()
@@ -168,12 +162,8 @@ class HttpBanchoProtocol(Resource):
             self.player.logger.warning('Request finished before response')
             return
 
-        reactor.callFromThread(
-            lambda: (
-                request.write(self.player.dequeue()),
-                request.finish()
-            )
-        )
+        request.write(self.player.dequeue())
+        request.finish()
 
     def on_request_error(
         self,
@@ -195,12 +185,8 @@ class HttpBanchoProtocol(Resource):
             self.player.logger.warning('Request finished before response')
             return
 
-        reactor.callFromThread(
-            lambda: (
-                request.write(self.player.dequeue()),
-                request.finish()
-            )
-        )
+        request.write(self.player.dequeue())
+        request.finish()
 
     def on_login_done(self, request: Request) -> None:
         request.setHeader('cho-token', self.player.token)
