@@ -17,7 +17,6 @@ from twisted.web.resource import Resource
 from twisted.web.http import Request
 from queue import Queue
 
-import config
 import gzip
 import uuid
 import app
@@ -105,16 +104,20 @@ class HttpBanchoProtocol(Resource):
             )
 
             deferred.addErrback(
-                lambda f: self.on_request_error(request, f.value)
+                lambda f: self.on_request_error(request, f)
             )
 
             deferred.addCallback(
                 lambda _: self.on_login_done(request)
             )
         except Exception as e:
-            return self.on_request_error(
-                request, e
+            request.setResponseCode(500)
+            self.player.send_error()
+            self.player.logger.error(
+                f'Failed to process request: {e}',
+                exc_info=e
             )
+            return self.player.dequeue()
 
         return NOT_DONE_YET
 
@@ -125,7 +128,7 @@ class HttpBanchoProtocol(Resource):
         )
 
         deferred.addErrback(
-            lambda f: self.on_request_error(request, f.value)
+            lambda f: self.on_request_error(request, f)
         )
 
         deferred.addCallback(
@@ -175,15 +178,29 @@ class HttpBanchoProtocol(Resource):
     def on_request_error(
         self,
         request: Request,
-        error: Exception
+        failiure: Failure
     ) -> None:
         request.setResponseCode(500)
         self.player.send_error()
         self.player.logger.error(
-            f'Failed to process request: {error}',
-            exc_info=error
+            f'Failed to process request: {failiure.getErrorMessage()}',
+            exc_info=failiure.value
         )
-        self.on_request_done(request)
+
+        if request._disconnected:
+            self.player.logger.warning('Client disconnected before response')
+            return
+
+        if request.finished:
+            self.player.logger.warning('Request finished before response')
+            return
+
+        reactor.callFromThread(
+            lambda: (
+                request.write(self.player.dequeue()),
+                request.finish()
+            )
+        )
 
     def on_login_done(self, request: Request) -> None:
         request.setHeader('cho-token', self.player.token)
