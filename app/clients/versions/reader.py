@@ -4,7 +4,6 @@ from app.common.objects import (
     bBeatmapInfoRequest,
     bReplayFrameBundle,
     bStatusUpdate,
-    BanchoPacket,
     bReplayFrame,
     bScoreFrame,
     bMatchJoin,
@@ -18,9 +17,6 @@ from abc import ABC
 class BaseReader(ABC):
     def __init__(self, stream: StreamIn) -> None:
         self.stream = stream
-
-    def read_header(self) -> BanchoPacket:
-        ...
 
     def read_intlist(self) -> List[int]:
         ...

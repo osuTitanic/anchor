@@ -4,7 +4,6 @@ from app.common.objects import (
     bBeatmapInfoRequest,
     bReplayFrameBundle,
     bStatusUpdate,
-    BanchoPacket,
     bReplayFrame,
     bScoreFrame,
     bMatchJoin,
@@ -37,17 +36,6 @@ import config
 class Reader(BaseReader):
     def __init__(self, stream: StreamIn) -> None:
         self.stream = stream
-
-    def read_header(self) -> BanchoPacket:
-        return BanchoPacket(
-            packet=RequestPacket(self.stream.u16()),
-            compression=self.stream.bool(),
-            payload=StreamIn(
-                self.stream.read(
-                    self.stream.u32()
-                )
-            )
-        )
 
     def read_intlist(self) -> List[int]:
         return [self.stream.s32() for _ in range(self.stream.s32())]
