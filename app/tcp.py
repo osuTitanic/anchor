@@ -92,7 +92,9 @@ class TcpBanchoProtocol(Player, Protocol):
             )
 
             # Login received
-            username, password, client, self.buffer = self.buffer.split(b'\n', 3)
+            username, password, client, self.buffer = (
+                self.buffer.split(b'\n', 3)
+            )
 
             self.client = OsuClient.from_string(
                 client.decode(),
@@ -100,9 +102,7 @@ class TcpBanchoProtocol(Player, Protocol):
             )
 
             if not self.client:
-                self.logger.warning(
-                    f'Failed to parse client: "{client.decode()}"'
-                )
+                self.logger.warning(f'Failed to parse client: "{client.decode()}"')
                 self.close_connection()
                 return
 
@@ -144,23 +144,18 @@ class TcpBanchoProtocol(Player, Protocol):
 
             while self.buffer:
                 stream = StreamIn(self.buffer)
+                packet = stream.u16()
 
-                try:
-                    packet = stream.u16()
+                # In version b323 and below, the
+                # compression is enabled by default
+                compression = True
 
-                    if self.client.version.date > 323:
-                        compression = stream.bool()
-                    else:
-                        # In version b323 and below, the compression is enabled by default
-                        compression = True
+                if self.client.version.date > 323:
+                    compression = stream.bool()
 
-                    payload = stream.read(stream.u32())
-                except OverflowError:
-                    # Wait for next buffer
-                    break
+                payload = stream.read(stream.u32())
 
                 if compression:
-                    # gzip compression is only used in very old clients
                     payload = gzip.decompress(payload)
 
                 # Update buffer
@@ -178,6 +173,10 @@ class TcpBanchoProtocol(Player, Protocol):
                         self.close_connection(f.value)
                     )
                 )
+        except OverflowError:
+            # Wait for more data
+            pass
+
         except Exception as e:
             self.logger.error(
                 f'Error while receiving packet: {e}',

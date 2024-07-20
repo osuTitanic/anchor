@@ -45,11 +45,7 @@ class HttpPlayer(Player):
         return data
 
     def login_received(self, username: str, md5: str, client: OsuClient) -> None:
-        super().login_received(
-            username,
-            md5,
-            client
-        )
+        super().login_received(username, md5, client)
 
         if self.logged_in:
             self.token = str(uuid.uuid4())
@@ -71,8 +67,19 @@ class HttpBanchoProtocol(Resource):
 
     def handle_login_request(self, request: Request) -> bytes:
         try:
+            login_data = request.content.read()
+
+            if login_data.count(b'\n') < 3:
+                request.setHeader('connection', 'close')
+                request.setResponseCode(400)
+                return b''
+
+            app.session.logger.debug(
+                f'-> Received login: {login_data}'
+            )
+
             username, password, client_data = (
-                request.content.read().decode().splitlines()
+                login_data.decode().splitlines()
             )
 
             ip_address = ip.resolve_ip_address_twisted(request)
@@ -86,6 +93,12 @@ class HttpBanchoProtocol(Resource):
                 client_data,
                 ip_address
             )
+
+            if not self.player.client:
+                self.logger.warning(f'Failed to parse client: "{client_data}"')
+                request.setHeader('connection', 'close')
+                request.setResponseCode(400)
+                return b''
 
             self.player.login_received(
                 username,
