@@ -45,16 +45,15 @@ from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 from app.common import mail
 
+from twisted.internet.error import ConnectionDone
+from twisted.python.failure import Failure
+
 from dataclasses import asdict, is_dataclass
 from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from enum import Enum
 from copy import copy
-
-from twisted.internet.error import ConnectionDone
-from twisted.python.failure import Failure
-from twisted.internet import threads
 
 from app.clients import versions
 from app.clients import (
@@ -118,6 +117,9 @@ class Player:
     def __repr__(self) -> str:
         return f'<Player "{self.name}" ({self.id})>'
 
+    def __hash__(self) -> int:
+        return self.id
+
     def __eq__(self, other) -> bool:
         if isinstance(other, Player):
             return (
@@ -125,9 +127,6 @@ class Player:
                 self.port == other.port
             )
         return False
-
-    def __hash__(self) -> int:
-        return self.id
 
     @classmethod
     def bot_player(cls):
@@ -372,13 +371,17 @@ class Player:
 
             self.spectating = None
 
+        for channel in copy(self.channels):
+            channel.remove(self)
+
+        app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
         status.delete(self.id)
         usercount.set(len(app.session.players.normal_clients))
 
-        for channel in copy(self.channels):
-            channel.remove(self)
+        if self.match:
+            app.clients.handler.leave_match(self)
 
         tourney_clients = app.session.players.get_all_tourney_clients(self.id)
 
@@ -388,14 +391,9 @@ class Player:
                     self.id,
                     self.user_presence,
                     self.user_stats,
-                    QuitState.Gone # TODO: IRC
+                    QuitState.Gone
                 )
             )
-
-        app.session.channels.remove(self.spectator_chat)
-
-        if self.match:
-            app.clients.handler.leave_match(self)
 
     def send_packet(self, packet: Enum, *args) -> None:
         try:
@@ -407,7 +405,8 @@ class Player:
             )
 
             if self.client.version.date <= 323:
-                # In version b323 and below, the compression is enabled by default
+                # In version b323 and below, the
+                # compression is enabled by default
                 data = gzip.compress(data)
                 stream.legacy_header(packet, len(data))
             else:
@@ -466,13 +465,14 @@ class Player:
             stats.update(
                 self.id,
                 self.status.mode.value,
-                {
-                    'rank': cached_rank
-                }
+                {'rank': cached_rank}
             )
 
             # Update rank history
-            histories.update_rank(self.current_stats, self.object.country)
+            histories.update_rank(
+                self.current_stats,
+                self.object.country
+            )
 
     def update_leaderboard_stats(self) -> None:
         """Updates the player's stats inside the redis leaderboard"""
@@ -514,13 +514,11 @@ class Player:
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
         if client.hash.adapters != 'runningunderwine':
-            # Check adapters md5
+            # Validate adapters md5
             adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
             if adapters_hash != client.hash.adapters_md5:
-                officer.call(
-                    f'Player tried to log in with a modified adapters file: {adapters_hash}'
-                )
+                officer.call(f'Player tried to log in with spoofed adapters: {adapters_hash}')
                 self.close_connection()
                 return
 
@@ -571,13 +569,20 @@ class Player:
 
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            if (
+            check_client = (
                 not config.DISABLE_CLIENT_VERIFICATION
                 and not self.is_staff
                 and not self.has_preview_access
-            ):
-                # Check client's executable hash (Admins can bypass this check)
-                if not client_utils.is_valid_client_hash(self.client.version.date, self.client.hash.md5):
+            )
+
+            # Check client's executable hash
+            if check_client:
+                is_valid = client_utils.is_valid_client_hash(
+                    self.client.version.date,
+                    self.client.hash.md5
+                )
+
+                if not is_valid:
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
                         LoginError.UpdateNeeded,
@@ -597,12 +602,12 @@ class Player:
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
 
-            else:
-                if not self.is_supporter:
-                    # Trying to use tourney client without supporter
-                    self.login_failed(LoginError.TestBuild)
-                    return
+            elif not self.is_supporter:
+                # Trying to use tourney client without supporter
+                self.login_failed(LoginError.TestBuild)
+                return
 
+            else:
                 # Check amount of tourney clients that are online
                 tourney_clients = app.session.players.get_all_tourney_clients(self.id)
 
@@ -630,9 +635,7 @@ class Player:
             self.check_client(session)
 
             if self.object.country.upper() == 'XX':
-                # User is logging in for the first time
-                # Update their country value in the database
-                self.logger.info('Updating country...')
+                # We failed to get the users country on registration
                 self.object.country = self.client.ip.country_code.upper()
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
