@@ -180,11 +180,6 @@ class Player:
         )
 
     @property
-    def supporter(self) -> bool:
-        # NOTE: Supporter related code has been removed
-        return True
-
-    @property
     def restricted(self) -> bool:
         if not self.object:
             return False
@@ -295,6 +290,10 @@ class Player:
     @property
     def link(self) -> str:
         return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
+
+    @property
+    def is_supporter(self) -> bool:
+        return 'Supporter' in self.groups
 
     @property
     def is_admin(self) -> bool:
@@ -599,7 +598,7 @@ class Player:
                     )
 
             else:
-                if not self.supporter:
+                if not self.is_supporter:
                     # Trying to use tourney client without supporter
                     self.login_failed(LoginError.TestBuild)
                     return

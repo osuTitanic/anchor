@@ -1301,7 +1301,7 @@ def match_complete(player: Player):
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
 def tourney_match_info(player: Player, match_id: int):
-    if not player.supporter:
+    if not player.is_supporter:
         player.logger.warning('Tried to request tourney match info, but was not supporter.')
         return
 
