@@ -433,6 +433,18 @@ class Player:
             reason
         )
 
+    def send_inactive_account_error(self):
+        if self.client.version.date < 20130801:
+            self.login_failed(LoginError.NotActivated)
+            return
+
+        # Versions after b20130801 show the
+        # "NotActivated" error as being banned
+        self.login_failed(
+            LoginError.Authentication,
+            strings.NOT_ACTIVATED
+        )
+
     def login_failed(self, reason=LoginError.ServerError, message=""):
         self.send_error(reason.value, message)
         self.close_connection()
@@ -552,9 +564,8 @@ class Player:
                 return
 
             if not user.activated:
-                # TODO: Some clients may interpret this as being banned...?
                 self.logger.warning('Login Failed: Not activated')
-                self.login_failed(LoginError.NotActivated)
+                self.send_inactive_account_error()
                 return
 
             if config.MAINTENANCE:
