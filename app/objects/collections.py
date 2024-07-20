@@ -258,5 +258,3 @@ class Matches(List[Match | None]):
             config.BANCHO_WORKERS,
             config.BANCHO_WORKERS + len(self.active)
         )
-
-# TODO: IRC Players

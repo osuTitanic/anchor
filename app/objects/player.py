@@ -131,7 +131,6 @@ class Player:
     @classmethod
     def bot_player(cls):
         with app.session.database.managed_session() as session:
-            # TODO: Refactor bot related code to IRC client
             player = Player('127.0.0.1', 6969)
             player.object = users.fetch_by_id(1, session=session)
             player.client = OsuClient.empty()
@@ -1046,8 +1045,6 @@ class Player:
                 ]
             )
 
-        # TODO: Enqueue irc players
-
     def enqueue_irc_player(self, player):
         if self.client.version.date <= 1710:
             self.send_packet(
@@ -1073,7 +1070,7 @@ class Player:
 
         self.enqueue_quit(quit_state)
 
-    def enqueue_presence(self, player, update: bool = False):
+    def enqueue_presence(self, player: "Player", update: bool = False):
         if self.client.version.date <= 319:
             self.send_packet(
                 self.packets.USER_STATS,
@@ -1095,7 +1092,7 @@ class Player:
 
         if (
             self.client.version.date > 833 and
-            self.current_stats.pp <= 0
+            player.current_stats.pp <= 0
         ):
             # Newer clients don't display rank 0
             presence.rank = 0
@@ -1105,7 +1102,7 @@ class Player:
             presence
         )
 
-    def enqueue_stats(self, player):
+    def enqueue_stats(self, player: "Player"):
         if self.client.version.date <= 319:
             self.send_packet(
                 self.packets.USER_STATS,
