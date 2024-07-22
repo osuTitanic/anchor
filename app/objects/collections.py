@@ -219,7 +219,6 @@ class Matches(List[Match | None]):
             # Add match to list if free slot was found
             match.id = free
             self[free] = match
-            self.update_reactor_threadpool()
             return True
 
         return False
@@ -239,9 +238,6 @@ class Matches(List[Match | None]):
             # Remove inactive match
             self.pop(index)
 
-        # Update reactor threadpool size
-        self.update_reactor_threadpool()
-
     def exists(self, match_id: int) -> bool:
         """Check if a match exists"""
         try:
@@ -249,12 +245,3 @@ class Matches(List[Match | None]):
         except IndexError:
             return False
 
-    def update_reactor_threadpool(self) -> None:
-        """
-        Update the reactor threadpool based on the number of active matches.
-        This is due to matches requiring a separate thread to handle the score queue.
-        """
-        reactor.getThreadPool().adjustPoolsize(
-            config.BANCHO_WORKERS,
-            config.BANCHO_WORKERS + len(self.active)
-        )
