@@ -44,6 +44,7 @@ from ..common.constants import (
 
 from typing import Callable, Tuple, Optional, List
 from sqlalchemy.orm import selectinload
+from twisted.internet import reactor
 from datetime import datetime
 from copy import copy
 
@@ -1192,7 +1193,10 @@ def score_update(player: Player, scoreframe: bScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    player.match.score_queue.put(scoreframe)
+    reactor.callFromThread(
+        player.match.process_score_update,
+        scoreframe
+    )
 
 @register(RequestPacket.MATCH_COMPLETE)
 def match_complete(player: Player):
