@@ -575,6 +575,93 @@ class Match:
 
         self.update()
 
+    def finish(self):
+        # Get players that have been playing this round
+        players = [
+            slot.player for slot in self.slots
+            if slot.completed
+        ]
+
+        self.unready_players(SlotStatus.Complete)
+        self.in_progress = False
+
+        for p in players:
+            p.enqueue_match_complete()
+
+        self.logger.info('Match finished')
+        self.update()
+
+        start_event = events.fetch_last_by_type(
+            self.db_match.id,
+            type=EventType.Start
+        )
+
+        if not start_event:
+            return
+
+        ranking_type = {
+            MatchScoringTypes.Score: lambda s: s.last_frame.total_score,
+            MatchScoringTypes.Accuracy: lambda s: s.last_frame.accuracy(self.mode),
+            MatchScoringTypes.Combo: lambda s: s.last_frame.max_combo
+        }[self.scoring_type]
+
+        slots = [slot for slot in self.slots if slot.last_frame]
+        slots.sort(key=ranking_type, reverse=True)
+
+        match_results = [
+            (rank, slot)
+            for rank, slot in enumerate(slots)
+            if (slot != None) and (slot.player != None)
+        ]
+
+        if not match_results:
+            return
+
+        events.create(
+            self.db_match.id,
+            type=EventType.Result,
+            data={
+                'beatmap_id': self.beatmap_id,
+                'beatmap_text': self.beatmap_name,
+                'beatmap_hash': self.beatmap_hash,
+                'mode': self.mode.value,
+                'team_mode': self.team_type.value,
+                'scoring_mode': self.scoring_type.value,
+                'mods': self.mods.value,
+                'freemod': self.freemod,
+                'host': self.host.id,
+                'start_time': start_event.data['start_time'],
+                'end_time': str(datetime.now()),
+                'results': [
+                    {
+                        'player': {
+                            'id': slot.player.id,
+                            'name': slot.player.name,
+                            'country': slot.player.object.country,
+                            'team': slot.team.value,
+                            'mods': slot.mods.value
+                        },
+                        'score': {
+                            'c300': slot.last_frame.c300,
+                            'c100': slot.last_frame.c100,
+                            'c50': slot.last_frame.c50,
+                            'cGeki': slot.last_frame.cGeki,
+                            'cKatu': slot.last_frame.cKatu,
+                            'cMiss': slot.last_frame.cMiss,
+                            'score': slot.last_frame.total_score,
+                            'accuracy': round(slot.last_frame.accuracy(self.mode) * 100, 2),
+                            'max_combo': slot.last_frame.max_combo,
+                            'perfect': slot.last_frame.perfect,
+                            'failed': slot.has_failed,
+                            'grade': slot.last_frame.grade(self.mode, slot.mods).name
+                        },
+                        'place': rank + 1
+                    }
+                    for rank, slot in match_results
+                ]
+            }
+        )
+
     def execute_timer(self) -> None:
         if not self.starting:
             self.logger.warning('Tried to execute timer, but match was not starting.')
