@@ -45,16 +45,15 @@ from app.common.database import DBUser, DBStats
 from app.objects import OsuClient, Status
 from app.common import mail
 
+from twisted.internet.error import ConnectionDone
+from twisted.python.failure import Failure
+
 from dataclasses import asdict, is_dataclass
 from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from enum import Enum
 from copy import copy
-
-from twisted.internet.error import ConnectionDone
-from twisted.python.failure import Failure
-from twisted.internet import threads
 
 from app.clients import versions
 from app.clients import (
@@ -118,6 +117,9 @@ class Player:
     def __repr__(self) -> str:
         return f'<Player "{self.name}" ({self.id})>'
 
+    def __hash__(self) -> int:
+        return self.id
+
     def __eq__(self, other) -> bool:
         if isinstance(other, Player):
             return (
@@ -126,13 +128,9 @@ class Player:
             )
         return False
 
-    def __hash__(self) -> int:
-        return self.id
-
     @classmethod
     def bot_player(cls):
         with app.session.database.managed_session() as session:
-            # TODO: Refactor bot related code to IRC client
             player = Player('127.0.0.1', 6969)
             player.object = users.fetch_by_id(1, session=session)
             player.client = OsuClient.empty()
@@ -178,11 +176,6 @@ class Player:
             self.object.silence_end.timestamp() -
             datetime.now().timestamp()
         )
-
-    @property
-    def supporter(self) -> bool:
-        # NOTE: Supporter related code has been removed
-        return True
 
     @property
     def restricted(self) -> bool:
@@ -297,6 +290,10 @@ class Player:
         return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
 
     @property
+    def is_supporter(self) -> bool:
+        return 'Supporter' in self.groups
+
+    @property
     def is_admin(self) -> bool:
         return 'Admins' in self.groups
 
@@ -373,13 +370,17 @@ class Player:
 
             self.spectating = None
 
+        for channel in copy(self.channels):
+            channel.remove(self)
+
+        app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
         status.delete(self.id)
         usercount.set(len(app.session.players.normal_clients))
 
-        for channel in copy(self.channels):
-            channel.remove(self)
+        if self.match:
+            app.clients.handler.leave_match(self)
 
         tourney_clients = app.session.players.get_all_tourney_clients(self.id)
 
@@ -389,14 +390,9 @@ class Player:
                     self.id,
                     self.user_presence,
                     self.user_stats,
-                    QuitState.Gone # TODO: IRC
+                    QuitState.Gone
                 )
             )
-
-        app.session.channels.remove(self.spectator_chat)
-
-        if self.match:
-            app.clients.handler.leave_match(self)
 
     def send_packet(self, packet: Enum, *args) -> None:
         try:
@@ -408,7 +404,8 @@ class Player:
             )
 
             if self.client.version.date <= 323:
-                # In version b323 and below, the compression is enabled by default
+                # In version b323 and below, the
+                # compression is enabled by default
                 data = gzip.compress(data)
                 stream.legacy_header(packet, len(data))
             else:
@@ -433,6 +430,18 @@ class Player:
         self.send_packet(
             self.packets.LOGIN_REPLY,
             reason
+        )
+
+    def send_inactive_account_error(self):
+        if self.client.version.date < 20130801:
+            self.login_failed(LoginError.NotActivated)
+            return
+
+        # Versions after b20130801 show the
+        # "NotActivated" error as being banned
+        self.login_failed(
+            LoginError.Authentication,
+            strings.NOT_ACTIVATED
         )
 
     def login_failed(self, reason=LoginError.ServerError, message=""):
@@ -467,13 +476,14 @@ class Player:
             stats.update(
                 self.id,
                 self.status.mode.value,
-                {
-                    'rank': cached_rank
-                }
+                {'rank': cached_rank}
             )
 
             # Update rank history
-            histories.update_rank(self.current_stats, self.object.country)
+            histories.update_rank(
+                self.current_stats,
+                self.object.country
+            )
 
     def update_leaderboard_stats(self) -> None:
         """Updates the player's stats inside the redis leaderboard"""
@@ -515,13 +525,11 @@ class Player:
         self.send_packet(self.packets.PROTOCOL_VERSION, config.PROTOCOL_VERSION)
 
         if client.hash.adapters != 'runningunderwine':
-            # Check adapters md5
+            # Validate adapters md5
             adapters_hash = hashlib.md5(client.hash.adapters.encode()).hexdigest()
 
             if adapters_hash != client.hash.adapters_md5:
-                officer.call(
-                    f'Player tried to log in with a modified adapters file: {adapters_hash}'
-                )
+                officer.call(f'Player tried to log in with spoofed adapters: {adapters_hash}')
                 self.close_connection()
                 return
 
@@ -555,9 +563,8 @@ class Player:
                 return
 
             if not user.activated:
-                # TODO: Some clients may interpret this as being banned...?
                 self.logger.warning('Login Failed: Not activated')
-                self.login_failed(LoginError.NotActivated)
+                self.send_inactive_account_error()
                 return
 
             if config.MAINTENANCE:
@@ -572,13 +579,20 @@ class Player:
 
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            if (
+            check_client = (
                 not config.DISABLE_CLIENT_VERIFICATION
                 and not self.is_staff
                 and not self.has_preview_access
-            ):
-                # Check client's executable hash (Admins can bypass this check)
-                if not client_utils.is_valid_client_hash(self.client.version.date, self.client.hash.md5):
+            )
+
+            # Check client's executable hash
+            if check_client:
+                is_valid = client_utils.is_valid_client_hash(
+                    self.client.version.date,
+                    self.client.hash.md5
+                )
+
+                if not is_valid:
                     self.logger.warning('Login Failed: Unsupported client')
                     self.login_failed(
                         LoginError.UpdateNeeded,
@@ -598,12 +612,12 @@ class Player:
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
 
-            else:
-                if not self.supporter:
-                    # Trying to use tourney client without supporter
-                    self.login_failed(LoginError.TestBuild)
-                    return
+            elif not self.is_supporter:
+                # Trying to use tourney client without supporter
+                self.login_failed(LoginError.TestBuild)
+                return
 
+            else:
                 # Check amount of tourney clients that are online
                 tourney_clients = app.session.players.get_all_tourney_clients(self.id)
 
@@ -631,9 +645,7 @@ class Player:
             self.check_client(session)
 
             if self.object.country.upper() == 'XX':
-                # User is logging in for the first time
-                # Update their country value in the database
-                self.logger.info('Updating country...')
+                # We failed to get the users country on registration
                 self.object.country = self.client.ip.country_code.upper()
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
@@ -757,7 +769,7 @@ class Player:
                     self.client.ip.country_name
                 )
 
-        if config.ALLOW_MULTIACCOUNTING:
+        if config.ALLOW_MULTIACCOUNTING or self.is_bot:
             return
 
         # Reset multiaccounting lock
@@ -1033,8 +1045,6 @@ class Player:
                 ]
             )
 
-        # TODO: Enqueue irc players
-
     def enqueue_irc_player(self, player):
         if self.client.version.date <= 1710:
             self.send_packet(
@@ -1060,7 +1070,7 @@ class Player:
 
         self.enqueue_quit(quit_state)
 
-    def enqueue_presence(self, player, update: bool = False):
+    def enqueue_presence(self, player: "Player", update: bool = False):
         if self.client.version.date <= 319:
             self.send_packet(
                 self.packets.USER_STATS,
@@ -1082,7 +1092,7 @@ class Player:
 
         if (
             self.client.version.date > 833 and
-            self.current_stats.pp <= 0
+            player.current_stats.pp <= 0
         ):
             # Newer clients don't display rank 0
             presence.rank = 0
@@ -1092,7 +1102,7 @@ class Player:
             presence
         )
 
-    def enqueue_stats(self, player):
+    def enqueue_stats(self, player: "Player"):
         if self.client.version.date <= 319:
             self.send_packet(
                 self.packets.USER_STATS,

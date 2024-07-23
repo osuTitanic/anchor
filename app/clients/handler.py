@@ -43,6 +43,8 @@ from ..common.constants import (
 )
 
 from typing import Callable, Tuple, Optional, List
+from sqlalchemy.orm import selectinload
+from twisted.internet import reactor
 from datetime import datetime
 from copy import copy
 
@@ -393,6 +395,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
         filename_beatmaps = s.query(DBBeatmap) \
+            .options(selectinload(DBBeatmap.beatmapset)) \
             .filter(DBBeatmap.filename.in_(info.filenames)) \
             .all()
 
@@ -413,6 +416,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
             ))
 
         id_beatmaps = s.query(DBBeatmap) \
+            .options(selectinload(DBBeatmap.beatmapset)) \
             .filter(DBBeatmap.id.in_(info.beatmap_ids)) \
             .all()
 
@@ -468,7 +472,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                     index,
                     beatmap.id,
                     beatmap.set_id,
-                    beatmap.set_id, # ThreadId
+                    beatmap.beatmapset.topic_id or 0,
                     ranked,
                     grades[0], # Standard
                     grades[2], # Fruits
@@ -756,8 +760,8 @@ def leave_match(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     status = (
         SlotStatus.Locked
@@ -848,8 +852,8 @@ def change_slot(player: Player, slot_id: int):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     player.match.slots[slot_id].copy_from(slot)
     slot.reset()
@@ -926,15 +930,13 @@ def change_mods(player: Player, mods: Mods):
             if Mods.DoubleTime|Mods.Nightcore in player.match.mods:
                 player.match.mods &= ~Mods.DoubleTime
 
-        slot = player.match.get_slot(player)
-        assert slot is not None
+        if slot := player.match.get_slot(player):
+            # Only keep mods that are "FreeModAllowed"
+            slot.mods = mods & Mods.FreeModAllowed
 
-        # Only keep mods that are "FreeModAllowed"
-        slot.mods = mods & Mods.FreeModAllowed
-
-        player.match.logger.info(
-            f'{player.name} changed their mods to {slot.mods.short}'
-        )
+            player.match.logger.info(
+                f'{player.name} changed their mods to {slot.mods.short}'
+            )
     else:
         if player is not player.match.host:
             player.logger.warning(f'{player.name} tried to change mods, but was not host')
@@ -962,8 +964,8 @@ def ready(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.Ready
     player.match.update()
@@ -976,8 +978,8 @@ def not_ready(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.NotReady
     player.match.update()
@@ -993,8 +995,8 @@ def no_beatmap(player: Player):
         # Beatmap is being selected by the host
         return
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.NoMap
     player.match.update()
@@ -1039,8 +1041,8 @@ def change_team(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.team = {
         SlotTeam.Blue: SlotTeam.Red,
@@ -1120,8 +1122,8 @@ def load_complete(player: Player):
     if not player.match.in_progress:
         return
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.loaded = True
 
@@ -1143,7 +1145,9 @@ def skip(player: Player):
         return
 
     slot, id = player.match.get_slot_with_id(player)
-    assert slot is not None
+
+    if not slot:
+        return
 
     slot.skipped = True
 
@@ -1179,7 +1183,9 @@ def score_update(player: Player, scoreframe: bScoreFrame):
         return
 
     slot, id = player.match.get_slot_with_id(player)
-    assert slot is not None
+
+    if not slot:
+        return
 
     if not slot.is_playing:
         return
@@ -1187,7 +1193,10 @@ def score_update(player: Player, scoreframe: bScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    player.match.score_queue.put(scoreframe)
+    reactor.callFromThread(
+        player.match.process_score_update,
+        scoreframe
+    )
 
 @register(RequestPacket.MATCH_COMPLETE)
 def match_complete(player: Player):
@@ -1199,104 +1208,19 @@ def match_complete(player: Player):
 
     player.match.last_activity = time.time()
 
-    slot = player.match.get_slot(player)
-    assert slot is not None
+    if not (slot := player.match.get_slot(player)):
+        return
 
     slot.status = SlotStatus.Complete
 
     if any([slot.is_playing for slot in player.match.slots]):
         return
 
-    # Players that have been playing this round
-    players = [
-        slot.player for slot in player.match.slots
-        if slot.completed
-    ]
-
-    # Wait for score queue to finish processing
-    player.match.score_queue.join()
-
-    player.match.unready_players(SlotStatus.Complete)
-    player.match.in_progress = False
-
-    for p in players:
-        p.enqueue_match_complete()
-
-    player.match.logger.info('Match finished')
-    player.match.update()
-
-    start_event = events.fetch_last_by_type(
-        player.match.db_match.id,
-        type=EventType.Start
-    )
-
-    if start_event:
-        ranking_type = {
-            MatchScoringTypes.Score: lambda s: s.last_frame.total_score,
-            MatchScoringTypes.Accuracy: lambda s: s.last_frame.accuracy(player.match.mode),
-            MatchScoringTypes.Combo: lambda s: s.last_frame.max_combo
-        }[player.match.scoring_type]
-
-        slots = [slot for slot in player.match.slots if slot.last_frame]
-        slots.sort(key=ranking_type, reverse=True)
-
-        match_results = [
-            (rank, slot)
-            for rank, slot in enumerate(slots)
-            if (slot != None) and (slot.player != None)
-        ]
-
-        if not match_results:
-            return
-
-        events.create(
-            player.match.db_match.id,
-            type=EventType.Result,
-            data={
-                'beatmap_id': player.match.beatmap_id,
-                'beatmap_text': player.match.beatmap_name,
-                'beatmap_hash': player.match.beatmap_hash,
-                'mode': player.match.mode.value,
-                'team_mode': player.match.team_type.value,
-                'scoring_mode': player.match.scoring_type.value,
-                'mods': player.match.mods.value,
-                'freemod': player.match.freemod,
-                'host': player.match.host.id,
-                'start_time': start_event.data['start_time'],
-                'end_time': str(datetime.now()),
-                'results': [
-                    {
-                        'player': {
-                            'id': slot.player.id,
-                            'name': slot.player.name,
-                            'country': slot.player.object.country,
-                            'team': slot.team.value,
-                            'mods': slot.mods.value
-                        },
-                        'score': {
-                            'c300': slot.last_frame.c300,
-                            'c100': slot.last_frame.c100,
-                            'c50': slot.last_frame.c50,
-                            'cGeki': slot.last_frame.cGeki,
-                            'cKatu': slot.last_frame.cKatu,
-                            'cMiss': slot.last_frame.cMiss,
-                            'score': slot.last_frame.total_score,
-                            'accuracy': round(slot.last_frame.accuracy(player.match.mode) * 100, 2),
-                            'max_combo': slot.last_frame.max_combo,
-                            'perfect': slot.last_frame.perfect,
-                            'failed': slot.has_failed,
-                            'grade': slot.last_frame.grade(player.match.mode, slot.mods).name
-                        },
-                        'place': rank + 1
-                    }
-                    for rank, slot in match_results
-                ]
-            }
-        )
+    player.match.finish()
 
 @register(RequestPacket.TOURNAMENT_MATCH_INFO)
 def tourney_match_info(player: Player, match_id: int):
-    if not player.supporter:
+    if not player.is_supporter:
         player.logger.warning('Tried to request tourney match info, but was not supporter.')
         return
 

@@ -186,13 +186,6 @@ def osu_error(user_id: int, error: dict):
         f'{json.dumps(error, indent=4)}'
     )
 
-    if channel := app.session.channels.by_name('#admin'):
-        channel.send_message(
-            app.session.bot_player,
-            f'Client error from "{player.name}". Please check the logs!',
-            ignore_privs=True
-        )
-
     # When a beatmap fails to load inside a match, the player
     # gets forced to the menu screen. In this state, everything
     # is a little buggy, but aborting the match fixes pretty much everything.
