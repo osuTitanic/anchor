@@ -18,7 +18,14 @@ class Status:
     beatmap: int = -1
 
     def __repr__(self) -> str:
-        return f"<[{self.action.name}] mode='{self.mode.name}' mods={self.mods} text='{self.text}' md5='{self.checksum}' beatmap={self.beatmap}>"
+        return (
+            f"<[{self.action.name}] "
+            f"mode='{self.mode.name}' "
+            f"mods={self.mods} "
+            f"text='{self.text}' "
+            f"md5='{self.checksum}' "
+            f"beatmap={self.beatmap}>"
+        )
 
     @property
     def bancho_status(self) -> bStatusUpdate:

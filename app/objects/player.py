@@ -38,7 +38,6 @@ from app.common.database.repositories import (
     stats
 )
 
-from app.common.helpers import analytics
 from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
@@ -48,7 +47,6 @@ from app.common import mail
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
-from dataclasses import asdict, is_dataclass
 from typing import Callable, List, Dict, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
