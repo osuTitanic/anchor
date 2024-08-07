@@ -208,6 +208,6 @@ class Channel:
         if submit_to_database:
             messages.create(
                 sender.name,
-                self.display_name,
+                self.name,
                 message[:512]
             )
