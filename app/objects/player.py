@@ -671,9 +671,6 @@ class Player:
         )
         app.session.channels.append(self.spectator_chat)
 
-        # Remove avatar so that it can be reloaded
-        app.session.redis.delete(f'avatar:{self.id}')
-
         self.update_activity()
         self.send_packet(self.packets.PROTOCOL_VERSION, 18)
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
