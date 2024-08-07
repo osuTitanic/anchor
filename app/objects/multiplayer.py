@@ -1,15 +1,10 @@
 
 from __future__ import annotations
 
-from twisted.internet.defer import Deferred
-from twisted.python.failure import Failure
-from twisted.internet import threads
-
 from dataclasses import dataclass
 from typing import Tuple, List
 from datetime import datetime
 from threading import Thread
-from queue import Queue
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -25,7 +20,6 @@ from app.common.constants import (
 from app.common.database.repositories import beatmaps, events, matches
 from app.common.objects import bMatch, bSlot, bScoreFrame
 from app.common.database import DBMatch
-from app.common import officer
 
 from .channel import Channel
 from .player import Player
@@ -39,12 +33,12 @@ class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
         self.player: Player | None = None
-        self.status     = SlotStatus.Open
-        self.team       = SlotTeam.Neutral
-        self.mods       = Mods.NoMod
+        self.status = SlotStatus.Open
+        self.team = SlotTeam.Neutral
+        self.mods = Mods.NoMod
         self.has_failed = False
-        self.loaded     = False
-        self.skipped    = False
+        self.loaded = False
+        self.skipped = False
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
@@ -115,16 +109,16 @@ class Match:
         mode: GameMode,
         seed: int = 0
     ) -> None:
-        self.id       = id
-        self.name     = name
+        self.id = id
+        self.name = name
         self.password = password
         self.host = host
 
-        self.beatmap_id   = beatmap_id
+        self.beatmap_id = beatmap_id
         self.beatmap_name = beatmap_name
         self.beatmap_hash = beatmap_hash
 
-        self.previous_beatmap_id   = beatmap_id
+        self.previous_beatmap_id = beatmap_id
         self.previous_beatmap_name = beatmap_name
         self.previous_beatmap_hash = beatmap_hash
 
@@ -132,11 +126,11 @@ class Match:
         self.mode = mode
         self.seed = seed
 
-        self.type         = MatchType.Standard
+        self.type = MatchType.Standard
         self.scoring_type = MatchScoringTypes.Score
-        self.team_type    = MatchTeamTypes.HeadToHead
-        self.freemod      = False
-        self.in_progress  = False
+        self.team_type = MatchTeamTypes.HeadToHead
+        self.freemod = False
+        self.in_progress = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.banned_players = []
