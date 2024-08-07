@@ -14,6 +14,7 @@ from twisted.web.resource import Resource
 from twisted.web.http import Request
 from queue import Queue
 
+import config
 import gzip
 import uuid
 import app
@@ -170,8 +171,8 @@ class HttpBanchoProtocol(Resource):
         return ANCHOR_WEB_RESPONSE.encode('utf-8')
 
     def render_POST(self, request: Request) -> bytes:
+        request.setHeader('cho-protocol', str(config.PROTOCOL_VERSION))
         request.setHeader('server', 'bancho')
-        request.setHeader('cho-protocol', '18')
         request.setResponseCode(200)
 
         if request.getHeader('User-Agent') != 'osu!':
