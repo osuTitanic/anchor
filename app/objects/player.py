@@ -713,11 +713,7 @@ class Player:
             self.enqueue_channel(channel)
 
         self.send_packet(self.packets.CHANNEL_INFO_COMPLETE)
-
-        if self.silenced:
-            self.enqueue_silence_info(
-                self.remaining_silence
-            )
+        self.enqueue_silence_info(self.remaining_silence)
 
         # Enqueue players in lobby
         for player in app.session.players.in_lobby:
