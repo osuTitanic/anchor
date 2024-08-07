@@ -138,7 +138,8 @@ class Channel:
             # Player did not join this channel
             sender.revoke_channel(self.display_name)
             sender.logger.warning(
-                f'Failed to send message: "{message}" on {self.name}, because player did not join the channel.'
+                f'Failed to send message: "{message}" on {self.name}, '
+                'because player did not join the channel.'
             )
             return
 
@@ -155,9 +156,7 @@ class Channel:
                 return
 
         if sender.silenced:
-            sender.logger.warning(
-                'Failed to send message: Sender was silenced'
-            )
+            sender.logger.warning('Failed to send message: Sender was silenced.')
             return
 
         if not self.can_write(sender.permissions) and not ignore_privs:
@@ -195,30 +194,16 @@ class Channel:
             or self.name in config.AUTOJOIN_CHANNELS
         }
 
+        message_object = bMessage(
+            sender.name,
+            message,
+            self.display_name,
+            sender.id
+        )
+
         for user in users:
             # Enqueue message to every user inside this channel
-            user.enqueue_message(
-                bMessage(
-                    sender.name,
-                    message,
-                    self.display_name,
-                    sender.id
-                )
-            )
-
-            # Send to their tourney clients
-            for client in app.session.players.get_all_tourney_clients(user.id):
-                if client.port == user.port:
-                    continue
-
-                client.enqueue_message(
-                    bMessage(
-                        sender.name,
-                        message,
-                        self.display_name,
-                        sender.id
-                    )
-                )
+            user.enqueue_message(message_object)
 
         if submit_to_database:
             messages.create(

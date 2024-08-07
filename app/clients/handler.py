@@ -281,22 +281,6 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
     sender.recent_message_count += 1
-
-    # Send to their tourney clients
-    for client in session.players.get_all_tourney_clients(target.id):
-        if client.port == target.port:
-            continue
-
-        client.enqueue_message(
-            bMessage(
-                sender.name,
-                message.content,
-                sender.name,
-                sender.id,
-                is_private=True
-            )
-        )
-
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
 
     messages.create(
