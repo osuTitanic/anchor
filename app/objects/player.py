@@ -539,13 +539,13 @@ class Player:
             self.stats = user.stats
             self.object = user
 
+            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+
             # Preload relationships
             self.object.target_relationships
             self.object.relationships
             self.object.groups
-
-            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
 
             if not bcrypt.checkpw(md5.encode(), user.bcrypt.encode()):
                 self.logger.warning('Login Failed: Authentication error')
@@ -667,7 +667,6 @@ class Player:
         app.session.channels.append(self.spectator_chat)
 
         self.update_activity()
-        self.send_packet(self.packets.PROTOCOL_VERSION, 18)
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
 
         # Menu Icon
