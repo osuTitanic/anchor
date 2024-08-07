@@ -599,7 +599,8 @@ class Player:
                         message=strings.UNSUPPORTED_HASH
                     )
                     officer.call(
-                        f'Player tried to log in with an unsupported version: {self.client.version} ({self.client.hash.md5})'
+                        f'"{self.name}" tried to log in with an unsupported version: '
+                        f'{self.client.version} ({self.client.hash.md5})'
                     )
                     self.close_connection()
                     return
