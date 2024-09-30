@@ -14,7 +14,7 @@ POSTGRES_POOLSIZE_OVERFLOW = int(os.environ.get('POSTGRES_POOLSIZE_OVERFLOW', 30
 
 S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY')
 S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY')
-S3_BASEURL    = os.environ.get('S3_BASEURL')
+S3_BASEURL = os.environ.get('S3_BASEURL')
 
 REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
@@ -37,8 +37,6 @@ MAILGUN_DOMAIN = MAILGUN_EMAIL.split('@')[-1]
 EMAILS_ENABLED = MAILGUN_API_KEY is not None or SENDGRID_API_KEY is not None
 EMAIL = MAILGUN_EMAIL or SENDGRID_EMAIL
 
-AMPLITUDE_API_KEY = os.environ.get('AMPLITUDE_API_KEY')
-
 MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
 MENUICON_URL = os.environ.get('MENUICON_URL')
 
@@ -52,9 +50,7 @@ DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 OFFICER_WEBHOOK_URL = os.environ.get('OFFICER_WEBHOOK_URL')
 EVENT_WEBHOOK_URL = os.environ.get('EVENT_WEBHOOK_URL')
 
-IP_DATABASE_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
-
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18
-VERSION = '1.4.3'
+VERSION = '1.4.4'

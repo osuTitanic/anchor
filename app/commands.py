@@ -167,46 +167,14 @@ def reload_config(ctx: Context) -> List[str]:
 
     config.dotenv.load_dotenv(override=True)
 
-    config.POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-    config.POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
-    config.POSTGRES_USER = os.environ.get('POSTGRES_USER')
-    config.POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
+    for key in dir(config):
+        if not key.isupper():
+            continue
 
-    config.POSTGRES_POOLSIZE = int(os.environ.get('POSTGRES_POOLSIZE', 10))
-    config.POSTGRES_POOLSIZE_OVERFLOW = int(os.environ.get('POSTGRES_POOLSIZE_OVERFLOW', 30))
+        if key not in os.environ:
+            continue
 
-    config.S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY')
-    config.S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY')
-    config.S3_BASEURL    = os.environ.get('S3_BASEURL')
-
-    config.REDIS_HOST = os.environ.get('REDIS_HOST')
-    config.REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
-
-    config.AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
-    config.BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
-    config.TCP_PORTS = eval(os.environ.get('BANCHO_PORTS', '[13381, 13382, 13383]'))
-
-    config.DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
-
-    config.SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-    config.SENDGRID_EMAIL = os.environ.get('SENDGRID_EMAIL')
-
-    config.MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
-    config.MAILGUN_EMAIL = os.environ.get('MAILGUN_EMAIL')
-    config.MAILGUN_URL = os.environ.get('MAILGUN_URL', 'api.eu.mailgun.net')
-    config.MAILGUN_DOMAIN = config.MAILGUN_EMAIL.split('@')[-1]
-
-    config.EMAILS_ENABLED = config.MAILGUN_API_KEY is not None or config.SENDGRID_API_KEY is not None
-    config.EMAIL = config.MAILGUN_EMAIL or config.SENDGRID_EMAIL
-
-    config.MENUICON_IMAGE = os.environ.get('MENUICON_IMAGE')
-    config.MENUICON_URL = os.environ.get('MENUICON_URL')
-
-    config.DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION', 'True').capitalize())
-    config.APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
-    config.MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
-    config.S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
-    config.DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
+        setattr(config, key, os.environ[key])
 
     return ['Config was reloaded.']
 
