@@ -77,7 +77,7 @@ class TcpBanchoProtocol(Player, Protocol):
             return
 
         if self.busy:
-            self.buffer += data
+            self.buffer += data.replace(b'\r', b'')
             return
 
         try:
