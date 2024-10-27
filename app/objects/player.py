@@ -489,7 +489,7 @@ class Player:
         """Updates the player's status inside the cache"""
         status.update(
             self.id,
-            self.status.bancho_status,
+            self.user_stats,
             self.client.hash.string,
             self.client.version.date
         )
