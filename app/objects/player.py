@@ -189,6 +189,9 @@ class Player:
 
         if recent.is_permanent:
             return True
+        
+        if not recent.length:
+            return True
 
         remaining = (recent.length - datetime.now()).total_seconds()
 
