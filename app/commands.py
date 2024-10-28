@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import List, NamedTuple, Callable
-from twisted.internet import threads, reactor
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
 from dataclasses import dataclass
@@ -248,7 +247,6 @@ def mp_start(ctx: Context):
 
     if ctx.args[0].isdecimal():
         # Host wants to start a timer
-
         if match.starting:
             # Timer is already running
             time_remaining = round(match.starting.time - time.time())
@@ -1379,14 +1377,8 @@ def get_command(
 
         # Try running the command
         try:
-            response = command.callback(
-                Context(
-                    player,
-                    trigger,
-                    target,
-                    args
-                )
-            )
+            context = Context(player, trigger, target, args)
+            response = command.callback(context)
         except Exception as e:
             player.logger.error(
                 f'Command error: {e}',
@@ -1399,11 +1391,11 @@ def get_command(
             response,
             command.hidden
         )
-
-    try:
-        set_trigger, trigger, *args = trigger, *args
-    except ValueError:
+    
+    if len(args) < 1:
         return
+
+    set_trigger, trigger, *args = trigger, *args
 
     # Command sets
     for set in sets:
@@ -1423,10 +1415,8 @@ def get_command(
                 continue
 
             ctx = Context(
-                player,
-                trigger,
-                target,
-                args
+                player, trigger,
+                target, args
             )
 
             # Check set conditions
@@ -1485,27 +1475,27 @@ def on_command_done(
     if not command.hidden and type(target) == Channel:
         target.send_message(
             player,
-            command_message,
-            submit_to_database=True
+            command_message
         )
 
         for message in command.response:
             target.send_message(
                 app.session.bot_player,
-                message,
-                submit_to_database=True
+                message
             )
         return
 
     player.logger.info(f'[{player.name}]: {command_message}')
     player.logger.info(f'[{app.session.bot_player.name}]: {", ".join(command.response)}')
 
-    target_name = target.name \
-        if type(target) != Channel \
+    target_name = (
+        target.name
+        if type(target) != Channel
         else target.display_name
+    )
 
     # Send to sender
-    for message in command.response:
+    for message in command.response:        
         player.enqueue_message(
             bMessage(
                 app.session.bot_player.name,

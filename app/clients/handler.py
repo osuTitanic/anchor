@@ -202,12 +202,7 @@ def send_message(player: Player, message: bMessage):
         commands.execute(player, channel, parsed_message)
         return
 
-    channel.send_message(
-        player,
-        parsed_message,
-        submit_to_database=True
-    )
-
+    channel.send_message(player, parsed_message)
     player.update_activity()
     player.recent_message_count += 1
 
