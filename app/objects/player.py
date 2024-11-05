@@ -315,10 +315,6 @@ class Player:
         return 'Preview' in self.groups
 
     @property
-    def is_verified(self) -> bool:
-        return 'Verified' in self.groups or self.is_staff
-
-    @property
     def is_staff(self) -> bool:
         return any([self.is_admin, self.is_dev, self.is_moderator])
 
