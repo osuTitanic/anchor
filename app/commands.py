@@ -622,9 +622,7 @@ def mp_name(ctx: Context):
 
     matches.update(
         match.db_match.id,
-        {
-            "name": name
-        }
+        {"name": name}
     )
 
 @mp_commands.register(['set'])
@@ -787,6 +785,20 @@ def mp_password(ctx: Context):
     match.update()
 
     return ["Match password was set."]
+
+@mp_commands.register(['link', 'url'], ignore_conditions=True)
+def mp_link(ctx: Context):
+    """- Get the link to the current match"""
+    if not (match := ctx.player.match):
+        return
+
+    if ctx.target is not ctx.player.match.chat:
+        return
+    
+    return [
+        f'Match history available '
+        f'[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].'
+    ]
 
 # TODO: Tourney rooms
 # TODO: Match refs
