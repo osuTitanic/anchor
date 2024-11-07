@@ -64,7 +64,8 @@ class Command(NamedTuple):
     callback: Callable
     groups: List[str]
     hidden: bool
-    doc: str | None
+    doc: str | None = None
+    ignore_conditions: bool = False
 
 class CommandSet:
     def __init__(self, trigger: str, doc: str) -> None:
@@ -79,7 +80,8 @@ class CommandSet:
         aliases:
         List[str],
         groups: List[str] = ['Players'],
-        hidden: bool = False
+        hidden: bool = False,
+        ignore_conditions: bool = False
     ) -> Callable:
         def wrapper(f: Callable):
             self.commands.append(
@@ -88,7 +90,8 @@ class CommandSet:
                     f,
                     groups,
                     hidden,
-                    doc=f.__doc__
+                    f.__doc__,
+                    ignore_conditions
                 )
             )
             return f
@@ -1419,27 +1422,27 @@ def get_command(
                 target, args
             )
 
-            # Check set conditions
-            for condition in set.conditions:
-                if not condition(ctx):
-                    break
+            if not command.ignore_conditions:
+                # Check set conditions
+                for condition in set.conditions:
+                    if not condition(ctx):
+                        return
 
-            else:
+            try:
                 # Try running the command
-                try:
-                    response = command.callback(ctx)
-                except Exception as e:
-                    player.logger.error(
-                        f'Command error: {e}',
-                        exc_info=e
-                    )
-
-                    response = ['An error occurred while running this command.']
-
-                return CommandResponse(
-                    response,
-                    command.hidden
+                response = command.callback(ctx)
+            except Exception as e:
+                player.logger.error(
+                    f'Command error: {e}',
+                    exc_info=e
                 )
+
+                response = ['An error occurred while running this command.']
+
+            return CommandResponse(
+                response,
+                command.hidden
+            )
 
 def execute(
     player: Player,
