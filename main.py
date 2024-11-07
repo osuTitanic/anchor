@@ -2,12 +2,11 @@
 from twisted.internet import reactor
 
 from app.common.database.repositories import channels, wrapper
+from app.common.constants import ANCHOR_ASCII_ART
+from app.common.logging import Console, File
 from app.common.cache import status, usercount
 
 from app.server import TcpBanchoFactory, HttpBanchoFactory
-
-from app.common.constants import ANCHOR_ASCII_ART
-from app.common.logging import Console, File
 from app.objects.channel import Channel
 from app.objects.player import Player
 from app.tasks import (
@@ -35,7 +34,6 @@ def setup():
     app.session.logger.info(f'{ANCHOR_ASCII_ART}')
     app.session.logger.info(f'Running anchor-{config.VERSION}')
     os.makedirs(config.DATA_PATH, exist_ok=True)
-
     app.session.logger.info('Loading channels...')
 
     for channel in channels.fetch_all():
@@ -52,7 +50,6 @@ def setup():
         )
 
     app.session.logger.info('Loading bot...')
-
     app.session.players.add(
         bot_player := Player.bot_player()
     )
