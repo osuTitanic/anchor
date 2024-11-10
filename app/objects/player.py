@@ -320,7 +320,7 @@ class Player:
     
     @property
     def is_verified(self) -> bool:
-        return self.object.verified
+        return self.object.is_verified
 
     def enqueue(self, data: bytes):
         """
