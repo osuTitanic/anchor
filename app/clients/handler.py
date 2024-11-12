@@ -146,10 +146,10 @@ def request_status(player: Player):
 
 @register(RequestPacket.JOIN_CHANNEL)
 def handle_channel_join(player: Player, channel_name: str):
-    client_channels = [
+    client_channels = (
         '#userlog',
         '#highlight'
-    ]
+    )
 
     if channel_name in client_channels:
         player.join_success(channel_name)
@@ -174,10 +174,10 @@ def channel_leave(player: Player, channel_name: str, kick: bool = False):
 
 @register(RequestPacket.SEND_MESSAGE)
 def send_message(player: Player, message: bMessage):
-    client_channels = [
+    client_channels = (
         '#userlog',
         '#highlight'
-    ]
+    )
 
     if message.target in client_channels:
         return
@@ -218,7 +218,6 @@ def send_private_message(sender: Player, message: bMessage):
         return
 
     if target.id == sender.id:
-        # This is somehow possible in b1700
         return
 
     if sender.silenced:
@@ -244,14 +243,16 @@ def send_private_message(sender: Player, message: bMessage):
         sender.silence(60, reason='Chat spamming')
         return
 
-    if (parsed_message := message.content.strip()).startswith('!') \
-        or target == session.bot_player:
+    parsed_message = message.content.strip()
+    has_command_prefix = parsed_message.startswith('!')
+
+    if has_command_prefix or target is session.bot_player:
         # A command was executed
         commands.execute(sender, target, parsed_message)
         return
 
-    # Limit message size
     if len(message.content) > 512:
+        # Limit message size
         message.content = message.content[:512] + '... (truncated)'
 
     if target.away_message:
@@ -275,15 +276,14 @@ def send_private_message(sender: Player, message: bMessage):
         )
     )
 
-    sender.recent_message_count += 1
-    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
-
     messages.create(
         sender.name,
         target.name,
         message.content[:512]
     )
 
+    sender.recent_message_count += 1
+    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
     sender.update_activity()
 
 @register(RequestPacket.SET_AWAY_MESSAGE)
@@ -292,6 +292,7 @@ def away_message(player: Player, message: bMessage):
         return
 
     if message.content != "":
+        player.logger.info(f'Player was marked as being away: {message.content}')
         player.away_message = message.content
         player.enqueue_message(
             bMessage(
@@ -304,6 +305,7 @@ def away_message(player: Player, message: bMessage):
         )
         return
 
+    player.logger.info('Player is no longer marked as being away.')
     player.away_message = None
     player.enqueue_message(
         bMessage(
@@ -324,7 +326,6 @@ def add_friend(player: Player, target_id: int):
         return
 
     if target.id == player.id:
-        # This is somehow possible in b1700
         return
 
     relationships.create(
@@ -1228,8 +1229,7 @@ def tourney_match_info(player: Player, match_id: int):
 
 @register(RequestPacket.ERROR_REPORT)
 def bancho_error(player: Player, error: str):
-    session.logger.error(f'Bancho Error Report:\n{error}')
-    officer.call(f'Bancho Error Report:\n```c#\n{error}```')
+    session.logger.warning(f'Bancho Error Report:\n{error}')
 
 @register(RequestPacket.CHANGE_FRIENDONLY_DMS)
 def change_friendonly_dms(player: Player, enabled: bool):
