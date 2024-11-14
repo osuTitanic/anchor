@@ -21,43 +21,6 @@ from typing import Optional
 import json
 import app
 
-def enqueue_stats(player: Player):
-    for p in app.session.players:
-        if p.client.version.date > 20121223 and p.id != player.id:
-            # Client will request the stats themselves
-            continue
-
-        if p.client.version.date <= 377:
-            p.enqueue_presence(player, update=True)
-            continue
-
-        p.enqueue_stats(player)
-
-@app.session.events.register('user_update')
-def user_update(user_id: int, mode: int | None = None):
-    if not (player := app.session.players.by_id(user_id)):
-        return
-
-    if mode != None:
-        # Assign new mode to the player
-        player.status.mode = GameMode(mode)
-
-    player.reload_object()
-    enqueue_stats(player)
-
-    duplicates = app.session.players.get_rank_duplicates(
-        player.rank,
-        player.status.mode
-    )
-
-    for p in duplicates:
-        if p.id == player.id:
-            continue
-
-        # We have found a player with the same rank
-        player.reload_object()
-        enqueue_stats(player)
-
 @app.session.events.register('bot_message')
 def bot_message(message: str, target: str):
     if not (channel := app.session.channels.by_name(target)):
@@ -176,6 +139,31 @@ def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
     app.session.players.announce(message)
 
+@app.session.events.register('user_update')
+def user_update(user_id: int, mode: int | None = None):
+    if not (player := app.session.players.by_id(user_id)):
+        return
+
+    if mode != None:
+        # Assign new mode to the player
+        player.status.mode = GameMode(mode)
+
+    player.reload_object()
+    enqueue_stats(player)
+
+    duplicates = app.session.players.get_rank_duplicates(
+        player.rank,
+        player.status.mode
+    )
+
+    for p in duplicates:
+        if p.id == player.id:
+            continue
+
+        # We have found a player with the same rank
+        player.reload_object()
+        enqueue_stats(player)
+
 @app.session.events.register('osu_error')
 def osu_error(user_id: int, error: dict):
     if not (player := app.session.players.by_id(user_id)):
@@ -225,3 +213,18 @@ def link_discord_user(user_id: int, code: str):
 def shutdown():
     """Used to shutdown the event_listener thread"""
     exit()
+
+def enqueue_stats(player: Player):
+    for p in app.session.players:
+        if p.client.version.date > 20121223 and p.id != player.id:
+            # Client will request the stats
+            # themselves when pressing F9
+            continue
+
+        if p.client.version.date <= 377:
+            # Client needs the "update" flag to
+            # be set for the stats to be updated
+            p.enqueue_presence(player, update=True)
+            continue
+
+        p.enqueue_stats(player)

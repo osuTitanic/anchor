@@ -189,6 +189,9 @@ class Player:
 
         if recent.is_permanent:
             return True
+        
+        if not recent.length:
+            return True
 
         remaining = (recent.length - datetime.now()).total_seconds()
 
@@ -312,12 +315,12 @@ class Player:
         return 'Preview' in self.groups
 
     @property
-    def is_verified(self) -> bool:
-        return 'Verified' in self.groups or self.is_staff
-
-    @property
     def is_staff(self) -> bool:
         return any([self.is_admin, self.is_dev, self.is_moderator])
+    
+    @property
+    def is_verified(self) -> bool:
+        return self.object.is_verified
 
     def enqueue(self, data: bytes):
         """
@@ -489,7 +492,7 @@ class Player:
         """Updates the player's status inside the cache"""
         status.update(
             self.id,
-            self.status.bancho_status,
+            self.user_stats,
             self.client.hash.string,
             self.client.version.date
         )

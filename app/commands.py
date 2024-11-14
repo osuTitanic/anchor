@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import List, NamedTuple, Callable
-from twisted.internet import threads, reactor
 from pytimeparse.timeparse import timeparse
 from datetime import timedelta, datetime
 from dataclasses import dataclass
@@ -65,7 +64,8 @@ class Command(NamedTuple):
     callback: Callable
     groups: List[str]
     hidden: bool
-    doc: str | None
+    doc: str | None = None
+    ignore_conditions: bool = False
 
 class CommandSet:
     def __init__(self, trigger: str, doc: str) -> None:
@@ -80,7 +80,8 @@ class CommandSet:
         aliases:
         List[str],
         groups: List[str] = ['Players'],
-        hidden: bool = False
+        hidden: bool = False,
+        ignore_conditions: bool = False
     ) -> Callable:
         def wrapper(f: Callable):
             self.commands.append(
@@ -89,7 +90,8 @@ class CommandSet:
                     f,
                     groups,
                     hidden,
-                    doc=f.__doc__
+                    f.__doc__,
+                    ignore_conditions
                 )
             )
             return f
@@ -248,7 +250,6 @@ def mp_start(ctx: Context):
 
     if ctx.args[0].isdecimal():
         # Host wants to start a timer
-
         if match.starting:
             # Timer is already running
             time_remaining = round(match.starting.time - time.time())
@@ -621,9 +622,7 @@ def mp_name(ctx: Context):
 
     matches.update(
         match.db_match.id,
-        {
-            "name": name
-        }
+        {"name": name}
     )
 
 @mp_commands.register(['set'])
@@ -786,6 +785,20 @@ def mp_password(ctx: Context):
     match.update()
 
     return ["Match password was set."]
+
+@mp_commands.register(['link', 'url'], ignore_conditions=True)
+def mp_link(ctx: Context):
+    """- Get the link to the current match"""
+    if not (match := ctx.player.match):
+        return
+
+    if ctx.target is not ctx.player.match.chat:
+        return
+    
+    return [
+        f'Match history available '
+        f'[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].'
+    ]
 
 # TODO: Tourney rooms
 # TODO: Match refs
@@ -1379,14 +1392,8 @@ def get_command(
 
         # Try running the command
         try:
-            response = command.callback(
-                Context(
-                    player,
-                    trigger,
-                    target,
-                    args
-                )
-            )
+            context = Context(player, trigger, target, args)
+            response = command.callback(context)
         except Exception as e:
             player.logger.error(
                 f'Command error: {e}',
@@ -1399,11 +1406,11 @@ def get_command(
             response,
             command.hidden
         )
-
-    try:
-        set_trigger, trigger, *args = trigger, *args
-    except ValueError:
+    
+    if len(args) < 1:
         return
+
+    set_trigger, trigger, *args = trigger, *args
 
     # Command sets
     for set in sets:
@@ -1423,33 +1430,31 @@ def get_command(
                 continue
 
             ctx = Context(
-                player,
-                trigger,
-                target,
-                args
+                player, trigger,
+                target, args
             )
 
-            # Check set conditions
-            for condition in set.conditions:
-                if not condition(ctx):
-                    break
+            if not command.ignore_conditions:
+                # Check set conditions
+                for condition in set.conditions:
+                    if not condition(ctx):
+                        return
 
-            else:
+            try:
                 # Try running the command
-                try:
-                    response = command.callback(ctx)
-                except Exception as e:
-                    player.logger.error(
-                        f'Command error: {e}',
-                        exc_info=e
-                    )
-
-                    response = ['An error occurred while running this command.']
-
-                return CommandResponse(
-                    response,
-                    command.hidden
+                response = command.callback(ctx)
+            except Exception as e:
+                player.logger.error(
+                    f'Command error: {e}',
+                    exc_info=e
                 )
+
+                response = ['An error occurred while running this command.']
+
+            return CommandResponse(
+                response,
+                command.hidden
+            )
 
 def execute(
     player: Player,
@@ -1485,27 +1490,27 @@ def on_command_done(
     if not command.hidden and type(target) == Channel:
         target.send_message(
             player,
-            command_message,
-            submit_to_database=True
+            command_message
         )
 
         for message in command.response:
             target.send_message(
                 app.session.bot_player,
-                message,
-                submit_to_database=True
+                message
             )
         return
 
     player.logger.info(f'[{player.name}]: {command_message}')
     player.logger.info(f'[{app.session.bot_player.name}]: {", ".join(command.response)}')
 
-    target_name = target.name \
-        if type(target) != Channel \
+    target_name = (
+        target.name
+        if type(target) != Channel
         else target.display_name
+    )
 
     # Send to sender
-    for message in command.response:
+    for message in command.response:        
         player.enqueue_message(
             bMessage(
                 app.session.bot_player.name,

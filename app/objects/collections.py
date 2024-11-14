@@ -1,12 +1,5 @@
 
 from __future__ import annotations
-
-from app.clients import (
-    DefaultResponsePacket,
-    DefaultRequestPacket
-)
-
-from twisted.internet import reactor
 from enum import Enum
 from typing import (
     Iterable,
@@ -19,7 +12,6 @@ from ..http import HttpPlayer
 from .player import Player
 
 import threading
-import config
 import app
 
 class Players(Set[Player | HttpPlayer]):
