@@ -1,10 +1,10 @@
 
 from __future__ import annotations
 
+from threading import Thread, Timer
 from dataclasses import dataclass
 from typing import Tuple, List
 from datetime import datetime
-from threading import Thread
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -136,6 +136,7 @@ class Match:
         self.banned_players = []
 
         self.starting: StartingTimers | None = None
+        self.completion_timer: Timer | None = None
         self.db_match: DBMatch | None = None
         self.chat: Channel | None = None
 
@@ -702,3 +703,18 @@ class Match:
 
         for p in app.session.players.in_lobby:
             p.enqueue_score_update(scoreframe)
+
+    def start_finish_timeout(self) -> None:
+        if self.completion_timer:
+            return
+
+        self.completion_timer = Timer(8, self.finish_timeout)
+        self.completion_timer.start()
+
+    def finish_timeout(self) -> None:
+        if not self.in_progress:
+            return
+
+        # Force-finish the match
+        self.completion_timer = None
+        self.finish()

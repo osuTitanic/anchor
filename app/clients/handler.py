@@ -1187,6 +1187,7 @@ def match_complete(player: Player):
         return
 
     player.match.last_activity = time.time()
+    player.match.start_finish_timeout()
 
     if not (slot := player.match.get_slot(player)):
         return
