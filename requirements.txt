@@ -10,6 +10,6 @@ boto3==1.35.57
 pytz==2024.2
 pytimeparse==1.1.8
 geoip2==4.8.0
-bcrypt==4.2.0
+bcrypt==4.2.1
 sendgrid==6.11.0
 timeago==1.0.16
