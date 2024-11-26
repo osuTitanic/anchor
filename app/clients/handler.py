@@ -1187,6 +1187,7 @@ def match_complete(player: Player):
         return
 
     player.match.last_activity = time.time()
+    player.match.start_finish_timeout()
 
     if not (slot := player.match.get_slot(player)):
         return
@@ -1210,19 +1211,11 @@ def tourney_match_info(player: Player, match_id: int):
 
     player.logger.debug(f'Requesting tourney match info ({match_id})')
 
-    if not (db_match := matches.fetch_by_id(match_id)):
-        player.logger.warning(f'Tried to request tourney match info, but match with id "{match_id}" was not found.')
-        return
-
-    if db_match.ended_at != None:
-        player.logger.warning('Tried to request tourney match info, but match has already ended.')
-        return
-
-    if not session.matches.exists(db_match.bancho_id):
+    if not session.matches.exists(match_id):
         player.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
         return
 
-    match = session.matches[db_match.bancho_id]
+    match = session.matches[match_id]
 
     player.logger.debug(f'Got tournament match info request for "{match.name}".')
     player.enqueue_match(match.bancho_match)

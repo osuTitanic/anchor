@@ -139,6 +139,13 @@ def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
     app.session.players.announce(message)
 
+@app.session.events.register('user_announcement')
+def user_announcement(user_id: int, message: str):
+    if not (player := app.session.players.by_id(user_id)):
+        return
+
+    player.enqueue_announcement(message)
+
 @app.session.events.register('user_update')
 def user_update(user_id: int, mode: int | None = None):
     if not (player := app.session.players.by_id(user_id)):
