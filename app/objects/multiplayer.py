@@ -698,6 +698,8 @@ class Match:
         self.start()
 
     def process_score_update(self, scoreframe: bScoreFrame) -> None:
+        self.last_activity = time.time()
+
         for p in self.players:
             p.enqueue_score_update(scoreframe)
 

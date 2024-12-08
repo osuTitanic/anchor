@@ -12,9 +12,6 @@ def match_activity():
             exit()
 
         for match in app.session.matches.active:
-            if match.in_progress:
-                continue
-
             last_activity = (time.time() - match.last_activity)
 
             if last_activity < MATCH_TIMEOUT_SECONDS:

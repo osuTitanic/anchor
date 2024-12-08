@@ -849,7 +849,6 @@ def change_settings(player: Player, match: bMatch):
         return
 
     player.match.last_activity = time.time()
-
     player.match.change_settings(match)
 
 @register(RequestPacket.MATCH_CHANGE_BEATMAP)
