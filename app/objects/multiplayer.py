@@ -716,7 +716,11 @@ class Match:
     def finish_timeout(self) -> None:
         if not self.in_progress:
             return
+        
+        for slot in self.slots:
+            slot.status = SlotStatus.Complete
 
         # Force-finish the match
         self.completion_timer = None
+        self.update()
         self.finish()
