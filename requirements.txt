@@ -2,11 +2,11 @@ titanic-pp-py==0.0.7
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.36
 python-dotenv==1.0.1
-twisted==24.10.0
-redis==5.2.0
+twisted==24.11.0
+redis==5.2.1
 requests==2.32.3
 boto3-type-annotations-with-docs==0.3.1
-boto3==1.35.69
+boto3==1.35.76
 pytz==2024.2
 pytimeparse==1.1.8
 geoip2==4.8.1

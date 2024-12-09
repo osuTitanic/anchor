@@ -1192,6 +1192,7 @@ def match_complete(player: Player):
         return
 
     slot.status = SlotStatus.Complete
+    player.match.update()
 
     if any([slot.is_playing for slot in player.match.slots]):
         return

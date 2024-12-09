@@ -714,9 +714,18 @@ class Match:
         self.completion_timer.start()
 
     def finish_timeout(self) -> None:
+        self.completion_timer = None
+
         if not self.in_progress:
             return
+        
+        for slot in self.player_slots:
+            if not slot.is_playing:
+                continue
+
+            # Force-update slot status to complete
+            slot.status = SlotStatus.Complete
 
         # Force-finish the match
-        self.completion_timer = None
+        self.update()
         self.finish()
