@@ -442,6 +442,7 @@ def beatmap_info(player: Player, info: bBeatmapInfoRequest, ignore_limit: bool =
                     .filter(DBScore.user_id == player.id) \
                     .filter(DBScore.mode == mode) \
                     .filter(DBScore.status_pp == 3) \
+                    .filter(DBScore.hidden == False) \
                     .scalar()
 
                 if grade:
