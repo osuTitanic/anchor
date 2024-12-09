@@ -719,7 +719,11 @@ class Match:
         if not self.in_progress:
             return
         
-        for slot in self.slots:
+        for slot in self.player_slots:
+            if not slot.is_playing:
+                continue
+
+            # Force-update slot status to complete
             slot.status = SlotStatus.Complete
 
         # Force-finish the match
