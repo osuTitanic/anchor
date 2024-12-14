@@ -882,11 +882,8 @@ class Player:
             self.object.country
         )
 
-        # Remove stats
-        stats.delete_all(self.id)
-
-        # Hide scores
         scores.hide_all(self.id)
+        stats.update_all(self.id, {'rank': 0})
 
         if reason:
             self.enqueue_announcement(
