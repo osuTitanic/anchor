@@ -70,8 +70,9 @@ def restrict(
             player.country
         )
 
-        stats.delete_all(player.id)
+        # Hide scores
         scores.hide_all(player.id)
+        stats.update_all(player.id, {'rank': 0})
 
         # Update hardware
         clients.update_all(player.id, {'banned': True})
@@ -117,14 +118,10 @@ def unrestrict(user_id: int, restore_scores: bool = True):
     clients.update_all(player.id, {'banned': False})
 
     if restore_scores:
-        try:
-            scores.restore_hidden_scores(player.id)
-            stats.restore(player.id)
-        except Exception as e:
-            officer.call(
-                f'Failed to restore scores of player "{player.name}": {e}',
-                exc_info=e
-            )
+        scores.restore_hidden_scores(player.id)
+    else:
+        stats.delete_all(player.id)
+        leaderboards.remove(player.id, player.country)
 
     for user_stats in stats.fetch_all(player.id):
         leaderboards.update(

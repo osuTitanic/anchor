@@ -1204,10 +1204,9 @@ def restrict(ctx: Context) -> List | None:
             player.country
         )
 
-        stats.delete_all(player.id)
         scores.hide_all(player.id)
+        stats.update_all(player.id, {'rank': 0})
 
-        # Remove permissions
         groups.delete_entry(player.id, 999)
         groups.delete_entry(player.id, 1000)
 
@@ -1261,15 +1260,11 @@ def unrestrict(ctx: Context) -> List | None:
     # Update hardware
     clients.update_all(player.id, {'banned': False})
 
-    if restore_scores:
-        try:
-            scores.restore_hidden_scores(player.id)
-            stats.restore(player.id)
-        except Exception as e:
-            officer.call(
-                f'Failed to restore scores of player "{player.name}": {e}',
-                exc_info=e
-            )
+    if not restore_scores:
+        stats.delete_all(player.id)
+        leaderboards.remove(player.id, player.country)
+    else:
+        scores.restore_hidden_scores(player.id)
 
     for user_stats in stats.fetch_all(player.id):
         leaderboards.update(
