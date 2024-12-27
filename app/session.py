@@ -35,7 +35,7 @@ bot_player = None
 
 requests = Session()
 requests.headers = {
-    'User-Agent': f'bancho-{config.VERSION}'
+    'User-Agent': f'osuTitanic/anchor ({config.DOMAIN_NAME})'
 }
 
 handlers: Dict[DefaultResponsePacket, Callable] = {}
