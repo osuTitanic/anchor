@@ -277,8 +277,8 @@ def send_private_message(sender: Player, message: bMessage):
     )
 
     messages.create_private(
-        sender.name,
-        target.name,
+        sender.id,
+        target.id,
         message.content[:512]
     )
 
