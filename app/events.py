@@ -188,6 +188,54 @@ def link_discord_user(user_id: int, code: str):
         )
     )
 
+@app.session.events.register('external_message')
+def external_message(
+    sender_id: int,
+    sender: str,
+    target: str,
+    message: str
+) -> None:
+    if not (channel := app.session.channels.by_name(target)):
+        return
+
+    messages = message.split('\n')
+
+    for message in messages:
+        channel.handle_external_message(
+            message,
+            sender,
+            sender_id
+        )
+
+@app.session.events.register('external_dm')
+def external_dm(
+    sender_id: int,
+    target_id: int,
+    message: str
+) -> None:
+    if not (target := app.session.players.by_id(target_id)):
+        return
+
+    if not (sender := users.fetch_by_id(sender_id)):
+        return
+
+    target.logger.info(
+        f'(external) [{sender.name} -> {target.name}]: {message}'
+    )
+
+    target.enqueue_message(
+        msg := bMessage(
+            sender.name,
+            message,
+            target.name,
+            sender_id=sender.id,
+            is_private=True
+        )
+    )
+
+    if (online_sender := app.session.players.by_id(sender_id)):
+        online_sender.enqueue_message(msg)
+
 @app.session.events.register('shutdown')
 def shutdown():
     """Used to shutdown the event_listener thread"""

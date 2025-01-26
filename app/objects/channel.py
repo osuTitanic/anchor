@@ -208,3 +208,29 @@ class Channel:
             self.name,
             message[:512]
         )
+
+    def handle_external_message(
+        self,
+        message: str,
+        sender: str,
+        sender_id: int
+    ) -> None:
+        self.logger.info(f'[{sender}]: {message}')
+
+        message_object = bMessage(
+            sender,
+            message,
+            self.display_name,
+            sender_id
+        )
+
+        # Exclude clients that only write in #osu
+        # if channel was not autojoined
+        users = {
+            user for user in self.users
+            if user.client.version.date > 342
+            or self.name in config.AUTOJOIN_CHANNELS
+        }
+
+        for user in users:
+            user.enqueue_message(message_object)
