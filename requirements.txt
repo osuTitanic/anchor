@@ -7,7 +7,7 @@ redis==5.2.1
 requests==2.32.3
 boto3-type-annotations-with-docs==0.3.1
 boto3<2
-pytz==2024.2
+pytz==2025.1
 pytimeparse==1.1.8
 geoip2==4.8.1
 bcrypt==4.2.1
