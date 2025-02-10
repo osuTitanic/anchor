@@ -26,8 +26,8 @@ HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
-EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER')
-EMAIL_SENDER = os.environ.get('EMAIL_SENDER')
+EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', '')
+EMAIL_SENDER = os.environ.get('EMAIL_SENDER', '')
 EMAIL_DOMAIN = EMAIL_SENDER.split('@')[-1]
 EMAILS_ENABLED = bool(EMAIL_PROVIDER and EMAIL_SENDER)
 
