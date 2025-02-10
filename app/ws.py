@@ -27,7 +27,11 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
     def address(self):
         return self.player.address if self.player else 'unknown'
 
-    def onOpen(self):
+    def onConnect(self, request: ConnectionRequest):
+        self.player.address = ip.resolve_ip_address_autobahn(request)
+        self.player.logger = logging.getLogger(self.address)
+        self.player.port = request.peer.split(":")[2]
+        self.player.enqueue = self.enqueue
         self.logger.info(f'-> <{self.address}>')
 
     def onClose(self, wasClean: bool, code: int, reason: str):
@@ -38,13 +42,6 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
             return
 
         self.logger.info(f'<{self.address}> -> Connection done.')
-
-    def onConnect(self, request: ConnectionRequest):
-        self.logger.info(f'-> <{self.address}>')
-        self.player.address = ip.resolve_ip_address_autobahn(request)
-        self.player.logger = logging.getLogger(self.address)
-        self.player.port = request.peer.split(":")[2]
-        self.player.enqueue = self.enqueue
 
     def onMessage(self, payload: bytes, isBinary: bool):
         # Client may send \r\n or just \n, as well as trailing newlines
