@@ -72,7 +72,7 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
             self.player.login_received,
             username.decode(),
             password.decode(),
-            self.client
+            self.player.client
         )
 
         deferred.addErrback(
@@ -103,7 +103,7 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
                 payload = gzip.decompress(payload)
 
             deferred = threads.deferToThread(
-                self.packet_received,
+                self.player.packet_received,
                 packet_id=packet,
                 stream=StreamIn(payload)
             )
