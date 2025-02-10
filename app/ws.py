@@ -127,4 +127,8 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
         self.player.connectionLost(Failure(error or ConnectionDone()))
 
     def enqueue(self, data: bytes):
+        if self.state != self.STATE_OPEN:
+            self.logger.debug('Cannot send data to a closed channel')
+            return
+
         self.sendMessage(data, isBinary=True)
