@@ -23,6 +23,7 @@ AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announc
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
 TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
 HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
+WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
