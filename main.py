@@ -6,7 +6,7 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.common.cache import status, usercount
 
-from app.server import TcpBanchoFactory, HttpBanchoFactory
+from app.server import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
 from app.objects.player import Player
 from app.tasks import (
@@ -101,11 +101,13 @@ def on_startup_fail(e: Exception):
 
 @wrapper.exception_wrapper(on_startup_fail)
 def setup_servers():
+    ws_factory = WebsocketBanchoFactory()
     http_factory = HttpBanchoFactory()
     tcp_factory = TcpBanchoFactory()
 
     reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
     reactor.listenTCP(config.HTTP_PORT, http_factory)
+    reactor.listenTCP(config.WS_PORT, ws_factory)
 
     for port in config.TCP_PORTS:
         reactor.listenTCP(port, tcp_factory)

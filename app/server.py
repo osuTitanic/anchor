@@ -1,9 +1,11 @@
 
+from autobahn.twisted.websocket import WebSocketServerFactory
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.interfaces import IAddress
 from twisted.web.server import Site
 from typing import Optional
 
+from .ws import WebsocketBanchoProtocol
 from .http import HttpBanchoProtocol
 from .tcp import TcpBanchoProtocol
 
@@ -26,6 +28,17 @@ class TcpBanchoFactory(Factory):
 class HttpBanchoFactory(Site):
     def __init__(self):
         super().__init__(HttpBanchoProtocol())
+
+    def startFactory(self):
+        app.session.logger.info(f'Starting factory: {self}')
+
+    def stopFactory(self):
+        app.session.logger.warning(f'Stopping factory: {self}')
+
+class WebsocketBanchoFactory(WebSocketServerFactory):
+    def __init__(self):
+        super().__init__()
+        self.protocol = WebsocketBanchoProtocol
 
     def startFactory(self):
         app.session.logger.info(f'Starting factory: {self}')
