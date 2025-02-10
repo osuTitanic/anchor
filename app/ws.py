@@ -47,10 +47,10 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
         self.player.enqueue = self.enqueue
 
     def onMessage(self, payload: bytes, isBinary: bool):
-        # Client may send \r\n or just \n
-        payload = payload.replace(b'\r\n', b'\n')
+        # Client may send \r\n or just \n, as well as trailing newlines
+        payload = payload.replace(b'\r\n', b'\n').strip(b'\n')
 
-        if payload.count(b'\n') < 2:
+        if payload.count(b'\n') != 2:
             self.logger.warning(f'Invalid login payload: "{payload}"')
             self.close_connection()
             return
