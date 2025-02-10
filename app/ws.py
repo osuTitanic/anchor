@@ -43,7 +43,7 @@ class WebsocketBanchoProtocol(WebSocketServerProtocol):
         self.logger.info(f'-> <{self.address}>')
         self.player.address = ip.resolve_ip_address_autobahn(request)
         self.player.logger = logging.getLogger(self.address)
-        self.player.port = request.peer.split(":")[1]
+        self.player.port = request.peer.split(":")[2]
         self.player.enqueue = self.enqueue
 
     def onMessage(self, payload: bytes, isBinary: bool):
