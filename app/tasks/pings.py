@@ -18,12 +18,6 @@ def ping():
         if player.is_bot:
             continue
 
-        if not player.connected:
-            # Why the heck is this player even in the collection
-            player.logger.warning('Tried to ping player, but was not connected?')
-            player.connectionLost()
-            continue
-
         # Enqueue ping if needed
         if (next_ping > player.last_response):
             player.enqueue_ping()
@@ -36,6 +30,12 @@ def ping():
 
     for player in app.session.players.http_clients:
         last_response = (time.time() - player.last_response)
+
+        if not player.connected:
+            # Why the heck is this player even in the collection
+            player.logger.warning('Tried to ping player, but was not connected?')
+            player.connectionLost()
+            continue
 
         if last_response >= PING_TIMEOUT:
             player.logger.warning('Client timed out.')
