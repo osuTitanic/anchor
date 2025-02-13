@@ -12,7 +12,7 @@ from app.common.objects import (
 
 class Writer(BaseWriter):
     def write_presence(self, presence: bUserPresence, stats: bUserStats, update: bool = False):
-        self.stream.u32(presence.user_id)
+        self.stream.u32(abs(presence.user_id))
         self.stream.string(presence.username)
 
         self.stream.s64(stats.rscore)
