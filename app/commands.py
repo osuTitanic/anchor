@@ -54,10 +54,9 @@ class Context:
     target: Channel | Player
     args: List[str]
 
-@dataclass(slots=True)
-class CommandResponse:
-    response: List[str]
-    hidden: bool
+    @property
+    def message(self) -> str:
+        return f'!{self.trigger} {" ".join(self.args)}'
 
 class Command(NamedTuple):
     triggers: List[str]
@@ -447,7 +446,7 @@ def mp_invite(ctx: Context):
     name = ' '.join(ctx.args[0:])
     match = ctx.player.match
 
-    if name == app.session.bot_player.name:
+    if name == app.session.banchobot.name:
         return [bot_invites[random.randrange(0, len(bot_invites))]]
 
     if not (target := app.session.players.by_name(name)):
@@ -543,7 +542,7 @@ def mp_kick(ctx: Context):
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
-    if name == app.session.bot_player.name:
+    if name == app.session.banchobot.name:
         return ["no."]
 
     if name == ctx.player.name:
@@ -572,7 +571,7 @@ def mp_ban(ctx: Context):
     name = ' '.join(ctx.args[0:]).strip()
     match = ctx.player.match
 
-    if name == app.session.bot_player.name:
+    if name == app.session.banchobot.name:
         return ["no."]
 
     if name == ctx.player.name:
@@ -902,7 +901,7 @@ def report(ctx: Context) -> List | None:
     if target.id == ctx.player.id:
         return ['You cannot report yourself.']
 
-    if target.name == app.session.bot_player.name:
+    if target.name == app.session.banchobot.name:
         return ['no.']
 
     if r := reports.fetch_by_sender_to_target(ctx.player.id, target.id):
@@ -919,7 +918,7 @@ def report(ctx: Context) -> List | None:
     if channel := app.session.channels.by_name('#admin'):
         # Send message to admin chat
         channel.send_message(
-            app.session.bot_player,
+            app.session.banchobot,
             f'[{ctx.target.name}] {ctx.player.link} reported {target.link} for: "{reason}".'
         )
 
@@ -1359,158 +1358,3 @@ def multi(ctx: Context) -> List | None:
 # TODO: !rank
 # TODO: !faq
 # TODO: !top
-
-def get_command(
-    player: Player,
-    target: Channel | Player,
-    message: str
-) -> CommandResponse | None:
-    try:
-        # Parse command
-        trigger, *args = shlex.split(message.strip()[1:])
-        trigger = trigger.lower()
-    except ValueError:
-        return
-
-    # Regular commands
-    for command in commands:
-        if trigger not in command.triggers:
-            continue
-
-        has_permissions = any(
-            group in command.groups
-            for group in player.groups
-        )
-
-        if not has_permissions:
-            return
-
-        # Try running the command
-        try:
-            context = Context(player, trigger, target, args)
-            response = command.callback(context)
-        except Exception as e:
-            player.logger.error(
-                f'Command error: {e}',
-                exc_info=e
-            )
-
-            response = ['An error occurred while running this command.']
-
-        return CommandResponse(
-            response,
-            command.hidden
-        )
-    
-    if len(args) < 1:
-        return
-
-    set_trigger, trigger, *args = trigger, *args
-
-    # Command sets
-    for set in sets:
-        if set.trigger != set_trigger:
-            continue
-
-        for command in set.commands:
-            if trigger not in command.triggers:
-                continue
-
-            has_permissions = any(
-                group in command.groups
-                for group in player.groups
-            )
-
-            if not has_permissions:
-                continue
-
-            ctx = Context(
-                player, trigger,
-                target, args
-            )
-
-            if not command.ignore_conditions:
-                # Check set conditions
-                for condition in set.conditions:
-                    if not condition(ctx):
-                        return
-
-            try:
-                # Try running the command
-                response = command.callback(ctx)
-            except Exception as e:
-                player.logger.error(
-                    f'Command error: {e}',
-                    exc_info=e
-                )
-
-                response = ['An error occurred while running this command.']
-
-            return CommandResponse(
-                response,
-                command.hidden
-            )
-
-def execute(
-    player: Player,
-    target: Channel | Player,
-    command_message: str
-) -> None:
-    if not command_message.startswith('!'):
-        command_message = f'!{command_message}'
-
-    result = get_command(
-        player,
-        target,
-        command_message
-    )
-
-    on_command_done(
-        result,
-        player,
-        target,
-        command_message
-    )
-
-def on_command_done(
-    command: CommandResponse,
-    player: Player,
-    target: Channel | Player,
-    command_message: str
-) -> None:
-    if not command:
-        return
-
-    # Send to others
-    if not command.hidden and type(target) == Channel:
-        target.send_message(
-            player,
-            command_message
-        )
-
-        for message in command.response:
-            target.send_message(
-                app.session.bot_player,
-                message
-            )
-        return
-
-    player.logger.info(f'[{player.name}]: {command_message}')
-    player.logger.info(f'[{app.session.bot_player.name}]: {", ".join(command.response)}')
-
-    target_name = (
-        target.name
-        if type(target) != Channel
-        else target.display_name
-    )
-
-    # Send to sender
-    for message in command.response:        
-        player.enqueue_message(
-            bMessage(
-                app.session.bot_player.name,
-                message,
-                target_name,
-                app.session.bot_player.id
-            )
-        )

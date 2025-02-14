@@ -30,7 +30,7 @@ def bot_message(message: str, target: str):
 
     for message in messages:
         channel.send_message(
-            app.session.bot_player,
+            app.session.banchobot,
             message,
             ignore_privs=True
         )
@@ -180,10 +180,10 @@ def link_discord_user(user_id: int, code: str):
 
     player.enqueue_message(
         bMessage(
-            app.session.bot_player.name,
+            app.session.banchobot.name,
             f'Your verification code is: "{code}". Please type it into discord to link your account!',
             player.name,
-            sender_id=app.session.bot_player.id,
+            sender_id=app.session.banchobot.id,
             is_private=True
         )
     )

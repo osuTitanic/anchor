@@ -8,7 +8,7 @@ from ..objects.multiplayer import Match
 from ..objects.channel import Channel
 from ..objects.player import Player
 from ..common import officer
-from .. import session, commands
+from .. import session
 
 from ..common.database.repositories import (
     relationships,
@@ -199,8 +199,9 @@ def send_message(player: Player, message: bMessage):
 
     if (parsed_message := message.content.strip()).startswith('!'):
         # A command was executed
-        commands.execute(player, channel, parsed_message)
-        return
+        return session.banchobot.send_command_response(
+            *session.banchobot.process_command(parsed_message, player, channel)
+        )
 
     channel.send_message(player, parsed_message)
     player.update_activity()
@@ -246,10 +247,10 @@ def send_private_message(sender: Player, message: bMessage):
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')
 
-    if has_command_prefix or target is session.bot_player:
-        # A command was executed
-        commands.execute(sender, target, parsed_message)
-        return
+    if has_command_prefix or target is session.banchobot:
+        return session.banchobot.send_command_response(
+            *session.banchobot.process_command(parsed_message, sender, target)
+        )
 
     if len(message.content) > 512:
         # Limit message size
@@ -296,10 +297,10 @@ def away_message(player: Player, message: bMessage):
         player.away_message = message.content
         player.enqueue_message(
             bMessage(
-                session.bot_player.name,
+                session.banchobot.name,
                 f'You have been marked as away: {message.content}',
-                session.bot_player.name,
-                session.bot_player.id,
+                session.banchobot.name,
+                session.banchobot.id,
                 is_private=True
             )
         )
@@ -309,10 +310,10 @@ def away_message(player: Player, message: bMessage):
     player.away_message = None
     player.enqueue_message(
         bMessage(
-            session.bot_player.name,
+            session.banchobot.name,
             'You are no longer marked as being away',
-            session.bot_player.name,
-            session.bot_player.id,
+            session.banchobot.name,
+            session.banchobot.id,
             is_private=True
         )
     )
@@ -482,8 +483,8 @@ def start_spectating(player: Player, player_id: int):
         player.logger.warning(f'Failed to start spectating: Player with id "{player_id}" was not found!')
         return
 
-    if target.id == session.bot_player.id:
-        player.logger.warning(f'Tried to spectate {session.bot_player.name}.')
+    if target.id == session.banchobot.id:
+        player.logger.warning(f'Tried to spectate {session.banchobot.name}.')
         return
 
     if (player.spectating or player in target.spectators) and not player.is_tourney_client:
@@ -658,7 +659,7 @@ def create_match(player: Player, bancho_match: bMatch):
     )
 
     match.chat.send_message(
-        session.bot_player,
+        session.banchobot,
         f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
         ignore_privs=True
     )
@@ -886,7 +887,7 @@ def change_beatmap(player: Player, new_match: bMatch):
         beatmap_text       = new_match.beatmap_text
 
     match.chat.send_message(
-        session.bot_player,
+        session.banchobot,
         f'Selected: {beatmap_text}'
     )
 

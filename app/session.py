@@ -31,7 +31,7 @@ events = EventQueue(
 )
 
 logger = logging.getLogger('bancho')
-bot_player = None
+banchobot = None
 
 requests = Session()
 requests.headers = {

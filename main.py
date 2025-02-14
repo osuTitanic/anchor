@@ -1,14 +1,13 @@
 
-from twisted.internet import reactor
-
 from app.common.database.repositories import channels, wrapper
 from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.common.cache import status, usercount
+from twisted.internet import reactor
 
 from app.server import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
-from app.objects.player import Player
+from app.banchobot import BanchoBot
 from app.tasks import (
     activities,
     events,
@@ -50,10 +49,8 @@ def setup():
         )
 
     app.session.logger.info('Loading bot...')
-    app.session.players.add(
-        bot_player := Player.bot_player()
-    )
-    app.session.bot_player = bot_player
+    app.session.players.add(bot_player := BanchoBot())
+    app.session.banchobot = bot_player
     app.session.logger.info(f'  - {bot_player.name}')
 
     app.session.logger.info('Loading tasks...')
