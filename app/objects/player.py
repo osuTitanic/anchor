@@ -126,26 +126,6 @@ class Player:
             )
         return False
 
-    @classmethod
-    def bot_player(cls):
-        with app.session.database.managed_session() as session:
-            player = Player('127.0.0.1', 6969)
-            player.object = users.fetch_by_id(1, session=session)
-            player.client = OsuClient.empty()
-
-            player.id = -player.object.id
-            player.name = player.object.name
-            player.stats  = player.object.stats
-
-            player.permissions = Permissions(
-                groups.get_player_permissions(1, session=session)
-            )
-
-            player.client.ip.country_code = "OC"
-            player.client.ip.city = "w00t p00t!"
-
-            return player
-
     @property
     def is_bot(self) -> bool:
         return (
@@ -683,7 +663,7 @@ class Player:
         # User & Bot Presence
         self.enqueue_presence(self)
         self.enqueue_stats(self)
-        self.enqueue_irc_player(app.session.bot_player)
+        self.enqueue_irc_player(app.session.banchobot)
 
         # Append to player collection
         app.session.players.add(self)

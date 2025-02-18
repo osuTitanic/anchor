@@ -355,7 +355,7 @@ class Match:
                 beatmap_text      = new_match.beatmap_text
 
             self.chat.send_message(
-                app.session.bot_player,
+                app.session.banchobot,
                 f'Selected: {beatmap_text}'
             )
 
@@ -681,7 +681,7 @@ class Match:
             remaining_time = round(self.starting.time - time.time())
 
             self.chat.send_message(
-                app.session.bot_player,
+                app.session.banchobot,
                 f'Match starting in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
 
@@ -690,7 +690,7 @@ class Match:
         time.sleep(1)
 
         self.chat.send_message(
-            app.session.bot_player,
+            app.session.banchobot,
             'Match was started. Good luck!'
         )
 

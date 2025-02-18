@@ -23,11 +23,12 @@ AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announc
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
 TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
 HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
+WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
-EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER')
-EMAIL_SENDER = os.environ.get('EMAIL_SENDER')
+EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', '')
+EMAIL_SENDER = os.environ.get('EMAIL_SENDER', '')
 EMAIL_DOMAIN = EMAIL_SENDER.split('@')[-1]
 EMAILS_ENABLED = bool(EMAIL_PROVIDER and EMAIL_SENDER)
 
@@ -56,4 +57,4 @@ EVENT_WEBHOOK_URL = os.environ.get('EVENT_WEBHOOK_URL')
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18
-VERSION = '1.4.7'
+VERSION = '1.5.0'

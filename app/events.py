@@ -30,7 +30,7 @@ def bot_message(message: str, target: str):
 
     for message in messages:
         channel.send_message(
-            app.session.bot_player,
+            app.session.banchobot,
             message,
             ignore_privs=True
         )
@@ -168,31 +168,6 @@ def user_update(user_id: int, mode: int | None = None):
         player.reload_object()
         enqueue_stats(player)
 
-@app.session.events.register('osu_error')
-def osu_error(user_id: int, error: dict):
-    if not (player := app.session.players.by_id(user_id)):
-        return
-
-    app.session.logger.warning(
-        f'Client error from "{player.name}":\n'
-        f'{json.dumps(error, indent=4)}'
-    )
-
-    # When a beatmap fails to load inside a match, the player
-    # gets forced to the menu screen. In this state, everything
-    # is a little buggy, but aborting the match fixes pretty much everything.
-    if player.match and player.match.in_progress:
-        if not player.match.in_progress:
-            return
-
-        player.match.abort()
-        player.match.chat.send_message(
-            app.session.bot_player,
-            f"Match was aborted, due to client error from {player.name}. "
-            "Please try again!",
-            ignore_privs=True
-        )
-
 @app.session.events.register('link')
 def link_discord_user(user_id: int, code: str):
     if not (player := app.session.players.by_id(user_id)):
@@ -205,13 +180,61 @@ def link_discord_user(user_id: int, code: str):
 
     player.enqueue_message(
         bMessage(
-            app.session.bot_player.name,
+            app.session.banchobot.name,
             f'Your verification code is: "{code}". Please type it into discord to link your account!',
             player.name,
-            sender_id=app.session.bot_player.id,
+            sender_id=app.session.banchobot.id,
             is_private=True
         )
     )
+
+@app.session.events.register('external_message')
+def external_message(
+    sender_id: int,
+    sender: str,
+    target: str,
+    message: str
+) -> None:
+    if not (channel := app.session.channels.by_name(target)):
+        return
+
+    messages = message.split('\n')
+
+    for message in messages:
+        channel.handle_external_message(
+            message,
+            sender,
+            sender_id
+        )
+
+@app.session.events.register('external_dm')
+def external_dm(
+    sender_id: int,
+    target_id: int,
+    message: str
+) -> None:
+    if not (target := app.session.players.by_id(target_id)):
+        return
+
+    if not (sender := users.fetch_by_id(sender_id)):
+        return
+
+    target.logger.info(
+        f'(external) [{sender.name} -> {target.name}]: {message}'
+    )
+
+    target.enqueue_message(
+        msg := bMessage(
+            sender.name,
+            message,
+            target.name,
+            sender_id=sender.id,
+            is_private=True
+        )
+    )
+
+    if (online_sender := app.session.players.by_id(sender_id)):
+        online_sender.enqueue_message(msg)
 
 @app.session.events.register('shutdown')
 def shutdown():

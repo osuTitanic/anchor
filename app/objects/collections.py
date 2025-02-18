@@ -82,14 +82,14 @@ class Players(Set[Player | HttpPlayer]):
         """Get a player by id"""
         return next(
             (p for p in self if p.id == id),
-            (app.session.bot_player if id == 1 else None)
+            (app.session.banchobot if id == 1 else None)
         )
 
     def by_name(self, name: str) -> Player | None:
         """Get a player by name"""
         return next(
             (p for p in self if p.name == name),
-            (app.session.bot_player if name == app.session.bot_player.name else None)
+            (app.session.banchobot if name == app.session.banchobot.name else None)
         )
 
     def by_token(self, token: str) -> Player | None:
