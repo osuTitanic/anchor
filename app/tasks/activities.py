@@ -6,7 +6,7 @@ MATCH_TIMEOUT_MINUTES = 15
 MATCH_TIMEOUT_SECONDS = MATCH_TIMEOUT_MINUTES * 60
 
 @app.session.tasks.submit(interval=MATCH_TIMEOUT_SECONDS)
-def match_activity():
+def match_activity() -> None:
     """This task will close any matches that have not been active in the last 15 minutes."""
     for match in app.session.matches.active:
         last_activity = (time.time() - match.last_activity)

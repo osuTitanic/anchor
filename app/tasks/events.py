@@ -2,7 +2,7 @@
 import app
 
 @app.session.tasks.submit(interval=1)
-def event_listener():
+def event_listener() -> None:
     """This will listen for redis pubsub events and call the appropriate functions."""
     message = app.session.events.poll()
 
