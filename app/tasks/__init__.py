@@ -38,6 +38,9 @@ class Tasks:
         threaded: bool
     ) -> None:
         def on_task_done():
+            if interval < 0:
+                return
+
             # Schedule the next run
             reactor.callLater(
                 interval, self.start_task,
