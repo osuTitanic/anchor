@@ -1,12 +1,11 @@
 
-from app.common import officer
-
 import time
 import app
 
 PING_INTERVAL = 10
 PING_TIMEOUT = 45
 
+@app.session.tasks.submit(interval=5)
 def ping():
     """
     This task will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
@@ -40,14 +39,3 @@ def ping():
         if last_response >= PING_TIMEOUT:
             player.logger.warning('Client timed out.')
             player.close_connection()
-
-def ping_task():
-    while True:
-        if app.session.tasks._shutdown:
-            exit()
-
-        try:
-            ping()
-            time.sleep(1)
-        except Exception as e:
-            officer.call(f'Ping task failed: {e}', exc_info=e)

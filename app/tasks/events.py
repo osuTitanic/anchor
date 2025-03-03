@@ -1,12 +1,15 @@
 
 import app
 
+@app.session.tasks.submit(interval=1)
 def event_listener():
     """This will listen for redis pubsub events and call the appropriate functions."""
-    events = app.session.events.listen()
+    message = app.session.events.poll()
 
-    if app.session.tasks._shutdown:
-        exit()
+    if not message:
+        return
 
-    for func, args, kwargs in events:
-        func(*args, **kwargs)
+    func, args, kwargs = message
+
+    # Use the task executor to prevent blocking the reactor
+    app.session.tasks.executor.submit(func, *args, **kwargs)
