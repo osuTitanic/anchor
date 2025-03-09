@@ -1355,6 +1355,25 @@ def multi(ctx: Context) -> List | None:
         ]
     ]
 
+@command(['rtx', 'jumpscare'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+def rtx(ctx: Context) -> List | None:
+    """<username>"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <username> (<message>)']
+
+    username = ctx.args[0]
+    message = "Zallius' eyes have awoken"
+    target = app.session.players.by_name(username)
+
+    if not target:
+        return [f'User "{username}" was not found.']
+    
+    if len(ctx.args) > 1:
+        message = ' '.join(ctx.args[1:])
+
+    target.send_packet(target.packets.RTX, message)
+    return [f"{target.name} was RTX'd."]
+
 # TODO: !rank
 # TODO: !faq
 # TODO: !top

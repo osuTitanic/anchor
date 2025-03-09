@@ -110,3 +110,7 @@ class ResponsePacket(PacketEnum):
     TARGET_IS_SILENCED              = 101
     VERSION_UPDATE_FORCED           = 102
     SWITCH_SERVER                   = 103
+    ACCOUNT_RESTRICTED              = 104
+    RTX                             = 105
+    MATCH_ABORT                     = 106
+    SWITCH_TOURNAMENT_SERVER        = 107

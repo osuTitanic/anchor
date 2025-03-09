@@ -375,3 +375,9 @@ def unauthorized_build():
     # "Your account has not been authorised to use the private version of osu!."
     # "If you think this is a mistake, please contact peppy via IRC/forums"
     return
+
+@register(ResponsePacket.RTX)
+def rtx(message: str):
+    stream = StreamOut()
+    stream.string(message)
+    return stream.get()
