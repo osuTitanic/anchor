@@ -186,7 +186,6 @@ def execute_console(ctx: Context):
         return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <input>']
 
     input = ' '.join(ctx.args)
-
     return [str(eval(input))]
 
 @mp_commands.condition
