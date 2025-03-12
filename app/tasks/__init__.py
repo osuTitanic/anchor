@@ -26,7 +26,7 @@ class Tasks:
     def start(self) -> None:
         for name, (interval, func, threaded) in self.tasks.items():
             reactor.callLater(
-                interval, self.start_task,
+                max(interval, 1), self.start_task,
                 name, interval, func, threaded
             )
 
@@ -38,7 +38,7 @@ class Tasks:
         threaded: bool
     ) -> None:
         def on_task_done():
-            if interval < 0:
+            if interval <= 0:
                 return
 
             # Schedule the next run
