@@ -562,24 +562,18 @@ class Player:
             )
 
             # Check client's executable hash
-            if check_client:
-                is_valid = client_utils.is_valid_client_hash(
-                    self.client.version.date,
-                    self.client.hash.md5
+            if check_client and not self.is_valid_client(session):
+                self.logger.warning('Login Failed: Unsupported client')
+                self.login_failed(
+                    LoginError.UpdateNeeded,
+                    message=strings.UNSUPPORTED_HASH
                 )
-
-                if not is_valid:
-                    self.logger.warning('Login Failed: Unsupported client')
-                    self.login_failed(
-                        LoginError.UpdateNeeded,
-                        message=strings.UNSUPPORTED_HASH
-                    )
-                    officer.call(
-                        f'"{self.name}" tried to log in with an unsupported version: '
-                        f'{self.client.version} ({self.client.hash.md5})'
-                    )
-                    self.close_connection()
-                    return
+                officer.call(
+                    f'"{self.name}" tried to log in with an unsupported version: '
+                    f'{self.client.version} ({self.client.hash.md5})'
+                )
+                self.close_connection()
+                return
 
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id(user.id)):
@@ -693,6 +687,25 @@ class Player:
         # Enqueue players in lobby
         for player in app.session.players.in_lobby:
             self.enqueue_lobby_join(player.id)
+
+    def is_valid_client(self, session: Session | None = None) -> bool:
+        valid_identifiers = (
+            'stable', 'test', 'tourney', 'cuttingedge', 'beta'
+            'ce45', 'peppy', 'dev', 'arcade', 'ubertest'
+        )
+
+        if self.client.version.identifier in valid_identifiers:
+            return client_utils.is_valid_client_hash(
+                self.client.version.date,
+                self.client.hash.md5,
+                session=session
+            )
+        
+        return client_utils.is_valid_mod(
+            self.client.version.identifier,
+            self.client.hash.md5,
+            session=session
+        )
 
     def check_client(self, session: Session | None = None):
         client = clients.fetch_without_executable(

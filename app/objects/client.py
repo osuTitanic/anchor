@@ -1,6 +1,5 @@
 
 from __future__ import annotations
-
 from app.common.constants import OSU_VERSION
 from app.common.helpers import location
 from datetime import datetime
@@ -19,10 +18,10 @@ class ClientVersion:
         name: str | None = None
     ) -> None:
         self.revision = revision
-        self.stream   = stream
-        self.match    = match
-        self.date     = date
-        self.name     = name
+        self.stream = stream
+        self.match = match
+        self.date = date
+        self.name = name
 
     def __repr__(self) -> str:
         return self.string
@@ -31,10 +30,13 @@ class ClientVersion:
     def string(self) -> str:
         return self.match.string
 
+    @property
+    def identifier(self) -> str:
+        return self.stream or self.name or 'stable'
+
     @classmethod
     def from_string(cls, string: str):
         match = OSU_VERSION.match(string)
-
         assert match is not None
 
         date = match.group('date')
@@ -60,10 +62,10 @@ class ClientHash:
         diskdrive_signature: str
     ) -> None:
         self.diskdrive_signature = diskdrive_signature
-        self.uninstall_id        = uninstall_id
-        self.adapters_md5        = adapters_md5
-        self.adapters            = adapters
-        self.md5                 = md5
+        self.uninstall_id = uninstall_id
+        self.adapters_md5 = adapters_md5
+        self.adapters = adapters
+        self.md5 = md5
 
     def __repr__(self) -> str:
         return self.string
@@ -71,6 +73,13 @@ class ClientHash:
     @property
     def string(self) -> str:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
+
+    @property
+    def unknown_hardware_ids(self) -> bool:
+        return (
+            self.diskdrive_signature == 'ad921d60486366258809553a3db49a4a' or
+            self.uninstall_id == 'ad921d60486366258809553a3db49a4a'
+        )
 
     @property
     def device_id(self) -> str:
@@ -132,11 +141,11 @@ class OsuClient:
         friendonly_dms: bool
     ) -> None:
         self.friendonly_dms = friendonly_dms
-        self.display_city   = display_city
-        self.utc_offset     = utc_offset
-        self.version        = version
-        self.hash           = client_hash
-        self.ip             = ip
+        self.display_city = display_city
+        self.utc_offset = utc_offset
+        self.version = version
+        self.hash = client_hash
+        self.ip = ip
 
     @property
     def is_wine(self) -> bool:
@@ -186,7 +195,5 @@ class OsuClient:
             location.fetch_geolocation('127.0.0.1'),
             ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
             ClientHash.empty('b20136969'),
-            0,
-            True,
-            False
+            0, True, False
         )
