@@ -118,6 +118,9 @@ def presence_request_all(player: Player):
 @register(RequestPacket.STATS_REQUEST)
 def stats_request(player: Player, players: List[int]):
     for id in players:
+        if id is player.id:
+            continue
+
         if not (target := session.players.by_id(id)):
             continue
 
