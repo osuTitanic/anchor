@@ -90,10 +90,8 @@ class BanchoBot(Player):
                 if not has_permissions:
                     continue
 
-                ctx = Context(
-                    ctx.player, trigger,
-                    ctx.target, args
-                )
+                ctx.trigger = trigger
+                ctx.args = args
 
                 if not command.ignore_conditions:
                     # Check set conditions

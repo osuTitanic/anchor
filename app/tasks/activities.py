@@ -5,21 +5,16 @@ import app
 MATCH_TIMEOUT_MINUTES = 15
 MATCH_TIMEOUT_SECONDS = MATCH_TIMEOUT_MINUTES * 60
 
-def match_activity():
+@app.session.tasks.submit(interval=MATCH_TIMEOUT_SECONDS)
+def match_activity() -> None:
     """This task will close any matches that have not been active in the last 15 minutes."""
-    while True:
-        if app.session.tasks._shutdown:
-            exit()
+    for match in app.session.matches.active:
+        last_activity = (time.time() - match.last_activity)
 
-        for match in app.session.matches.active:
-            last_activity = (time.time() - match.last_activity)
+        if last_activity < MATCH_TIMEOUT_SECONDS:
+            continue
 
-            if last_activity < MATCH_TIMEOUT_SECONDS:
-                continue
-
-            match.logger.warning(
-                f'Match was not active in the last {MATCH_TIMEOUT_MINUTES} minutes. Closing...'
-            )
-            match.close()
-
-        app.session.tasks.sleep(5)
+        match.logger.warning(
+            f'Match was not active in the last {MATCH_TIMEOUT_MINUTES} minutes. Closing...'
+        )
+        match.close()

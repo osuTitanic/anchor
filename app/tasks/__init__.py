@@ -1,46 +1,82 @@
 
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures._base import Future
-from typing import Callable
-
-from . import activities
-from . import events
-from . import pings
+from typing import Callable, Dict, Tuple, List
+from twisted.internet import reactor, threads
+from twisted.internet.defer import Deferred
+from app.common import officer
 
 import logging
 import time
 
-class Tasks(ThreadPoolExecutor):
+class Tasks:
+    """
+    A task manager that utilizes Twisted's reactor to schedule tasks.
+    """
+
     def __init__(self) -> None:
-        super().__init__(thread_name_prefix='task')
+        self.tasks: Dict[str, Tuple[int, Callable, bool]] = {}
         self.logger = logging.getLogger('anchor')
 
-    def submit(self, fn: Callable, *args, **kwargs) -> Future:
-        """Submit a task to the threadpool"""
-        future = super().submit(fn, *args, **kwargs)
-        future.add_done_callback(self.future_callback)
-        self.logger.info(f'  - Starting task: "{fn.__name__}"')
-        return future
+    def submit(self, interval: int, threaded: bool = False) -> Callable:
+        def wrapper(func: Callable) -> Callable:
+            self.logger.info(f'Registered task: "{func.__name__}"')
+            self.tasks[func.__name__] = (interval, func, threaded)
+            return func
+        return wrapper
 
-    def sleep(self, seconds: int, interval: int = 1):
-        """Custom sleep function to check for application shutdowns"""
-        for _ in range(0, seconds, interval):
-            if self._shutdown:
-                exit()
-
-            time.sleep(interval)
-
-    def future_callback(self, future: Future):
-        """Callback function for a task/future"""
-        if e := future.exception():
-            if isinstance(e, SystemExit):
-                return
-
-            self.logger.error(
-                f'Future {future.__repr__()} raised an exception: {e}',
-                exc_info=e
+    def start(self) -> None:
+        for name, (interval, func, threaded) in self.tasks.items():
+            reactor.callLater(
+                max(interval, 1), self.start_task,
+                name, interval, func, threaded
             )
 
-        self.logger.debug(
-            f'Result for task {future.__repr__()}: {future.result()}'
+    def start_task(
+        self,
+        name: str,
+        interval: int,
+        func: Callable,
+        threaded: bool
+    ) -> Deferred:
+        def on_task_done() -> None:
+            self.logger.debug(f'Task "{name}" completed')
+
+            if interval <= 0:
+                return
+
+            # Schedule the next run
+            reactor.callLater(
+                interval, self.start_task,
+                name, interval, func, threaded
+            )
+
+        def on_task_failed(e: Exception) -> None:
+            officer.call(f'Task "{name}" failed: {e!r}', exc_info=e)
+            on_task_done()
+
+        # Defer the task to a thread if specified
+        # Otherwise, defer the task to the synchronous reactor
+        defer_method = (
+            self.defer_to_thread
+            if threaded else
+            self.defer_to_reactor
         )
+
+        deferred = defer_method(func)
+        deferred.addCallback(lambda _: on_task_done())
+        deferred.addErrback(lambda f: on_task_failed(f.value))
+        return deferred
+
+    def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
+        return threads.deferToThread(func, *args, **kwargs)
+
+    def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
+        def run(deferred: Deferred, func: Callable, *args, **kwargs) -> None:
+            try:
+                result = func(*args, **kwargs)
+                deferred.callback(result)
+            except Exception as e:
+                deferred.errback(e)
+
+        deferred = Deferred()
+        reactor.callLater(0, run, deferred, func, *args, **kwargs)
+        return deferred

@@ -8,12 +8,8 @@ from twisted.internet import reactor
 from app.server import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
 from app.banchobot import BanchoBot
-from app.tasks import (
-    activities,
-    events,
-    pings
-)
 
+import importlib
 import logging
 import config
 import signal
@@ -54,9 +50,9 @@ def setup():
     app.session.logger.info(f'  - {bot_player.name}')
 
     app.session.logger.info('Loading tasks...')
-    app.session.tasks.submit(pings.ping_task)
-    app.session.tasks.submit(events.event_listener)
-    app.session.tasks.submit(activities.match_activity)
+    importlib.import_module('app.tasks.pings')
+    importlib.import_module('app.tasks.events')
+    importlib.import_module('app.tasks.activities')
 
     # Reset usercount
     usercount.set(0)
@@ -77,14 +73,8 @@ def before_shutdown(*args):
 signal.signal(signal.SIGINT, before_shutdown)
 
 def shutdown():
-    # Reset usercount
-    usercount.set(0)
-
     for player in app.session.players:
         status.delete(player.id)
-
-    app.session.events.submit('shutdown')
-    app.session.tasks.shutdown(cancel_futures=True, wait=False)
 
     def force_exit(*args):
         app.session.logger.warning("Force exiting...")
@@ -112,6 +102,7 @@ def setup_servers():
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)
     reactor.addSystemEventTrigger('before', 'startup', setup_servers)
+    reactor.addSystemEventTrigger('after', 'startup', app.session.tasks.start)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
     reactor.run()
 

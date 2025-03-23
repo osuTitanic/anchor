@@ -236,11 +236,6 @@ def external_dm(
     if (online_sender := app.session.players.by_id(sender_id)):
         online_sender.enqueue_message(msg)
 
-@app.session.events.register('shutdown')
-def shutdown():
-    """Used to shutdown the event_listener thread"""
-    exit()
-
 def enqueue_stats(player: Player):
     for p in app.session.players:
         if p.client.version.date > 20121223 and p.id != player.id:

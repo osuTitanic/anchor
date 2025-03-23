@@ -1,12 +1,8 @@
 
 import app
 
-def event_listener():
+@app.session.tasks.submit(interval=1, threaded=True)
+def event_listener() -> None:
     """This will listen for redis pubsub events and call the appropriate functions."""
-    events = app.session.events.listen()
-
-    if app.session.tasks._shutdown:
-        exit()
-
-    for func, args, kwargs in events:
+    for func, args, kwargs in app.session.events.listen():
         func(*args, **kwargs)
