@@ -69,6 +69,7 @@ def before_shutdown(*args):
         player.enqueue_server_restart(15 * 1000)
 
     reactor.callLater(0.5, reactor.stop)
+    app.session.events.submit('shutdown')
 
 signal.signal(signal.SIGINT, before_shutdown)
 
