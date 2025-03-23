@@ -100,9 +100,9 @@ def setup_servers():
         reactor.listenTCP(port, tcp_factory)
 
 def main():
-    reactor.addSystemEventTrigger('after', 'startup', app.session.tasks.start)
-    reactor.addSystemEventTrigger('before', 'startup', setup_servers)
     reactor.addSystemEventTrigger('before', 'startup', setup)
+    reactor.addSystemEventTrigger('before', 'startup', setup_servers)
+    reactor.addSystemEventTrigger('after', 'startup', app.session.tasks.start)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
     reactor.run()
 
