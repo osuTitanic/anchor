@@ -691,8 +691,8 @@ class Player:
     def is_valid_client(self, session: Session | None = None) -> bool:
         valid_identifiers = (
             'stable', 'test', 'tourney', 'cuttingedge', 'beta'
-            'ce45', 'peppy', 'dev', 'arcade', 'ubertest',
-            'a', 'b', 'c', 'd'
+            'ubertest', 'ce45', 'peppy', 'dev', 'arcade',
+            'fallback', 'a', 'b', 'c', 'd', 'e'
         )
 
         if self.client.version.identifier in valid_identifiers:
