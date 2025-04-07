@@ -356,7 +356,7 @@ class Player:
         if self.match:
             app.clients.handler.leave_match(self)
 
-        tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+        tourney_clients = app.session.players.tourney_clients_by_id(self.id)
         user_quit = bUserQuit(self.id, self.user_presence, self.user_stats, QuitState.Gone)
 
         if len(tourney_clients) <= 0:
@@ -582,7 +582,7 @@ class Player:
 
             else:
                 # Check amount of tourney clients that are online
-                tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+                tourney_clients = app.session.players.tourney_clients_by_id(self.id)
 
                 if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
                     self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')

@@ -121,11 +121,11 @@ class Players:
             if p not in immune:
                 p.enqueue(data)
 
-    def get_all_tourney_clients(self, id: int) -> Tuple[Player]:
+    def tourney_clients_by_id(self, id: int) -> Tuple[Player]:
         """Get all tourney clients for a player id"""
         return tuple(p for p in self.tourney_clients if p.id == id)
 
-    def get_rank_duplicates(self, rank: int, mode: int) -> Tuple[Player]:
+    def by_rank(self, rank: int, mode: int) -> Tuple[Player]:
         """Get all players with the specified rank"""
         return tuple(p for p in self if p.rank == rank and p.status.mode == mode)
 
