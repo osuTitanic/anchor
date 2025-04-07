@@ -47,7 +47,7 @@ from app.common import mail
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
-from typing import Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set, Iterable
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from enum import Enum
@@ -194,17 +194,15 @@ class Player:
     @property
     def friends(self) -> List[int]:
         return [
-            rel.target_id
-            for rel in self.object.relationships
+            rel.target_id for rel in self.object.relationships
             if rel.status == 0
         ]
 
     @property
-    def online_friends(self) -> List["Player"]:
-        return [
-            app.session.players.by_id(id)
-            for id in self.friends if id in app.session.players.ids
-        ]
+    def online_friends(self) -> Iterable["Player"]:
+        for id in self.friends:
+            if player := app.session.players.by_id(id):
+                yield player
 
     @property
     def user_presence(self) -> bUserPresence:
@@ -353,7 +351,7 @@ class Player:
         app.session.players.remove(self)
 
         status.delete(self.id)
-        usercount.set(len(app.session.players.normal_clients))
+        usercount.set(len(app.session.players))
 
         if self.match:
             app.clients.handler.leave_match(self)
@@ -666,7 +664,7 @@ class Player:
         self.enqueue_players(app.session.players)
 
         # Update usercount
-        usercount.set(len(app.session.players.normal_clients))
+        usercount.set(len(app.session.players))
 
         # Enqueue all public channels
         for channel in app.session.channels.public:

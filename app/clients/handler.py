@@ -563,6 +563,7 @@ def join_lobby(player: Player):
     for p in session.players:
         p.enqueue_lobby_join(player.id)
 
+    session.players.in_lobby.append(player)
     player.in_lobby = True
 
     for match in session.matches.active:
@@ -570,6 +571,7 @@ def join_lobby(player: Player):
 
 @register(RequestPacket.PART_LOBBY)
 def part_lobby(player: Player):
+    session.players.in_lobby.remove(player)
     player.in_lobby = False
 
     for p in session.players:
