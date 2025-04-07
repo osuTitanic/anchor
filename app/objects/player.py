@@ -350,23 +350,17 @@ class Player:
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
-        status.delete(self.id)
         usercount.set(len(app.session.players))
+        status.delete(self.id)
 
         if self.match:
             app.clients.handler.leave_match(self)
 
         tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+        user_quit = bUserQuit(self.id, self.user_presence, self.user_stats, QuitState.Gone)
 
         if len(tourney_clients) <= 0:
-            app.session.players.send_user_quit(
-                bUserQuit(
-                    self.id,
-                    self.user_presence,
-                    self.user_stats,
-                    QuitState.Gone
-                )
-            )
+            app.session.players.send_user_quit(user_quit)
 
     def send_packet(self, packet: Enum, *args) -> None:
         try:
