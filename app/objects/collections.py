@@ -34,7 +34,7 @@ class Players:
         return snapshot
 
     def __repr__(self) -> str:
-        return f'<Players ({len(self)})>'
+        return '<Players>'
 
     def __len__(self):
         with self.lock.read_context():
@@ -162,41 +162,36 @@ class Players:
 
 from .channel import Channel
 
-class Channels(Set[Channel]):
-    def __iter__(self) -> Iterator[Channel]:
-        return super().__iter__()
+class Channels(Dict[str, Channel]):
+    def __repr__(self) -> str:
+        return '<Channels>'
 
     @property
-    def public(self) -> Set[Channel]:
+    def public(self) -> List[Channel]:
         """All publicly available channels"""
-        return {c for c in self if c.public}
+        return [c for c in self.values() if c.public]
 
     def by_name(self, name: str) -> Channel | None:
         """Get a channel by name"""
-        return next((c for c in self if c.name == name), None)
+        return self.get(name, None)
 
-    def append(self, c: Channel) -> None:
+    def add(self, c: Channel) -> None:
         """Append a channel to the collection"""
         if not c:
             return
 
-        if c not in self:
-            return super().add(c)
+        self[c.name] = c
 
     def remove(self, c: Channel) -> None:
         """Remove a channel from the collection"""
         if not c:
             return
 
-        # Revoke channel to all users
         for p in c.users:
             p.revoke_channel(c.display_name)
 
-        if c in self:
-            return super().remove(c)
-
-    def extend(self, channels: Iterable[Channel]) -> None:
-        return super().update(channels)
+        if c.name in self:
+            del self[c.name]
 
 from .multiplayer import Match
 
@@ -208,7 +203,7 @@ class Matches(List[Match | None]):
         return super().__iter__()
 
     def __repr__(self) -> str:
-        return f'[{", ".join(match.name for match in self if match)}]'
+        return f'<Matches ({len(self)})>'
 
     @property
     def active(self) -> List[Match]:

@@ -631,7 +631,7 @@ class Player:
             write_perms=1,
             public=False
         )
-        app.session.channels.append(self.spectator_chat)
+        app.session.channels.add(self.spectator_chat)
 
         self.update_activity()
         self.send_packet(self.packets.LOGIN_REPLY, self.id)

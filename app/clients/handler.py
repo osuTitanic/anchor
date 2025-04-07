@@ -635,7 +635,7 @@ def create_match(player: Player, bancho_match: bMatch):
     for index, slot in enumerate(bancho_match.slots):
         match.slots[index].status = slot.status
 
-    session.channels.append(
+    session.channels.add(
         c := Channel(
             name=f'#multi_{match.id}',
             topic=match.name,
