@@ -295,7 +295,7 @@ class Player:
     @property
     def is_staff(self) -> bool:
         return any([self.is_admin, self.is_dev, self.is_moderator])
-    
+
     @property
     def is_verified(self) -> bool:
         return self.object.is_verified
@@ -584,7 +584,7 @@ class Player:
                 # Check amount of tourney clients that are online
                 tourney_clients = app.session.players.tourney_clients_by_id(self.id)
 
-                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
+                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS and not self.is_admin:
                     self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
                     self.close_connection()
                     return
