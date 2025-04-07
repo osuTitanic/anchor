@@ -10,6 +10,7 @@ from typing import (
     Set
 )
 
+from .locks import ReadWriteLock
 from ..http import HttpPlayer
 from .player import Player
 
@@ -20,16 +21,29 @@ class Players:
         self.token_mapping: Dict[str, Player] = {}
         self.tourney_clients: List[Player] = []
         self.in_lobby: List[Player] = []
+        self.lock = ReadWriteLock()
+
+    @property
+    def tcp_clients(self) -> Tuple[Player]:
+        return tuple(p for p in self if p.protocol == 'tcp')
+
+    @property
+    def http_clients(self) -> Tuple[HttpPlayer]:
+        with self.lock.read_context():
+            snapshot = tuple(self.token_mapping.values())
+        return snapshot
 
     def __repr__(self) -> str:
         return f'<Players ({len(self)})>'
 
-    def __iter__(self):
-        return iter(self.id_mapping.values())
-
     def __len__(self):
-        return len(self.id_mapping)
-    
+        with self.lock.read_context():
+            return len(self.id_mapping)
+
+    def __setitem__(self, _, value: Player | HttpPlayer) -> None:
+        """Set a player in the collection"""
+        return self.add(value)
+
     def __getitem__(self, key: int | str) -> Player | None:
         """Get a player by id or name"""
         if isinstance(key, int):
@@ -37,22 +51,20 @@ class Players:
         elif isinstance(key, str):
             return self.by_name(key)
         return None
-    
+
+    def __iter__(self):
+        with self.lock.read_context():
+            snapshot = list(self.id_mapping.values())
+        return iter(snapshot)
+
     def __contains__(self, player: Player | HttpPlayer) -> bool:
         """Check if a player is in the collection"""
-        if isinstance(player, Player):
-            return player.id in self.id_mapping
-        elif isinstance(player, HttpPlayer):
-            return player.token in self.token_mapping
-        return False
-
-    @property
-    def http_clients(self) -> Tuple[HttpPlayer]:
-        return tuple(p for p in self.token_mapping.values())
-
-    @property
-    def tcp_clients(self) -> Tuple[Player]:
-        return tuple(p for p in self if p.protocol == 'tcp')
+        with self.lock.read_context():
+            if isinstance(player, Player):
+                return player.id in self.id_mapping
+            elif isinstance(player, HttpPlayer):
+                return player.token in self.token_mapping
+            return False
 
     def get(self, value: int | str) -> Player | None:
         """Get a player by id or name"""
@@ -60,42 +72,48 @@ class Players:
 
     def add(self, player: Player | HttpPlayer) -> None:
         """Append a player to the collection"""
-        self.id_mapping[abs(player.id)] = player
-        self.name_mapping[player.name] = player
+        with self.lock.write_context():
+            self.id_mapping[abs(player.id)] = player
+            self.name_mapping[player.name] = player
+
+            if isinstance(player, HttpPlayer):
+                self.token_mapping[player.token] = player
+
+            if player.is_tourney_client:
+                self.tourney_clients.append(player)
+                
         self.send_player(player)
-
-        if isinstance(player, HttpPlayer):
-            self.token_mapping[player.token] = player
-
-        if player.is_tourney_client:
-            self.tourney_clients.append(player)
 
     def remove(self, player: Player | HttpPlayer) -> None:
         """Remove a player from the collection"""
-        try:
-            del self.id_mapping[abs(player.id)]
-            del self.name_mapping[player.name]
-            del self.token_mapping[player.token]
+        with self.lock.write_context():
+            try:
+                del self.id_mapping[abs(player.id)]
+                del self.name_mapping[player.name]
+                del self.token_mapping[player.token]
 
-            if player.in_lobby:
-                self.in_lobby.remove(player)
+                if player.in_lobby:
+                    self.in_lobby.remove(player)
 
-            if player.is_tourney_client:
-                self.tourney_clients.remove(player)
-        except (ValueError, KeyError, AttributeError):
-            pass
+                if player.is_tourney_client:
+                    self.tourney_clients.remove(player)
+            except (ValueError, KeyError, AttributeError):
+                pass
 
     def by_id(self, id: int) -> Player | None:
         """Get a player by id"""
-        return self.id_mapping.get(id, None)
+        with self.lock.read_context():
+            return self.id_mapping.get(id, None)
 
     def by_name(self, name: str) -> Player | None:
         """Get a player by name"""
-        return self.name_mapping.get(name, None)
+        with self.lock.read_context():
+            return self.name_mapping.get(name, None)
 
     def by_token(self, token: str) -> Player | None:
         """Get a player by token"""
-        return self.token_mapping.get(token, None)
+        with self.lock.read_context():
+            return self.token_mapping.get(token, None)
 
     def enqueue(self, data: bytes, immune = []) -> None:
         """Send raw data to all players"""
@@ -240,4 +258,3 @@ class Matches(List[Match | None]):
             return self[match_id] is not None
         except IndexError:
             return False
-
