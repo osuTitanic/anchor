@@ -19,8 +19,8 @@ class Players:
         self.id_mapping: Dict[int, Player] = {}
         self.name_mapping: Dict[str, Player] = {}
         self.token_mapping: Dict[str, Player] = {}
-        self.tourney_clients: List[Player] = []
-        self.in_lobby: List[Player] = []
+        self.tourney_clients: Set[Player] = set()
+        self.in_lobby: Set[Player] = set()
         self.lock = ReadWriteLock()
 
     @property
@@ -80,8 +80,8 @@ class Players:
                 self.token_mapping[player.token] = player
 
             if player.is_tourney_client:
-                self.tourney_clients.append(player)
-                
+                self.tourney_clients.add(player)
+
         self.send_player(player)
 
     def remove(self, player: Player | HttpPlayer) -> None:

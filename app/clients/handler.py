@@ -563,7 +563,7 @@ def join_lobby(player: Player):
     for p in session.players:
         p.enqueue_lobby_join(player.id)
 
-    session.players.in_lobby.append(player)
+    session.players.in_lobby.add(player)
     player.in_lobby = True
 
     for match in session.matches.active:
