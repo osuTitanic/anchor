@@ -33,7 +33,7 @@ def setup():
 
     for channel in channels.fetch_all():
         app.session.logger.info(f'  - {channel.name}')
-        app.session.channels.append(
+        app.session.channels.add(
             Channel(
                 channel.name,
                 channel.topic,

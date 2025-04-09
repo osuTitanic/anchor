@@ -47,7 +47,7 @@ from app.common import mail
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
-from typing import Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set, Iterable
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from enum import Enum
@@ -194,17 +194,15 @@ class Player:
     @property
     def friends(self) -> List[int]:
         return [
-            rel.target_id
-            for rel in self.object.relationships
+            rel.target_id for rel in self.object.relationships
             if rel.status == 0
         ]
 
     @property
-    def online_friends(self) -> List["Player"]:
-        return [
-            app.session.players.by_id(id)
-            for id in self.friends if id in app.session.players.ids
-        ]
+    def online_friends(self) -> Iterable["Player"]:
+        for id in self.friends:
+            if player := app.session.players.by_id(id):
+                yield player
 
     @property
     def user_presence(self) -> bUserPresence:
@@ -297,7 +295,7 @@ class Player:
     @property
     def is_staff(self) -> bool:
         return any([self.is_admin, self.is_dev, self.is_moderator])
-    
+
     @property
     def is_verified(self) -> bool:
         return self.object.is_verified
@@ -352,23 +350,17 @@ class Player:
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
+        usercount.set(len(app.session.players))
         status.delete(self.id)
-        usercount.set(len(app.session.players.normal_clients))
 
         if self.match:
             app.clients.handler.leave_match(self)
 
-        tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+        tourney_clients = app.session.players.tourney_clients_by_id(self.id)
+        user_quit = bUserQuit(self.id, self.user_presence, self.user_stats, QuitState.Gone)
 
         if len(tourney_clients) <= 0:
-            app.session.players.send_user_quit(
-                bUserQuit(
-                    self.id,
-                    self.user_presence,
-                    self.user_stats,
-                    QuitState.Gone
-                )
-            )
+            app.session.players.send_user_quit(user_quit)
 
     def send_packet(self, packet: Enum, *args) -> None:
         try:
@@ -590,9 +582,9 @@ class Player:
 
             else:
                 # Check amount of tourney clients that are online
-                tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+                tourney_clients = app.session.players.tourney_clients_by_id(self.id)
 
-                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
+                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS and not self.is_admin:
                     self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
                     self.close_connection()
                     return
@@ -639,7 +631,7 @@ class Player:
             write_perms=1,
             public=False
         )
-        app.session.channels.append(self.spectator_chat)
+        app.session.channels.add(self.spectator_chat)
 
         self.update_activity()
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
@@ -666,7 +658,7 @@ class Player:
         self.enqueue_players(app.session.players)
 
         # Update usercount
-        usercount.set(len(app.session.players.normal_clients))
+        usercount.set(len(app.session.players))
 
         # Enqueue all public channels
         for channel in app.session.channels.public:

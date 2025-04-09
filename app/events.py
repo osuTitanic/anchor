@@ -32,7 +32,7 @@ def bot_message(message: str, target: str):
         channel.send_message(
             app.session.banchobot,
             message,
-            ignore_privs=True
+            ignore_privileges=True
         )
 
 @app.session.events.register('logout')
@@ -155,7 +155,7 @@ def user_update(user_id: int, mode: int | None = None):
     player.reload_object()
     enqueue_stats(player)
 
-    duplicates = app.session.players.get_rank_duplicates(
+    duplicates = app.session.players.by_rank(
         player.rank,
         player.status.mode
     )

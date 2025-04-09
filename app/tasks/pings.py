@@ -2,10 +2,10 @@
 import time
 import app
 
-PING_INTERVAL = 10
-PING_TIMEOUT = 45
+PING_INTERVAL = 15
+PING_TIMEOUT = 60
 
-@app.session.tasks.submit(interval=5)
+@app.session.tasks.submit(interval=15, threaded=True)
 def ping() -> None:
     """
     This task will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
