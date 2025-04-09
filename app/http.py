@@ -48,18 +48,19 @@ class HttpPlayer(Player):
         return data
 
     def login_received(self, username: str, md5: str, client: OsuClient) -> None:
+        self.token = str(uuid.uuid4())
         super().login_received(username, md5, client)
 
-        if self.logged_in:
-            self.token = str(uuid.uuid4())
+        if not self.logged_in:
+            self.token = ""
 
     def close_connection(self, error: Exception | None = None) -> None:
         if error:
             self.send_error()
 
         self.logger.info(f'Closing connection -> <{self.address}>')
-        self.token = ""
         super().connectionLost(Failure(error or ConnectionDone()))
+        self.token = ""
 
 class HttpBanchoProtocol(Resource):
     isLeaf = True
