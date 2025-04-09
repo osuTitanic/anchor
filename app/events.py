@@ -32,7 +32,7 @@ def bot_message(message: str, target: str):
         channel.send_message(
             app.session.banchobot,
             message,
-            ignore_privs=True
+            ignore_privileges=True
         )
 
 @app.session.events.register('logout')

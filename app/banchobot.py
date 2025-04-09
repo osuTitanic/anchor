@@ -110,15 +110,19 @@ class BanchoBot(Player):
         if not response:
             return
 
-        # Send to others
+        # Send to others, if command is not hidden
         if not command.hidden and type(context.target) is Channel:
             context.target.send_message(
                 context.player,
-                context.message
+                context.message,
+                ignore_commands=True
             )
 
             for message in response:
-                context.target.send_message(self, message)
+                context.target.send_message(
+                    self, message,
+                    ignore_commands=True
+                )
 
             return
 

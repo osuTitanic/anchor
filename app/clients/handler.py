@@ -200,13 +200,7 @@ def send_message(player: Player, message: bMessage):
         player.silence(60, reason='Chat spamming')
         return
 
-    if (parsed_message := message.content.strip()).startswith('!'):
-        # A command was executed
-        return session.banchobot.send_command_response(
-            *session.banchobot.process_command(parsed_message, player, channel)
-        )
-
-    channel.send_message(player, parsed_message)
+    channel.send_message(player, message.content.strip())
     player.update_activity()
     player.recent_message_count += 1
 
@@ -257,7 +251,7 @@ def send_private_message(sender: Player, message: bMessage):
 
     if len(message.content) > 512:
         # Limit message size
-        message.content = message.content[:512] + '... (truncated)'
+        message.content = message.content[:497] + '... (truncated)'
 
     if target.away_message:
         sender.enqueue_message(
@@ -666,7 +660,7 @@ def create_match(player: Player, bancho_match: bMatch):
     match.chat.send_message(
         session.banchobot,
         f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privs=True
+        ignore_privileges=True
     )
 
 @register(RequestPacket.JOIN_MATCH)

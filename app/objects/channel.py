@@ -129,7 +129,8 @@ class Channel:
         self,
         sender: "Player",
         message: str,
-        ignore_privs=False,
+        ignore_privileges=False,
+        ignore_commands=False,
         exclude_sender=True
     ) -> None:
         if sender not in self.users and not sender.is_bot:
@@ -157,9 +158,15 @@ class Channel:
             sender.logger.warning('Failed to send message: Sender was silenced.')
             return
 
-        if not self.can_write(sender.permissions) and not ignore_privs:
+        if not self.can_write(sender.permissions) and not ignore_privileges:
             sender.logger.warning(f'Failed to send message: "{message}".')
             return
+
+        if message.startswith('!') and not ignore_commands:
+            # A command was executed
+            return app.session.banchobot.send_command_response(
+                *app.session.banchobot.process_command(message, sender, self)
+            )
 
         has_bad_words = any([
             word in message.lower()
@@ -174,9 +181,9 @@ class Channel:
             officer.call(f'Message: {message}')
             return
 
-        # Limit message size
+        # Limit message size to 512 characters
         if len(message) > 512:
-            message = message[:512] + '... (truncated)'
+            message = message[:497] + '... (truncated)'
 
         self.logger.info(f'[{sender.name}]: {message}')
         users = self.users
@@ -184,13 +191,6 @@ class Channel:
         if exclude_sender:
             # Filter out sender
             users = {user for user in self.users if user != sender}
-
-        # Exclude clients that only write in #osu if channel was not autojoined
-        users = {
-            user for user in users
-            if user.client.version.date > 342
-            or self.name in config.AUTOJOIN_CHANNELS
-        }
 
         message_object = bMessage(
             sender.name,
