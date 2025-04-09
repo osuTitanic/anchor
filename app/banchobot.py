@@ -13,7 +13,7 @@ import app
 
 class BanchoBot(Player):
     def __init__(self):
-        super().__init__('127.0.0.1', 6969)
+        super().__init__('127.0.0.1', 13381)
         self.initialize()
 
     def process_command(
