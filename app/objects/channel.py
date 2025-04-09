@@ -141,7 +141,7 @@ class Channel:
             )
             return
 
-        if self.moderated:
+        if self.moderated and sender != app.session.banchobot:
             allowed_groups = [
                 'Admins',
                 'Developers',
