@@ -12,7 +12,6 @@ from app.objects import collections
 from app.common import officer
 
 import logging
-import config
 import app
 
 class Channel:
@@ -224,13 +223,5 @@ class Channel:
             sender_id
         )
 
-        # Exclude clients that only write in #osu
-        # if channel was not autojoined
-        users = {
-            user for user in self.users
-            if user.client.version.date > 342
-            or self.name in config.AUTOJOIN_CHANNELS
-        }
-
-        for user in users:
+        for user in self.users:
             user.enqueue_message(message_object)
