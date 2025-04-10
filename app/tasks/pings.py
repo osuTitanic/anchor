@@ -5,28 +5,30 @@ import app
 PING_INTERVAL = 15
 PING_TIMEOUT = 60
 
-@app.session.tasks.submit(interval=15, threaded=True)
-def ping() -> None:
+@app.session.tasks.submit(interval=PING_INTERVAL)
+def tcp_pings() -> None:
     """
-    This task will handle client pings and timeouts. Pings are required for tcp clients, to keep them connected.
-    For http clients, we can just check if they have responded within the timeout period, and close the connection if not.
+    This task will handle client pings and timeouts for tcp clients.
+    Pings are required for tcp clients, to keep them connected.
     """
-    next_ping = (time.time() - PING_INTERVAL)
-
     for player in app.session.players.tcp_clients:
         if player.is_bot:
             continue
 
-        # Enqueue ping if needed
-        if (next_ping > player.last_response):
-            player.enqueue_ping()
-
+        player.enqueue_ping()
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT:
             player.logger.warning('Client timed out.')
             player.close_connection()
 
+@app.session.tasks.submit(interval=PING_TIMEOUT)
+def http_pings() -> None:
+    """
+    This task will handle client timeouts for http clients.
+    Http clients do not require pings, but we still want to
+    check if they are still connected.
+    """
     for player in app.session.players.http_clients:
         last_response = (time.time() - player.last_response)
 
