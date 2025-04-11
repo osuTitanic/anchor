@@ -805,7 +805,7 @@ def mp_password(ctx: Context):
         match.update()
         return ["Match password was reset."]
 
-    match.password = ctx.args[0:]
+    match.password = " ".join(ctx.args[0:])
     match.update()
     return ["Match password was set."]
 
