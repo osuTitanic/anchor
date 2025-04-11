@@ -35,6 +35,7 @@ from .common.constants import (
 )
 
 from .objects.multiplayer import StartingTimers
+from .objects.multiplayer import Match
 from .objects.channel import Channel
 from .common.objects import bMessage
 from .objects.player import Player
@@ -46,7 +47,7 @@ import time
 import app
 import os
 
-@dataclass(slots=True)
+@dataclass
 class Context:
     player: Player
     trigger: str
@@ -194,17 +195,33 @@ def execute_console(ctx: Context):
     input = ' '.join(ctx.args)
     return [str(eval(input))]
 
+def resolve_match(ctx: Context) -> Match | None:
+    if ctx.player.match:
+        return ctx.player.match
+
+    # TODO: Match referees
+    return None
+
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
-    return ctx.player.match is not None
+    if not (match := resolve_match(ctx)):
+        return False
+
+    ctx.set_context_object('match', match)
+    return True
 
 @mp_commands.condition
 def inside_chat(ctx: Context) -> bool:
-    return ctx.target is ctx.player.match.chat
+    return ctx.target is ctx.get_context_object('match').chat
 
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
-    return (ctx.player is ctx.player.match.host) or \
+    non_host_commands = ('help', 'link', 'url')
+
+    if ctx.trigger in non_host_commands:
+        return True
+
+    return (ctx.player is ctx.get_context_object('match').host) or \
            (ctx.player.is_admin)
 
 @mp_commands.register(['help', 'h'], hidden=True)
@@ -234,7 +251,7 @@ def mp_start(ctx: Context):
     if len(ctx.args) > 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
 
     if match.in_progress:
         return ['This match is already running.']
@@ -297,20 +314,21 @@ def mp_start(ctx: Context):
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
-    ctx.player.match.logger.info('Match was closed.')
-    ctx.player.match.close()
-
+    match: Match = ctx.get_context_object('match')
+    match.logger.info('Match was closed.')
+    match.close()
     return ['Match was closed.']
 
 @mp_commands.register(['abort'])
 def mp_abort(ctx: Context):
     """- Abort the current match"""
-    if not ctx.player.match.in_progress:
+    match: Match = ctx.get_context_object('match')
+
+    if not match.in_progress:
         return ["Nothing to abort."]
 
-    ctx.player.match.abort()
-    ctx.player.match.logger.info('Match was aborted.')
-
+    match.abort()
+    match.logger.info('Match was aborted.')
     return ['Match aborted.']
 
 @mp_commands.register(['map', 'setmap', 'beatmap'])
@@ -319,7 +337,7 @@ def mp_map(ctx: Context):
     if len(ctx.args) != 1 or not ctx.args[0].isdecimal():
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <beatmap_id>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
     beatmap_id = int(ctx.args[0])
 
     if beatmap_id == match.beatmap_id:
@@ -335,7 +353,6 @@ def mp_map(ctx: Context):
     match.update()
 
     match.logger.info(f'Selected: {map.full_name}')
-
     return [f'Selected: {map.link}']
 
 @mp_commands.register(['mods', 'setmods'])
@@ -344,7 +361,7 @@ def mp_mods(ctx: Context):
     if len(ctx.args) != 1 or len(ctx.args[0]) % 2 != 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
     mods = Mods.from_string(ctx.args[0])
     # TODO: Filter out invalid mods
 
@@ -361,8 +378,8 @@ def mp_mods(ctx: Context):
         match.mods = mods
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
-
     match.update()
+
     return [f'Updated match mods to {match.mods.short}.']
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
@@ -371,8 +388,8 @@ def mp_freemod(ctx: Context):
     if len(ctx.args) != 1 or ctx.args[0] not in ("on", "off"):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <on/off>']
 
-    freemod = ctx.args[0] == 'on'
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
+    freemod = ctx.args[0] in ('on', 'true', 'yes', '1')
 
     if match.freemod == freemod:
         return [f'Freemod is already {ctx.args[0]}.']
@@ -409,8 +426,8 @@ def mp_host(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
-    match = ctx.player.match
 
     if not (target := match.get_player(name)):
         return ['Could not find this player.']
@@ -429,7 +446,6 @@ def mp_host(ctx: Context):
 
     match.host = target
     match.host.enqueue_match_transferhost()
-
     match.logger.info(f'Changed host to: {target.name}')
     match.update()
 
@@ -448,8 +464,8 @@ def mp_invite(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
-    match = ctx.player.match
 
     if name == app.session.banchobot.name:
         return [bot_invites[random.randrange(0, len(bot_invites))]]
@@ -480,8 +496,8 @@ def mp_force_invite(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
-    match = ctx.player.match
 
     if not (target := app.session.players.by_name(name)):
         return [f'Could not find the player "{name}".']
@@ -518,25 +534,29 @@ def mp_force_invite(ctx: Context):
 @mp_commands.register(['lock'])
 def mp_lock(ctx: Context):
     """- Lock all unsued slots in the match."""
-    for slot in ctx.player.match.slots:
+    match: Match = ctx.get_context_object('match')
+
+    for slot in match.slots:
         if slot.has_player:
-            ctx.player.match.kick_player(slot.player)
+            match.kick_player(slot.player)
 
         if slot.status == SlotStatus.Open:
             slot.status = SlotStatus.Locked
 
-    ctx.player.match.update()
+    match.update()
     return ['Locked all unused slots.']
 
 @mp_commands.register(['unlock'])
 def mp_unlock(ctx: Context):
     """- Unlock all locked slots in the match."""
-    for slot in ctx.player.match.slots:
+    match: Match = ctx.get_context_object('match')
+
+    for slot in match.slots:
         if slot.status == SlotStatus.Locked:
             slot.status = SlotStatus.Open
 
-    ctx.player.match.update()
-    return ['Locked all unused slots.']
+    match.update()
+    return ['Unlocked all locked slots.']
 
 @mp_commands.register(['kick', 'remove'])
 def mp_kick(ctx: Context):
@@ -544,8 +564,8 @@ def mp_kick(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
-    match = ctx.player.match
 
     if name == app.session.banchobot.name:
         return ["no."]
@@ -573,8 +593,8 @@ def mp_ban(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
-    match = ctx.player.match
 
     if name == app.session.banchobot.name:
         return ["no."]
@@ -599,8 +619,8 @@ def mp_unban(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
-    match = ctx.player.match
 
     if not (player := app.session.players.by_name(name)):
         return [f'Could not find the player "{name}".']
@@ -618,8 +638,8 @@ def mp_name(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
+    match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
-    match = ctx.player.match
 
     match.name = name
     match.update()
@@ -636,7 +656,7 @@ def mp_set(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <teammode> (<scoremode>) (<size>)']
 
     try:
-        match = ctx.player.match
+        match: Match = ctx.get_context_object('match')
         match.team_type = MatchTeamTypes(int(ctx.args[0]))
 
         if len(ctx.args) > 1:
@@ -675,7 +695,7 @@ def mp_size(ctx: Context):
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <size>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
     size = max(1, min(int(ctx.args[0]), config.MULTIPLAYER_MAX_SLOTS))
 
     for slot in match.slots[size:]:
@@ -695,7 +715,6 @@ def mp_size(ctx: Context):
         return ["Match was disbanded."]
 
     match.update()
-
     return [f"Changed slot size to {size}."]
 
 @mp_commands.register(['move'])
@@ -704,7 +723,7 @@ def mp_move(ctx: Context):
     if len(ctx.args) <= 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <slot>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
     name = ctx.args[0]
     slot_id = max(1, min(int(ctx.args[1]), config.MULTIPLAYER_MAX_SLOTS))
 
@@ -721,15 +740,17 @@ def mp_move(ctx: Context):
     old_slot.reset()
 
     match.update()
-
     return [f'Moved {player.name} into slot {slot_id}.']
 
 @mp_commands.register(['settings'])
 def mp_settings(ctx: Context):
     """- View the current match settings"""
-    match = ctx.player.match
-    beatmap_link = f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]' \
-                    if match.beatmap_id > 0 else match.beatmap_name
+    match: Match = ctx.get_context_object('match')
+    beatmap_link = (
+        f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]'
+        if match.beatmap_id > 0 else match.beatmap_name
+    )
+
     return [
         f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
         f"Beatmap: {beatmap_link}",
@@ -752,7 +773,7 @@ def mp_team(ctx: Context):
     if len(ctx.args) <= 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <color>']
 
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
     name = ctx.args[0]
     team = ctx.args[1].capitalize()
 
@@ -772,13 +793,12 @@ def mp_team(ctx: Context):
     slot.team = SlotTeam[team]
 
     match.update()
-
     return [f"Moved {player.name} to team {team}."]
 
 @mp_commands.register(['password', 'setpassword', 'pass'])
 def mp_password(ctx: Context):
     """(<password>) - (Re)set the match password"""
-    match = ctx.player.match
+    match: Match = ctx.get_context_object('match')
 
     if not ctx.args:
         match.password = ""
@@ -787,18 +807,16 @@ def mp_password(ctx: Context):
 
     match.password = ctx.args[0:]
     match.update()
-
     return ["Match password was set."]
 
-@mp_commands.register(['link', 'url'], ignore_conditions=True)
+@mp_commands.register(['link', 'url'])
 def mp_link(ctx: Context):
     """- Get the link to the current match"""
-    if not (match := ctx.player.match):
-        return
+    match: Match = ctx.get_context_object('match')
 
-    if ctx.target is not ctx.player.match.chat:
-        return
-    
+    if not match:
+        return ["You are not inside a match."]
+
     return [
         f'Match history available '
         f'[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].'
