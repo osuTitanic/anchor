@@ -1,6 +1,7 @@
 
 from contextlib import contextmanager
-from threading  import Lock
+from typing import TypeVar, Set
+from threading import Lock
 
 class ReadWriteLock:
     def __init__(self):
@@ -50,3 +51,36 @@ class ReadWriteLock:
             yield
         finally:
             self.release_write()
+
+T = TypeVar('T')
+
+class LockedSet(Set[T]):
+    """A set that is thread-safe for concurrent read and write operations."""
+
+    def __init__(self):
+        self.set = set()
+        self.lock = ReadWriteLock()
+
+    def __iter__(self):
+        with self.lock.read_context():
+            return iter(self.set)
+        
+    def __len__(self) -> int:
+        with self.lock.read_context():
+            return len(self.set)
+
+    def __contains__(self, item: T) -> bool:
+        with self.lock.read_context():
+            return item in self.set
+
+    def add(self, item: T) -> None:
+        with self.lock.write_context():
+            self.set.add(item)
+
+    def remove(self, item: T) -> None:
+        with self.lock.write_context():
+            self.set.remove(item)
+
+    def update(self, *args, **kwargs) -> None:
+        with self.lock.write_context():
+            self.set.update(*args, **kwargs)
