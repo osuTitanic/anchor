@@ -780,6 +780,7 @@ def leave_match(player: Player):
         for p in session.players.in_lobby:
             p.enqueue_match_disband(player.match.id)
 
+        session.channels.remove(player.match.chat)
         session.matches.remove(player.match)
         player.match.starting = None
 
@@ -818,6 +819,7 @@ def leave_match(player: Player):
         )
 
     player.match.update()
+    player.match.chat.remove(player)
     player.match = None
 
 @register(RequestPacket.MATCH_CHANGE_SLOT)
