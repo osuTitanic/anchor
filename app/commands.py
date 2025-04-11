@@ -1,10 +1,10 @@
 
 from __future__ import annotations
 
-from typing import List, NamedTuple, Callable
+from typing import List, NamedTuple, Callable, Dict, Any
 from pytimeparse.timeparse import timeparse
+from dataclasses import dataclass, field
 from datetime import timedelta, datetime
-from dataclasses import dataclass
 from threading import Thread
 
 from .common import officer
@@ -42,7 +42,6 @@ from .objects.player import Player
 import timeago
 import config
 import random
-import shlex
 import time
 import app
 import os
@@ -53,10 +52,17 @@ class Context:
     trigger: str
     target: Channel | Player
     args: List[str]
+    objects: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def message(self) -> str:
         return f'!{self.trigger} {" ".join(self.args)}'
+    
+    def set_context_object(self, key: str, value: Any) -> None:
+        self.objects[key] = value
+
+    def get_context_object(self, key: str) -> Any:
+        return self.objects.get(key)
 
 class Command(NamedTuple):
     triggers: List[str]
