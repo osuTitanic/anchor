@@ -29,15 +29,16 @@ from .common.constants import (
     Permissions,
     SlotStatus,
     EventType,
+    MatchType,
     SlotTeam,
     GameMode,
     Mods
 )
 
+from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
 from .objects.channel import Channel
-from .common.objects import bMessage
 from .objects.player import Player
 
 import timeago
@@ -1380,7 +1381,7 @@ def multi(ctx: Context) -> List | None:
 
 @command(['rtx', 'jumpscare'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def rtx(ctx: Context) -> List | None:
-    """<username>"""
+    """<username> (<message>) - Zallius' eyes have awoken"""
     if len(ctx.args) <= 0:
         return [f'Invalid syntax: !{ctx.trigger} <username> (<message>)']
 
@@ -1396,6 +1397,44 @@ def rtx(ctx: Context) -> List | None:
 
     target.send_packet(target.packets.RTX, message)
     return [f"{target.name} was RTX'd."]
+
+@command(['crash'], ['Admins', 'Developers'], hidden=False)
+def crash(ctx: Context) -> List | None:
+    """<username> - We do a little trolling"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <username>']
+    
+    username = " ".join(ctx.args[0:])
+    target = app.session.players.by_name(username)
+
+    if not target:
+        return [f'User "{username}" was not found.']
+
+    fake_match = bMatch(
+        id=0,
+        in_progress=False,
+        type=MatchType.Standard,
+        mods=Mods.NoMod,
+        name="weeeeee",
+        password="",
+        beatmap_text="",
+        beatmap_id=0,
+        beatmap_checksum="",
+        slots=[
+            bSlot(player_id=-1, status=SlotStatus.NoMap),
+            bSlot(player_id=2, status=SlotStatus.Ready),
+            *(bSlot(status=SlotStatus.Open) for _ in range(6))
+        ],
+        host_id=-1,
+        mode=GameMode.Osu,
+        scoring_type=MatchScoringTypes.Combo,
+        team_type=MatchTeamTypes.HeadToHead,
+        freemod=False,
+        seed=13381
+    )
+    target.enqueue_match(fake_match)
+    target.enqueue_matchjoin_success(fake_match)
+    return [f"{target.name} was crashed, hopefully :tf:"]
 
 # TODO: !rank
 # TODO: !faq
