@@ -1,5 +1,5 @@
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from app.objects.player import Player
@@ -30,6 +30,7 @@ class Channel:
 
         self.read_perms = read_perms
         self.write_perms = write_perms
+        self.ignore_display_name = False
         self.moderated = False
         self.public = public
 
@@ -52,14 +53,14 @@ class Channel:
     @property
     def bancho_channel(self) -> bChannel:
         return bChannel(
-            self.display_name,
+            self.client_name,
             self.topic,
             self.owner,
             self.user_count
         )
 
     @property
-    def display_name(self) -> str:
+    def client_name(self) -> str:
         if self.name.startswith('#spec_'):
             return '#spectator'
 
@@ -74,6 +75,13 @@ class Channel:
     def can_write(self, perms: Permissions):
         return perms.value >= self.write_perms
 
+    def display_name(self, player: "Player") -> str:
+        # Ignore display name if player is the owner
+        return (
+            self.name if self.ignore_display_name and
+            player.name is self.owner else self.client_name
+        )
+
     def add(self, player: "Player", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
@@ -81,14 +89,14 @@ class Channel:
         if not self.can_read(player.permissions):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.revoke_channel(self.display_name)
+            player.revoke_channel(self.display_name(player))
 
         if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
             if no_response:
                 return
 
-            player.join_success(self.display_name)
+            player.join_success(self.display_name(player))
             return
 
         player.channels.add(self)
@@ -96,7 +104,7 @@ class Channel:
         self.update()
 
         if not no_response:
-            player.join_success(self.display_name)
+            player.join_success(self.display_name(player))
 
         self.logger.info(f'{player.name} joined')
 
@@ -124,6 +132,18 @@ class Channel:
                     autojoin=False
                 )
 
+    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message}')
+
+        if self.ignore_display_name:
+            for user in users:
+                message.target = self.display_name(user)
+                user.enqueue_message(message)
+            return
+
+        for user in users:
+            user.enqueue_message(message)
+
     def send_message(
         self,
         sender: "Player",
@@ -134,7 +154,7 @@ class Channel:
     ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
-            sender.revoke_channel(self.display_name)
+            sender.revoke_channel(self.display_name(sender))
             sender.logger.warning(
                 f'Failed to send message: "{message}" on {self.name}, '
                 'because player did not join the channel.'
@@ -180,27 +200,25 @@ class Channel:
             officer.call(f'Message: {message}')
             return
 
+        users = self.users
+
+        if exclude_sender:
+            # Filter out sender, if needed
+            users = {user for user in self.users if user != sender}
+
         # Limit message size to 512 characters
         if len(message) > 512:
             message = message[:497] + '... (truncated)'
 
-        self.logger.info(f'[{sender.name}]: {message}')
-        users = self.users
-
-        if exclude_sender:
-            # Filter out sender
-            users = {user for user in self.users if user != sender}
-
-        message_object = bMessage(
-            sender.name,
-            message,
-            self.display_name,
-            sender.id
+        self.broadcast_message(
+            bMessage(
+                sender.name,
+                message,
+                self.name,
+                sender.id
+            ),
+            users=users
         )
-
-        for user in users:
-            # Enqueue message to every user inside this channel
-            user.enqueue_message(message_object)
 
         messages.create(
             sender.name,
@@ -214,14 +232,12 @@ class Channel:
         sender: str,
         sender_id: int
     ) -> None:
-        self.logger.info(f'[{sender}]: {message}')
-
-        message_object = bMessage(
-            sender,
-            message,
-            self.display_name,
-            sender_id
+        self.broadcast_message(
+            bMessage(
+                sender,
+                message,
+                self.name,
+                sender_id
+            ),
+            users=self.users
         )
-
-        for user in self.users:
-            user.enqueue_message(message_object)
