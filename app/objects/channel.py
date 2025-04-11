@@ -1,5 +1,5 @@
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Set
 
 if TYPE_CHECKING:
     from app.objects.player import Player
@@ -8,7 +8,7 @@ from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
-from app.objects import collections
+from app.objects.locks import LockedSet
 from app.common import officer
 
 import logging
@@ -35,7 +35,7 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-        self.users = collections.Players()
+        self.users: LockedSet["Player"] = LockedSet()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
