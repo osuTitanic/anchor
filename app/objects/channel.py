@@ -149,8 +149,7 @@ class Channel:
         sender: "Player",
         message: str,
         ignore_privileges=False,
-        ignore_commands=False,
-        exclude_sender=True
+        ignore_commands=False
     ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
@@ -200,15 +199,12 @@ class Channel:
             officer.call(f'Message: {message}')
             return
 
-        users = self.users
-
-        if exclude_sender:
-            # Filter out sender, if needed
-            users = {user for user in self.users if user != sender}
-
         # Limit message size to 512 characters
         if len(message) > 512:
             message = message[:497] + '... (truncated)'
+
+        # Filter out sender
+        users = {user for user in self.users if user != sender}
 
         self.broadcast_message(
             bMessage(
