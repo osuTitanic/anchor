@@ -1421,9 +1421,8 @@ def crash(ctx: Context) -> List | None:
         beatmap_id=0,
         beatmap_checksum="",
         slots=[
-            bSlot(player_id=-1, status=SlotStatus.NoMap),
-            bSlot(player_id=2, status=SlotStatus.Ready),
-            *(bSlot(status=SlotStatus.Open) for _ in range(6))
+            bSlot(player_id=2, status=SlotStatus.NotReady),
+            *(bSlot(player_id=-index-1, status=SlotStatus.NoMap) for index in range(7))
         ],
         host_id=-1,
         mode=GameMode.Osu,
