@@ -133,7 +133,7 @@ class Channel:
                 )
 
     def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
-        self.logger.info(f'[{message.sender}]: {message}')
+        self.logger.info(f'[{message.sender}]: {message.content}')
 
         if self.ignore_display_name:
             for user in users:
