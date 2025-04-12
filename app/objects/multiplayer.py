@@ -1,10 +1,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
-from typing import Tuple, List
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from .channel import Channel
+    from .player import Player
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -21,9 +25,6 @@ from app.common.database.repositories import beatmaps, events, matches
 from app.common.objects import bMatch, bSlot, bScoreFrame
 from app.common.database import DBMatch
 
-from .channel import Channel
-from .player import Player
-
 import logging
 import config
 import time
@@ -32,7 +33,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: Player | None = None
+        self.player: "Player" | None = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -102,7 +103,7 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: Player,
+        host: "Player",
         beatmap_id: int,
         beatmap_name: str,
         beatmap_hash: str,
@@ -138,13 +139,13 @@ class Match:
         self.starting: StartingTimers | None = None
         self.completion_timer: Timer | None = None
         self.db_match: DBMatch | None = None
-        self.chat: Channel | None = None
+        self.chat: "Channel" | None = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
+    def from_bancho_match(cls, bancho_match: bMatch, host_player: "Player"):
         return Match(
             bancho_match.id,
             bancho_match.name,
@@ -179,7 +180,7 @@ class Match:
         )
 
     @property
-    def players(self) -> List[Player]:
+    def players(self) -> List["Player"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
 
@@ -226,21 +227,21 @@ class Match:
             )
         ]
 
-    def get_slot(self, player: Player) -> Slot | None:
+    def get_slot(self, player: "Player") -> Slot | None:
         for slot in self.slots:
             if player is slot.player:
                 return slot
 
         return None
 
-    def get_slot_id(self, player: Player) -> int | None:
+    def get_slot_id(self, player: "Player") -> int | None:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return index
 
         return None
 
-    def get_slot_with_id(self, player: Player) -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "Player") -> Tuple[Slot, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
@@ -254,7 +255,7 @@ class Match:
 
         return None
 
-    def get_player(self, name: str) -> Player | None:
+    def get_player(self, name: str) -> "Player" | None:
         for player in self.players:
             if player.name == name:
                 return player
@@ -403,7 +404,7 @@ class Match:
 
         self.update()
 
-    def kick_player(self, player: Player):
+    def kick_player(self, player: "Player"):
         player.enqueue_match_disband(self.id)
         player.revoke_channel('#multiplayer')
         self.chat.remove(player)
@@ -443,13 +444,13 @@ class Match:
 
         self.update()
 
-    def ban_player(self, player: Player):
+    def ban_player(self, player: "Player"):
         self.banned_players.append(player.id)
 
         if player in self.players:
             self.kick_player(player)
 
-    def unban_player(self, player: Player):
+    def unban_player(self, player: "Player"):
         if player.id in self.banned_players:
             self.banned_players.remove(player.id)
 

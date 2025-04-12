@@ -187,7 +187,7 @@ class Channels(Dict[str, Channel]):
             return
 
         for p in c.users:
-            p.revoke_channel(c.display_name(p))
+            p.revoke_channel(c.display_name)
 
         if c.name in self:
             del self[c.name]

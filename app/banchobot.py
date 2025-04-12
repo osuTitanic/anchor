@@ -132,7 +132,7 @@ class BanchoBot(Player):
         target_name = (
             context.target.name
             if type(context.target) != Channel
-            else context.target.display_name(context.player)
+            else context.target.display_name
         )
 
         # Send to sender only

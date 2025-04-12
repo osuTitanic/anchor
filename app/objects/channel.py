@@ -2,6 +2,7 @@
 from typing import TYPE_CHECKING, List, Set
 
 if TYPE_CHECKING:
+    from app.objects.multiplayer import Match
     from app.objects.player import Player
 
 from app.common.database.repositories import messages
@@ -30,7 +31,6 @@ class Channel:
 
         self.read_perms = read_perms
         self.write_perms = write_perms
-        self.ignore_display_name = False
         self.moderated = False
         self.public = public
 
@@ -53,20 +53,14 @@ class Channel:
     @property
     def bancho_channel(self) -> bChannel:
         return bChannel(
-            self.client_name,
+            self.display_name,
             self.topic,
             self.owner,
             self.user_count
         )
 
     @property
-    def client_name(self) -> str:
-        if self.name.startswith('#spec_'):
-            return '#spectator'
-
-        if self.name.startswith('#multi_'):
-            return '#multiplayer'
-
+    def display_name(self) -> str:
         return self.name
 
     def can_read(self, perms: Permissions):
@@ -75,13 +69,6 @@ class Channel:
     def can_write(self, perms: Permissions):
         return perms.value >= self.write_perms
 
-    def display_name(self, player: "Player") -> str:
-        # Ignore display name if player is the owner
-        return (
-            self.name if self.ignore_display_name and
-            player.name is self.owner else self.client_name
-        )
-
     def add(self, player: "Player", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
@@ -89,14 +76,14 @@ class Channel:
         if not self.can_read(player.permissions):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.revoke_channel(self.display_name(player))
+            player.revoke_channel(self.display_name)
 
         if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
             if no_response:
                 return
 
-            player.join_success(self.display_name(player))
+            player.join_success(self.display_name)
             return
 
         player.channels.add(self)
@@ -104,7 +91,7 @@ class Channel:
         self.update()
 
         if not no_response:
-            player.join_success(self.display_name(player))
+            player.join_success(self.display_name)
 
         self.logger.info(f'{player.name} joined')
 
@@ -135,12 +122,6 @@ class Channel:
     def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
-        if self.ignore_display_name:
-            for user in users:
-                message.target = self.display_name(user)
-                user.enqueue_message(message)
-            return
-
         for user in users:
             user.enqueue_message(message)
 
@@ -153,7 +134,7 @@ class Channel:
     ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
-            sender.revoke_channel(self.display_name(sender))
+            sender.revoke_channel(self.display_name)
             sender.logger.warning(
                 f'Failed to send message: "{message}" on {self.name}, '
                 'because player did not join the channel.'
@@ -210,7 +191,7 @@ class Channel:
             bMessage(
                 sender.name,
                 message,
-                self.name,
+                self.display_name,
                 sender.id
             ),
             users=users
@@ -232,8 +213,38 @@ class Channel:
             bMessage(
                 sender,
                 message,
-                self.name,
+                self.display_name,
                 sender_id
             ),
             users=self.users
         )
+
+class SpectatorChannel(Channel):
+    def __init__(self, player: "Player") -> None:
+        super().__init__(
+            name=f'#spec_{player.id}',
+            topic=f"{player.name}'s spectator channel",
+            owner=player.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
+
+    @property
+    def display_name(self) -> str:
+        return '#spectator'
+
+class MultiplayerChannel(Channel):
+    def __init__(self, match: "Match") -> None:
+        super().__init__(
+            name=f'#multi_{match.id}',
+            topic=match.name,
+            owner=match.host.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
+
+    @property
+    def display_name(self) -> str:
+        return '#multiplayer'

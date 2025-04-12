@@ -41,6 +41,9 @@ from app.common.database.repositories import (
 from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
+from app.objects.channel import SpectatorChannel, Channel
+from app.objects.multiplayer import Match
+from app.objects.locks import LockedSet
 from app.objects import OsuClient, Status
 from app.common import mail
 
@@ -90,14 +93,10 @@ class Player:
         self.decoders: Dict[Enum, Callable] = versions.get_next_version(20130815).decoders
         self.encoders: Dict[Enum, Callable] = versions.get_next_version(20130815).encoders
 
-        from .collections import Players
-        from .multiplayer import Match
-        from .channel import Channel
-
         self.channels: Set[Channel] = set()
         self.filter = PresenceFilter.All
 
-        self.spectators = Players()
+        self.spectators: LockedSet["Player"] = LockedSet()
         self.spectating: Player | None = None
         self.spectator_chat: Channel | None = None
 
@@ -621,16 +620,7 @@ class Player:
         self.login_success()
 
     def login_success(self):
-        from .channel import Channel
-
-        self.spectator_chat = Channel(
-            name=f'#spec_{self.id}',
-            topic=f"{self.name}'s spectator channel",
-            owner=self.name,
-            read_perms=1,
-            write_perms=1,
-            public=False
-        )
+        self.spectator_chat = SpectatorChannel(self)
         app.session.channels.add(self.spectator_chat)
 
         self.update_activity()
