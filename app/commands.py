@@ -44,6 +44,7 @@ from .objects.player import Player
 import timeago
 import config
 import random
+import string
 import time
 import app
 import os
@@ -246,7 +247,7 @@ def mp_help(ctx: Context):
 
     return response
 
-@mp_commands.register(['create', 'make'], ignore_conditions=True)
+@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True)
 def create_persistant_match(ctx: Context):
     """<name> - Create a new persistant match"""
     if len(ctx.args) < 1:
@@ -259,13 +260,15 @@ def create_persistant_match(ctx: Context):
         return ['You cannot create a persistant match inside of a tourney client.']
 
     if ctx.player.match:
-        # Kick the player from the current match
-        ctx.player.match.kick_player(ctx.player)
+        return ['Please leave your current match first.']
+    
+    is_private = ctx.trigger in ('makeprivate', 'createprivate')
+    password = ''.join(random.choice(string.ascii_uppercase) for i in range(12))
 
     match = Match(
         id=-1,
         name=" ".join(ctx.args[0:])[:50],
-        password="",
+        password=password if is_private else "",
         host=ctx.player,
         mode=ctx.player.status.mode,
         persistant=True
@@ -291,7 +294,10 @@ def create_persistant_match(ctx: Context):
         f'Created persistant match: "{match.name}"'
     )
 
-    ctx.player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    channel_object = match.chat.bancho_channel
+    channel_object.name = match.chat.name
+
+    ctx.player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(ctx.player)
 
     slot = match.slots[0]
