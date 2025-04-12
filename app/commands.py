@@ -827,7 +827,7 @@ def mp_move(ctx: Context):
     match.update()
     return [f'Moved {player.name} into slot {slot_id}.']
 
-@mp_commands.register(['settings'])
+@mp_commands.register(['settings'], hidden=True)
 def mp_settings(ctx: Context):
     """- View the current match settings"""
     match: Match = ctx.get_context_object('match')
