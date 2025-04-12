@@ -93,6 +93,7 @@ class Player:
         self.decoders: Dict[Enum, Callable] = versions.get_next_version(20130815).decoders
         self.encoders: Dict[Enum, Callable] = versions.get_next_version(20130815).encoders
 
+        self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
         self.filter = PresenceFilter.All
 

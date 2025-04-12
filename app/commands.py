@@ -35,10 +35,10 @@ from .common.constants import (
     Mods
 )
 
+from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
-from .objects.channel import Channel
 from .objects.player import Player
 
 import timeago
@@ -245,6 +245,81 @@ def mp_help(ctx: Context):
         response.append(f'!{mp_commands.trigger.upper()} {command.triggers[0].upper()} {command.doc}')
 
     return response
+
+@mp_commands.register(['create', 'make'], ignore_conditions=True)
+def create_persistant_match(ctx: Context):
+    """<name> - Create a new persistant match"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    if len(ctx.player.referee_matches) > 3:
+        return ['You have reached the maximum amount of persistant matches.']
+
+    if ctx.player.is_tourney_client:
+        return ['You cannot create a persistant match inside of a tourney client.']
+
+    if ctx.player.match:
+        # Kick the player from the current match
+        ctx.player.match.kick_player(ctx.player)
+
+    match = Match(
+        id=-1,
+        name=" ".join(ctx.args[0:])[:50],
+        password="",
+        host=ctx.player,
+        mode=ctx.player.status.mode,
+        persistant=True
+    )
+
+    if not app.session.matches.append(match):
+        ctx.player.logger.warning('Failed to append match to collection')
+        ctx.player.enqueue_matchjoin_fail()
+        return ['Could not create match.']
+
+    ctx.player.referee_matches.add(match.id)
+    match.referee_players.append(ctx.player.id)
+    match.chat = MultiplayerChannel(match)
+    app.session.channels.add(match.chat)
+
+    match.db_match = matches.create(
+        match.name,
+        match.id,
+        match.host.id
+    )
+
+    app.session.logger.info(
+        f'Created persistant match: "{match.name}"'
+    )
+
+    ctx.player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    match.chat.add(ctx.player)
+
+    slot = match.slots[0]
+    slot.status = SlotStatus.NotReady
+    slot.player = ctx.player
+
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={
+            'user_id': ctx.player.id,
+            'name': ctx.player.name
+        }
+    )
+
+    match.logger.info(f'{ctx.player.name} joined')
+    match.update()
+
+    ctx.player.match = match
+    ctx.player.enqueue_matchjoin_success(match.bancho_match)
+
+    match.chat.send_message(
+        app.session.banchobot,
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
+        ignore_privileges=True
+    )
+
+    return ['Match created.']
 
 @mp_commands.register(['start', 'st'])
 def mp_start(ctx: Context):
