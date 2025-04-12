@@ -698,8 +698,15 @@ def join_match(player: Player, match_join: bMatchJoin):
         # Player is creating the match
         slot_id = 0
 
+    channel_object = match.chat.bancho_channel
+    
+    if player.id in match.referee_players:
+        # Make sure referee player joined the channel
+        channel_object.name = match.chat.name
+        player.referee_matches.add(match)
+
     # Join the chat
-    player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(player)
 
     slot = match.slots[slot_id]
@@ -724,6 +731,10 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     match.logger.info(f'{player.name} joined')
     match.update()
+
+    if player.id in match.referee_players:
+        # Force-revoke #multiplayer
+        player.revoke_channel('#multiplayer')
 
 @register(RequestPacket.LEAVE_MATCH)
 def leave_match(player: Player):
