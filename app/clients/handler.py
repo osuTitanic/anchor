@@ -717,6 +717,10 @@ def join_match(player: Player, match_join: bMatchJoin):
     slot.status = SlotStatus.NotReady
     slot.player = player
 
+    if match.host is None and player.id in match.referee_players:
+        # This player has referee privileges, so we can make them the host
+        match.host = player
+
     player.match = match
     player.enqueue_matchjoin_success(match.bancho_match)
 
@@ -805,7 +809,11 @@ def leave_match(player: Player):
         player.match = None
         return
 
-    if player is player.match.host:
+    if player.match.persistent and player is player.match.host:
+        # This match has referee players, so we don't need a host
+        player.match.host = None
+
+    elif player is player.match.host:
         # Player was host, transfer to next player
         for slot in player.match.slots:
             if slot.status.value & SlotStatus.HasPlayer.value:
