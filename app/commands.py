@@ -197,11 +197,11 @@ def execute_console(ctx: Context):
     return [str(eval(input))]
 
 def resolve_match(ctx: Context) -> Match | None:
-    if ctx.player.match:
-        return ctx.player.match
+    if ctx.target.display_name != '#multiplayer':
+        # User is not inside a multiplayer channel
+        return None
 
-    # TODO: Match referees
-    return None
+    return ctx.target.match
 
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:

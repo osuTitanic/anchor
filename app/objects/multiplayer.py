@@ -134,7 +134,8 @@ class Match:
         self.in_progress = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
-        self.banned_players = []
+        self.referee_players: List[int] = []
+        self.banned_players: List[int] = []
 
         self.starting: StartingTimers | None = None
         self.completion_timer: Timer | None = None
