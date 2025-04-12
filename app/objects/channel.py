@@ -229,6 +229,7 @@ class SpectatorChannel(Channel):
             write_perms=1,
             public=False
         )
+        self.player = player
 
     @property
     def display_name(self) -> str:
@@ -244,6 +245,7 @@ class MultiplayerChannel(Channel):
             write_perms=1,
             public=False
         )
+        self.match = match
 
     @property
     def display_name(self) -> str:
