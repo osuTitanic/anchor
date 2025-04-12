@@ -174,7 +174,7 @@ class Match:
             self.beatmap_id,
             self.beatmap_hash,
             [s.bancho_slot for s in self.slots],
-            self.host.id,
+            self.host.id if self.host else 0,
             self.mode,
             self.scoring_type,
             self.team_type,
