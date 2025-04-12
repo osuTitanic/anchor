@@ -104,11 +104,12 @@ class Match:
         name: str,
         password: str,
         host: "Player",
-        beatmap_id: int,
-        beatmap_name: str,
-        beatmap_hash: str,
-        mode: GameMode,
-        seed: int = 0
+        beatmap_id: int = -1,
+        beatmap_name: str = "",
+        beatmap_hash: str = "",
+        mode: GameMode = GameMode.Osu,
+        seed: int = 0,
+        persistant: bool = False
     ) -> None:
         self.id = id
         self.name = name
@@ -130,8 +131,9 @@ class Match:
         self.type = MatchType.Standard
         self.scoring_type = MatchScoringTypes.Score
         self.team_type = MatchTeamTypes.HeadToHead
-        self.freemod = False
+        self.persistant = persistant
         self.in_progress = False
+        self.freemod = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.referee_players: List[int] = []
