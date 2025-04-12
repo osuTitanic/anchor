@@ -261,9 +261,9 @@ def create_persistant_match(ctx: Context):
 
     if ctx.player.match:
         return ['Please leave your current match first.']
-    
+
     is_private = ctx.trigger in ('makeprivate', 'createprivate')
-    password = ''.join(random.choice(string.ascii_uppercase) for _ in range(12))
+    password = ''.join(random.choice(string.ascii_uppercase) for _ in range(15))
 
     match = Match(
         id=-1,
