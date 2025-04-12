@@ -213,18 +213,24 @@ def inside_match(ctx: Context) -> bool:
     return True
 
 @mp_commands.condition
-def inside_chat(ctx: Context) -> bool:
-    return ctx.target is ctx.get_context_object('match').chat
-
-@mp_commands.condition
 def is_host(ctx: Context) -> bool:
     non_host_commands = ('link', 'url', 'settings')
 
     if ctx.trigger in non_host_commands:
         return True
+    
+    match = ctx.get_context_object('match')
 
-    return (ctx.player is ctx.get_context_object('match').host) or \
+    if not match:
+        return False
+
+    return (ctx.player is match.host) or \
+           (ctx.player.id in match.referee_players) or \
            (ctx.player.is_admin)
+
+@mp_commands.condition
+def inside_chat(ctx: Context) -> bool:
+    return ctx.target is ctx.get_context_object('match').chat
 
 @mp_commands.register(['help', 'h'], hidden=True)
 def mp_help(ctx: Context):
@@ -940,10 +946,62 @@ def mp_listrefs(ctx: Context):
         for id, player in referees_targets.items()
     ]
 
+    for player in referees_targets.values():
+        if player is None:
+            continue
+
+        if match in player.referee_matches:
+            continue
+
+        # Ensure the match is added to the players referee matches
+        player.referee_matches.add(match)
+
     return [
         f"Match referees: {', '.join(referees)}"
         if referees else "There are no referees in this match."
     ]
+
+@mp_commands.register(['addref', 'addreferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+def mp_addref(ctx: Context):
+    """<username> - Add a referee to this match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+    
+    if not match.persistent:
+        return ["This match is not persistent."]
+    
+    if match.chat.owner != ctx.player.name:
+        return ["You are not the owner of this match."]
+    
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <username>']
+    
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find player "{name}".']
+
+    if target.id in match.referee_players:
+        return [f'{target.name} is already a referee.']
+    
+    if target.id == ctx.player.id:
+        return ["You cannot add yourself as a referee."]
+    
+    if target.match:
+        return [f'{target.name} is already in a match.']
+
+    match.referee_players.append(target.id)
+    target.referee_matches.add(match)
+
+    channel_object = match.chat.bancho_channel
+    channel_object.name = match.chat.name
+
+    target.enqueue_channel(channel_object, autojoin=True)
+    match.chat.add(target)
+
+    return [f'"{target.name}" was added as a referee to this match.']
 
 def command(
     aliases: List[str],
