@@ -743,11 +743,12 @@ def leave_match(player: Player):
 
     slot.reset(status)
 
-    channel_leave(
-        player,
-        player.match.chat.name,
-        kick=True
-    )
+    if player.id not in player.match.referee_players:
+        channel_leave(
+            player,
+            player.match.chat.display_name,
+            kick=True
+        )
 
     events.create(
         player.match.db_match.id,
