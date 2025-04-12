@@ -764,7 +764,7 @@ def leave_match(player: Player):
         player.match.beatmap_hash = player.match.previous_beatmap_hash
         player.match.beatmap_name = player.match.previous_beatmap_name
 
-    if all(slot.empty for slot in player.match.slots):
+    if all(slot.empty for slot in player.match.slots) and not player.match.persistent:
         # No players in match anymore -> Disband match
         player.enqueue_match_disband(player.match.id)
 
@@ -809,8 +809,10 @@ def leave_match(player: Player):
             }
         )
 
+    if player.id not in player.match.referee_players:
+        player.match.chat.remove(player)
+
     player.match.update()
-    player.match.chat.remove(player)
     player.match = None
 
 @register(RequestPacket.MATCH_CHANGE_SLOT)

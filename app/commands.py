@@ -319,6 +319,9 @@ def create_persistant_match(ctx: Context):
         ignore_privileges=True
     )
 
+    # Force-revoke #multiplayer
+    ctx.player.revoke_channel('#multiplayer')
+
     return ['Match created.']
 
 @mp_commands.register(['start', 'st'])

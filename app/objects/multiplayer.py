@@ -131,7 +131,7 @@ class Match:
         self.type = MatchType.Standard
         self.scoring_type = MatchScoringTypes.Score
         self.team_type = MatchTeamTypes.HeadToHead
-        self.persistant = persistant
+        self.persistent = persistant
         self.in_progress = False
         self.freemod = False
 
@@ -429,7 +429,7 @@ class Match:
             }
         )
 
-        if player == self.host:
+        if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
                 if slot.status.value & SlotStatus.HasPlayer.value:
