@@ -2,10 +2,10 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
+from ..objects.channel import Channel, MultiplayerChannel
 from ..common.database.objects import DBBeatmap, DBScore
 from ..common.database.repositories import wrapper
 from ..objects.multiplayer import Match
-from ..objects.channel import Channel
 from ..objects.player import Player
 from ..common import officer
 from .. import session
@@ -629,17 +629,8 @@ def create_match(player: Player, bancho_match: bMatch):
     for index, slot in enumerate(bancho_match.slots):
         match.slots[index].status = slot.status
 
-    session.channels.add(
-        c := Channel(
-            name=f'#multi_{match.id}',
-            topic=match.name,
-            owner=match.host.name,
-            read_perms=1,
-            write_perms=1,
-            public=False
-        )
-    )
-    match.chat = c
+    match.chat = MultiplayerChannel(match)
+    session.channels.add(match.chat)
 
     match.db_match = matches.create(
         match.name,
