@@ -77,10 +77,13 @@ class LockedSet(Set[T]):
         with self.lock.write_context():
             self.set.add(item)
 
-    def remove(self, item: T) -> None:
-        with self.lock.write_context():
-            self.set.remove(item)
-
     def update(self, *args, **kwargs) -> None:
         with self.lock.write_context():
             self.set.update(*args, **kwargs)
+
+    def remove(self, item: T) -> None:
+        with self.lock.write_context():
+            try:
+                self.set.remove(item)
+            except KeyError:
+                pass
