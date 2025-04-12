@@ -128,6 +128,7 @@ class HttpBanchoProtocol(Resource):
         if request.finished or request._disconnected:
             return
 
+        request.setHeader('connection', 'keep-alive')
         request.write(result)
         request.finish()
 
@@ -173,6 +174,7 @@ class HttpBanchoProtocol(Resource):
         if request.finished or request._disconnected:
             return
 
+        request.setHeader('connection', 'keep-alive')
         request.write(result)
         request.finish()
 
