@@ -247,7 +247,7 @@ def mp_help(ctx: Context):
 
     return response
 
-@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True)
+@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True, groups=['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
 def create_persistant_match(ctx: Context):
     """<name> - Create a new persistant match"""
     if len(ctx.args) < 1:
@@ -535,6 +535,21 @@ def mp_host(ctx: Context):
     match.update()
 
     return [f'{target.name} is now host of this match.']
+
+@mp_commands.register(['clearhost', 'removehost'])
+def mp_clearhost(ctx: Context):
+    """- Clear the current host"""
+    match: Match = ctx.get_context_object('match')
+
+    if match.host is None:
+        return ['There is no host to clear.']
+
+    if ctx.player.id not in match.referee_players:
+        return ['You are not a referee.']
+
+    match.host = None
+    match.update()
+    return ['Host was cleared.']
 
 bot_invites = [
     "Uhh... sorry, no time to play. (°_o)",
