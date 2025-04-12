@@ -922,8 +922,28 @@ def mp_link(ctx: Context):
         f'[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].'
     ]
 
-# TODO: Tourney rooms
-# TODO: Match refs
+@mp_commands.register(['listrefs', 'listreferees'])
+def mp_listrefs(ctx: Context):
+    """- List all referees in the current match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+
+    referees_targets = {
+        player_id: app.session.players.by_id(player_id)
+        for player_id in match.referee_players
+    }
+
+    referees = [
+        f"[http://osu.{config.DOMAIN_NAME}/u/{id} {player.name if player else 'Unknown'}]"
+        for id, player in referees_targets.items()
+    ]
+
+    return [
+        f"Match referees: {', '.join(referees)}"
+        if referees else "There are no referees in this match."
+    ]
 
 def command(
     aliases: List[str],
