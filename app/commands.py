@@ -217,7 +217,7 @@ def inside_chat(ctx: Context) -> bool:
 
 @mp_commands.condition
 def is_host(ctx: Context) -> bool:
-    non_host_commands = ('help', 'link', 'url', 'settings')
+    non_host_commands = ('link', 'url', 'settings')
 
     if ctx.trigger in non_host_commands:
         return True
