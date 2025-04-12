@@ -461,8 +461,6 @@ class Match:
         # Shutdown pending match timer
         self.starting = None
 
-        app.session.matches.remove(self)
-
         if self.in_progress:
             for player in self.players:
                 player.enqueue_match_complete()
@@ -473,9 +471,14 @@ class Match:
             player.enqueue_match_disband(self.id)
             player.match = None
 
+            if player.id in self.referee_players and self in player.referee_matches:
+                # Remove referee player from this match
+                player.referee_matches.remove(self)
+
         for player in app.session.players.in_lobby:
             player.enqueue_match_disband(self.id)
 
+        app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
 
         last_game = events.fetch_last_by_type(
@@ -486,9 +489,10 @@ class Match:
         if not last_game:
             # No games were played
             matches.delete(self.db_match.id)
-        else:
-            matches.update(self.db_match.id, {'ended_at': datetime.now()})
-            events.create(self.db_match.id, type=EventType.Disband)
+            return
+
+        matches.update(self.db_match.id, {'ended_at': datetime.now()})
+        events.create(self.db_match.id, type=EventType.Disband)
 
     def start(self):
         if self.player_count <= 0:
