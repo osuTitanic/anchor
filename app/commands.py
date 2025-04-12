@@ -968,16 +968,16 @@ def mp_addref(ctx: Context):
 
     if not match:
         return ["You are not inside a match."]
-    
+
     if not match.persistent:
         return ["This match is not persistent."]
-    
+
     if match.chat.owner != ctx.player.name:
         return ["You are not the owner of this match."]
-    
+
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <username>']
-    
+
     name = ' '.join(ctx.args[0:])
 
     if not (target := app.session.players.by_name(name)):
@@ -985,10 +985,10 @@ def mp_addref(ctx: Context):
 
     if target.id in match.referee_players:
         return [f'{target.name} is already a referee.']
-    
+
     if target.id == ctx.player.id:
         return ["You cannot add yourself as a referee."]
-    
+
     if target.match:
         return [f'{target.name} is already in a match.']
 
@@ -1001,7 +1001,42 @@ def mp_addref(ctx: Context):
     target.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(target)
 
-    return [f'"{target.name}" was added as a referee to this match.']
+    return [f'Added "{target.name}" as a match referee.']
+
+@mp_commands.register(['removeref', 'remref', 'removereferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+def mp_removeref(ctx: Context):
+    """<username> - Remove a referee from this match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+
+    if not match.persistent:
+        return ["This match is not persistent."]
+
+    if match.chat.owner != ctx.player.name:
+        return ["You are not the owner of this match."]
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find player "{name}".']
+
+    if target.id not in match.referee_players:
+        return [f'{target.name} is not a referee.']
+
+    if target.id == ctx.player.id:
+        return ["You cannot remove yourself as a referee."]
+
+    match.chat.remove(target)
+    match.referee_players.remove(target.id)
+    target.referee_matches.remove(match)
+    target.revoke_channel(match.chat.bancho_channel.name)
+
+    return [f'Removed "{target.name}" from match referee status.']
 
 def command(
     aliases: List[str],
