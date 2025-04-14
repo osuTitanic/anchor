@@ -358,6 +358,9 @@ def mp_start(ctx: Context):
             time_remaining = round(match.starting.time - time.time())
             return [f'Match starting in {time_remaining} seconds.']
 
+        if not match.player_slots:
+            return ['There are no players inside this match.']
+
         # Check if players are ready
         if any([s.status == SlotStatus.NotReady for s in match.slots]):
             return [f'Not all players are ready ("!{mp_commands.trigger}" {ctx.trigger} force" to start anyways)']
