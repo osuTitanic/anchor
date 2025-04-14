@@ -604,7 +604,7 @@ def mp_invite(ctx: Context):
 
     return [f'Invited {target.name} to this match.']
 
-@mp_commands.register(['force', 'forceinvite'], ['Admins'])
+@mp_commands.register(['force', 'forceinvite'], ['Admins', 'Tournament Manager Team'])
 def mp_force_invite(ctx: Context):
     """<name> - Force a player to join this match"""
     if len(ctx.args) <= 0:
@@ -612,6 +612,9 @@ def mp_force_invite(ctx: Context):
 
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
+
+    if not ctx.player.is_admin and not match.persistent:
+        return ['You are not allowed to force invite players.']
 
     if not (target := app.session.players.by_name(name)):
         return [f'Could not find the player "{name}".']
