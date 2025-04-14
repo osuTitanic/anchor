@@ -250,3 +250,47 @@ class MultiplayerChannel(Channel):
     @property
     def display_name(self) -> str:
         return '#multiplayer'
+
+    def resolve_name(self, player: "Player") -> str:
+        return self.name if player.id in self.match.referee_players else self.display_name
+
+    def add(self, player: "Player", no_response: bool = False) -> None:
+        # Update player's silence duration
+        player.silenced
+
+        if not self.can_read(player.permissions):
+            # Player does not have read access
+            self.logger.warning(f'{player} tried to join channel but does not have read access.')
+            player.revoke_channel(self.resolve_name(player))
+
+        if player in self.users and not player.is_tourney_client:
+            # Player has already joined the channel
+            if no_response:
+                return
+
+            player.join_success(self.resolve_name(player))
+            return
+
+        player.channels.add(self)
+        self.users.add(player)
+        self.update()
+
+        if not no_response:
+            player.join_success(self.resolve_name(player))
+
+        self.logger.info(f'{player.name} joined')
+
+    def update(self) -> None:
+        channel_object = self.bancho_channel
+
+        # Only enqueue to users in this channel
+        for player in self.users:
+            channel_object.name = self.resolve_name(player)
+            player.enqueue_channel(channel_object)
+
+    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message.content}')
+
+        for user in users:
+            message.target = self.resolve_name(user)
+            user.enqueue_message(message)

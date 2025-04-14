@@ -104,11 +104,12 @@ class Match:
         name: str,
         password: str,
         host: "Player",
-        beatmap_id: int,
-        beatmap_name: str,
-        beatmap_hash: str,
-        mode: GameMode,
-        seed: int = 0
+        beatmap_id: int = -1,
+        beatmap_name: str = "",
+        beatmap_hash: str = "",
+        mode: GameMode = GameMode.Osu,
+        seed: int = 0,
+        persistant: bool = False
     ) -> None:
         self.id = id
         self.name = name
@@ -130,11 +131,13 @@ class Match:
         self.type = MatchType.Standard
         self.scoring_type = MatchScoringTypes.Score
         self.team_type = MatchTeamTypes.HeadToHead
-        self.freemod = False
+        self.persistent = persistant
         self.in_progress = False
+        self.freemod = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
-        self.banned_players = []
+        self.referee_players: List[int] = []
+        self.banned_players: List[int] = []
 
         self.starting: StartingTimers | None = None
         self.completion_timer: Timer | None = None
@@ -171,7 +174,7 @@ class Match:
             self.beatmap_id,
             self.beatmap_hash,
             [s.bancho_slot for s in self.slots],
-            self.host.id,
+            self.host.id if self.host else 0,
             self.mode,
             self.scoring_type,
             self.team_type,
@@ -406,7 +409,7 @@ class Match:
 
     def kick_player(self, player: "Player"):
         player.enqueue_match_disband(self.id)
-        player.revoke_channel('#multiplayer')
+        player.revoke_channel(self.chat.resolve_name(player))
         self.chat.remove(player)
         player.match = None
 
@@ -426,7 +429,7 @@ class Match:
             }
         )
 
-        if player == self.host:
+        if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
                 if slot.status.value & SlotStatus.HasPlayer.value:
@@ -458,21 +461,21 @@ class Match:
         # Shutdown pending match timer
         self.starting = None
 
-        app.session.matches.remove(self)
-
         if self.in_progress:
             for player in self.players:
                 player.enqueue_match_complete()
 
         for player in self.players:
             self.kick_player(player)
-            self.chat.remove(player)
-            player.enqueue_match_disband(self.id)
-            player.match = None
+
+            if player.id in self.referee_players and self in player.referee_matches:
+                # Remove referee player from this match
+                player.referee_matches.remove(self)
 
         for player in app.session.players.in_lobby:
             player.enqueue_match_disband(self.id)
 
+        app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
 
         last_game = events.fetch_last_by_type(
@@ -483,9 +486,10 @@ class Match:
         if not last_game:
             # No games were played
             matches.delete(self.db_match.id)
-        else:
-            matches.update(self.db_match.id, {'ended_at': datetime.now()})
-            events.create(self.db_match.id, type=EventType.Disband)
+            return
+
+        matches.update(self.db_match.id, {'ended_at': datetime.now()})
+        events.create(self.db_match.id, type=EventType.Disband)
 
     def start(self):
         if self.player_count <= 0:

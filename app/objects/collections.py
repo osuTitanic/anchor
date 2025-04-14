@@ -209,6 +209,11 @@ class Matches(List[Match | None]):
         """All currently active matches"""
         return [m for m in self if m]
 
+    @property
+    def persistent(self) -> List[Match]:
+        """All persistent matches"""
+        return [m for m in self if m and m.persistent]
+
     def get_free(self) -> int | None:
         """Get a free match slot"""
         for index, match in enumerate(self):

@@ -1,10 +1,10 @@
 
+from app.objects.channel import Channel, SpectatorChannel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
 from app.common.database import users, groups, messages
 from app.common.constants import Permissions
 from app.objects.client import OsuClient
 from app.common.objects import bMessage
-from app.objects.channel import Channel
 from app.objects.player import Player
 from typing import Tuple, List
 
@@ -92,6 +92,7 @@ class BanchoBot(Player):
 
                 ctx.trigger = trigger
                 ctx.args = args
+                ctx.set = set
 
                 if not command.ignore_conditions:
                     # Check set conditions
@@ -129,11 +130,18 @@ class BanchoBot(Player):
         context.player.logger.info(f'[{context.player.name}]: {context.message}')
         context.player.logger.info(f'[{self.name}]: {", ".join(response)}')
 
+        is_channel = (
+            type(context.target) in (Channel, SpectatorChannel, MultiplayerChannel)
+        )
+
         target_name = (
             context.target.name
-            if type(context.target) != Channel
+            if not is_channel
             else context.target.display_name
         )
+
+        if type(context.target) is MultiplayerChannel:
+            target_name = context.target.resolve_name(context.player)
 
         # Send to sender only
         for message in response:

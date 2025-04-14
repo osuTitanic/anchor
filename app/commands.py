@@ -35,15 +35,16 @@ from .common.constants import (
     Mods
 )
 
+from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
-from .objects.channel import Channel
 from .objects.player import Player
 
 import timeago
 import config
 import random
+import string
 import time
 import app
 import os
@@ -54,11 +55,16 @@ class Context:
     trigger: str
     target: Channel | Player
     args: List[str]
+    set: CommandSet | None = None
     objects: Dict[str, Any] = field(default_factory=dict)
 
     @property
+    def full_trigger(self) -> str:
+        return f'{self.set.trigger} {self.trigger}' if self.set else self.trigger
+
+    @property
     def message(self) -> str:
-        return f'!{self.trigger} {" ".join(self.args)}'
+        return f'!{self.full_trigger} {" ".join(self.args)}'
     
     def set_context_object(self, key: str, value: Any) -> None:
         self.objects[key] = value
@@ -197,11 +203,11 @@ def execute_console(ctx: Context):
     return [str(eval(input))]
 
 def resolve_match(ctx: Context) -> Match | None:
-    if ctx.player.match:
-        return ctx.player.match
+    if ctx.target.display_name != '#multiplayer':
+        # User is not inside a multiplayer channel
+        return None
 
-    # TODO: Match referees
-    return None
+    return ctx.target.match
 
 @mp_commands.condition
 def inside_match(ctx: Context) -> bool:
@@ -212,18 +218,24 @@ def inside_match(ctx: Context) -> bool:
     return True
 
 @mp_commands.condition
-def inside_chat(ctx: Context) -> bool:
-    return ctx.target is ctx.get_context_object('match').chat
-
-@mp_commands.condition
 def is_host(ctx: Context) -> bool:
-    non_host_commands = ('help', 'link', 'url', 'settings')
+    non_host_commands = ('link', 'url', 'settings')
 
     if ctx.trigger in non_host_commands:
         return True
+    
+    match = ctx.get_context_object('match')
 
-    return (ctx.player is ctx.get_context_object('match').host) or \
+    if not match:
+        return False
+
+    return (ctx.player is match.host) or \
+           (ctx.player.id in match.referee_players) or \
            (ctx.player.is_admin)
+
+@mp_commands.condition
+def inside_chat(ctx: Context) -> bool:
+    return ctx.target is ctx.get_context_object('match').chat
 
 @mp_commands.register(['help', 'h'], hidden=True)
 def mp_help(ctx: Context):
@@ -246,6 +258,89 @@ def mp_help(ctx: Context):
 
     return response
 
+@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True, groups=['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+def create_persistant_match(ctx: Context):
+    """<name> - Create a new persistant match"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
+
+    if len(ctx.player.referee_matches) > 3:
+        return ['You have reached the maximum amount of persistant matches.']
+
+    if ctx.player.is_tourney_client:
+        return ['You cannot create a persistant match inside of a tourney client.']
+
+    if ctx.player.match:
+        return ['Please leave your current match first.']
+
+    is_private = ctx.trigger in ('makeprivate', 'createprivate')
+    password = ''.join(random.choice(string.ascii_uppercase) for _ in range(15))
+
+    match = Match(
+        id=-1,
+        name=" ".join(ctx.args[0:])[:50],
+        password=password if is_private else "",
+        host=ctx.player,
+        mode=ctx.player.status.mode,
+        persistant=True
+    )
+
+    if not app.session.matches.append(match):
+        ctx.player.logger.warning('Failed to append match to collection')
+        ctx.player.enqueue_matchjoin_fail()
+        return ['Could not create match.']
+
+    ctx.player.referee_matches.add(match.id)
+    match.referee_players.append(ctx.player.id)
+    match.chat = MultiplayerChannel(match)
+    app.session.channels.add(match.chat)
+
+    match.db_match = matches.create(
+        match.name,
+        match.id,
+        match.host.id
+    )
+
+    app.session.logger.info(
+        f'Created persistant match: "{match.name}"'
+    )
+
+    channel_object = match.chat.bancho_channel
+    channel_object.name = match.chat.name
+
+    ctx.player.enqueue_channel(channel_object, autojoin=True)
+    match.chat.add(ctx.player)
+
+    slot = match.slots[0]
+    slot.status = SlotStatus.NotReady
+    slot.player = ctx.player
+
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={
+            'user_id': ctx.player.id,
+            'name': ctx.player.name
+        }
+    )
+
+    match.logger.info(f'{ctx.player.name} joined')
+    match.update()
+
+    ctx.player.match = match
+    ctx.player.enqueue_matchjoin_success(match.bancho_match)
+
+    match.chat.send_message(
+        app.session.banchobot,
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
+        ignore_privileges=True
+    )
+
+    # Force-revoke #multiplayer
+    ctx.player.revoke_channel('#multiplayer')
+
+    return ['Match created.']
+
 @mp_commands.register(['start', 'st'])
 def mp_start(ctx: Context):
     """<force/seconds/cancel> - Start the match, with any players that are ready"""
@@ -262,6 +357,9 @@ def mp_start(ctx: Context):
         if match.starting:
             time_remaining = round(match.starting.time - time.time())
             return [f'Match starting in {time_remaining} seconds.']
+
+        if not match.player_slots:
+            return ['There are no players inside this match.']
 
         # Check if players are ready
         if any([s.status == SlotStatus.NotReady for s in match.slots]):
@@ -393,7 +491,7 @@ def mp_freemod(ctx: Context):
     freemod = ctx.args[0] in ('on', 'true', 'yes', '1')
 
     if match.freemod == freemod:
-        return [f'Freemod is already {ctx.args[0]}.']
+        return [f'Freemod is already {"enabled" if freemod else "disabled"}.']
 
     match.unready_players()
     match.freemod = freemod
@@ -411,8 +509,9 @@ def mp_freemod(ctx: Context):
             # The speedmods are kept in the match mods
             match.mods = match.mods & ~Mods.FreeModAllowed
     else:
-        # Keep mods from host
-        match.mods |= match.host_slot.mods
+        # Keep mods from host, if the host exists
+        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
+        match.mods |= host_mods
 
         # Reset any mod from players
         for slot in match.slots:
@@ -451,6 +550,21 @@ def mp_host(ctx: Context):
     match.update()
 
     return [f'{target.name} is now host of this match.']
+
+@mp_commands.register(['clearhost', 'removehost'])
+def mp_clearhost(ctx: Context):
+    """- Clear the current host"""
+    match: Match = ctx.get_context_object('match')
+
+    if match.host is None:
+        return ['There is no host to clear.']
+
+    if ctx.player.id not in match.referee_players:
+        return ['You are not a referee.']
+
+    match.host = None
+    match.update()
+    return ['Host was cleared.']
 
 bot_invites = [
     "Uhh... sorry, no time to play. (°_o)",
@@ -491,7 +605,7 @@ def mp_invite(ctx: Context):
 
     return [f'Invited {target.name} to this match.']
 
-@mp_commands.register(['force', 'forceinvite'], ['Admins'])
+@mp_commands.register(['force', 'forceinvite'], ['Admins', 'Tournament Manager Team'])
 def mp_force_invite(ctx: Context):
     """<name> - Force a player to join this match"""
     if len(ctx.args) <= 0:
@@ -499,6 +613,9 @@ def mp_force_invite(ctx: Context):
 
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
+
+    if not ctx.player.is_admin and not match.persistent:
+        return ['You are not allowed to force invite players.']
 
     if not (target := app.session.players.by_name(name)):
         return [f'Could not find the player "{name}".']
@@ -678,7 +795,7 @@ def mp_set(ctx: Context):
 
                 slot.reset()
 
-            if all(slot.empty for slot in match.slots):
+            if all(slot.empty for slot in match.slots) and not match.persistent:
                 match.close()
                 return ["Match was disbanded."]
 
@@ -711,7 +828,7 @@ def mp_size(ctx: Context):
 
         slot.reset()
 
-    if all(slot.empty for slot in match.slots):
+    if all(slot.empty for slot in match.slots) and not match.persistent:
         match.close()
         return ["Match was disbanded."]
 
@@ -743,7 +860,7 @@ def mp_move(ctx: Context):
     match.update()
     return [f'Moved {player.name} into slot {slot_id}.']
 
-@mp_commands.register(['settings'])
+@mp_commands.register(['settings'], hidden=True)
 def mp_settings(ctx: Context):
     """- View the current match settings"""
     match: Match = ctx.get_context_object('match')
@@ -823,8 +940,115 @@ def mp_link(ctx: Context):
         f'[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].'
     ]
 
-# TODO: Tourney rooms
-# TODO: Match refs
+@mp_commands.register(['listrefs', 'listreferees'])
+def mp_listrefs(ctx: Context):
+    """- List all referees in the current match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+
+    referees_targets = {
+        player_id: app.session.players.by_id(player_id)
+        for player_id in match.referee_players
+    }
+
+    referees = [
+        f"[http://osu.{config.DOMAIN_NAME}/u/{id} {player.name if player else 'Unknown'}]"
+        for id, player in referees_targets.items()
+    ]
+
+    for player in referees_targets.values():
+        if player is None:
+            continue
+
+        if match in player.referee_matches:
+            continue
+
+        # Ensure the match is added to the players referee matches
+        player.referee_matches.add(match)
+
+    return [
+        f"Match referees: {', '.join(referees)}"
+        if referees else "There are no referees in this match."
+    ]
+
+@mp_commands.register(['addref', 'addreferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+def mp_addref(ctx: Context):
+    """<username> - Add a referee to this match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+
+    if not match.persistent:
+        return ["This match is not persistent."]
+
+    if match.chat.owner != ctx.player.name:
+        return ["You are not the owner of this match."]
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find player "{name}".']
+
+    if target.id in match.referee_players:
+        return [f'{target.name} is already a referee.']
+
+    if target.id == ctx.player.id:
+        return ["You cannot add yourself as a referee."]
+
+    if target.match:
+        return [f'{target.name} is already in a match.']
+
+    match.referee_players.append(target.id)
+    target.referee_matches.add(match)
+
+    channel_object = match.chat.bancho_channel
+    channel_object.name = match.chat.name
+
+    target.enqueue_channel(channel_object, autojoin=True)
+    match.chat.add(target)
+
+    return [f'Added "{target.name}" as a match referee.']
+
+@mp_commands.register(['removeref', 'remref', 'removereferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+def mp_removeref(ctx: Context):
+    """<username> - Remove a referee from this match"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match:
+        return ["You are not inside a match."]
+
+    if not match.persistent:
+        return ["This match is not persistent."]
+
+    if match.chat.owner != ctx.player.name:
+        return ["You are not the owner of this match."]
+
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <username>']
+
+    name = ' '.join(ctx.args[0:])
+
+    if not (target := app.session.players.by_name(name)):
+        return [f'Could not find player "{name}".']
+
+    if target.id not in match.referee_players:
+        return [f'{target.name} is not a referee.']
+
+    if target.id == ctx.player.id:
+        return ["You cannot remove yourself as a referee."]
+
+    match.chat.remove(target)
+    match.referee_players.remove(target.id)
+    target.referee_matches.remove(match)
+    target.revoke_channel(match.chat.bancho_channel.name)
+
+    return [f'Removed "{target.name}" from match referee status.']
 
 def command(
     aliases: List[str],

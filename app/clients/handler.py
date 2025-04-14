@@ -698,8 +698,15 @@ def join_match(player: Player, match_join: bMatchJoin):
         # Player is creating the match
         slot_id = 0
 
+    channel_object = match.chat.bancho_channel
+
+    if player.id in match.referee_players:
+        # Make sure referee player joined the channel
+        channel_object.name = match.chat.name
+        player.referee_matches.add(match)
+
     # Join the chat
-    player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(player)
 
     slot = match.slots[slot_id]
@@ -709,6 +716,10 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     slot.status = SlotStatus.NotReady
     slot.player = player
+
+    if match.host is None and player.id in match.referee_players:
+        # This player has referee privileges, so we can make them the host
+        match.host = player
 
     player.match = match
     player.enqueue_matchjoin_success(match.bancho_match)
@@ -724,6 +735,10 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     match.logger.info(f'{player.name} joined')
     match.update()
+
+    if player.id in match.referee_players:
+        # Force-revoke #multiplayer
+        player.revoke_channel('#multiplayer')
 
 @register(RequestPacket.LEAVE_MATCH)
 def leave_match(player: Player):
@@ -743,11 +758,12 @@ def leave_match(player: Player):
 
     slot.reset(status)
 
-    channel_leave(
-        player,
-        player.match.chat.name,
-        kick=True
-    )
+    if player.id not in player.match.referee_players:
+        channel_leave(
+            player,
+            player.match.chat.display_name,
+            kick=True
+        )
 
     events.create(
         player.match.db_match.id,
@@ -764,7 +780,7 @@ def leave_match(player: Player):
         player.match.beatmap_hash = player.match.previous_beatmap_hash
         player.match.beatmap_name = player.match.previous_beatmap_name
 
-    if all(slot.empty for slot in player.match.slots):
+    if all(slot.empty for slot in player.match.slots) and not player.match.persistent:
         # No players in match anymore -> Disband match
         player.enqueue_match_disband(player.match.id)
 
@@ -793,7 +809,11 @@ def leave_match(player: Player):
         player.match = None
         return
 
-    if player is player.match.host:
+    if player.match.persistent and player is player.match.host:
+        # This match has referee players, so we don't need a host
+        player.match.host = None
+
+    elif player is player.match.host:
         # Player was host, transfer to next player
         for slot in player.match.slots:
             if slot.status.value & SlotStatus.HasPlayer.value:
@@ -809,8 +829,10 @@ def leave_match(player: Player):
             }
         )
 
+    if player.id not in player.match.referee_players:
+        player.match.chat.remove(player)
+
     player.match.update()
-    player.match.chat.remove(player)
     player.match = None
 
 @register(RequestPacket.MATCH_CHANGE_SLOT)
