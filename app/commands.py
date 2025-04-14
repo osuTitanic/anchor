@@ -203,6 +203,10 @@ def execute_console(ctx: Context):
     return [str(eval(input))]
 
 def resolve_match(ctx: Context) -> Match | None:
+    if type(ctx.target) != Channel:
+        # User is not inside a channel
+        return None
+
     if ctx.target.display_name != '#multiplayer':
         # User is not inside a multiplayer channel
         return None
