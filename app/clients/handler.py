@@ -699,7 +699,7 @@ def join_match(player: Player, match_join: bMatchJoin):
         slot_id = 0
 
     channel_object = match.chat.bancho_channel
-    
+
     if player.id in match.referee_players:
         # Make sure referee player joined the channel
         channel_object.name = match.chat.name

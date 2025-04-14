@@ -671,6 +671,19 @@ class Player:
         for player in app.session.players.in_lobby:
             self.enqueue_lobby_join(player.id)
 
+        # Potentially fix player referee state
+        self.referee_matches.update([
+            match for match in app.session.matches.persistent
+            if self.id in match.referee_players
+        ])
+
+        for match in self.referee_matches:
+            # Join the match channel automatically
+            channel_object = match.chat.bancho_channel
+            channel_object.name = match.chat.name
+            self.enqueue_channel(channel_object, autojoin=True)
+            match.chat.add(self)
+
     def is_valid_client(self, session: Session | None = None) -> bool:
         valid_identifiers = (
             'stable', 'test', 'tourney', 'cuttingedge', 'beta'
