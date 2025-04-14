@@ -509,8 +509,9 @@ def mp_freemod(ctx: Context):
             # The speedmods are kept in the match mods
             match.mods = match.mods & ~Mods.FreeModAllowed
     else:
-        # Keep mods from host
-        match.mods |= match.host_slot.mods
+        # Keep mods from host, if the host exists
+        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
+        match.mods |= host_mods
 
         # Reset any mod from players
         for slot in match.slots:
