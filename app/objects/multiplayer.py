@@ -409,7 +409,7 @@ class Match:
 
     def kick_player(self, player: "Player"):
         player.enqueue_match_disband(self.id)
-        player.revoke_channel('#multiplayer')
+        player.revoke_channel(self.chat.resolve_name(player))
         self.chat.remove(player)
         player.match = None
 
@@ -467,9 +467,6 @@ class Match:
 
         for player in self.players:
             self.kick_player(player)
-            self.chat.remove(player)
-            player.enqueue_match_disband(self.id)
-            player.match = None
 
             if player.id in self.referee_players and self in player.referee_matches:
                 # Remove referee player from this match
