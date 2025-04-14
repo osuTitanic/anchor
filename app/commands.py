@@ -791,7 +791,7 @@ def mp_set(ctx: Context):
 
                 slot.reset()
 
-            if all(slot.empty for slot in match.slots):
+            if all(slot.empty for slot in match.slots) and not match.persistent:
                 match.close()
                 return ["Match was disbanded."]
 
@@ -824,7 +824,7 @@ def mp_size(ctx: Context):
 
         slot.reset()
 
-    if all(slot.empty for slot in match.slots):
+    if all(slot.empty for slot in match.slots) and not match.persistent:
         match.close()
         return ["Match was disbanded."]
 
