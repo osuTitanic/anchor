@@ -491,7 +491,7 @@ def mp_freemod(ctx: Context):
     freemod = ctx.args[0] in ('on', 'true', 'yes', '1')
 
     if match.freemod == freemod:
-        return [f'Freemod is already {ctx.args[0]}.']
+        return [f'Freemod is already {"enabled" if freemod else "disabled"}.']
 
     match.unready_players()
     match.freemod = freemod
