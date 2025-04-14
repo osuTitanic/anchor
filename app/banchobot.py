@@ -92,6 +92,7 @@ class BanchoBot(Player):
 
                 ctx.trigger = trigger
                 ctx.args = args
+                ctx.set = set
 
                 if not command.ignore_conditions:
                     # Check set conditions

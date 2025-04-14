@@ -55,11 +55,16 @@ class Context:
     trigger: str
     target: Channel | Player
     args: List[str]
+    set: CommandSet | None = None
     objects: Dict[str, Any] = field(default_factory=dict)
 
     @property
+    def full_trigger(self) -> str:
+        return f'{self.set.trigger} {self.trigger}' if self.set else self.trigger
+
+    @property
     def message(self) -> str:
-        return f'!{self.trigger} {" ".join(self.args)}'
+        return f'!{self.full_trigger} {" ".join(self.args)}'
     
     def set_context_object(self, key: str, value: Any) -> None:
         self.objects[key] = value
