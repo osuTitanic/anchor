@@ -163,6 +163,11 @@ class Players:
 
     def send_stats(self, player: Player):
         for p in self:
+            if p.client.version.date > 20121223:
+                # Client will request the stats
+                # themselves when pressing F9
+                continue
+
             p.enqueue_stats(player)
 
     def announce(self, message: str):
