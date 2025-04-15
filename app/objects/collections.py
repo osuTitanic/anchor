@@ -87,15 +87,15 @@ class Players:
         """Remove a player from the collection"""
         with self.lock.write_context():
             try:
-                del self.id_mapping[abs(player.id)]
-                del self.name_mapping[player.name]
-                del self.token_mapping[player.token]
-
                 if player.in_lobby:
                     self.in_lobby.remove(player)
 
                 if player.is_tourney_client:
                     self.tourney_clients.remove(player)
+
+                del self.token_mapping[player.token]
+                del self.name_mapping[player.name]
+                del self.id_mapping[abs(player.id)]
             except (ValueError, KeyError, AttributeError):
                 pass
 
@@ -114,19 +114,24 @@ class Players:
         with self.lock.read_context():
             return self.token_mapping.get(token, None)
 
+    def by_rank(self, rank: int, mode: int) -> List[Player]:
+        """Get all players with the specified rank"""
+        return [p for p in self if p.rank == rank and p.status.mode == mode]
+
+    def tourney_clients_by_id(self, id: int) -> List[Player]:
+        """Get all tourney clients for a player id"""
+        return [p for p in self.tourney_clients if p.id == id]
+
+    def clear_tourney_clients(self, id: int) -> None:
+        """Clear all tourney clients by player id"""
+        for p in self.tourney_clients_by_id(id):
+            self.remove(p)
+
     def enqueue(self, data: bytes, immune = []) -> None:
         """Send raw data to all players"""
         for p in self:
             if p not in immune:
                 p.enqueue(data)
-
-    def tourney_clients_by_id(self, id: int) -> Tuple[Player]:
-        """Get all tourney clients for a player id"""
-        return tuple(p for p in self.tourney_clients if p.id == id)
-
-    def by_rank(self, rank: int, mode: int) -> Tuple[Player]:
-        """Get all players with the specified rank"""
-        return tuple(p for p in self if p.rank == rank and p.status.mode == mode)
 
     def send_packet(self, packet: Enum, *args):
         for p in self:

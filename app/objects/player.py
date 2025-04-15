@@ -584,10 +584,10 @@ class Player:
                 # Check amount of tourney clients that are online
                 tourney_clients = app.session.players.tourney_clients_by_id(self.id)
 
-                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS and not self.is_admin:
-                    self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
-                    self.close_connection()
-                    return
+                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS + 2:
+                    # Clear connection of oldest tourney client
+                    tourney_clients.sort(key=lambda x: x.last_response)
+                    tourney_clients[0].close_connection()
 
             self.status.mode = GameMode(self.object.preferred_mode)
 
