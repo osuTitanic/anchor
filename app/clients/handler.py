@@ -744,6 +744,11 @@ def join_match(player: Player, match_join: bMatchJoin):
     match.logger.info(f'{player.name} joined')
     match.update()
 
+    for player in session.players.tourney_clients:
+        # Ensure that all tourney clients got the player's presence
+        player.enqueue_presence(player)
+        player.enqueue_stats(player)
+
     if player.id in match.referee_players:
         # Force-revoke #multiplayer
         player.revoke_channel('#multiplayer')
