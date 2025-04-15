@@ -454,14 +454,37 @@ def mp_map(ctx: Context):
     match.logger.info(f'Selected: {map.full_name}')
     return [f'Selected: {map.link}']
 
+def parse_mods_from_args(args: List[str]) -> Mods:
+    try:
+        if args[0].isdecimal():
+            # Parse mods as an integer
+            return Mods(int(args[0]))
+
+        # Parse mods from their short forms, e.g. HDHR or HDDT
+        mods_string = "".join(args[0:]).upper().replace(',', '')
+
+        if len(args[0]) % 2 != 0:
+            # Mod string must be a multiple of 2
+            return
+
+        return Mods.from_string(mods_string)
+    except ValueError:
+        pass
+
 @mp_commands.register(['mods', 'setmods'])
 def mp_mods(ctx: Context):
     """<mods> - Set the current match's mods (e.g. HDHR)"""
-    if len(ctx.args) != 1 or len(ctx.args[0]) % 2 != 0:
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+
+    if (mods := parse_mods_from_args(ctx.args)) is None:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+
+    if mods.value >= 4294967295:
+        # This would hit the integer limit
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
 
     match: Match = ctx.get_context_object('match')
-    mods = Mods.from_string(ctx.args[0])
     # TODO: Filter out invalid mods
 
     if mods == match.mods:
@@ -484,7 +507,7 @@ def mp_mods(ctx: Context):
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
     """<on/off> - Enable or disable freemod status."""
-    if len(ctx.args) != 1 or ctx.args[0] not in ("on", "off"):
+    if len(ctx.args) != 1 or ctx.args[0] not in ('on', 'true', 'yes', '1'):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <on/off>']
 
     match: Match = ctx.get_context_object('match')
