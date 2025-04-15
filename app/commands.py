@@ -1225,6 +1225,7 @@ def search(ctx: Context):
         return ['No matches found']
 
     status = {
+        -3: 'Inactive',
         -2: 'Graveyarded',
         -1: 'WIP',
          0: 'Pending',
