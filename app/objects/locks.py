@@ -64,7 +64,7 @@ class LockedSet(Set[T]):
     def __iter__(self):
         with self.lock.read_context():
             return iter(self.set)
-        
+
     def __len__(self) -> int:
         with self.lock.read_context():
             return len(self.set)
@@ -86,4 +86,50 @@ class LockedSet(Set[T]):
             try:
                 self.set.remove(item)
             except KeyError:
+                pass
+
+class LockedList(list):
+    """A list that is thread-safe for concurrent read and write operations."""
+
+    def __init__(self):
+        super().__init__()
+        self.lock = ReadWriteLock()
+
+    def __getitem__(self, index):
+        with self.lock.read_context():
+            return super().__getitem__(index)
+
+    def __setitem__(self, index, value):
+        with self.lock.write_context():
+            super().__setitem__(index, value)
+
+    def __delitem__(self, index):
+        with self.lock.write_context():
+            super().__delitem__(index)
+
+    def __len__(self) -> int:
+        with self.lock.read_context():
+            return super().__len__()
+
+    def __contains__(self, item) -> bool:
+        with self.lock.read_context():
+            return super().__contains__(item)
+
+    def __iter__(self):
+        with self.lock.read_context():
+            return super().__iter__()
+
+    def append(self, item) -> None:
+        with self.lock.write_context():
+            super().append(item)
+
+    def extend(self, iterable) -> None:
+        with self.lock.write_context():
+            super().extend(iterable)
+
+    def remove(self, item) -> None:
+        with self.lock.write_context():
+            try:
+                super().remove(item)
+            except ValueError:
                 pass
