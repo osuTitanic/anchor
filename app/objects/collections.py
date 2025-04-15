@@ -86,18 +86,28 @@ class Players:
     def remove(self, player: Player | HttpPlayer) -> None:
         """Remove a player from the collection"""
         with self.lock.write_context():
-            try:
-                if player.in_lobby:
-                    self.in_lobby.remove(player)
+            if player.in_lobby:
+                self.remove_from_collection('in_lobby', player)
 
-                if player.is_tourney_client:
-                    self.tourney_clients.remove(player)
+            if player.is_tourney_client:
+                self.remove_from_collection('tourney_clients', player)
 
-                del self.token_mapping[player.token]
-                del self.name_mapping[player.name]
-                del self.id_mapping[abs(player.id)]
-            except (ValueError, KeyError, AttributeError):
-                pass
+            self.remove_from_mapping('id_mapping', abs(player.id))
+            self.remove_from_mapping('name_mapping', player.name)
+            self.remove_from_mapping('token_mapping', player.token)
+
+    def remove_from_mapping(self, name: str, key: str) -> None:
+        try:
+            del getattr(self, name)[key]
+        except (KeyError, ValueError, AttributeError):
+            pass
+
+    def remove_from_collection(self, name: str, player: Player) -> None:
+        """Remove a player from the collection"""
+        try:
+            getattr(self, name).remove(player)
+        except (KeyError, ValueError, AttributeError):
+            pass
 
     def by_id(self, id: int) -> Player | None:
         """Get a player by id"""
