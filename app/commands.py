@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-from typing import List, NamedTuple, Callable, Dict, Any
+from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
@@ -454,30 +454,16 @@ def mp_map(ctx: Context):
     match.logger.info(f'Selected: {map.full_name}')
     return [f'Selected: {map.link}']
 
-def parse_mods_from_args(args: List[str]) -> Mods:
-    try:
-        if args[0].isdecimal():
-            # Parse mods as an integer
-            return Mods(int(args[0]))
-
-        # Parse mods from their short forms, e.g. HDHR or HDDT
-        mods_string = "".join(args[0:]).upper().replace(',', '')
-
-        if len(args[0]) % 2 != 0:
-            # Mod string must be a multiple of 2
-            return
-
-        return Mods.from_string(mods_string)
-    except ValueError:
-        pass
-
 @mp_commands.register(['mods', 'setmods'])
 def mp_mods(ctx: Context):
     """<mods> - Set the current match's mods (e.g. HDHR)"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
 
-    if (mods := parse_mods_from_args(ctx.args)) is None:
+    # TODO: Filter out invalid mods
+    mods, freemod = parse_mods_from_args(ctx.args)
+
+    if mods is None:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
 
     if mods.value >= 4294967295:
@@ -485,10 +471,11 @@ def mp_mods(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
 
     match: Match = ctx.get_context_object('match')
-    # TODO: Filter out invalid mods
 
-    if mods == match.mods:
-        return [f'Mods are already set to {match.mods.short}.']
+    if mods == match.mods and freemod == match.freemod:
+        return [f'Mods are already set to {match.mods.short}{"FM" if freemod else ""}.']
+
+    match.freemod = freemod
 
     if match.freemod:
         # Set match mods
@@ -501,13 +488,37 @@ def mp_mods(ctx: Context):
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
     match.update()
+    return [f'Updated match mods to {match.mods.short}{"FM" if freemod else ""}.']
 
-    return [f'Updated match mods to {match.mods.short}.']
+def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
+    try:
+        freemod = any(arg.lower() in ('freemod', 'fm') for arg in args)
+
+        if args[0].isdecimal():
+            # Parse mods as an integer
+            return Mods(int(args[0])), freemod
+
+        # Parse mods from their short forms, e.g. HDHR or HDDT
+        mods_string = "".join(args[0:]).replace(',', '').replace("freemod", "")
+        freemod = "fm" in mods_string.lower() or freemod
+
+        if len(args[0]) % 2 != 0:
+            # Mod string must be a multiple of 2
+            return
+
+        return Mods.from_string(mods_string), freemod
+    except (ValueError, TypeError):
+        pass
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
     """<on/off> - Enable or disable freemod status."""
-    if len(ctx.args) != 1 or ctx.args[0] not in ('on', 'true', 'yes', '1'):
+    valid_args = (
+        "on", "true", "yes", "1",
+        "off", "false", "no", "0",
+    )
+
+    if len(ctx.args) != 1 or ctx.args[0] not in valid_args:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <on/off>']
 
     match: Match = ctx.get_context_object('match')
