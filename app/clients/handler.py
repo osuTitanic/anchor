@@ -139,6 +139,10 @@ def change_status(player: Player, status: bStatusUpdate):
     player.update_activity()
     player.reload_rank()
 
+    for p in player.spectators:
+        # Ensure that all spectators get the latest status
+        p.enqueue_stats(player)
+
     # (This needs to be done for older clients)
     session.players.send_stats(player)
 
