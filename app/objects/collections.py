@@ -94,7 +94,9 @@ class Players:
 
             self.remove_from_mapping('id_mapping', abs(player.id))
             self.remove_from_mapping('name_mapping', player.name)
-            self.remove_from_mapping('token_mapping', player.token)
+
+            if player.protocol is 'http':
+                self.remove_from_mapping('token_mapping', player.token)
 
     def remove_from_mapping(self, name: str, key: str) -> None:
         try:
