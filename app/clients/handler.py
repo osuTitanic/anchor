@@ -475,6 +475,10 @@ def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
         player.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
+    
+    if player_id == -1:
+        # This can happen on tourney clients
+        return
 
     if not (target := session.players.by_id(player_id)):
         player.logger.warning(f'Failed to start spectating: Player with id "{player_id}" was not found!')
