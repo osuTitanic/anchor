@@ -1213,7 +1213,7 @@ def report(ctx: Context) -> List | None:
 
     return ['Chat moderators have been alerted. Thanks for your help.']
 
-@command(['search'], ['Supporters'], hidden=False)
+@command(['search'], ['Supporter'], hidden=False)
 def search(ctx: Context):
     """<query> - Search a beatmap"""
     query = ' '.join(ctx.args[0:])
