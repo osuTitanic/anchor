@@ -1,18 +1,18 @@
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Set
 
 if TYPE_CHECKING:
+    from app.objects.multiplayer import Match
     from app.objects.player import Player
 
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
-from app.objects import collections
+from app.objects.locks import LockedSet
 from app.common import officer
 
 import logging
-import config
 import app
 
 class Channel:
@@ -35,7 +35,7 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-        self.users = collections.Players()
+        self.users: LockedSet["Player"] = LockedSet()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -61,12 +61,6 @@ class Channel:
 
     @property
     def display_name(self) -> str:
-        if self.name.startswith('#spec_'):
-            return '#spectator'
-
-        if self.name.startswith('#multi_'):
-            return '#multiplayer'
-
         return self.name
 
     def can_read(self, perms: Permissions):
@@ -125,12 +119,18 @@ class Channel:
                     autojoin=False
                 )
 
+    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message.content}')
+
+        for user in users:
+            user.enqueue_message(message)
+
     def send_message(
         self,
         sender: "Player",
         message: str,
-        ignore_privs=False,
-        exclude_sender=True
+        ignore_privileges=False,
+        ignore_commands=False
     ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
@@ -141,7 +141,7 @@ class Channel:
             )
             return
 
-        if self.moderated:
+        if self.moderated and sender != app.session.banchobot:
             allowed_groups = [
                 'Admins',
                 'Developers',
@@ -157,9 +157,15 @@ class Channel:
             sender.logger.warning('Failed to send message: Sender was silenced.')
             return
 
-        if not self.can_write(sender.permissions) and not ignore_privs:
+        if not self.can_write(sender.permissions) and not ignore_privileges:
             sender.logger.warning(f'Failed to send message: "{message}".')
             return
+
+        if message.startswith('!') and not ignore_commands:
+            # A command was executed
+            return app.session.banchobot.send_command_response(
+                *app.session.banchobot.process_command(message, sender, self)
+            )
 
         has_bad_words = any([
             word in message.lower()
@@ -174,34 +180,22 @@ class Channel:
             officer.call(f'Message: {message}')
             return
 
-        # Limit message size
+        # Limit message size to 512 characters
         if len(message) > 512:
-            message = message[:512] + '... (truncated)'
+            message = message[:497] + '... (truncated)'
 
-        self.logger.info(f'[{sender.name}]: {message}')
-        users = self.users
+        # Filter out sender
+        users = {user for user in self.users if user != sender}
 
-        if exclude_sender:
-            # Filter out sender
-            users = {user for user in self.users if user != sender}
-
-        # Exclude clients that only write in #osu if channel was not autojoined
-        users = {
-            user for user in users
-            if user.client.version.date > 342
-            or self.name in config.AUTOJOIN_CHANNELS
-        }
-
-        message_object = bMessage(
-            sender.name,
-            message,
-            self.display_name,
-            sender.id
+        self.broadcast_message(
+            bMessage(
+                sender.name,
+                message,
+                self.display_name,
+                sender.id
+            ),
+            users=users
         )
-
-        for user in users:
-            # Enqueue message to every user inside this channel
-            user.enqueue_message(message_object)
 
         messages.create(
             sender.name,
@@ -215,22 +209,88 @@ class Channel:
         sender: str,
         sender_id: int
     ) -> None:
-        self.logger.info(f'[{sender}]: {message}')
-
-        message_object = bMessage(
-            sender,
-            message,
-            self.display_name,
-            sender_id
+        self.broadcast_message(
+            bMessage(
+                sender,
+                message,
+                self.display_name,
+                sender_id
+            ),
+            users=self.users
         )
 
-        # Exclude clients that only write in #osu
-        # if channel was not autojoined
-        users = {
-            user for user in self.users
-            if user.client.version.date > 342
-            or self.name in config.AUTOJOIN_CHANNELS
-        }
+class SpectatorChannel(Channel):
+    def __init__(self, player: "Player") -> None:
+        super().__init__(
+            name=f'#spec_{player.id}',
+            topic=f"{player.name}'s spectator channel",
+            owner=player.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
+        self.player = player
+
+    @property
+    def display_name(self) -> str:
+        return '#spectator'
+
+class MultiplayerChannel(Channel):
+    def __init__(self, match: "Match") -> None:
+        super().__init__(
+            name=f'#multi_{match.id}',
+            topic=match.name,
+            owner=match.host.name,
+            read_perms=1,
+            write_perms=1,
+            public=False
+        )
+        self.match = match
+
+    @property
+    def display_name(self) -> str:
+        return '#multiplayer'
+
+    def resolve_name(self, player: "Player") -> str:
+        return self.name if player.id in self.match.referee_players else self.display_name
+
+    def add(self, player: "Player", no_response: bool = False) -> None:
+        # Update player's silence duration
+        player.silenced
+
+        if not self.can_read(player.permissions):
+            # Player does not have read access
+            self.logger.warning(f'{player} tried to join channel but does not have read access.')
+            player.revoke_channel(self.resolve_name(player))
+
+        if player in self.users and not player.is_tourney_client:
+            # Player has already joined the channel
+            if no_response:
+                return
+
+            player.join_success(self.resolve_name(player))
+            return
+
+        player.channels.add(self)
+        self.users.add(player)
+        self.update()
+
+        if not no_response:
+            player.join_success(self.resolve_name(player))
+
+        self.logger.info(f'{player.name} joined')
+
+    def update(self) -> None:
+        channel_object = self.bancho_channel
+
+        # Only enqueue to users in this channel
+        for player in self.users:
+            channel_object.name = self.resolve_name(player)
+            player.enqueue_channel(channel_object)
+
+    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message.content}')
 
         for user in users:
-            user.enqueue_message(message_object)
+            message.target = self.resolve_name(user)
+            user.enqueue_message(message)

@@ -5,4 +5,7 @@ import app
 def event_listener() -> None:
     """This will listen for redis pubsub events and call the appropriate functions."""
     for func, args, kwargs in app.session.events.listen():
-        func(*args, **kwargs)
+        try:
+            func(*args, **kwargs)
+        except SystemExit:
+            break

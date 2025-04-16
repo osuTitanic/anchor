@@ -33,7 +33,7 @@ def setup():
 
     for channel in channels.fetch_all():
         app.session.logger.info(f'  - {channel.name}')
-        app.session.channels.append(
+        app.session.channels.add(
             Channel(
                 channel.name,
                 channel.topic,
@@ -63,12 +63,13 @@ def setup():
         status.delete(player_id)
 
 def before_shutdown(*args):
-    for player in app.session.players:
+    for player in app.session.players.tcp_clients:
         # Enqueue server restart packet to all players
         # They should reconnect after 15 seconds
         player.enqueue_server_restart(15 * 1000)
 
     reactor.callLater(0.5, reactor.stop)
+    app.session.events.submit('shutdown')
 
 signal.signal(signal.SIGINT, before_shutdown)
 

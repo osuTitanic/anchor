@@ -2,10 +2,10 @@
 from . import DefaultResponsePacket as ResponsePacket
 from . import DefaultRequestPacket as RequestPacket
 
+from ..objects.channel import Channel, MultiplayerChannel
 from ..common.database.objects import DBBeatmap, DBScore
 from ..common.database.repositories import wrapper
 from ..objects.multiplayer import Match
-from ..objects.channel import Channel
 from ..objects.player import Player
 from ..common import officer
 from .. import session
@@ -118,6 +118,9 @@ def presence_request_all(player: Player):
 @register(RequestPacket.STATS_REQUEST)
 def stats_request(player: Player, players: List[int]):
     for id in players:
+        if id is player.id:
+            continue
+
         if not (target := session.players.by_id(id)):
             continue
 
@@ -135,6 +138,10 @@ def change_status(player: Player, status: bStatusUpdate):
     player.update_status_cache()
     player.update_activity()
     player.reload_rank()
+
+    for p in player.spectators:
+        # Ensure that all spectators get the latest status
+        p.enqueue_stats(player)
 
     # (This needs to be done for older clients)
     session.players.send_stats(player)
@@ -197,13 +204,7 @@ def send_message(player: Player, message: bMessage):
         player.silence(60, reason='Chat spamming')
         return
 
-    if (parsed_message := message.content.strip()).startswith('!'):
-        # A command was executed
-        return session.banchobot.send_command_response(
-            *session.banchobot.process_command(parsed_message, player, channel)
-        )
-
-    channel.send_message(player, parsed_message)
+    channel.send_message(player, message.content.strip())
     player.update_activity()
     player.recent_message_count += 1
 
@@ -254,7 +255,7 @@ def send_private_message(sender: Player, message: bMessage):
 
     if len(message.content) > 512:
         # Limit message size
-        message.content = message.content[:512] + '... (truncated)'
+        message.content = message.content[:497] + '... (truncated)'
 
     if target.away_message:
         sender.enqueue_message(
@@ -478,6 +479,10 @@ def start_spectating(player: Player, player_id: int):
     if player_id == player.id:
         player.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
+    
+    if player_id == -1:
+        # This can happen on tourney clients
+        return
 
     if not (target := session.players.by_id(player_id)):
         player.logger.warning(f'Failed to start spectating: Player with id "{player_id}" was not found!')
@@ -560,6 +565,7 @@ def join_lobby(player: Player):
     for p in session.players:
         p.enqueue_lobby_join(player.id)
 
+    session.players.in_lobby.add(player)
     player.in_lobby = True
 
     for match in session.matches.active:
@@ -567,6 +573,7 @@ def join_lobby(player: Player):
 
 @register(RequestPacket.PART_LOBBY)
 def part_lobby(player: Player):
+    session.players.in_lobby.remove(player)
     player.in_lobby = False
 
     for p in session.players:
@@ -630,17 +637,8 @@ def create_match(player: Player, bancho_match: bMatch):
     for index, slot in enumerate(bancho_match.slots):
         match.slots[index].status = slot.status
 
-    session.channels.append(
-        c := Channel(
-            name=f'#multi_{match.id}',
-            topic=match.name,
-            owner=match.host.name,
-            read_perms=1,
-            write_perms=1,
-            public=False
-        )
-    )
-    match.chat = c
+    match.chat = MultiplayerChannel(match)
+    session.channels.add(match.chat)
 
     match.db_match = matches.create(
         match.name,
@@ -661,7 +659,7 @@ def create_match(player: Player, bancho_match: bMatch):
     match.chat.send_message(
         session.banchobot,
         f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privs=True
+        ignore_privileges=True
     )
 
 @register(RequestPacket.JOIN_MATCH)
@@ -708,8 +706,15 @@ def join_match(player: Player, match_join: bMatchJoin):
         # Player is creating the match
         slot_id = 0
 
+    channel_object = match.chat.bancho_channel
+
+    if player.id in match.referee_players:
+        # Make sure referee player joined the channel
+        channel_object.name = match.chat.name
+        player.referee_matches.add(match)
+
     # Join the chat
-    player.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+    player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(player)
 
     slot = match.slots[slot_id]
@@ -719,6 +724,10 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     slot.status = SlotStatus.NotReady
     slot.player = player
+
+    if match.host is None and player.id in match.referee_players:
+        # This player has referee privileges, so we can make them the host
+        match.host = player
 
     player.match = match
     player.enqueue_matchjoin_success(match.bancho_match)
@@ -734,6 +743,15 @@ def join_match(player: Player, match_join: bMatchJoin):
 
     match.logger.info(f'{player.name} joined')
     match.update()
+
+    for player in session.players.tourney_clients:
+        # Ensure that all tourney clients got the player's presence
+        player.enqueue_presence(player)
+        player.enqueue_stats(player)
+
+    if player.id in match.referee_players:
+        # Force-revoke #multiplayer
+        player.revoke_channel('#multiplayer')
 
 @register(RequestPacket.LEAVE_MATCH)
 def leave_match(player: Player):
@@ -753,11 +771,12 @@ def leave_match(player: Player):
 
     slot.reset(status)
 
-    channel_leave(
-        player,
-        player.match.chat.name,
-        kick=True
-    )
+    if player.id not in player.match.referee_players:
+        channel_leave(
+            player,
+            player.match.chat.display_name,
+            kick=True
+        )
 
     events.create(
         player.match.db_match.id,
@@ -774,13 +793,14 @@ def leave_match(player: Player):
         player.match.beatmap_hash = player.match.previous_beatmap_hash
         player.match.beatmap_name = player.match.previous_beatmap_name
 
-    if all(slot.empty for slot in player.match.slots):
+    if all(slot.empty for slot in player.match.slots) and not player.match.persistent:
         # No players in match anymore -> Disband match
         player.enqueue_match_disband(player.match.id)
 
         for p in session.players.in_lobby:
             p.enqueue_match_disband(player.match.id)
 
+        session.channels.remove(player.match.chat)
         session.matches.remove(player.match)
         player.match.starting = None
 
@@ -802,7 +822,11 @@ def leave_match(player: Player):
         player.match = None
         return
 
-    if player is player.match.host:
+    if player.match.persistent and player is player.match.host:
+        # This match has referee players, so we don't need a host
+        player.match.host = None
+
+    elif player is player.match.host:
         # Player was host, transfer to next player
         for slot in player.match.slots:
             if slot.status.value & SlotStatus.HasPlayer.value:
@@ -817,6 +841,9 @@ def leave_match(player: Player):
                 'new': {'id': player.match.host.id, 'name': player.match.host.name}
             }
         )
+
+    if player.id not in player.match.referee_players:
+        player.match.chat.remove(player)
 
     player.match.update()
     player.match = None

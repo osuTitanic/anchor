@@ -1,10 +1,10 @@
 
+from app.objects.channel import Channel, SpectatorChannel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
 from app.common.database import users, groups, messages
 from app.common.constants import Permissions
 from app.objects.client import OsuClient
 from app.common.objects import bMessage
-from app.objects.channel import Channel
 from app.objects.player import Player
 from typing import Tuple, List
 
@@ -13,7 +13,7 @@ import app
 
 class BanchoBot(Player):
     def __init__(self):
-        super().__init__('127.0.0.1', 6969)
+        super().__init__('127.0.0.1', 13381)
         self.initialize()
 
     def process_command(
@@ -92,6 +92,7 @@ class BanchoBot(Player):
 
                 ctx.trigger = trigger
                 ctx.args = args
+                ctx.set = set
 
                 if not command.ignore_conditions:
                     # Check set conditions
@@ -110,26 +111,37 @@ class BanchoBot(Player):
         if not response:
             return
 
-        # Send to others
+        # Send to others, if command is not hidden
         if not command.hidden and type(context.target) is Channel:
             context.target.send_message(
                 context.player,
-                context.message
+                context.message,
+                ignore_commands=True
             )
 
             for message in response:
-                context.target.send_message(self, message)
+                context.target.send_message(
+                    self, message,
+                    ignore_commands=True
+                )
 
             return
 
         context.player.logger.info(f'[{context.player.name}]: {context.message}')
         context.player.logger.info(f'[{self.name}]: {", ".join(response)}')
 
+        is_channel = (
+            type(context.target) in (Channel, SpectatorChannel, MultiplayerChannel)
+        )
+
         target_name = (
             context.target.name
-            if type(context.target) != Channel
+            if not is_channel
             else context.target.display_name
         )
+
+        if type(context.target) is MultiplayerChannel:
+            target_name = context.target.resolve_name(context.player)
 
         # Send to sender only
         for message in response:

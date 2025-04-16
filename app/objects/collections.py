@@ -2,110 +2,148 @@
 from __future__ import annotations
 from enum import Enum
 from typing import (
-    Iterable,
     Iterator,
+    Tuple,
+    Dict,
     List,
     Set
 )
 
+from .locks import ReadWriteLock
 from ..http import HttpPlayer
 from .player import Player
 
-import threading
-import app
-
-class Players(Set[Player | HttpPlayer]):
+class Players:
     def __init__(self):
-        self.lock = threading.Lock()
-        super().__init__()
+        self.id_mapping: Dict[int, Player] = {}
+        self.name_mapping: Dict[str, Player] = {}
+        self.token_mapping: Dict[str, Player] = {}
+        self.tourney_clients: Set[Player] = set()
+        self.in_lobby: Set[Player] = set()
+        self.lock = ReadWriteLock()
 
-    def __iter__(self) -> Iterator[Player]:
-        with self.lock:
-            players = iter(list(super().__iter__()))
-        return players
+    @property
+    def tcp_clients(self) -> Tuple[Player]:
+        return tuple(p for p in self if p.protocol == 'tcp')
 
-    def __len__(self) -> int:
-        with self.lock:
-            return len(list(super().__iter__()))
-
-    def __contains__(self, player: Player) -> bool:
-        with self.lock:
-            return super().__contains__(player)
+    @property
+    def http_clients(self) -> Tuple[HttpPlayer]:
+        with self.lock.read_context():
+            snapshot = tuple(self.token_mapping.values())
+        return snapshot
 
     def __repr__(self) -> str:
-        with self.lock:
-            return f'<Players ({len(self)})>'
+        return '<Players>'
 
-    @property
-    def ids(self) -> Set[int]:
-        return {p.id for p in self}
+    def __len__(self):
+        with self.lock.read_context():
+            return len(self.id_mapping)
 
-    @property
-    def in_lobby(self) -> Set[Player]:
-        return {p for p in self if p.in_lobby}
+    def __setitem__(self, _, value: Player | HttpPlayer) -> None:
+        """Set a player in the collection"""
+        return self.add(value)
 
-    @property
-    def tourney_clients(self) -> Set[Player]:
-        return {p for p in self if p.is_tourney_client}
+    def __getitem__(self, key: int | str) -> Player | None:
+        """Get a player by id or name"""
+        if isinstance(key, int):
+            return self.by_id(key)
+        elif isinstance(key, str):
+            return self.by_name(key)
+        return None
 
-    @property
-    def normal_clients(self) -> Set[Player]:
-        return {p for p in self if not p.is_tourney_client}
+    def __iter__(self):
+        with self.lock.read_context():
+            snapshot = list(self.id_mapping.values())
+        return iter(snapshot)
 
-    @property
-    def http_clients(self) -> Set[HttpPlayer]:
-        return {p for p in self if isinstance(p, HttpPlayer)}
+    def __contains__(self, player: Player | HttpPlayer) -> bool:
+        """Check if a player is in the collection"""
+        with self.lock.read_context():
+            if isinstance(player, Player):
+                return player.id in self.id_mapping
+            elif isinstance(player, HttpPlayer):
+                return player.token in self.token_mapping
+            return False
 
-    @property
-    def tcp_clients(self) -> Set[Player]:
-        return {p for p in self if not isinstance(p, HttpPlayer)}
+    def get(self, value: int | str) -> Player | None:
+        """Get a player by id or name"""
+        return self[value]
 
-    def add(self, player: Player) -> None:
+    def add(self, player: Player | HttpPlayer) -> None:
         """Append a player to the collection"""
-        self.send_player(player)
-        return super().add(player)
+        with self.lock.write_context():
+            self.id_mapping[abs(player.id)] = player
+            self.name_mapping[player.name] = player
 
-    def remove(self, player: Player) -> None:
+            if isinstance(player, HttpPlayer):
+                self.token_mapping[player.token] = player
+
+            if player.is_tourney_client:
+                self.tourney_clients.add(player)
+
+        self.send_player(player)
+
+    def remove(self, player: Player | HttpPlayer) -> None:
+        """Remove a player from the collection"""
+        with self.lock.write_context():
+            if player.in_lobby:
+                self.remove_from_collection('in_lobby', player)
+
+            if player.is_tourney_client:
+                self.remove_from_collection('tourney_clients', player)
+
+            self.remove_from_mapping('id_mapping', abs(player.id))
+            self.remove_from_mapping('name_mapping', player.name)
+
+            if player.protocol is 'http':
+                self.remove_from_mapping('token_mapping', player.token)
+
+    def remove_from_mapping(self, name: str, key: str) -> None:
+        try:
+            del getattr(self, name)[key]
+        except (KeyError, ValueError, AttributeError):
+            pass
+
+    def remove_from_collection(self, name: str, player: Player) -> None:
         """Remove a player from the collection"""
         try:
-            return super().remove(player)
-        except (ValueError, KeyError):
+            getattr(self, name).remove(player)
+        except (KeyError, ValueError, AttributeError):
             pass
+
+    def by_id(self, id: int) -> Player | None:
+        """Get a player by id"""
+        with self.lock.read_context():
+            return self.id_mapping.get(id, None)
+
+    def by_name(self, name: str) -> Player | None:
+        """Get a player by name"""
+        with self.lock.read_context():
+            return self.name_mapping.get(name, None)
+
+    def by_token(self, token: str) -> Player | None:
+        """Get a player by token"""
+        with self.lock.read_context():
+            return self.token_mapping.get(token, None)
+
+    def by_rank(self, rank: int, mode: int) -> List[Player]:
+        """Get all players with the specified rank"""
+        return [p for p in self if p.rank == rank and p.status.mode == mode]
+
+    def tourney_clients_by_id(self, id: int) -> List[Player]:
+        """Get all tourney clients for a player id"""
+        return [p for p in self.tourney_clients if p.id == id]
+
+    def clear_tourney_clients(self, id: int) -> None:
+        """Clear all tourney clients by player id"""
+        for p in self.tourney_clients_by_id(id):
+            self.remove(p)
 
     def enqueue(self, data: bytes, immune = []) -> None:
         """Send raw data to all players"""
         for p in self:
             if p not in immune:
                 p.enqueue(data)
-
-    def by_id(self, id: int) -> Player | None:
-        """Get a player by id"""
-        return next(
-            (p for p in self if p.id == id),
-            (app.session.banchobot if id == 1 else None)
-        )
-
-    def by_name(self, name: str) -> Player | None:
-        """Get a player by name"""
-        return next(
-            (p for p in self if p.name == name),
-            (app.session.banchobot if name == app.session.banchobot.name else None)
-        )
-
-    def by_token(self, token: str) -> Player | None:
-        """Get a player by token"""
-        return next(
-            (p for p in self.http_clients if p.token == token),
-            None
-        )
-
-    def get_all_tourney_clients(self, id: int) -> List[Player]:
-        """Get all tourney clients for a player id"""
-        return [p for p in self.tourney_clients if p.id == id]
-
-    def get_rank_duplicates(self, rank: int, mode: int) -> List[Player]:
-        """Get all players with the specified rank"""
-        return [p for p in self if p.rank == rank and p.status.mode == mode]
 
     def send_packet(self, packet: Enum, *args):
         for p in self:
@@ -125,6 +163,11 @@ class Players(Set[Player | HttpPlayer]):
 
     def send_stats(self, player: Player):
         for p in self:
+            if p.client.version.date > 20121223:
+                # Client will request the stats
+                # themselves when pressing F9
+                continue
+
             p.enqueue_stats(player)
 
     def announce(self, message: str):
@@ -140,41 +183,36 @@ class Players(Set[Player | HttpPlayer]):
 
 from .channel import Channel
 
-class Channels(Set[Channel]):
-    def __iter__(self) -> Iterator[Channel]:
-        return super().__iter__()
+class Channels(Dict[str, Channel]):
+    def __repr__(self) -> str:
+        return '<Channels>'
 
     @property
-    def public(self) -> Set[Channel]:
+    def public(self) -> List[Channel]:
         """All publicly available channels"""
-        return {c for c in self if c.public}
+        return [c for c in self.values() if c.public]
 
     def by_name(self, name: str) -> Channel | None:
         """Get a channel by name"""
-        return next((c for c in self if c.name == name), None)
+        return self.get(name, None)
 
-    def append(self, c: Channel) -> None:
+    def add(self, c: Channel) -> None:
         """Append a channel to the collection"""
         if not c:
             return
 
-        if c not in self:
-            return super().add(c)
+        self[c.name] = c
 
     def remove(self, c: Channel) -> None:
         """Remove a channel from the collection"""
         if not c:
             return
 
-        # Revoke channel to all users
         for p in c.users:
             p.revoke_channel(c.display_name)
 
-        if c in self:
-            return super().remove(c)
-
-    def extend(self, channels: Iterable[Channel]) -> None:
-        return super().update(channels)
+        if c.name in self:
+            del self[c.name]
 
 from .multiplayer import Match
 
@@ -186,12 +224,17 @@ class Matches(List[Match | None]):
         return super().__iter__()
 
     def __repr__(self) -> str:
-        return f'[{", ".join(match.name for match in self if match)}]'
+        return f'<Matches ({len(self)})>'
 
     @property
     def active(self) -> List[Match]:
         """All currently active matches"""
         return [m for m in self if m]
+
+    @property
+    def persistent(self) -> List[Match]:
+        """All persistent matches"""
+        return [m for m in self if m and m.persistent]
 
     def get_free(self) -> int | None:
         """Get a free match slot"""
@@ -236,4 +279,3 @@ class Matches(List[Match | None]):
             return self[match_id] is not None
         except IndexError:
             return False
-

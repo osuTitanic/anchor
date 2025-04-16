@@ -41,13 +41,16 @@ from app.common.database.repositories import (
 from app.common.helpers import clients as client_utils
 from app.common.streams import StreamIn, StreamOut
 from app.common.database import DBUser, DBStats
+from app.objects.channel import SpectatorChannel, Channel
+from app.objects.multiplayer import Match
+from app.objects.locks import LockedSet
 from app.objects import OsuClient, Status
 from app.common import mail
 
 from twisted.internet.error import ConnectionDone
 from twisted.python.failure import Failure
 
-from typing import Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set, Iterable
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from enum import Enum
@@ -90,14 +93,11 @@ class Player:
         self.decoders: Dict[Enum, Callable] = versions.get_next_version(20130815).decoders
         self.encoders: Dict[Enum, Callable] = versions.get_next_version(20130815).encoders
 
-        from .collections import Players
-        from .multiplayer import Match
-        from .channel import Channel
-
+        self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
         self.filter = PresenceFilter.All
 
-        self.spectators = Players()
+        self.spectators: LockedSet["Player"] = LockedSet()
         self.spectating: Player | None = None
         self.spectator_chat: Channel | None = None
 
@@ -194,17 +194,15 @@ class Player:
     @property
     def friends(self) -> List[int]:
         return [
-            rel.target_id
-            for rel in self.object.relationships
+            rel.target_id for rel in self.object.relationships
             if rel.status == 0
         ]
 
     @property
-    def online_friends(self) -> List["Player"]:
-        return [
-            app.session.players.by_id(id)
-            for id in self.friends if id in app.session.players.ids
-        ]
+    def online_friends(self) -> Iterable["Player"]:
+        for id in self.friends:
+            if player := app.session.players.by_id(id):
+                yield player
 
     @property
     def user_presence(self) -> bUserPresence:
@@ -297,7 +295,7 @@ class Player:
     @property
     def is_staff(self) -> bool:
         return any([self.is_admin, self.is_dev, self.is_moderator])
-    
+
     @property
     def is_verified(self) -> bool:
         return self.object.is_verified
@@ -352,23 +350,17 @@ class Player:
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
+        usercount.set(len(app.session.players))
         status.delete(self.id)
-        usercount.set(len(app.session.players.normal_clients))
 
         if self.match:
             app.clients.handler.leave_match(self)
 
-        tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+        tourney_clients = app.session.players.tourney_clients_by_id(self.id)
+        user_quit = bUserQuit(self.id, self.user_presence, self.user_stats, QuitState.Gone)
 
         if len(tourney_clients) <= 0:
-            app.session.players.send_user_quit(
-                bUserQuit(
-                    self.id,
-                    self.user_presence,
-                    self.user_stats,
-                    QuitState.Gone
-                )
-            )
+            app.session.players.send_user_quit(user_quit)
 
     def send_packet(self, packet: Enum, *args) -> None:
         try:
@@ -562,24 +554,18 @@ class Player:
             )
 
             # Check client's executable hash
-            if check_client:
-                is_valid = client_utils.is_valid_client_hash(
-                    self.client.version.date,
-                    self.client.hash.md5
+            if check_client and not self.is_valid_client(session):
+                self.logger.warning('Login Failed: Unsupported client')
+                self.login_failed(
+                    LoginError.UpdateNeeded,
+                    message=strings.UNSUPPORTED_HASH
                 )
-
-                if not is_valid:
-                    self.logger.warning('Login Failed: Unsupported client')
-                    self.login_failed(
-                        LoginError.UpdateNeeded,
-                        message=strings.UNSUPPORTED_HASH
-                    )
-                    officer.call(
-                        f'"{self.name}" tried to log in with an unsupported version: '
-                        f'{self.client.version} ({self.client.hash.md5})'
-                    )
-                    self.close_connection()
-                    return
+                officer.call(
+                    f'"{self.name}" tried to log in with an unsupported version: '
+                    f'{self.client.version} ({self.client.hash.md5})'
+                )
+                self.close_connection()
+                return
 
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id(user.id)):
@@ -596,12 +582,12 @@ class Player:
 
             else:
                 # Check amount of tourney clients that are online
-                tourney_clients = app.session.players.get_all_tourney_clients(self.id)
+                tourney_clients = app.session.players.tourney_clients_by_id(self.id)
 
-                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS:
-                    self.logger.warning(f'Tried to log in with more than {config.MULTIPLAYER_MAX_SLOTS} tourney clients')
-                    self.close_connection()
-                    return
+                if len(tourney_clients) >= config.MULTIPLAYER_MAX_SLOTS + 2:
+                    # Clear connection of oldest tourney client
+                    tourney_clients.sort(key=lambda x: x.last_response)
+                    tourney_clients[0].close_connection()
 
             self.status.mode = GameMode(self.object.preferred_mode)
 
@@ -635,17 +621,8 @@ class Player:
         self.login_success()
 
     def login_success(self):
-        from .channel import Channel
-
-        self.spectator_chat = Channel(
-            name=f'#spec_{self.id}',
-            topic=f"{self.name}'s spectator channel",
-            owner=self.name,
-            read_perms=1,
-            write_perms=1,
-            public=False
-        )
-        app.session.channels.append(self.spectator_chat)
+        self.spectator_chat = SpectatorChannel(self)
+        app.session.channels.add(self.spectator_chat)
 
         self.update_activity()
         self.send_packet(self.packets.LOGIN_REPLY, self.id)
@@ -672,7 +649,7 @@ class Player:
         self.enqueue_players(app.session.players)
 
         # Update usercount
-        usercount.set(len(app.session.players.normal_clients))
+        usercount.set(len(app.session.players))
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -693,6 +670,39 @@ class Player:
         # Enqueue players in lobby
         for player in app.session.players.in_lobby:
             self.enqueue_lobby_join(player.id)
+
+        # Potentially fix player referee state
+        self.referee_matches.update([
+            match for match in app.session.matches.persistent
+            if self.id in match.referee_players
+        ])
+
+        for match in self.referee_matches:
+            # Join the match channel automatically
+            channel_object = match.chat.bancho_channel
+            channel_object.name = match.chat.name
+            self.enqueue_channel(channel_object, autojoin=True)
+            match.chat.add(self)
+
+    def is_valid_client(self, session: Session | None = None) -> bool:
+        valid_identifiers = (
+            'stable', 'test', 'tourney', 'cuttingedge', 'beta'
+            'ubertest', 'ce45', 'peppy', 'dev', 'arcade',
+            'fallback', 'a', 'b', 'c', 'd', 'e'
+        )
+
+        if self.client.version.identifier in valid_identifiers:
+            return client_utils.is_valid_client_hash(
+                self.client.version.date,
+                self.client.hash.md5,
+                session=session
+            )
+        
+        return client_utils.is_valid_mod(
+            self.client.version.identifier,
+            self.client.hash.md5,
+            session=session
+        )
 
     def check_client(self, session: Session | None = None):
         client = clients.fetch_without_executable(

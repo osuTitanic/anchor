@@ -1,10 +1,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
-from typing import Tuple, List
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from .channel import Channel
+    from .player import Player
 
 from app.common.constants import (
     MatchScoringTypes,
@@ -21,9 +25,6 @@ from app.common.database.repositories import beatmaps, events, matches
 from app.common.objects import bMatch, bSlot, bScoreFrame
 from app.common.database import DBMatch
 
-from .channel import Channel
-from .player import Player
-
 import logging
 import config
 import time
@@ -32,7 +33,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: Player | None = None
+        self.player: "Player" | None = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -102,12 +103,13 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: Player,
-        beatmap_id: int,
-        beatmap_name: str,
-        beatmap_hash: str,
-        mode: GameMode,
-        seed: int = 0
+        host: "Player",
+        beatmap_id: int = -1,
+        beatmap_name: str = "",
+        beatmap_hash: str = "",
+        mode: GameMode = GameMode.Osu,
+        seed: int = 0,
+        persistant: bool = False
     ) -> None:
         self.id = id
         self.name = name
@@ -129,22 +131,24 @@ class Match:
         self.type = MatchType.Standard
         self.scoring_type = MatchScoringTypes.Score
         self.team_type = MatchTeamTypes.HeadToHead
-        self.freemod = False
+        self.persistent = persistant
         self.in_progress = False
+        self.freemod = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
-        self.banned_players = []
+        self.referee_players: List[int] = []
+        self.banned_players: List[int] = []
 
         self.starting: StartingTimers | None = None
         self.completion_timer: Timer | None = None
         self.db_match: DBMatch | None = None
-        self.chat: Channel | None = None
+        self.chat: "Channel" | None = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, bancho_match: bMatch, host_player: Player):
+    def from_bancho_match(cls, bancho_match: bMatch, host_player: "Player"):
         return Match(
             bancho_match.id,
             bancho_match.name,
@@ -170,7 +174,7 @@ class Match:
             self.beatmap_id,
             self.beatmap_hash,
             [s.bancho_slot for s in self.slots],
-            self.host.id,
+            self.host.id if self.host else 0,
             self.mode,
             self.scoring_type,
             self.team_type,
@@ -179,7 +183,7 @@ class Match:
         )
 
     @property
-    def players(self) -> List[Player]:
+    def players(self) -> List["Player"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
 
@@ -226,21 +230,21 @@ class Match:
             )
         ]
 
-    def get_slot(self, player: Player) -> Slot | None:
+    def get_slot(self, player: "Player") -> Slot | None:
         for slot in self.slots:
             if player is slot.player:
                 return slot
 
         return None
 
-    def get_slot_id(self, player: Player) -> int | None:
+    def get_slot_id(self, player: "Player") -> int | None:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return index
 
         return None
 
-    def get_slot_with_id(self, player: Player) -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "Player") -> Tuple[Slot, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
@@ -254,7 +258,7 @@ class Match:
 
         return None
 
-    def get_player(self, name: str) -> Player | None:
+    def get_player(self, name: str) -> "Player" | None:
         for player in self.players:
             if player.name == name:
                 return player
@@ -403,9 +407,9 @@ class Match:
 
         self.update()
 
-    def kick_player(self, player: Player):
+    def kick_player(self, player: "Player"):
         player.enqueue_match_disband(self.id)
-        player.revoke_channel('#multiplayer')
+        player.revoke_channel(self.chat.resolve_name(player))
         self.chat.remove(player)
         player.match = None
 
@@ -425,7 +429,7 @@ class Match:
             }
         )
 
-        if player == self.host:
+        if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
                 if slot.status.value & SlotStatus.HasPlayer.value:
@@ -443,13 +447,13 @@ class Match:
 
         self.update()
 
-    def ban_player(self, player: Player):
+    def ban_player(self, player: "Player"):
         self.banned_players.append(player.id)
 
         if player in self.players:
             self.kick_player(player)
 
-    def unban_player(self, player: Player):
+    def unban_player(self, player: "Player"):
         if player.id in self.banned_players:
             self.banned_players.remove(player.id)
 
@@ -457,21 +461,21 @@ class Match:
         # Shutdown pending match timer
         self.starting = None
 
-        app.session.matches.remove(self)
-
         if self.in_progress:
             for player in self.players:
                 player.enqueue_match_complete()
 
         for player in self.players:
             self.kick_player(player)
-            self.chat.remove(player)
-            player.enqueue_match_disband(self.id)
-            player.match = None
+
+            if player.id in self.referee_players and self in player.referee_matches:
+                # Remove referee player from this match
+                player.referee_matches.remove(self)
 
         for player in app.session.players.in_lobby:
             player.enqueue_match_disband(self.id)
 
+        app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
 
         last_game = events.fetch_last_by_type(
@@ -482,9 +486,10 @@ class Match:
         if not last_game:
             # No games were played
             matches.delete(self.db_match.id)
-        else:
-            matches.update(self.db_match.id, {'ended_at': datetime.now()})
-            events.create(self.db_match.id, type=EventType.Disband)
+            return
+
+        matches.update(self.db_match.id, {'ended_at': datetime.now()})
+        events.create(self.db_match.id, type=EventType.Disband)
 
     def start(self):
         if self.player_count <= 0:
