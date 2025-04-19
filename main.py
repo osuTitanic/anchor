@@ -5,7 +5,7 @@ from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
 
-from app.server import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
+from app.servers import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
 from app.banchobot import BanchoBot
 
@@ -63,7 +63,7 @@ def setup():
         status.delete(player_id)
 
 def before_shutdown(*args):
-    for player in app.session.players.tcp_clients:
+    for player in app.session.players.tcp_osu_clients:
         # Enqueue server restart packet to all players
         # They should reconnect after 15 seconds
         player.enqueue_server_restart(15 * 1000)

@@ -2,16 +2,17 @@
 from app.objects.channel import Channel, SpectatorChannel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
 from app.common.database import users, groups, messages
+from app.objects.client import OsuClientInformation
 from app.common.constants import Permissions
-from app.objects.client import OsuClient
-from app.common.objects import bMessage
-from app.objects.player import Player
+from app.clients.irc import IrcClient
+from app.clients.base import Client
 from typing import Tuple, List
+from chio import Message
 
 import shlex
 import app
 
-class BanchoBot(Player):
+class BanchoBot(IrcClient):
     def __init__(self):
         super().__init__('127.0.0.1', 13381)
         self.initialize()
@@ -19,8 +20,8 @@ class BanchoBot(Player):
     def process_command(
         self,
         message: str,
-        sender: Player,
-        target: Channel | Player
+        sender: Client,
+        target: Channel | Client
     ) -> Tuple[Context, Command, List[str]]:
         trigger, *args = self.parse_command(message)
 
@@ -143,14 +144,14 @@ class BanchoBot(Player):
         if type(context.target) is MultiplayerChannel:
             target_name = context.target.resolve_name(context.player)
 
+        msg = Message(
+            self.name, message,
+            target_name, self.id
+        )
+
         # Send to sender only
         for message in response:
-            context.player.enqueue_message(
-                bMessage(
-                    self.name, message,
-                    target_name, self.id
-                )
-            )
+            context.player.enqueue_message_object(msg)
 
         if context.target is not self:
             return
@@ -169,14 +170,9 @@ class BanchoBot(Player):
         )
 
     def initialize(self) -> None:
-        with app.session.database.managed_session() as session:
-            self.object = users.fetch_by_id(1, session=session)
-            self.client = OsuClient.empty()
-            self.id = -self.object.id
-            self.name = self.object.name
-            self.stats  = self.object.stats
-            self.client.ip.country_code = "OC"
-            self.client.ip.city = "w00t p00t!"
-            self.permissions = Permissions(
-                groups.get_player_permissions(1, session=session)
-            )
+        self.id = 1
+        self.name = "BanchoBot"
+        self.info = OsuClientInformation.empty()
+        self.info.ip.country_code = "OC"
+        self.info.ip.city = "w00t p00t!"
+        self.reload()

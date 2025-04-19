@@ -1,13 +1,13 @@
 
 from .objects.collections import Players, Channels, Matches
 from .common.cache.events import EventQueue
-from .clients import DefaultResponsePacket
 from .common.database import Postgres
 from .common.storage import Storage
 from .tasks import Tasks
 
 from typing import Callable, Dict
 from requests import Session
+from chio import PacketType
 from redis import Redis
 
 import logging
@@ -38,8 +38,7 @@ requests.headers = {
     'User-Agent': f'osuTitanic/anchor ({config.DOMAIN_NAME})'
 }
 
-handlers: Dict[DefaultResponsePacket, Callable] = {}
-
+handlers: Dict[PacketType, Callable] = {}
 channels = Channels()
 storage = Storage()
 players = Players()

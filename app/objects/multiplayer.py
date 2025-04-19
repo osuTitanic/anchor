@@ -1,15 +1,18 @@
 
 from __future__ import annotations
 
+from chio import ScoreFrame as bScoreFrame, Match as bMatch
 from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
 from datetime import datetime
 
 if TYPE_CHECKING:
+    from ..clients import Client
     from .channel import Channel
-    from .player import Player
 
+from app.common.database.repositories import beatmaps, events, matches
+from app.common.database import DBMatch
 from app.common.constants import (
     MatchScoringTypes,
     MatchTeamTypes,
@@ -21,10 +24,6 @@ from app.common.constants import (
     Mods
 )
 
-from app.common.database.repositories import beatmaps, events, matches
-from app.common.objects import bMatch, bSlot, bScoreFrame
-from app.common.database import DBMatch
-
 import logging
 import config
 import time
@@ -33,7 +32,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: "Player" | None = None
+        self.player: "Client" | None = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -43,15 +42,6 @@ class Slot:
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
-
-    @property
-    def bancho_slot(self) -> bSlot:
-        return bSlot(
-            self.player.id if self.has_player else -1,
-            self.status,
-            self.team,
-            self.mods
-        )
 
     @property
     def empty(self) -> bool:
@@ -103,7 +93,7 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: "Player",
+        host: "Client",
         beatmap_id: int = -1,
         beatmap_name: str = "",
         beatmap_hash: str = "",
@@ -148,42 +138,21 @@ class Match:
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, bancho_match: bMatch, host_player: "Player"):
+    def from_bancho_match(cls, match: bMatch, host: "Client"):
         return Match(
-            bancho_match.id,
-            bancho_match.name,
-            bancho_match.password,
-            host_player,
-            bancho_match.beatmap_id,
-            bancho_match.beatmap_text,
-            bancho_match.beatmap_checksum,
-            bancho_match.mode,
-            bancho_match.seed
+            match.id,
+            match.name,
+            match.password,
+            host,
+            match.beatmap_id,
+            match.beatmap_text,
+            match.beatmap_checksum,
+            match.mode,
+            match.seed
         )
 
     @property
-    def bancho_match(self) -> bMatch:
-        return bMatch(
-            self.id,
-            self.in_progress,
-            self.type,
-            self.mods,
-            self.name,
-            self.password,
-            self.beatmap_name,
-            self.beatmap_id,
-            self.beatmap_hash,
-            [s.bancho_slot for s in self.slots],
-            self.host.id if self.host else 0,
-            self.mode,
-            self.scoring_type,
-            self.team_type,
-            self.freemod,
-            self.seed
-        )
-
-    @property
-    def players(self) -> List["Player"]:
+    def players(self) -> List["Client"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
 
@@ -230,21 +199,21 @@ class Match:
             )
         ]
 
-    def get_slot(self, player: "Player") -> Slot | None:
+    def get_slot(self, player: "Client") -> Slot | None:
         for slot in self.slots:
             if player is slot.player:
                 return slot
 
         return None
 
-    def get_slot_id(self, player: "Player") -> int | None:
+    def get_slot_id(self, player: "Client") -> int | None:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return index
 
         return None
 
-    def get_slot_with_id(self, player: "Player") -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "Client") -> Tuple[Slot, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
@@ -258,7 +227,7 @@ class Match:
 
         return None
 
-    def get_player(self, name: str) -> "Player" | None:
+    def get_player(self, name: str) -> "Client" | None:
         for player in self.players:
             if player.name == name:
                 return player
@@ -278,7 +247,7 @@ class Match:
             return
 
         # Enqueue to lobby players
-        for player in app.session.players.in_lobby:
+        for player in app.session.players.osu_in_lobby:
             player.enqueue_match(
                 self.bancho_match,
                 update=True
@@ -407,7 +376,7 @@ class Match:
 
         self.update()
 
-    def kick_player(self, player: "Player"):
+    def kick_player(self, player: "Client"):
         player.enqueue_match_disband(self.id)
         player.revoke_channel(self.chat.resolve_name(player))
         self.chat.remove(player)
@@ -447,13 +416,13 @@ class Match:
 
         self.update()
 
-    def ban_player(self, player: "Player"):
+    def ban_player(self, player: "Client"):
         self.banned_players.append(player.id)
 
         if player in self.players:
             self.kick_player(player)
 
-    def unban_player(self, player: "Player"):
+    def unban_player(self, player: "Client"):
         if player.id in self.banned_players:
             self.banned_players.remove(player.id)
 
@@ -472,7 +441,7 @@ class Match:
                 # Remove referee player from this match
                 player.referee_matches.remove(self)
 
-        for player in app.session.players.in_lobby:
+        for player in app.session.players.osu_in_lobby:
             player.enqueue_match_disband(self.id)
 
         app.session.matches.remove(self)
@@ -708,7 +677,7 @@ class Match:
         for p in self.players:
             p.enqueue_score_update(scoreframe)
 
-        for p in app.session.players.in_lobby:
+        for p in app.session.players.osu_in_lobby:
             p.enqueue_score_update(scoreframe)
 
     def start_finish_timeout(self) -> None:

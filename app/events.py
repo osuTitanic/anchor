@@ -1,9 +1,8 @@
 
 from __future__ import annotations
 
-from app.objects.player import Player
 from app.common import officer
-from app.common.objects import bMessage
+from app.clients.base import Client
 from app.common.constants import GameMode
 from app.common.cache import leaderboards
 from app.common.database.repositories import (
@@ -40,7 +39,7 @@ def logout(user_id: int):
     if not (player := app.session.players.by_id(user_id)):
         return
 
-    player.close_connection()
+    player.close_connection("Kicked by logout event")
 
 @app.session.events.register('restrict')
 def restrict(
@@ -134,7 +133,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
 @app.session.events.register('announcement')
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
-    app.session.players.announce(message)
+    app.session.players.send_announcement(message)
 
 @app.session.events.register('user_announcement')
 def user_announcement(user_id: int, message: str):
@@ -152,11 +151,11 @@ def user_update(user_id: int, mode: int | None = None):
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
-    player.reload_object()
+    player.reload()
     enqueue_stats(player)
 
     duplicates = app.session.players.by_rank(
-        player.rank,
+        player.stats.rank,
         player.status.mode
     )
 
@@ -179,13 +178,9 @@ def link_discord_user(user_id: int, code: str):
         return
 
     player.enqueue_message(
-        bMessage(
-            app.session.banchobot.name,
-            f'Your verification code is: "{code}". Please type it into discord to link your account!',
-            player.name,
-            sender_id=app.session.banchobot.id,
-            is_private=True
-        )
+        f'Your verification code is: "{code}". Please type it into discord to link your account!',
+        app.session.banchobot,
+        player.name
     )
 
 @app.session.events.register('external_message')
@@ -224,33 +219,21 @@ def external_dm(
     )
 
     target.enqueue_message(
-        msg := bMessage(
-            sender.name,
-            message,
-            target.name,
-            sender_id=sender.id,
-            is_private=True
-        )
+        message, sender, target.name
     )
 
     if (online_sender := app.session.players.by_id(sender_id)):
-        online_sender.enqueue_message(msg)
+        online_sender.enqueue_message(message, sender, target.name)
 
 @app.session.events.register('shutdown')
 def shutdown() -> None:
     exit(0)
 
-def enqueue_stats(player: Player):
-    for p in app.session.players:
-        if p.client.version.date > 20121223 and p.id != player.id:
+def enqueue_stats(player: Client):
+    for p in app.session.players.osu_clients:
+        if not p.io.requires_status_updates:
             # Client will request the stats
             # themselves when pressing F9
-            continue
-
-        if p.client.version.date <= 377:
-            # Client needs the "update" flag to
-            # be set for the stats to be updated
-            p.enqueue_presence(player, update=True)
             continue
 
         p.enqueue_stats(player)

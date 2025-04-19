@@ -26,14 +26,3 @@ class Status:
             f"md5='{self.checksum}' "
             f"beatmap={self.beatmap}>"
         )
-
-    @property
-    def bancho_status(self) -> bStatusUpdate:
-        return bStatusUpdate(
-            self.action,
-            self.text,
-            self.mods,
-            self.mode,
-            self.checksum,
-            self.beatmap
-        )

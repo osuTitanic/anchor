@@ -5,6 +5,7 @@ from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
+from chio import PacketType, TitleUpdate
 from threading import Thread
 
 from .common import officer
@@ -39,7 +40,7 @@ from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
-from .objects.player import Player
+from .clients.base import Client
 
 import timeago
 import config
@@ -51,9 +52,9 @@ import os
 
 @dataclass
 class Context:
-    player: Player
+    player: Client
     trigger: str
-    target: Channel | Player
+    target: Channel | Client
     args: List[str]
     set: CommandSet | None = None
     objects: Dict[str, Any] = field(default_factory=dict)
@@ -139,7 +140,7 @@ def maintenance_mode(ctx: Context) -> List[str]:
             if player.is_admin:
                 continue
 
-            player.close_connection()
+            player.close_connection("Server maintenance")
 
     return [
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
@@ -159,11 +160,13 @@ def set_config_value(ctx: Context) -> List[str]:
 
     if env_name.startswith('MENUICON'):
         # Enqueue menu icon to all players
-        for player in app.session.players:
-            player.send_packet(
-                player.packets.MENU_ICON,
-                config.MENUICON_IMAGE,
-                config.MENUICON_URL
+        for player in app.session.players.osu_clients:
+            player.enqueue_packet(
+                PacketType.BanchoTitleUpdate,
+                TitleUpdate(
+                    config.MENUICON_IMAGE,
+                    config.MENUICON_URL
+                )
             )
 
     return ['Config was updated.']
@@ -604,7 +607,7 @@ bot_invites = [
     "Uhh... sorry, no time to play. (°_o)",
     "I'm too busy!",
     "nope.",
-    "idk how to play this game... ¯\(°_o)/¯"
+    "idk how to play this game... ¯\\(°_o)/¯"
 ]
 
 @mp_commands.register(['invite', 'inv'])
@@ -619,8 +622,11 @@ def mp_invite(ctx: Context):
     if name == app.session.banchobot.name:
         return [bot_invites[random.randrange(0, len(bot_invites))]]
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     if target is ctx.player:
         return ['You are already here.']
@@ -651,8 +657,11 @@ def mp_force_invite(ctx: Context):
     if not ctx.player.is_admin and not match.persistent:
         return ['You are not allowed to force invite players.']
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     if target.match is match:
         return [f'{target.name} is already in this match.']
@@ -754,7 +763,7 @@ def mp_ban(ctx: Context):
     if name == ctx.player.name:
         return ["no."]
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
 
     match.ban_player(player)
@@ -774,7 +783,7 @@ def mp_unban(ctx: Context):
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
 
     if player.id not in match.banned_players:
@@ -1026,7 +1035,7 @@ def mp_addref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find player "{name}".']
 
     if target.id in match.referee_players:
@@ -1068,7 +1077,7 @@ def mp_removeref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find player "{name}".']
 
     if target.id not in match.referee_players:
@@ -1245,7 +1254,7 @@ def where(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
 
     if not target.client.ip:
@@ -1264,7 +1273,7 @@ def get_stats(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
 
     global_rank = leaderboards.global_rank(target.id, target.status.mode.value)
@@ -1286,7 +1295,7 @@ def recent(ctx: Context):
     if ctx.args:
         name = ' '.join(ctx.args[0:])
 
-        if not (target_player := app.session.players.by_name(name)):
+        if not (target_player := app.session.players.by_name_safe(name)):
             return ['Player is not online']
 
     with app.session.database.managed_session() as session:
@@ -1335,8 +1344,11 @@ def get_client_version(ctx: Context):
         # Select a different player
         name = ' '.join(ctx.args[0:])
 
-        if not (target := app.session.players.by_name(name)):
+        if not (target := app.session.players.by_name_safe(name)):
             return ['Player is not online']
+
+        if target.is_irc:
+            return ['This player is connected via. IRC.']
 
     return [f"{target.name} is playing on {target.client.version.string}"]
 
@@ -1349,8 +1361,11 @@ def monitor(ctx: Context) -> List | None:
 
     name = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return ['Player is not online']
+    
+    if player.is_irc:
+        return ['Player is connected via. IRC']
 
     player.enqueue_monitor()
 
@@ -1363,7 +1378,7 @@ def alert(ctx: Context) -> List | None:
     if not ctx.args:
         return [f'Invalid syntax: !{ctx.trigger} <message>']
 
-    app.session.players.announce(' '.join(ctx.args))
+    app.session.players.send_announcement(' '.join(ctx.args))
 
     return [f'Alert was sent to {len(app.session.players)} players.']
 
@@ -1376,7 +1391,7 @@ def alertuser(ctx: Context) -> List | None:
 
     username = ctx.args[0]
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'Could not find player "{username}".']
 
     player.enqueue_announcement(' '.join(ctx.args[1:]))
@@ -1394,7 +1409,7 @@ def silence(ctx: Context) -> List | None:
     duration = timeparse(ctx.args[1])
     reason = ' '.join(ctx.args[2:])
 
-    if (player := app.session.players.by_name(name)):
+    if (player := app.session.players.by_name_safe(name)):
         player.silence(duration, reason)
         silence_end = player.object.silence_end
     else:
@@ -1438,7 +1453,7 @@ def unsilence(ctx: Context):
 
     name = ctx.args[0]
 
-    if (player := app.session.players.by_name(name)):
+    if (player := app.session.players.by_name_safe(name)):
         player.unsilence()
         return [f'{player.name} was unsilenced.']
 
@@ -1469,7 +1484,7 @@ def restrict(ctx: Context) -> List | None:
     else:
         until = None
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         # Player is not online, or was not found
         player = users.fetch_by_name(username)
 
@@ -1577,10 +1592,10 @@ def kick(ctx: Context) -> List | None:
 
     username = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'User "{username}" was not found.']
 
-    player.close_connection()
+    player.close_connection(f"Kicked by '{ctx.player.name}'")
 
     return [f'{player.name} was disconnected from bancho.']
 
@@ -1592,12 +1607,15 @@ def kill(ctx: Context) -> List | None:
 
     username = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'User "{username}" was not found.']
 
+    if player.is_irc:
+        return [f'User "{username}" is connected via. IRC']
+
     player.permissions = Permissions(255)
-    player.enqueue_permissions()
-    player.enqueue_ping()
+    player.enqueue_packet(PacketType.BanchoLoginPermissions, player.permissions)
+    player.enqueue_packet(PacketType.BanchoPing)
 
     return [f'{player.name} was disconnected from bancho.']
 
@@ -1646,15 +1664,18 @@ def rtx(ctx: Context) -> List | None:
 
     username = ctx.args[0]
     message = "Zallius' eyes have awoken"
-    target = app.session.players.by_name(username)
+    target = app.session.players.by_name_safe(username)
 
     if not target:
         return [f'User "{username}" was not found.']
+
+    if target.is_irc:
+        return [f'User "{username}" is connected via. IRC']
     
     if len(ctx.args) > 1:
         message = ' '.join(ctx.args[1:])
 
-    target.send_packet(target.packets.RTX, message)
+    target.enqueue_packet(PacketType.BanchoRTX, message)
     return [f"{target.name} was RTX'd."]
 
 @command(['crash'], ['Admins', 'Developers'], hidden=False)
@@ -1664,10 +1685,13 @@ def crash(ctx: Context) -> List | None:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
     
     username = " ".join(ctx.args[0:])
-    target = app.session.players.by_name(username)
+    target = app.session.players.by_name_safe(username)
 
     if not target:
         return [f'User "{username}" was not found.']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     fake_match = bMatch(
         id=0,

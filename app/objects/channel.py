@@ -1,13 +1,13 @@
 
 from typing import TYPE_CHECKING, List, Set
+from chio import Message
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
-    from app.objects.player import Player
+    from app.clients import Client
 
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
-from app.common.objects import bMessage, bChannel
 from app.common.constants import Permissions
 from app.objects.locks import LockedSet
 from app.common import officer
@@ -35,7 +35,7 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-        self.users: LockedSet["Player"] = LockedSet()
+        self.users: LockedSet["Client"] = LockedSet()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -51,15 +51,6 @@ class Channel:
         return len(self.users)
 
     @property
-    def bancho_channel(self) -> bChannel:
-        return bChannel(
-            self.display_name,
-            self.topic,
-            self.owner,
-            self.user_count
-        )
-
-    @property
     def display_name(self) -> str:
         return self.name
 
@@ -69,7 +60,7 @@ class Channel:
     def can_write(self, perms: Permissions):
         return perms.value >= self.write_perms
 
-    def add(self, player: "Player", no_response: bool = False) -> None:
+    def add(self, player: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
 
@@ -83,7 +74,7 @@ class Channel:
             if no_response:
                 return
 
-            player.join_success(self.display_name)
+            player.enqueue_channel_join_success(self.display_name)
             return
 
         player.channels.add(self)
@@ -91,11 +82,11 @@ class Channel:
         self.update()
 
         if not no_response:
-            player.join_success(self.display_name)
+            player.enqueue_channel_join_success(self.display_name)
 
         self.logger.info(f'{player.name} joined')
 
-    def remove(self, player: "Player") -> None:
+    def remove(self, player: "Client") -> None:
         self.users.remove(player)
         self.update()
 
@@ -107,7 +98,7 @@ class Channel:
             # Only enqueue to users in this channel
             for player in self.users:
                 player.enqueue_channel(
-                    self.bancho_channel,
+                    self,
                     autojoin=False
                 )
             return
@@ -115,19 +106,19 @@ class Channel:
         for player in app.session.players:
             if self.can_read(player.permissions):
                 player.enqueue_channel(
-                    self.bancho_channel,
+                    self,
                     autojoin=False
                 )
 
-    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         for user in users:
-            user.enqueue_message(message)
+            user.enqueue_message_object(message)
 
     def send_message(
         self,
-        sender: "Player",
+        sender: "Client",
         message: str,
         ignore_privileges=False,
         ignore_commands=False
@@ -188,7 +179,7 @@ class Channel:
         users = {user for user in self.users if user != sender}
 
         self.broadcast_message(
-            bMessage(
+            Message(
                 sender.name,
                 message,
                 self.display_name,
@@ -210,7 +201,7 @@ class Channel:
         sender_id: int
     ) -> None:
         self.broadcast_message(
-            bMessage(
+            Message(
                 sender,
                 message,
                 self.display_name,
@@ -220,7 +211,7 @@ class Channel:
         )
 
 class SpectatorChannel(Channel):
-    def __init__(self, player: "Player") -> None:
+    def __init__(self, player: "Client") -> None:
         super().__init__(
             name=f'#spec_{player.id}',
             topic=f"{player.name}'s spectator channel",
@@ -251,10 +242,10 @@ class MultiplayerChannel(Channel):
     def display_name(self) -> str:
         return '#multiplayer'
 
-    def resolve_name(self, player: "Player") -> str:
+    def resolve_name(self, player: "Client") -> str:
         return self.name if player.id in self.match.referee_players else self.display_name
 
-    def add(self, player: "Player", no_response: bool = False) -> None:
+    def add(self, player: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
 
@@ -268,7 +259,7 @@ class MultiplayerChannel(Channel):
             if no_response:
                 return
 
-            player.join_success(self.resolve_name(player))
+            player.enqueue_channel_join_success(self.resolve_name(player))
             return
 
         player.channels.add(self)
@@ -276,7 +267,7 @@ class MultiplayerChannel(Channel):
         self.update()
 
         if not no_response:
-            player.join_success(self.resolve_name(player))
+            player.enqueue_channel_join_success(self.resolve_name(player))
 
         self.logger.info(f'{player.name} joined')
 
@@ -288,9 +279,9 @@ class MultiplayerChannel(Channel):
             channel_object.name = self.resolve_name(player)
             player.enqueue_channel(channel_object)
 
-    def broadcast_message(self, message: bMessage, users: List["Player"]) -> None:
+    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         for user in users:
             message.target = self.resolve_name(user)
-            user.enqueue_message(message)
+            user.enqueue_message_object(message)

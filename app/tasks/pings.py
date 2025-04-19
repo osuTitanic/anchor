@@ -1,4 +1,6 @@
 
+from chio import PacketType
+
 import time
 import app
 
@@ -11,16 +13,15 @@ def tcp_pings() -> None:
     This task will handle client pings and timeouts for tcp clients.
     Pings are required for tcp clients, to keep them connected.
     """
-    for player in app.session.players.tcp_clients:
+    for player in app.session.players.tcp_osu_clients:
         if player.is_bot:
             continue
 
-        player.enqueue_ping()
+        player.enqueue_packet(PacketType.BanchoPing)
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT:
-            player.logger.warning('Client timed out.')
-            player.close_connection()
+            player.close_connection('Client timed out.')
 
 @app.session.tasks.submit(interval=PING_TIMEOUT)
 def http_pings() -> None:
@@ -29,7 +30,10 @@ def http_pings() -> None:
     Http clients do not require pings, but we still want to
     check if they are still connected.
     """
-    for player in app.session.players.http_clients:
+    for player in app.session.players.http_osu_clients:
+        if player.is_bot:
+            continue
+
         last_response = (time.time() - player.last_response)
 
         if not player.connected:
@@ -39,5 +43,4 @@ def http_pings() -> None:
             continue
 
         if last_response >= PING_TIMEOUT:
-            player.logger.warning('Client timed out.')
-            player.close_connection()
+            player.close_connection('Client timed out.')
