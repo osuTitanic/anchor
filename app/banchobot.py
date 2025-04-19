@@ -177,3 +177,4 @@ class BanchoBot(IrcClient):
         self.presence.city = "w00t p00t!"
         self.presence.is_irc = True
         self.reload()
+        self.stats.rank = 0
