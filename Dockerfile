@@ -1,21 +1,28 @@
-FROM python:3.13-bullseye
+FROM python:3.13-alpine
 
 WORKDIR /bancho
 
-# Installing/Updating system dependencies
-RUN apt update -y
-RUN apt install postgresql git curl -y
+# Install system dependencies
+RUN apk update && apk add --no-cache \
+    postgresql-libs \
+    postgresql-dev \
+    git \
+    curl \
+    build-base \
+    libffi-dev \
+    openssl-dev \
+    musl-dev
 
-# Install rust toolchain
+# Install Rust toolchain
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Update pip
+# Upgrade pip
 RUN pip install --upgrade pip
 
-# Install python dependencies
+# Install Python dependencies
 COPY requirements.txt ./
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY . .
