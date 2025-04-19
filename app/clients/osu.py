@@ -100,7 +100,7 @@ class OsuClient(Client):
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_name_case_insensitive(username, session)):
                 self.logger.warning('Login Failed: User not found')
-                self.on_login_failed(LoginError.Authentication)
+                self.on_login_failed(LoginError.InvalidLogin)
                 return
 
             self.object = user
@@ -116,12 +116,12 @@ class OsuClient(Client):
 
             if not bcrypt.checkpw(password.encode(), user.bcrypt.encode()):
                 self.logger.warning('Login Failed: Authentication error')
-                self.on_login_failed(LoginError.Authentication)
+                self.on_login_failed(LoginError.InvalidLogin)
                 return
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
-                self.on_login_failed(LoginError.Banned)
+                self.on_login_failed(LoginError.UserBanned)
                 return
 
             if not user.activated:
@@ -151,7 +151,7 @@ class OsuClient(Client):
             if check_client and not self.is_valid_client(session):
                 self.logger.warning('Login Failed: Unverified client')
                 self.on_login_failed(
-                    LoginError.UpdateNeeded,
+                    LoginError.InvalidVersion,
                     strings.UNSUPPORTED_HASH
                 )
                 officer.call(
@@ -165,13 +165,13 @@ class OsuClient(Client):
                 if (other_user := app.session.players.by_id(user.id)):
                     # Another user is online with this account
                     other_user.on_login_failed(
-                        LoginError.Authentication,
+                        LoginError.InvalidLogin,
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
 
             elif not self.is_supporter:
                 # Trying to use tournament client without supporter
-                self.on_login_failed(LoginError.TestBuild)
+                self.on_login_failed(LoginError.UnauthorizedTestBuild)
                 return
 
             else:
@@ -469,7 +469,7 @@ class OsuClient(Client):
         autoban: bool = False
     ) -> None:
         super().restrict(reason, until, autoban)
-        self.on_login_failed(LoginError.Banned)
+        self.on_login_failed(LoginError.UserBanned)
         self.close_connection("Restricted")
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
