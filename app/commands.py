@@ -1367,7 +1367,7 @@ def monitor(ctx: Context) -> List | None:
     if player.is_irc:
         return ['Player is connected via. IRC']
 
-    player.enqueue_monitor()
+    player.enqueue_packet(PacketType.BanchoMonitor)
 
     return ['Player has been monitored']
 

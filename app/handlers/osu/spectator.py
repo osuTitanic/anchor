@@ -41,12 +41,12 @@ def start_spectating(client: OsuClient, player_id: int):
 
     # Enqueue fellow spectators
     for p in target.spectators:
-        client.enqueue_fellow_spectator(p.id)
-        p.enqueue_fellow_spectator(client.id)
+        client.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, p.id)
+        p.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, client.id)
 
     # Enqueue to target
     target.spectators.add(client)
-    target.enqueue_spectator(client.id)
+    target.enqueue_packet(PacketType, PacketType.BanchoSpectatorJoined, client.id)
     target.enqueue_channel(target.spectator_chat.bancho_channel)
 
     # Check if target joined #spectator
@@ -84,10 +84,10 @@ def cant_spectate(client: OsuClient):
         return
 
     client.logger.info(f"Player is missing beatmap to spectate.")
-    client.spectating.enqueue_cant_spectate(client.id)
+    client.spectating.enqueue_packet(PacketType.BanchoSpectatorCantSpectate, client.id)
 
     for p in client.spectating.spectators:
-        p.enqueue_cant_spectate(client.id)
+        p.enqueue_packet(PacketType.BanchoSpectatorCantSpectate, client.id)
 
 @register(PacketType.OsuSpectateFrames)
 def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
@@ -95,5 +95,5 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
         return
 
     for p in client.spectators:
-        p.enqueue_frames(bundle)
+        p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
 

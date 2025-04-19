@@ -185,10 +185,10 @@ class OsuClient(Client):
 
             self.status.mode = GameMode(self.object.preferred_mode)
 
-            if not self.stats:
-                self.stats = [stats.create(self.id, mode, session) for mode in range(4)]
-                self.reload_object()
-                self.enqueue_silence_info(-1)
+            if not self.object.stats:
+                self.object.stats = [stats.create(self.id, mode, session) for mode in range(4)]
+                self.reload()
+                self.enqueue_infringement_length(-1)
 
             # Create login attempt in db
             logins.create(
@@ -328,12 +328,12 @@ class OsuClient(Client):
             # Remove from target
             self.spectating.spectators.remove(self)
 
+            # Enqueue to target
+            self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)
+
             # Enqueue to others
             for p in self.spectating.spectators:
-                p.enqueue_fellow_spectator_left(self.id)
-
-            # Enqueue to target
-            self.spectating.enqueue_spectator_left(self.id)
+                p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, self.id)
 
             # If target has no spectators anymore
             # kick them from the spectator channel

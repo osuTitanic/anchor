@@ -164,7 +164,7 @@ def user_update(user_id: int, mode: int | None = None):
             continue
 
         # We have found a player with the same rank
-        player.reload_object()
+        player.reload()
         enqueue_stats(player)
 
 @app.session.events.register('link')
