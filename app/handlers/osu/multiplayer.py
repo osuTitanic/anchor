@@ -398,6 +398,8 @@ def change_mods(client: OsuClient, mods: Mods):
 
     client.match.last_activity = time.time()
 
+    # Convert chio mods
+    mods = Mods(mods.value)
     mods_before = copy(client.match.mods)
 
     if client.match.freemod:
