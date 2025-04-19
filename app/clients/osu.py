@@ -102,7 +102,7 @@ class OsuClient(Client):
             self.object = user
             self.update_object(user.preferred_mode)
 
-            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
 
             # Preload relationships
@@ -216,6 +216,8 @@ class OsuClient(Client):
 
         self.update_activity()
         self.enqueue_packet(PacketType.BanchoLoginReply, self.id)
+        self.enqueue_packet(PacketType.BanchoLoginPermissions, self.permissions)
+        self.enqueue_packet(PacketType.BanchoFriendsList, self.friends)
 
         # Menu Icon
         self.enqueue_packet(
@@ -225,9 +227,6 @@ class OsuClient(Client):
                 config.MENUICON_URL
             )
         )
-
-        self.enqueue_packet(PacketType.BanchoLoginPermissions, self.permissions)
-        self.enqueue_packet(PacketType.BanchoFriendsList, self.friends)
 
         # User & Bot Presence
         self.enqueue_presence(self)
@@ -261,7 +260,7 @@ class OsuClient(Client):
 
         # Enqueue players in lobby
         for player in app.session.players.osu_in_lobby:
-            self.enqueue_packet(PacketType.OsuLobbyJoin, player.id)
+            self.enqueue_packet(PacketType.BanchoLobbyJoin, player.id)
 
         # Potentially fix player referee state
         self.referee_matches.update([

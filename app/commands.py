@@ -1613,7 +1613,7 @@ def kill(ctx: Context) -> List | None:
     if player.is_irc:
         return [f'User "{username}" is connected via. IRC']
 
-    player.permissions = Permissions(255)
+    player.presence.permissions = Permissions(255)
     player.enqueue_packet(PacketType.BanchoLoginPermissions, player.permissions)
     player.enqueue_packet(PacketType.BanchoPing)
 

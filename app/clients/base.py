@@ -46,7 +46,6 @@ class Client:
         self.last_response = time.time()
         self.last_minute_stamp = time.time()
         self.recent_message_count = 0
-        self.permissions = Permissions.Regular
         self.groups = []
 
     @property
@@ -141,6 +140,10 @@ class Client:
         return round(
             (index + 1) + (score - added_score) / level.NEXT_LEVEL[index]
         )
+    
+    @property
+    def permissions(self) -> Permissions:
+        return self.presence.permissions
 
     @property
     def avatar_filename(self) -> str:
@@ -203,7 +206,7 @@ class Client:
                 DBUser.stats,
                 session=session
             )
-            self.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
             self.update_object(self.object.preferred_mode)
             self.reload_rank()
