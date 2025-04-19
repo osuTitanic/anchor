@@ -1,14 +1,14 @@
 
 from __future__ import annotations
 
-from chio import ScoreFrame as bScoreFrame, Match as bMatch
+from chio import PacketType, ScoreFrame as bScoreFrame, Match as bMatch
 from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from ..clients import Client
+    from ..clients.osu import OsuClient
     from .channel import Channel
 
 from app.common.database.repositories import beatmaps, events, matches
@@ -32,7 +32,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: "Client" | None = None
+        self.player: "OsuClient" | None = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -93,7 +93,7 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: "Client",
+        host: "OsuClient",
         beatmap_id: int = -1,
         beatmap_name: str = "",
         beatmap_hash: str = "",
@@ -138,7 +138,7 @@ class Match:
         self.last_activity = time.time()
 
     @classmethod
-    def from_bancho_match(cls, match: bMatch, host: "Client"):
+    def from_bancho_match(cls, match: bMatch, host: "OsuClient"):
         return Match(
             match.id,
             match.name,
@@ -152,7 +152,7 @@ class Match:
         )
 
     @property
-    def players(self) -> List["Client"]:
+    def players(self) -> List["OsuClient"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
 
@@ -199,21 +199,21 @@ class Match:
             )
         ]
 
-    def get_slot(self, player: "Client") -> Slot | None:
+    def get_slot(self, player: "OsuClient") -> Slot | None:
         for slot in self.slots:
             if player is slot.player:
                 return slot
 
         return None
 
-    def get_slot_id(self, player: "Client") -> int | None:
+    def get_slot_id(self, player: "OsuClient") -> int | None:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return index
 
         return None
 
-    def get_slot_with_id(self, player: "Client") -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "OsuClient") -> Tuple[Slot, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
@@ -227,7 +227,7 @@ class Match:
 
         return None
 
-    def get_player(self, name: str) -> "Client" | None:
+    def get_player(self, name: str) -> "OsuClient" | None:
         for player in self.players:
             if player.name == name:
                 return player
@@ -376,8 +376,8 @@ class Match:
 
         self.update()
 
-    def kick_player(self, player: "Client"):
-        player.enqueue_match_disband(self.id)
+    def kick_player(self, player: "OsuClient"):
+        player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.revoke_channel(self.chat.resolve_name(player))
         self.chat.remove(player)
         player.match = None
@@ -416,13 +416,13 @@ class Match:
 
         self.update()
 
-    def ban_player(self, player: "Client"):
+    def ban_player(self, player: "OsuClient"):
         self.banned_players.append(player.id)
 
         if player in self.players:
             self.kick_player(player)
 
-    def unban_player(self, player: "Client"):
+    def unban_player(self, player: "OsuClient"):
         if player.id in self.banned_players:
             self.banned_players.remove(player.id)
 
@@ -442,7 +442,7 @@ class Match:
                 player.referee_matches.remove(self)
 
         for player in app.session.players.osu_in_lobby:
-            player.enqueue_match_disband(self.id)
+            player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
 
         app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
@@ -517,7 +517,7 @@ class Match:
 
         # The join success packet will reset the players to the setup screen
         for player in players:
-            player.enqueue_matchjoin_success(self.bancho_match)
+            player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self.bancho_match)
 
         start_event = events.fetch_last_by_type(
             player.match.db_match.id,

@@ -1,6 +1,6 @@
 
+from chio import Message, Channel as bChannel
 from typing import TYPE_CHECKING, List, Set
-from chio import Message
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
@@ -53,6 +53,15 @@ class Channel:
     @property
     def display_name(self) -> str:
         return self.name
+
+    @property
+    def bancho_channel(self) -> bChannel:
+        return bChannel(
+            self.display_name,
+            self.topic,
+            self.owner,
+            self.user_count
+        )
 
     def can_read(self, perms: Permissions):
         return perms.value >= self.read_perms
