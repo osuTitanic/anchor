@@ -31,7 +31,7 @@ class HttpOsuClient(OsuClient):
 
     def enqueue_packet(self, packet, *args):
         data = self.io.write_packet_to_bytes(packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {args}')
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
         self.enqueue(data)
 
     def enqueue(self, data: bytes):

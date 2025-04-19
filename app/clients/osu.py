@@ -235,7 +235,7 @@ class OsuClient(Client):
         # User & Bot Presence
         self.enqueue_presence(self)
         self.enqueue_stats(self)
-        self.enqueue_player(app.session.banchobot)
+        self.enqueue_presence(app.session.banchobot)
 
         # Append to player collection
         app.session.players.add(self)
@@ -457,6 +457,7 @@ class OsuClient(Client):
         self.presence.country_index = self.info.ip.country_index
         self.presence.longitude = self.info.ip.longitude
         self.presence.latitude = self.info.ip.latitude
+        self.presence.is_irc = False
 
         if self.info.display_city:
             self.presence.city = self.info.ip.city
@@ -472,9 +473,7 @@ class OsuClient(Client):
         self.close_connection("Restricted")
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
-        self.logger.debug(f'<- "{packet.name}": {args}')
-        # NOTE: The actual packet will be sent in the protocol implementation
-        #       e.g. app.protocols.tcp or app.protocols.http
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
 
     def enqueue_error(self, error: LoginError = LoginError.ServerError, message: str = "") -> None:
         self.enqueue_packet(PacketType.BanchoLoginReply, error)

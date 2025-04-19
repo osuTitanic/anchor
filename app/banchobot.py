@@ -175,4 +175,5 @@ class BanchoBot(IrcClient):
         self.info = OsuClientInformation.empty()
         self.presence.country_index = 1
         self.presence.city = "w00t p00t!"
+        self.presence.is_irc = True
         self.reload()

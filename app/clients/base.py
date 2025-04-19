@@ -150,11 +150,11 @@ class Client:
         return f"{self.id}_000.png"
 
     @property
-    def friendonly_dms(self) -> bool:
-        return False
+    def is_irc(self) -> bool:
+        return self.presence.is_irc
 
     @property
-    def is_irc(self) -> bool:
+    def friendonly_dms(self) -> bool:
         return False
 
     @property

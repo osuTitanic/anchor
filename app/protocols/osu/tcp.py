@@ -49,7 +49,7 @@ class TcpOsuClient(OsuClient, Protocol):
 
     def enqueue_packet(self, packet, *args):
         self.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {args}')
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
 
     def close_connection(self, reason: str = "") -> None:
         reactor.callFromThread(self.transport.loseConnection)
