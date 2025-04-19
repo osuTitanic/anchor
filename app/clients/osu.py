@@ -50,6 +50,10 @@ class OsuClient(Client):
     def is_tourney_client(self) -> bool:
         return self.client.version.stream == 'tourney'
 
+    @property
+    def friendonly_dms(self) -> bool:
+        return self.info.friendonly_dms
+
     def __repr__(self) -> str:
         return f'<OsuClient "{self.name}" ({self.id})>'
 

@@ -114,7 +114,7 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.enqueue_silenced_target(target.name)
         return
 
-    if target.client.friendonly_dms:
+    if target.friendonly_dms:
         if sender.id not in target.friends:
             sender.enqueue_blocked_dms(sender.name)
             return
