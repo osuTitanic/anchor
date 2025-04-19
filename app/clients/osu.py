@@ -162,7 +162,7 @@ class OsuClient(Client):
                 return
 
             if not self.is_tourney_client:
-                if (other_user := app.session.players.by_id(user.id)):
+                if (other_user := app.session.players.by_id_osu(user.id)):
                     # Another user is online with this account
                     other_user.on_login_failed(
                         LoginError.InvalidLogin,
