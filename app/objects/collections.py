@@ -204,7 +204,7 @@ class Players(MutableMapping[int | str, Client]):
 
     def by_rank(self, rank: int, mode: int) -> List[Client]:
         """Get all players with the specified rank"""
-        return [p for p in self.osu_clients if p.rank == rank and p.status.mode == mode]
+        return [p for p in self.osu_clients if p.stats.rank == rank and p.status.mode == mode]
 
     def tournament_clients(self, id: int) -> List[OsuClient]:
         """Get all connected tournament clients for a player"""
