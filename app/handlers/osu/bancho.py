@@ -28,10 +28,10 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest, ignore_limit: bool
 
     # Limit request filenames/ids
     if not ignore_limit:
-        info.beatmap_ids = info.beatmap_ids[:100]
+        info.ids = info.ids[:100]
         info.filenames = info.filenames[:100]
 
-    total_maps = len(info.beatmap_ids) + len(info.filenames)
+    total_maps = len(info.ids) + len(info.filenames)
 
     if total_maps <= 0:
         return
@@ -63,7 +63,7 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest, ignore_limit: bool
 
         id_beatmaps = s.query(DBBeatmap) \
             .options(selectinload(DBBeatmap.beatmapset)) \
-            .filter(DBBeatmap.id.in_(info.beatmap_ids)) \
+            .filter(DBBeatmap.id.in_(info.ids)) \
             .all()
 
         for beatmap in id_beatmaps:
