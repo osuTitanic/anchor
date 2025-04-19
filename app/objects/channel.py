@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Set
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
+    from app.clients.osu import OsuClient
     from app.clients import Client
 
 from app.common.database.repositories import messages
@@ -220,7 +221,7 @@ class Channel:
         )
 
 class SpectatorChannel(Channel):
-    def __init__(self, player: "Client") -> None:
+    def __init__(self, player: "OsuClient") -> None:
         super().__init__(
             name=f'#spec_{player.id}',
             topic=f"{player.name}'s spectator channel",
@@ -234,6 +235,16 @@ class SpectatorChannel(Channel):
     @property
     def display_name(self) -> str:
         return '#spectator'
+
+    def add(self, player: "OsuClient", no_response: bool = False) -> None:
+        if player != self.player:
+            return super().add(player, no_response)
+
+        if not player.spectators:
+            # Player does not have any spectators -> revoke channel
+            return player.enqueue_channel_revoked(self.display_name)
+
+        return super().add(player, no_response)
 
     def update(self) -> None:
         for player in app.session.players:
