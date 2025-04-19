@@ -62,13 +62,13 @@ def invite(client: OsuClient, target_id: int):
         return
 
     # TODO: Check invite spams
-    target.enqueue_invite(
+    target.enqueue_packet(
+        PacketType.BanchoInvite,
         Message(
             client.name,
             f'Come join my multiplayer match: {client.match.embed}',
             client.name,
-            client.id,
-            is_private=True
+            client.id
         )
     )
 
