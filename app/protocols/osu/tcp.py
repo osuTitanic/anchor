@@ -131,13 +131,15 @@ class TcpOsuClient(OsuClient, Protocol):
             self.stream += data
 
             while self.stream.available() >= self.io.header_size:
-                deferred = threads.deferToThread(
-                    self.on_packet_received,
-                    self.io.read_packet(self.stream)
-                )
+                packet, data = self.io.read_packet(self.stream)
 
                 # Clear the data that was read
                 self.stream.reset()
+
+                deferred = threads.deferToThread(
+                    self.on_packet_received,
+                    packet, data
+                )
 
                 deferred.addErrback(
                     lambda f: (

@@ -83,11 +83,15 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.stream += payload
 
         while self.stream.available() >= self.player.io.header_size:
+            packet, data = self.player.io.read_packet(self.stream)
+
+            # Clear the data that was read
+            self.stream.reset()
+
             deferred = threads.deferToThread(
                 self.player.on_packet_received,
-                self.player.io.read_packet(self.stream)
+                packet, data
             )
-            self.stream.reset()
 
             deferred.addErrback(
                 lambda f: (
