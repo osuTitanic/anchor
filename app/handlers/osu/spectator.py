@@ -65,6 +65,7 @@ def stop_spectating(client: OsuClient):
 
     # Leave spectator channel
     client.spectating.spectator_chat.remove(client)
+    client.enqueue_channel_revoked("#spectator")
 
     # Enqueue to target
     client.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, client.id)
