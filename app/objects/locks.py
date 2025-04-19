@@ -172,8 +172,8 @@ class LockedDict(_MutableMapping, MutableMapping[K, V]):
 
     def __iter__(self) -> Iterator[K]:
         with self.lock.read_context():
-            # Create a snapshot of keys to avoid runtime errors if dict changes
-            return iter(list(self.dict.keys()))
+            snapshot = list(self.dict.keys())
+        return iter(snapshot)
 
     def __contains__(self, key: object) -> bool:
         with self.lock.read_context():
