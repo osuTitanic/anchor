@@ -290,7 +290,6 @@ def create_persistant_match(ctx: Context):
 
     if not app.session.matches.append(match):
         ctx.player.logger.warning('Failed to append match to collection')
-        ctx.player.enqueue_matchjoin_fail()
         return ['Could not create match.']
 
     ctx.player.referee_matches.add(match.id)
@@ -583,7 +582,7 @@ def mp_host(ctx: Context):
     )
 
     match.host = target
-    match.host.enqueue_match_transferhost()
+    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
     match.logger.info(f'Changed host to: {target.name}')
     match.update()
 

@@ -443,7 +443,7 @@ class Match:
 
         if self.in_progress:
             for player in self.players:
-                player.enqueue_match_complete()
+                player.enqueue_packet(PacketType.BanchoMatchComplete)
 
         for player in self.players:
             self.kick_player(player)
@@ -483,7 +483,7 @@ class Match:
             if slot.status == SlotStatus.NotReady:
                 continue
 
-            slot.player.enqueue_match_start(self.bancho_match)
+            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self)
 
             if slot.status != SlotStatus.NoMap:
                 slot.status = SlotStatus.Playing
@@ -560,7 +560,7 @@ class Match:
         self.in_progress = False
 
         for p in players:
-            p.enqueue_match_complete()
+            p.enqueue_packet(PacketType.BanchoMatchComplete)
 
         self.logger.info('Match finished')
         self.update()
@@ -686,10 +686,10 @@ class Match:
         self.last_activity = time.time()
 
         for p in self.players:
-            p.enqueue_score_update(scoreframe)
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
 
         for p in app.session.players.osu_in_lobby:
-            p.enqueue_score_update(scoreframe)
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
 
     def start_finish_timeout(self) -> None:
         if self.completion_timer:

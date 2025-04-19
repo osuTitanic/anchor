@@ -40,7 +40,7 @@ def join_lobby(client: OsuClient):
     client.in_lobby = True
 
     for match in session.matches.active:
-        client.enqueue_match(match.bancho_match)
+        client.enqueue_packet(PacketType.BanchoMatchNew, match)
 
 @register(PacketType.OsuLobbyPart)
 def part_lobby(client: OsuClient):
@@ -76,22 +76,22 @@ def invite(client: OsuClient, target_id: int):
 def create_match(client: OsuClient, bancho_match: Match):
     if not client.in_lobby:
         client.logger.warning('Tried to create match, but not in lobby')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     if client.is_tourney_client:
         client.logger.warning('Tried to create match, but was inside tourney client')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     if client.silenced:
         client.logger.warning('Tried to create match, but was silenced')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     if client.match:
         client.logger.warning('Tried to create match, but was already inside one')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         client.match.kick_player(client)
         return
 
@@ -102,7 +102,7 @@ def create_match(client: OsuClient, bancho_match: Match):
 
     if not session.matches.append(match):
         client.logger.warning('Failed to append match to collection')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     for index, slot in enumerate(bancho_match.slots):
@@ -138,7 +138,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     if not session.matches.exists(match_join.match_id):
         client.logger.warning(f'{client.name} tried to join a match that does not exist')
         client.enqueue_packet(PacketType.BanchoMatchDisband, match_join.match_id)
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     match = session.matches[match_join.match_id]
@@ -146,32 +146,32 @@ def join_match(client: OsuClient, match_join: MatchJoin):
 
     if client.is_tourney_client:
         client.logger.warning('Tried to join match, but was inside tourney client')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     if client.match:
         # Player already joined a match
         client.logger.warning(f'{client.name} tried to join a match, but is already inside one')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         client.match.kick_player(client)
         return
 
     if (client.id in match.banned_players) and not client.is_admin:
         client.logger.warning(f'{client.name} tried to join a match, but was banned from it')
-        client.enqueue_matchjoin_fail()
+        client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
     if client is not match.host:
         if match_join.password != match.password:
             # Invalid password
             client.logger.warning('Failed to join match: Invalid password')
-            client.enqueue_matchjoin_fail()
+            client.enqueue_packet(PacketType.BanchoMatchJoinFail)
             return
 
         if (slot_id := match.get_free()) is None:
             # Match is full
             client.logger.warning('Failed to join match: Match full')
-            client.enqueue_matchjoin_fail()
+            client.enqueue_packet(PacketType.BanchoMatchJoinFail)
             return
     else:
         # Player is creating the match
@@ -302,7 +302,7 @@ def leave_match(client: OsuClient):
         for slot in client.match.slots:
             if slot.status.value & SlotStatus.HasPlayer.value:
                 client.match.host = slot.player
-                client.match.host.enqueue_match_transferhost()
+                client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
         events.create(
             client.match.db_match.id,
@@ -548,11 +548,11 @@ def transfer_host(client: OsuClient, slot_id: int):
         return
 
     if target is client.match.host:
-        client.match.host.enqueue_match_transferhost()
+        client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
         return
 
     client.match.host = target
-    client.match.host.enqueue_match_transferhost()
+    client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
     events.create(
         client.match.db_match.id,
@@ -611,7 +611,7 @@ def load_complete(client: OsuClient):
             if not slot.has_map:
                 continue
 
-            slot.player.enqueue_match_all_players_loaded()
+            slot.player.enqueue_packet(PacketType.BanchoMatchAllPlayersLoaded)
 
         client.match.update()
 
@@ -631,14 +631,14 @@ def skip(client: OsuClient):
     slot.skipped = True
 
     for p in client.match.players:
-        p.enqueue_player_skipped(id)
+        p.enqueue_packet(PacketType.BanchoMatchPlayerSkipped, id)
 
     for slot in client.match.slots:
         if slot.status == SlotStatus.Playing and not slot.skipped:
             return
 
     for p in client.match.players:
-        p.enqueue_match_skip()
+        p.enqueue_packet(PacketType.BanchoMatchSkip)
 
 @register(PacketType.OsuMatchFailed)
 def player_failed(client: OsuClient):
@@ -654,7 +654,7 @@ def player_failed(client: OsuClient):
     slot.has_failed = True
 
     for p in client.match.players:
-        p.enqueue_player_failed(slot_id)
+        p.enqueue_packet(PacketType.BanchoMatchPlayerFailed, slot_id)
 
 @register(PacketType.OsuMatchScoreUpdate)
 def score_update(client: OsuClient, scoreframe: ScoreFrame):
@@ -717,5 +717,14 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
     match = session.matches[match_id]
 
+    # Clear password for tourney clients
+    match_password = copy(match.password)
+
+    if match.password:
+        match.password = " "
+
     client.logger.debug(f'Got tournament match info request for "{match.name}".')
-    client.enqueue_match(match.bancho_match)
+    client.enqueue_packet(PacketType.BanchoMatchTransferHost, match)
+
+    # Re-apply password
+    match.password = match_password

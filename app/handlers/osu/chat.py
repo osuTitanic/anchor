@@ -111,13 +111,12 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if target.silenced:
-        sender.enqueue_silenced_target(target.name)
+        sender.enqueue_packet(PacketType.BanchoTargetIsSilenced, target.name)
         return
 
-    if target.friendonly_dms:
-        if sender.id not in target.friends:
-            sender.enqueue_blocked_dms(sender.name)
-            return
+    if target.friendonly_dms and sender.id not in target.friends:
+        sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, sender.name)
+        return
 
     if (time() - sender.last_minute_stamp) > 60:
         sender.last_minute_stamp = time()
