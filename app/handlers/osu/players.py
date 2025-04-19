@@ -95,8 +95,8 @@ def stats_request(client: OsuClient, players: List[int]):
 
 @register(PacketType.OsuUserStatus)
 def change_status(client: OsuClient, status: UserStatus):
-    client.status.checksum = status.beatmap_checksum
-    client.status.beatmap = status.beatmap_id
+    client.status.beatmap_checksum = status.beatmap_checksum
+    client.status.beatmap_id = status.beatmap_id
     client.status.action = status.action
     client.status.mods = status.mods
     client.status.mode = status.mode
