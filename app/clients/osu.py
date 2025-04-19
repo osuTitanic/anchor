@@ -126,7 +126,7 @@ class OsuClient(Client):
 
             if not user.activated:
                 self.logger.warning('Login Failed: Not activated')
-                self.send_inactive_account_error()
+                self.on_login_failed(LoginError.UserInactive)
                 return
 
             if config.MAINTENANCE:
