@@ -63,7 +63,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.onMessage = self.onPacketMessage
 
         deferred = threads.deferToThread(
-            self.player.login_received,
+            self.player.on_login_received,
             username.decode(),
             password.decode(),
             self.player.info

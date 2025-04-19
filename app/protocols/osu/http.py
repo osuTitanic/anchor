@@ -109,7 +109,7 @@ class HttpOsuHandler(Resource):
             return b''
 
         try:
-            player.login_received(
+            player.on_login_received(
                 username,
                 password,
                 client
