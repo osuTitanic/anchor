@@ -235,6 +235,14 @@ class SpectatorChannel(Channel):
     def display_name(self) -> str:
         return '#spectator'
 
+    def update(self) -> None:
+        for player in app.session.players:
+            if self.can_read(player.permissions):
+                player.enqueue_channel(
+                    self.bancho_channel,
+                    autojoin=False
+                )
+
 class MultiplayerChannel(Channel):
     def __init__(self, match: "Match") -> None:
         super().__init__(
