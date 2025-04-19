@@ -19,7 +19,13 @@ class ByteStream:
     def write(self, data: bytes) -> None:
         self.client.enqueue(data)
 
-    def read(self, size: int) -> bytes:
+    def read(self, size: int = -1) -> bytes:
+        if size < 0:
+            return self.readall()
+
+        if self.offset + size > len(self.data):
+            raise OverflowError(f"{size} exceeds available data {len(self.data) - self.offset}")
+
         data = self.data[self.offset:self.offset + size]
         self.offset += size
         return data
@@ -31,6 +37,9 @@ class ByteStream:
 
     def append(self, data: bytes) -> None:
         self.data += data
+
+    def seek(self, offset: int) -> None:
+        self.offset = offset
 
     def available(self) -> int:
         return len(self.data) - self.offset

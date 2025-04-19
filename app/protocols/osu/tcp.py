@@ -122,13 +122,13 @@ class TcpOsuClient(OsuClient, Protocol):
 
     def packetDataReceived(self, data: bytes):
         """Will handle the bancho packets, after the client login was successful."""
+        self.stream += data
+
         if self.busy:
-            self.stream += data
             return
 
         try:
             self.busy = True
-            self.stream += data
 
             while self.stream.available() >= self.io.header_size:
                 packet, data = self.io.read_packet(self.stream)
@@ -149,7 +149,7 @@ class TcpOsuClient(OsuClient, Protocol):
                 )
         except OverflowError:
             # Wait for more data
-            pass
+            self.stream.seek(0)
 
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
