@@ -330,8 +330,9 @@ def create_persistant_match(ctx: Context):
     match.logger.info(f'{ctx.player.name} joined')
     match.update()
 
-    ctx.player.match = match
-    ctx.player.enqueue_matchjoin_success(match.bancho_match)
+    if not ctx.player.is_irc:
+        ctx.player.match = match
+        ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
 
     match.chat.send_message(
         app.session.banchobot,
@@ -685,7 +686,7 @@ def mp_force_invite(ctx: Context):
     slot.player = target
 
     target.match = match
-    target.enqueue_matchjoin_success(match.bancho_match)
+    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
 
     match.logger.info(f'{target.name} joined')
     match.update()
@@ -1714,8 +1715,8 @@ def crash(ctx: Context) -> List | None:
         freemod=False,
         seed=13381
     )
-    target.enqueue_match(fake_match)
-    target.enqueue_matchjoin_success(fake_match)
+    target.enqueue_packet(PacketType.BanchoMatchUpdate, fake_match)
+    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, fake_match)
     return [f"{target.name} was crashed, hopefully :tf:"]
 
 # TODO: !rank
