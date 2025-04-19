@@ -616,12 +616,12 @@ class Match:
                             'mods': slot.mods.value
                         },
                         'score': {
-                            'c300': slot.last_frame.c300,
-                            'c100': slot.last_frame.c100,
-                            'c50': slot.last_frame.c50,
-                            'cGeki': slot.last_frame.cGeki,
-                            'cKatu': slot.last_frame.cKatu,
-                            'cMiss': slot.last_frame.cMiss,
+                            'c300': slot.last_frame.total_300,
+                            'c100': slot.last_frame.total_100,
+                            'c50': slot.last_frame.total_50,
+                            'cGeki': slot.last_frame.total_geki,
+                            'cKatu': slot.last_frame.total_katu,
+                            'cMiss': slot.last_frame.total_miss,
                             'score': slot.last_frame.total_score,
                             'accuracy': round(slot.last_frame.accuracy(self.mode) * 100, 2),
                             'max_combo': slot.last_frame.max_combo,
