@@ -245,7 +245,7 @@ class Client:
         self.stats.rscore = stats.rscore
         self.stats.tscore = stats.tscore
         self.stats.playcount = stats.playcount
-        self.stats.pp = stats.pp
+        self.stats.pp = round(stats.pp)
 
     def update_leaderboard_stats(self) -> None:
         """Updates the player's stats inside the redis leaderboard"""
