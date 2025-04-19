@@ -6,6 +6,7 @@ from typing import Iterable, List
 
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
+from app.objects.client import ClientHash
 from app.objects.channel import Channel
 from app.common.constants import level
 from app.common import officer
@@ -268,8 +269,8 @@ class Client:
             self.id,
             self.stats,
             self.status,
-            self.client.hash.string,
-            self.client.version.date
+            hash=ClientHash.empty().string,
+            version=0
         )
 
     def update_activity(self) -> None:

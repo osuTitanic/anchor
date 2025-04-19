@@ -48,7 +48,7 @@ class OsuClient(Client):
 
     @property
     def is_tourney_client(self) -> bool:
-        return self.client.version.stream == 'tourney'
+        return self.info.version.stream == 'tourney'
 
     @property
     def friendonly_dms(self) -> bool:
@@ -156,7 +156,7 @@ class OsuClient(Client):
                 )
                 officer.call(
                     f'"{self.name}" tried to log in with an unverified version: '
-                    f'{self.client.version} ({self.client.hash.md5})'
+                    f'{self.info.version} ({self.info.hash.md5})'
                 )
                 self.close_connection()
                 return
@@ -194,7 +194,7 @@ class OsuClient(Client):
             logins.create(
                 self.id,
                 self.address,
-                self.client.version.string,
+                self.info.version.string,
                 session
             )
 
@@ -203,7 +203,7 @@ class OsuClient(Client):
 
             if self.object.country.upper() == 'XX':
                 # We failed to get the users country on registration
-                self.object.country = self.client.ip.country_code.upper()
+                self.object.country = self.info.ip.country_code.upper()
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
@@ -370,47 +370,47 @@ class OsuClient(Client):
             'fallback', 'a', 'b', 'c', 'd', 'e'
         )
 
-        if self.client.version.identifier in valid_identifiers:
+        if self.info.version.identifier in valid_identifiers:
             return client_utils.is_valid_client_hash(
-                self.client.version.date,
-                self.client.hash.md5,
+                self.info.version.date,
+                self.info.hash.md5,
                 session=session
             )
         
         return client_utils.is_valid_mod(
-            self.client.version.identifier,
-            self.client.hash.md5,
+            self.info.version.identifier,
+            self.info.hash.md5,
             session=session
         )
 
     def check_client(self, session: Session | None = None):
         client = clients.fetch_without_executable(
             self.id,
-            self.client.hash.adapters_md5,
-            self.client.hash.uninstall_id,
-            self.client.hash.diskdrive_signature,
+            self.info.hash.adapters_md5,
+            self.info.hash.uninstall_id,
+            self.info.hash.diskdrive_signature,
             session=session
         )
 
         matches = clients.fetch_hardware_only(
-            self.client.hash.adapters_md5,
-            self.client.hash.uninstall_id,
-            self.client.hash.diskdrive_signature,
+            self.info.hash.adapters_md5,
+            self.info.hash.uninstall_id,
+            self.info.hash.diskdrive_signature,
             session=session
         )
 
         if not client:
             # New hardware detected
             self.logger.warning(
-                f'New hardware detected: {self.client.hash.string}'
+                f'New hardware detected: {self.info.hash.string}'
             )
 
             clients.create(
                 self.id,
-                self.client.hash.md5,
-                self.client.hash.adapters_md5,
-                self.client.hash.uninstall_id,
-                self.client.hash.diskdrive_signature,
+                self.info.hash.md5,
+                self.info.hash.adapters_md5,
+                self.info.hash.uninstall_id,
+                self.info.hash.diskdrive_signature,
                 session=session
             )
 
@@ -419,7 +419,7 @@ class OsuClient(Client):
             if self.current_stats.playcount > 0 and not user_matches:
                 mail.send_new_location_email(
                     self.object,
-                    self.client.ip.country_name
+                    self.info.ip.country_name
                 )
 
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:
@@ -443,7 +443,7 @@ class OsuClient(Client):
             # Users who are verified will not be restricted
             officer.call(
                 f'Multiaccounting detected for "{self.name}": '
-                f'{self.client.hash.string} ({len(other_matches)} matches)'
+                f'{self.info.hash.string} ({len(other_matches)} matches)'
             )
 
             if self.is_verified:
@@ -451,6 +451,15 @@ class OsuClient(Client):
 
             app.session.redis.set(f'multiaccounting:{self.id}', 1)
             self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+
+    def update_status_cache(self) -> None:
+        status.update(
+            self.id,
+            self.stats,
+            self.status,
+            self.info.hash.string,
+            self.info.version.date
+        )
 
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
