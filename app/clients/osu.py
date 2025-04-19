@@ -292,6 +292,10 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
+        self.logger.debug(
+            f'-> "{packet.name}": {data}'
+        )
+
         if not (handler_function := app.session.handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
             return
