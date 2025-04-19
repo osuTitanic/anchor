@@ -627,7 +627,7 @@ class Match:
                             'max_combo': slot.last_frame.max_combo,
                             'perfect': slot.last_frame.perfect,
                             'failed': slot.has_failed,
-                            'grade': slot.last_frame.grade(self.mode, slot.mods).name
+                            'grade': slot.last_frame.rank(self.mode, slot.mods).name
                         },
                         'place': rank + 1
                     }
