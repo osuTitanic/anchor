@@ -317,7 +317,6 @@ class OsuClient(Client):
             f'Closing connection -> <{self.address}> ({reason})' if reason else
             f"<{self.address}> -> Connection done."
         )
-        self.logged_in = False
 
         if self.spectating:
             if not self.spectating:
@@ -350,6 +349,7 @@ class OsuClient(Client):
 
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
+        self.logged_in = False
 
         usercount.set(len(app.session.players))
         status.delete(self.id)
