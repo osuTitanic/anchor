@@ -545,7 +545,7 @@ def transfer_host(client: OsuClient, slot_id: int):
     if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
-    if not (target := client.match.slots[slot_id].client):
+    if not (target := client.match.slots[slot_id].player):
         client.match.logger.warning('Host tried to transfer host into an empty slot?')
         return
 
