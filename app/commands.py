@@ -634,7 +634,8 @@ def mp_invite(ctx: Context):
     if target.match is match:
         return ['This player is already here.']
 
-    target.enqueue_invite(
+    target.enqueue_packet(
+        PacketType.BanchoInvite,
         bMessage(
             ctx.player.name,
             f'Come join my multiplayer match: {match.embed}',
