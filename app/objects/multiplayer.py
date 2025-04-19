@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
 from datetime import datetime
+from copy import copy
 
 if TYPE_CHECKING:
     from ..clients.osu import OsuClient
@@ -42,6 +43,10 @@ class Slot:
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
+    
+    @property
+    def user_id(self) -> int:
+        return self.player.id if self.player else -1
 
     @property
     def empty(self) -> bool:
@@ -107,8 +112,8 @@ class Match:
         self.host = host
 
         self.beatmap_id = beatmap_id
-        self.beatmap_name = beatmap_name
-        self.beatmap_hash = beatmap_hash
+        self.beatmap_text = beatmap_name
+        self.beatmap_checksum = beatmap_hash
 
         self.previous_beatmap_id = beatmap_id
         self.previous_beatmap_name = beatmap_name
@@ -165,6 +170,10 @@ class Match:
     def embed(self) -> str:
         """Embed that will be sent on invite"""
         return f'[{self.url} {self.name}]'
+    
+    @property
+    def host_id(self) -> int:
+        return self.host.id if self.host else 0
 
     @property
     def host_slot(self) -> Slot | None:
@@ -237,21 +246,23 @@ class Match:
     def update(self, lobby=True) -> None:
         # Enqueue to our players
         for player in self.players:
-            player.enqueue_match(
-                self.bancho_match,
-                send_password=True,
-                update=True
-            )
+            player.enqueue_packet(PacketType.BanchoMatchUpdate, self)
 
         if not lobby:
             return
 
+        # Clear password for lobby players
+        match_password = copy(self.password)
+
+        if self.password:
+            match_password = " "
+
         # Enqueue to lobby players
         for player in app.session.players.osu_in_lobby:
-            player.enqueue_match(
-                self.bancho_match,
-                update=True
-            )
+            player.enqueue_packet(PacketType.BanchoMatchUpdate, self)
+
+        # Re-apply password
+        self.password = match_password
 
     def unready_players(self, expected = SlotStatus.Ready):
         for slot in self.slots:
@@ -296,14 +307,14 @@ class Match:
             self.unready_players()
 
             self.previous_beatmap_id = self.beatmap_id
-            self.previous_beatmap_hash = self.beatmap_hash
-            self.previous_beatmap_name = self.beatmap_name
+            self.previous_beatmap_hash = self.beatmap_checksum
+            self.previous_beatmap_name = self.beatmap_text
 
             self.beatmap_id = -1
-            self.beatmap_hash = ""
-            self.beatmap_name = ""
+            self.beatmap_checksum = ""
+            self.beatmap_text = ""
 
-        if self.beatmap_hash != new_match.beatmap_checksum:
+        if self.beatmap_checksum != new_match.beatmap_checksum:
             # New map has been chosen
             self.logger.info(f'Selected: {new_match.beatmap_text}')
             self.unready_players()
@@ -315,17 +326,17 @@ class Match:
             beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
 
             if beatmap:
-                self.beatmap_id   = beatmap.id
-                self.beatmap_hash = beatmap.md5
-                self.beatmap_name = beatmap.full_name
-                self.mode         = GameMode(beatmap.mode)
-                beatmap_text      = beatmap.link
+                self.beatmap_id       = beatmap.id
+                self.beatmap_text     = beatmap.full_name
+                self.beatmap_checksum = beatmap.md5
+                self.mode             = GameMode(beatmap.mode)
+                beatmap_text          = beatmap.link
             else:
-                self.beatmap_id   = new_match.beatmap_id
-                self.beatmap_hash = new_match.beatmap_checksum
-                self.beatmap_name = new_match.beatmap_text
-                self.mode         = new_match.mode
-                beatmap_text      = new_match.beatmap_text
+                self.beatmap_id       = new_match.beatmap_id
+                self.beatmap_checksum = new_match.beatmap_checksum
+                self.beatmap_text     = new_match.beatmap_text
+                self.mode             = new_match.mode
+                beatmap_text          = new_match.beatmap_text
 
             self.chat.send_message(
                 app.session.banchobot,
@@ -378,7 +389,7 @@ class Match:
 
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
-        player.revoke_channel(self.chat.resolve_name(player))
+        player.enqueue_channel_revoked(self.chat.resolve_name(player))
         self.chat.remove(player)
         player.match = None
 
@@ -401,9 +412,9 @@ class Match:
         if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
-                if slot.status.value & SlotStatus.HasPlayer.value:
+                if slot.has_player:
                     self.host = slot.player
-                    self.host.enqueue_match_transferhost()
+                    self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
             events.create(
                 self.db_match.id,
@@ -492,8 +503,8 @@ class Match:
             type=EventType.Start,
             data={
                 'beatmap_id': self.beatmap_id,
-                'beatmap_text': self.beatmap_name,
-                'beatmap_hash': self.beatmap_hash,
+                'beatmap_text': self.beatmap_text,
+                'beatmap_hash': self.beatmap_checksum,
                 'mode': self.mode.value,
                 'team_mode': self.team_type.value,
                 'scoring_mode': self.scoring_type.value,
@@ -529,8 +540,8 @@ class Match:
             type=EventType.Abort,
             data={
                 'beatmap_id': self.beatmap_id,
-                'beatmap_text': self.beatmap_name,
-                'beatmap_hash': self.beatmap_hash,
+                'beatmap_text': self.beatmap_text,
+                'beatmap_hash': self.beatmap_checksum,
                 'start_time': start_event.data['start_time'],
                 'end_time': str(datetime.now())
             }
@@ -585,8 +596,8 @@ class Match:
             type=EventType.Result,
             data={
                 'beatmap_id': self.beatmap_id,
-                'beatmap_text': self.beatmap_name,
-                'beatmap_hash': self.beatmap_hash,
+                'beatmap_text': self.beatmap_text,
+                'beatmap_hash': self.beatmap_checksum,
                 'mode': self.mode.value,
                 'team_mode': self.team_type.value,
                 'scoring_mode': self.scoring_type.value,

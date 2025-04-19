@@ -341,7 +341,7 @@ def create_persistant_match(ctx: Context):
     )
 
     # Force-revoke #multiplayer
-    ctx.player.revoke_channel('#multiplayer')
+    ctx.player.enqueue_channel_revoked('#multiplayer')
 
     return ['Match created.']
 
@@ -450,8 +450,8 @@ def mp_map(ctx: Context):
         return ['Could not find that beatmap.']
 
     match.beatmap_id = map.id
-    match.beatmap_hash = map.md5
-    match.beatmap_name = map.full_name
+    match.beatmap_checksum = map.md5
+    match.beatmap_text = map.full_name
     match.mode = GameMode(map.mode)
     match.update()
 
@@ -909,8 +909,8 @@ def mp_settings(ctx: Context):
     """- View the current match settings"""
     match: Match = ctx.get_context_object('match')
     beatmap_link = (
-        f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]'
-        if match.beatmap_id > 0 else match.beatmap_name
+        f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_text}]'
+        if match.beatmap_id > 0 else match.beatmap_text
     )
 
     return [
@@ -1090,7 +1090,7 @@ def mp_removeref(ctx: Context):
     match.chat.remove(target)
     match.referee_players.remove(target.id)
     target.referee_matches.remove(match)
-    target.revoke_channel(match.chat.bancho_channel.name)
+    target.enqueue_channel_revoked(match.chat.bancho_channel.name)
 
     return [f'Removed "{target.name}" from match referee status.']
 

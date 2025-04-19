@@ -194,14 +194,14 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         slot.team = SlotTeam.Red
 
     slot.status = SlotStatus.NotReady
-    slot.client = client
+    slot.player = client
 
     if match.host is None and client.id in match.referee_players:
         # This client has referee privileges, so we can make them the host
         match.host = client
 
     client.match = match
-    client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
+    client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
     events.create(
         match.db_match.id,
@@ -222,7 +222,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
 
     if client.id in match.referee_players:
         # Force-revoke #multiplayer
-        client.revoke_channel('#multiplayer')
+        client.enqueue_channel_revoked('#multiplayer')
 
 @register(PacketType.OsuMatchPart)
 def leave_match(client: OsuClient):
@@ -261,8 +261,8 @@ def leave_match(client: OsuClient):
     if (client is client.match.host and client.match.beatmap_id == -1):
         # Host was choosing beatmap; reset beatmap to previous
         client.match.beatmap_id = client.match.previous_beatmap_id
-        client.match.beatmap_hash = client.match.previous_beatmap_hash
-        client.match.beatmap_name = client.match.previous_beatmap_name
+        client.match.beatmap_checksum = client.match.previous_beatmap_hash
+        client.match.beatmap_text = client.match.previous_beatmap_name
 
     if all(slot.empty for slot in client.match.slots) and not client.match.persistent:
         # No players in match anymore -> Disband match
@@ -301,7 +301,7 @@ def leave_match(client: OsuClient):
         # Player was host, transfer to next client
         for slot in client.match.slots:
             if slot.status.value & SlotStatus.HasPlayer.value:
-                client.match.host = slot.client
+                client.match.host = slot.player
                 client.match.host.enqueue_match_transferhost()
 
         events.create(
@@ -372,17 +372,17 @@ def change_beatmap(client: OsuClient, new_match: Match):
     beatmap = beatmaps.fetch_by_checksum(new_match.beatmap_checksum)
 
     if beatmap:
-        match.beatmap_id   = beatmap.id
-        match.beatmap_hash = beatmap.md5
-        match.beatmap_name = beatmap.full_name
-        match.mode         = GameMode(beatmap.mode)
-        beatmap_text       = beatmap.link
+        match.beatmap_id       = beatmap.id
+        match.beatmap_checksum = beatmap.md5
+        match.beatmap_text     = beatmap.full_name
+        match.mode             = GameMode(beatmap.mode)
+        beatmap_text           = beatmap.link
     else:
-        match.beatmap_id   = new_match.beatmap_id
-        match.beatmap_hash = new_match.beatmap_checksum
-        match.beatmap_name = new_match.beatmap_text
-        match.mode         = new_match.mode
-        beatmap_text       = new_match.beatmap_text
+        match.beatmap_id       = new_match.beatmap_id
+        match.beatmap_checksum = new_match.beatmap_checksum
+        match.beatmap_text     = new_match.beatmap_text
+        match.mode             = new_match.mode
+        beatmap_text           = new_match.beatmap_text
 
     match.chat.send_message(
         session.banchobot,
@@ -495,12 +495,12 @@ def lock(client: OsuClient, slot_id: int):
 
     slot = client.match.slots[slot_id]
 
-    if slot.client is client:
+    if slot.player is client:
         # Player can't kick themselves
         return
 
     if slot.has_player:
-        client.match.kick_player(slot.client)
+        client.match.kick_player(slot.player)
 
     slot.status = (
         SlotStatus.Open
@@ -611,7 +611,7 @@ def load_complete(client: OsuClient):
             if not slot.has_map:
                 continue
 
-            slot.client.enqueue_match_all_players_loaded()
+            slot.player.enqueue_match_all_players_loaded()
 
         client.match.update()
 

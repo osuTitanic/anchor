@@ -45,7 +45,7 @@ def handle_channel_join(client: OsuClient, channel_name: str):
         return
 
     if not (channel := resolve_channel(channel_name, client)):
-        client.revoke_channel(channel_name)
+        client.enqueue_channel_revoked(channel_name)
         return
 
     channel.add(client)
@@ -53,11 +53,11 @@ def handle_channel_join(client: OsuClient, channel_name: str):
 @register(PacketType.OsuChannelLeave)
 def channel_leave(client: OsuClient, channel_name: str, kick: bool = False):
     if not (channel := resolve_channel(channel_name, client)):
-        client.revoke_channel(channel_name)
+        client.enqueue_channel_revoked(channel_name)
         return
 
     if kick:
-        client.revoke_channel(channel_name)
+        client.enqueue_channel_revoked(channel_name)
 
     channel.remove(client)
 
@@ -72,7 +72,7 @@ def send_message(client: OsuClient, message: Message):
         return
 
     if not (channel := resolve_channel(message.target, client)):
-        client.revoke_channel(message.target)
+        client.enqueue_channel_revoked(message.target)
         return
 
     if message.content.startswith('/me'):
@@ -98,7 +98,7 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if not (target := session.players.by_name(message.target)):
-        sender.revoke_channel(message.target)
+        sender.enqueue_channel_revoked(message.target)
         return
 
     if target.id == sender.id:

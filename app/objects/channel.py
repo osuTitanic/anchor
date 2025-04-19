@@ -76,7 +76,7 @@ class Channel:
         if not self.can_read(player.permissions):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.revoke_channel(self.display_name)
+            player.enqueue_channel_revoked(self.display_name)
 
         if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
@@ -134,7 +134,7 @@ class Channel:
     ) -> None:
         if sender not in self.users and not sender.is_bot:
             # Player did not join this channel
-            sender.revoke_channel(self.display_name)
+            sender.enqueue_channel_revoked(self.display_name)
             sender.logger.warning(
                 f'Failed to send message: "{message}" on {self.name}, '
                 'because player did not join the channel.'
@@ -261,7 +261,7 @@ class MultiplayerChannel(Channel):
         if not self.can_read(player.permissions):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.revoke_channel(self.resolve_name(player))
+            player.enqueue_channel_revoked(self.resolve_name(player))
 
         if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel
