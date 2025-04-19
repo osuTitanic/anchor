@@ -331,7 +331,7 @@ def create_persistant_match(ctx: Context):
 
     if not ctx.player.is_irc:
         ctx.player.match = match
-        ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
+        ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
     match.chat.send_message(
         app.session.banchobot,
@@ -685,7 +685,7 @@ def mp_force_invite(ctx: Context):
     slot.player = target
 
     target.match = match
-    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
+    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
     match.logger.info(f'{target.name} joined')
     match.update()

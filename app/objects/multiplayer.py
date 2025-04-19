@@ -528,7 +528,7 @@ class Match:
 
         # The join success packet will reset the players to the setup screen
         for player in players:
-            player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self.bancho_match)
+            player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self)
 
         start_event = events.fetch_last_by_type(
             player.match.db_match.id,
