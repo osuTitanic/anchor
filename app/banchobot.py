@@ -144,14 +144,14 @@ class BanchoBot(IrcClient):
         if type(context.target) is MultiplayerChannel:
             target_name = context.target.resolve_name(context.player)
 
-        msg = Message(
-            self.name, message,
-            target_name, self.id
-        )
-
         # Send to sender only
         for message in response:
-            context.player.enqueue_message_object(msg)
+            context.player.enqueue_message_object(
+                Message(
+                    self.name, message,
+                    target_name, self.id
+                )
+            )
 
         if context.target is not self:
             return
