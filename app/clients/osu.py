@@ -452,6 +452,15 @@ class OsuClient(Client):
             app.session.redis.set(f'multiaccounting:{self.id}', 1)
             self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
 
+    def update_object(self, mode: int = 0) -> None:
+        super().update_object(mode)
+        self.presence.country_index = self.info.ip.country_index
+        self.presence.longitude = self.info.ip.longitude
+        self.presence.latitude = self.info.ip.latitude
+
+        if self.info.display_city:
+            self.presence.city = self.info.ip.city
+
     def restrict(
         self,
         reason: str | None = None,

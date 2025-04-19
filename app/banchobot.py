@@ -173,6 +173,6 @@ class BanchoBot(IrcClient):
         self.id = 1
         self.name = "BanchoBot"
         self.info = OsuClientInformation.empty()
-        self.info.ip.country_code = "OC"
-        self.info.ip.city = "w00t p00t!"
+        self.presence.country_index = 1
+        self.presence.city = "w00t p00t!"
         self.reload()
