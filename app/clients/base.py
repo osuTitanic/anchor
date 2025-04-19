@@ -244,6 +244,9 @@ class Client:
         self.name = self.object.name
         self.status.mode = Mode(mode)
 
+        if not self.object.stats:
+            return
+
         # Ensure stats are sorted by mode
         self.object.stats.sort(key=lambda x: x.mode)
 
