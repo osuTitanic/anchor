@@ -42,6 +42,7 @@ class Client:
         self.status = UserStatus()
         self.stats = UserStats()
         self.object: DBUser | None = None
+        self.away_message: str | None = None
         self.logger = logging.getLogger(address)
         self.last_response = time.time()
         self.last_minute_stamp = time.time()
