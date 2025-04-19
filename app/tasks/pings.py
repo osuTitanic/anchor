@@ -21,7 +21,7 @@ def tcp_pings() -> None:
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT:
-            player.close_connection('Client timed out.')
+            player.close_connection('Client timed out')
 
 @app.session.tasks.submit(interval=PING_TIMEOUT)
 def http_pings() -> None:
@@ -43,4 +43,4 @@ def http_pings() -> None:
             continue
 
         if last_response >= PING_TIMEOUT:
-            player.close_connection('Client timed out.')
+            player.close_connection('Client timed out')

@@ -317,6 +317,7 @@ class OsuClient(Client):
             f'Closing connection -> <{self.address}> ({reason})' if reason else
             f"<{self.address}> -> Connection done."
         )
+        self.logged_in = False
 
         if self.spectating:
             if not self.spectating:
