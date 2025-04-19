@@ -33,8 +33,8 @@ def register(packet: PacketType) -> Callable:
 
 @register(PacketType.OsuLobbyJoin)
 def join_lobby(client: OsuClient):
-    for p in session.players:
-        p.enqueue_packet(PacketType.OsuLobbyJoin, client.id)
+    for p in session.players.osu_clients:
+        p.enqueue_packet(PacketType.BanchoLobbyJoin, client.id)
 
     session.players.osu_in_lobby.add(client)
     client.in_lobby = True
@@ -47,8 +47,8 @@ def part_lobby(client: OsuClient):
     session.players.osu_in_lobby.remove(client)
     client.in_lobby = False
 
-    for p in session.players:
-        p.enqueue_packet(PacketType.OsuLobbyPart, client.id)
+    for p in session.players.osu_clients:
+        p.enqueue_packet(PacketType.BanchoLobbyPart, client.id)
 
 @register(PacketType.OsuInvite)
 def invite(client: OsuClient, target_id: int):
@@ -137,8 +137,8 @@ def create_match(client: OsuClient, bancho_match: Match):
 def join_match(client: OsuClient, match_join: MatchJoin):
     if not session.matches.exists(match_join.match_id):
         client.logger.warning(f'{client.name} tried to join a match that does not exist')
+        client.enqueue_packet(PacketType.BanchoMatchDisband, match_join.match_id)
         client.enqueue_matchjoin_fail()
-        client.enqueue_match_disband(match_join.match_id)
         return
 
     match = session.matches[match_join.match_id]
@@ -201,7 +201,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         match.host = client
 
     client.match = match
-    client.enqueue_matchjoin_success(match.bancho_match)
+    client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match.bancho_match)
 
     events.create(
         match.db_match.id,
@@ -266,10 +266,10 @@ def leave_match(client: OsuClient):
 
     if all(slot.empty for slot in client.match.slots) and not client.match.persistent:
         # No players in match anymore -> Disband match
-        client.enqueue_match_disband(client.match.id)
+        client.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
 
         for p in session.players.osu_in_lobby:
-            p.enqueue_match_disband(client.match.id)
+            p.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
 
         session.channels.remove(client.match.chat)
         session.matches.remove(client.match)
