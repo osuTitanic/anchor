@@ -337,16 +337,18 @@ class OsuClient(Client):
         tourney_clients = app.session.players.tournament_clients(self.id)
 
         if tourney_clients:
-            # User still has tournament clients online
-            # so they should still be shown to others
-            return
+            user_quit = UserQuit(self, QuitState.OsuRemaining)
+            return app.session.players.send_user_quit(user_quit)
 
-        # Check if user has an IRC client connected
-        irc_client = app.session.players.by_id_irc(self.id)
+        # Check if there are any other remaining clients connected
+        remaining_client = app.session.players.by_id(self.id)
         quit_state = QuitState.Gone
 
-        if irc_client:
-            quit_state = QuitState.IrcRemaining
+        if remaining_client:
+            quit_state = (
+                QuitState.IrcRemaining if remaining_client.is_irc else
+                QuitState.OsuRemaining
+            )
 
         user_quit = UserQuit(self, quit_state)
         app.session.players.send_user_quit(user_quit)
@@ -525,7 +527,9 @@ class OsuClient(Client):
         self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
 
     def enqueue_stats(self, player: "Client") -> None:
-        if player.is_irc:
+        if player.is_irc and self.io.protocol_version < 6:
+            # Clients with protocol version 6 or higher, have
+            # a new way of handling IRC clients
             return
 
         self.enqueue_packet(PacketType.BanchoUserStats, player)
