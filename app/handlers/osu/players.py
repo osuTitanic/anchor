@@ -102,15 +102,15 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mode = status.mode
     client.status.text = status.text
 
+    client.update_object(status.mode.value)
     client.update_status_cache()
-    client.update_activity()
     client.reload_rank()
 
     for p in client.spectators:
         # Ensure that all spectators get the latest status
         p.enqueue_stats(client)
 
-    # (This needs to be done for older clients)
+    # Enqueue stats to clients that don't request them automatically
     session.players.send_stats(client)
 
 @register(PacketType.OsuStatusUpdateRequest)
