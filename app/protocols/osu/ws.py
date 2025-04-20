@@ -109,3 +109,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             return
 
         self.sendMessage(data, isBinary=True)
+
+    def enqueue_packet(self, packet, *args):
+        self.io.write_packet(self.stream, packet, *args)
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
