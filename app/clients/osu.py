@@ -524,6 +524,9 @@ class OsuClient(Client):
         self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
 
     def enqueue_stats(self, player: "OsuClient") -> None:
+        if player.is_irc:
+            return
+
         self.enqueue_packet(PacketType.BanchoUserStats, player)
 
     def enqueue_announcement(self, message: str) -> None:
