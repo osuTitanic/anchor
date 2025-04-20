@@ -526,12 +526,7 @@ class OsuClient(Client):
     def enqueue_presence_bundle(self, players: Iterable["Client"]) -> None:
         self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
 
-    def enqueue_stats(self, player: "Client") -> None:
-        if player.is_irc and self.io.protocol_version < 6:
-            # Clients with protocol version 6 or higher, have
-            # a new way of handling IRC clients
-            return
-
+    def enqueue_stats(self, player: "OsuClient") -> None:
         self.enqueue_packet(PacketType.BanchoUserStats, player)
 
     def enqueue_announcement(self, message: str) -> None:
