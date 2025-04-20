@@ -232,16 +232,15 @@ class OsuClient(Client):
             )
         )
 
-        # User & Bot Presence
+        # User Presence
         self.enqueue_presence(self)
         self.enqueue_stats(self)
-        self.enqueue_presence(app.session.banchobot)
-
-        # Append to player collection
-        app.session.players.add(self)
 
         # Enqueue other players
         self.enqueue_players(app.session.players)
+
+        # Append to player collection
+        app.session.players.add(self)
 
         # Update usercount
         usercount.set(len(app.session.players))
