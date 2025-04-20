@@ -336,9 +336,20 @@ class OsuClient(Client):
         # Check if there are any tournament clients remaining
         tourney_clients = app.session.players.tournament_clients(self.id)
 
-        if len(tourney_clients) <= 0:
-            user_quit = UserQuit(self, QuitState.Gone)
-            app.session.players.send_user_quit(user_quit)
+        if tourney_clients:
+            # User still has tournament clients online
+            # so they should still be shown to others
+            return
+
+        # Check if user has an IRC client connected
+        irc_client = app.session.players.by_id_irc(self.id)
+        quit_state = QuitState.Gone
+
+        if irc_client:
+            quit_state = QuitState.IrcRemaining
+
+        user_quit = UserQuit(self, quit_state)
+        app.session.players.send_user_quit(user_quit)
 
     def is_valid_client(self, session: Session | None = None) -> bool:
         valid_identifiers = (
