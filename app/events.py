@@ -230,10 +230,8 @@ def shutdown() -> None:
     exit(0)
 
 def enqueue_stats(player: Client):
-    for p in app.session.players.osu_clients:
-        if not p.io.requires_status_updates:
-            # Client will request the stats
-            # themselves when pressing F9
-            continue
-
-        p.enqueue_stats(player)
+    try:
+        player.status.update_stats = True
+        app.session.players.send_stats(player)
+    finally:
+        player.status.update_stats = False
