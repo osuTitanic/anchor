@@ -107,6 +107,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
     def enqueue(self, data: bytes):
         if self.state != self.STATE_OPEN:
             self.logger.debug('Cannot send data to a closed channel')
+            self.player.close_connection()
             return
 
         self.sendMessage(data, isBinary=True)
