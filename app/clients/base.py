@@ -156,6 +156,10 @@ class Client:
         return self.presence.is_irc
 
     @property
+    def is_channel(self) -> bool:
+        return False
+
+    @property
     def friendonly_dms(self) -> bool:
         return False
 

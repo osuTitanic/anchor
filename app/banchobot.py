@@ -1,9 +1,8 @@
 
-from app.objects.channel import Channel, SpectatorChannel, MultiplayerChannel
+from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
-from app.common.database import users, groups, messages
 from app.objects.client import OsuClientInformation
-from app.common.constants import Permissions
+from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
 from typing import Tuple, List
@@ -113,7 +112,7 @@ class BanchoBot(IrcClient):
             return
 
         # Send to others, if command is not hidden
-        if not command.hidden and type(context.target) is Channel:
+        if not command.hidden and context.target.is_channel:
             context.target.send_message(
                 context.player,
                 context.message,
@@ -131,13 +130,9 @@ class BanchoBot(IrcClient):
         context.player.logger.info(f'[{context.player.name}]: {context.message}')
         context.player.logger.info(f'[{self.name}]: {", ".join(response)}')
 
-        is_channel = (
-            type(context.target) in (Channel, SpectatorChannel, MultiplayerChannel)
-        )
-
         target_name = (
             context.target.name
-            if not is_channel
+            if not context.target.is_channel
             else context.target.display_name
         )
 

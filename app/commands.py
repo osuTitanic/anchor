@@ -1578,7 +1578,7 @@ def moderated(ctx: Context) -> List | None:
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
         return [f'Invalid syntax: !{ctx.trigger} <on/off>']
 
-    if type(ctx.target) != Channel:
+    if not ctx.target.is_channel:
         return ['Target is not a channel.']
 
     ctx.target.moderated = ctx.args[0] == "on"

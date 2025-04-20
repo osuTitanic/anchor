@@ -48,6 +48,10 @@ class Channel:
         return self.name == other.name
 
     @property
+    def is_channel(self) -> bool:
+        return True
+
+    @property
     def user_count(self) -> int:
         return len(self.users)
 
