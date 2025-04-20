@@ -319,37 +319,14 @@ class OsuClient(Client):
         )
 
         if self.spectating:
-            if not self.spectating:
-                return
-
-            # Leave spectator channel
-            self.spectating.spectator_chat.remove(self)
-
-            # Remove from target
-            self.spectating.spectators.remove(self)
-
-            # Enqueue to target
-            self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)
-
-            # Enqueue to others
-            for p in self.spectating.spectators:
-                p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, self.id)
-
-            # If target has no spectators anymore
-            # kick them from the spectator channel
-            if not self.spectating.spectators:
-                self.spectating.spectator_chat.remove(
-                    self.spectating
-                )
-
-            self.spectating = None
-
-        for channel in copy(self.channels):
-            channel.remove(self)
+            self.ensure_not_spectating()
 
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
         self.logged_in = False
+
+        for channel in copy(self.channels):
+            channel.remove(self)
 
         usercount.set(len(app.session.players))
         status.delete(self.id)
@@ -481,6 +458,37 @@ class OsuClient(Client):
         super().restrict(reason, until, autoban)
         self.on_login_failed(LoginError.UserBanned)
         self.close_connection("Restricted")
+
+    def ensure_not_spectating(self) -> None:
+        try:
+            if not self.spectating:
+                return
+
+            # Leave spectator channel
+            self.spectating.spectator_chat.remove(self)
+
+            # Remove from target
+            self.spectating.spectators.remove(self)
+
+            # Enqueue to target
+            self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)
+
+            # Enqueue to others
+            for p in self.spectating.spectators:
+                p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, self.id)
+
+            # If target has no spectators anymore
+            # kick them from the spectator channel
+            if not self.spectating.spectators:
+                self.spectating.spectator_chat.remove(
+                    self.spectating
+                )
+
+            self.spectating = None
+        except Exception as e:
+            self.logger.error(f"Failed to stop spectating: {e}")
+        finally:
+            self.spectating = None
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
