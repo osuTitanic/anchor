@@ -240,6 +240,10 @@ class Players(MutableMapping[int | str, Client]):
 
             p.enqueue_stats(player)
 
+    def send_stats_forced(self, player: OsuClient) -> None:
+        for p in self.osu_clients:
+            p.enqueue_stats(player)
+
     def send_announcement(self, message: str) -> None:
         for p in self:
             p.enqueue_announcement(message)
