@@ -38,15 +38,13 @@ class WebsocketOsuClient(WebSocketServerProtocol):
 
     def onMessage(self, payload: bytes, isBinary: bool):
         # Client may send \r\n or just \n, as well as trailing newlines
-        payload = payload.replace(b'\r\n', b'\n').strip(b'\n')
+        self.stream += payload.replace(b'\r\n', b'\n').strip(b'\n')
 
-        if payload.count(b'\n') != 2:
-            self.logger.warning(f'Invalid login payload: "{payload}"')
-            self.close_connection()
+        if self.stream.count(b'\n') != 2:
             return
 
         username, password, client = (
-            payload.split(b'\n', 3)
+            self.stream.split(b'\n', 3)
         )
 
         self.player.info = OsuClientInformation.from_string(
@@ -58,6 +56,9 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.logger.warning(f'Failed to parse client: "{client.decode()}"')
             self.close_connection()
             return
+
+        # Clear the login data
+        self.stream.clear()
 
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
