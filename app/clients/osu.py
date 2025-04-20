@@ -187,7 +187,7 @@ class OsuClient(Client):
 
             if not self.object.stats:
                 self.object.stats = [stats.create(self.id, mode, session) for mode in range(4)]
-                self.reload()
+                self.reload(self.object.preferred_mode)
                 self.enqueue_infringement_length(-1)
 
             # Create login attempt in db

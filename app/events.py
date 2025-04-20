@@ -151,7 +151,7 @@ def user_update(user_id: int, mode: int | None = None):
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
-    player.reload()
+    player.reload(player.status.mode.value)
     enqueue_stats(player)
 
     duplicates = app.session.players.by_rank(
@@ -164,7 +164,7 @@ def user_update(user_id: int, mode: int | None = None):
             continue
 
         # We have found a player with the same rank
-        p.reload()
+        p.reload(p.status.mode.value)
         enqueue_stats(p)
 
 @app.session.events.register('link')

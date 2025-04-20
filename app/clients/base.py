@@ -205,7 +205,7 @@ class Client:
             )
         return False
 
-    def reload(self) -> DBUser:
+    def reload(self, mode: int = 0) -> DBUser:
         """Re-fetch database information and apply it to the client"""
         with app.session.database.managed_session() as session:
             self.object = users.fetch_by_id(
@@ -218,7 +218,7 @@ class Client:
             )
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
-            self.update_object(self.object.preferred_mode)
+            self.update_object(mode)
             self.reload_rank()
             return self.object
 

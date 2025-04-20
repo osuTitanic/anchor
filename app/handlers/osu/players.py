@@ -31,7 +31,7 @@ def add_friend(client: OsuClient, target_id: int):
 
     session.logger.info(f'{client.name} is now friends with {target.name}.')
 
-    client.reload()
+    client.reload(client.status.mode.value)
     client.enqueue_packet(PacketType.BanchoFriendsList, client.friends)
 
 @register(PacketType.OsuFriendsRemove)
@@ -49,7 +49,7 @@ def remove_friend(client: OsuClient, target_id: int):
 
     session.logger.info(f'{client.name} is no longer friends with {target.name}.')
 
-    client.reload()
+    client.reload(client.status.mode.value)
     client.enqueue_packet(PacketType.BanchoFriendsList, client.friends)
 
 @register(PacketType.OsuReceiveUpdates)
