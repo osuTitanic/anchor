@@ -715,6 +715,7 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
     if not session.matches.exists(match_id):
         client.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
+        client.enqueue_packet(PacketType.BanchoMatchDisband, match_id)
         return
 
     match = session.matches[match_id]
