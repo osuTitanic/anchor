@@ -227,9 +227,9 @@ class Players(MutableMapping[int | str, Client]):
         for p in self:
             p.enqueue_players(players)
 
-    def send_presence(self, player: Client, update: bool = False) -> None:
+    def send_presence(self, player: Client) -> None:
         for p in self.osu_clients:
-            p.enqueue_presence(player, update)
+            p.enqueue_presence(player)
 
     def send_stats(self, player: OsuClient) -> None:
         for p in self.osu_clients:
