@@ -726,7 +726,7 @@ def tourney_match_info(client: OsuClient, match_id: int):
         match.password = " "
 
     client.logger.debug(f'Got tournament match info request for "{match.name}".')
-    client.enqueue_packet(PacketType.BanchoMatchTransferHost, match)
+    client.enqueue_packet(PacketType.BanchoMatchUpdate, match)
 
     # Re-apply password
     match.password = match_password
