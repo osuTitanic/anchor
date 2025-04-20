@@ -164,8 +164,8 @@ def user_update(user_id: int, mode: int | None = None):
             continue
 
         # We have found a player with the same rank
-        player.reload()
-        enqueue_stats(player)
+        p.reload()
+        enqueue_stats(p)
 
 @app.session.events.register('link')
 def link_discord_user(user_id: int, code: str):
