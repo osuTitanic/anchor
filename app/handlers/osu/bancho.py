@@ -1,7 +1,14 @@
 
-from chio import PacketType, BeatmapInfoReply, BeatmapInfoRequest, BeatmapInfo, Rank
 from typing import Callable, List, Tuple
 from sqlalchemy.orm import selectinload
+from chio import (
+    BeatmapInfoRequest,
+    BeatmapInfoReply,
+    RankedStatus,
+    BeatmapInfo,
+    PacketType,
+    Rank
+)
 
 from app.common.database.objects import DBBeatmap, DBScore
 from app.clients.osu import OsuClient
@@ -83,16 +90,16 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest, ignore_limit: bool
                 # Not submitted
                 continue
 
-            ranked = {
-                -3: -1, # Not submitted
-                -2: 0,  # Graveyard: Pending
-                -1: 0,  # WIP: Pending
-                 0: 0,  # Pending: Pending
-                 1: 1,  # Ranked: Ranked
-                 2: 2,  # Approved: Approved
-                 3: 2,  # Qualified: Approved
-                 4: 2,  # Loved: Approved
-            }[beatmap.status]
+            status_mapping = {
+                -3: RankedStatus.NotSubmitted,
+                -2: RankedStatus.Pending,
+                -1: RankedStatus.Pending,
+                 0: RankedStatus.Pending,
+                 1: RankedStatus.Ranked,
+                 2: RankedStatus.Approved,
+                 3: RankedStatus.Qualified,
+                 4: RankedStatus.Loved,
+            }
 
             # Get personal best in every mode for this beatmap
             grades = {
@@ -120,7 +127,7 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest, ignore_limit: bool
                     beatmap.id,
                     beatmap.set_id,
                     beatmap.beatmapset.topic_id or 0,
-                    ranked,
+                    status_mapping.get(beatmap.status, RankedStatus.NotSubmitted),
                     beatmap.md5,
                     grades[0], # Standard
                     grades[2], # Fruits
