@@ -3,10 +3,10 @@
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
 from twisted.internet import threads
+from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
 from app.objects import OsuClientInformation
-from app.common.streams import StreamIn
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
 
@@ -30,7 +30,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.player.address = ip.resolve_ip_address_autobahn(request)
         self.player.logger = logging.getLogger(self.address)
         self.player.port = request.peer.split(":")[2]
-        self.player.enqueue = self.enqueue
+        self.player.enqueue_packet = self.enqueue_packet
         self.logger.info(f'-> <{self.address}>')
 
     def onClose(self, wasClean: bool, code: int, reason: str):
@@ -111,6 +111,6 @@ class WebsocketOsuClient(WebSocketServerProtocol):
 
         self.sendMessage(data, isBinary=True)
 
-    def enqueue_packet(self, packet, *args):
-        self.io.write_packet(self.stream, packet, *args)
+    def enqueue_packet(self, packet: PacketType, *args) -> None:
+        self.player.io.write_packet(self.stream, packet, *args)
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
