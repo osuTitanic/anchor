@@ -10,8 +10,8 @@ from typing import (
     Set
 )
 
+from app.objects.locks import LockedDict, LockedSet
 from app.protocols.osu.http import HttpOsuClient
-from app.objects.locks import LockedDict
 from app.clients.base import Client
 from app.clients.osu import OsuClient
 from app.clients.irc import IrcClient
@@ -26,8 +26,8 @@ class Players(MutableMapping[int | str, Client]):
 
         # osu! specific
         self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
-        self.osu_tournament_clients: Set[OsuClient] = set()
-        self.osu_in_lobby: Set[OsuClient] = set()
+        self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
+        self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
 
     @property
     def osu_clients(self) -> Tuple[OsuClient]:
