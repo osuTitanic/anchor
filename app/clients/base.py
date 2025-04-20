@@ -59,6 +59,9 @@ class Client:
 
     @property
     def silenced(self) -> bool:
+        if not self.object:
+            return False
+
         if not self.object.silence_end:
             return False
 
@@ -71,6 +74,9 @@ class Client:
 
     @property
     def remaining_silence(self) -> int:
+        if not self.object:
+            return 0
+
         if not self.object.silence_end:
             return 0
 
