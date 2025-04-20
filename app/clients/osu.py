@@ -284,10 +284,11 @@ class OsuClient(Client):
 
     def on_connection_lost(self, reason: Any, was_clean: bool = True) -> None:
         if was_clean:
+            self.logger.info(f'<{self.address}> -> Connection done.')
             return self.close_connection()
 
         self.logger.warning(f'<{self.address}> -> Lost connection: "{reason}".')
-        return self.close_connection(reason)
+        return self.close_connection()
 
     def on_packet_received(self, packet: PacketType, data: Any) -> None:
         self.last_response = time.time()
@@ -312,10 +313,8 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
-        self.logger.info(
-            f'Closing connection -> <{self.address}> ({reason})' if reason else
-            f"<{self.address}> -> Connection done."
-        )
+        if reason:
+            self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
         if self.spectating:
             self.ensure_not_spectating()

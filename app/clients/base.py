@@ -295,10 +295,8 @@ class Client:
 
     def close_connection(self, reason: str = "") -> None:
         """Closes the connection to the client"""
-        self.logger.info(
-            f'Closing connection -> <{self.address}> ({reason})' if reason else
-            f"<{self.address}> -> Connection done."
-        )
+        if reason:
+            self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
     def silence(self, duration_sec: int, reason: str | None = None) -> None:
         if self.is_bot:
