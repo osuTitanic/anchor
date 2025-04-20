@@ -333,12 +333,9 @@ class OsuClient(Client):
         usercount.set(len(app.session.players))
         status.delete(self.id)
 
-        # Check if there are any tournament clients remaining
-        tourney_clients = app.session.players.tournament_clients(self.id)
-
-        if tourney_clients:
-            user_quit = UserQuit(self, QuitState.OsuRemaining)
-            return app.session.players.send_user_quit(user_quit)
+        if self.is_tourney_client:
+            # Clear any remaining tourney clients, if there are any
+            app.session.players.clear_tournament_clients(self.id)
 
         # Check if there are any other remaining clients connected
         remaining_client = app.session.players.by_id(self.id)
