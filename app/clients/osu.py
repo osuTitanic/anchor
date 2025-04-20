@@ -320,6 +320,9 @@ class OsuClient(Client):
         if self.spectating:
             self.ensure_not_spectating()
 
+        if self.match:
+            self.match.kick_player(self)
+
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
         self.logged_in = False
@@ -329,9 +332,6 @@ class OsuClient(Client):
 
         usercount.set(len(app.session.players))
         status.delete(self.id)
-
-        if self.match:
-            self.match.kick_player(self)
 
         # Check if there are any tournament clients remaining
         tourney_clients = app.session.players.tournament_clients(self.id)
