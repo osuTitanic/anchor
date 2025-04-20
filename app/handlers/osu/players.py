@@ -106,6 +106,9 @@ def change_status(client: OsuClient, status: UserStatus):
     client.update_status_cache()
     client.reload_rank()
 
+    # Enqueue stats to themselves
+    client.enqueue_stats(client)
+
     for p in client.spectators:
         # Ensure that all spectators get the latest status
         p.enqueue_stats(client)
