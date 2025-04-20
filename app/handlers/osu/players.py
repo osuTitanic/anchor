@@ -72,7 +72,7 @@ def receive_updates(client: OsuClient, filter: PresenceFilter):
 
 @register(PacketType.OsuPresenceRequest)
 def presence_request(client: OsuClient, players: List[int]):
-    for id in players:
+    for id in players[:256]:
         if not (target := session.players.by_id(id)):
             continue
 
@@ -84,7 +84,7 @@ def presence_request_all(client: OsuClient):
 
 @register(PacketType.OsuUserStatsRequest)
 def stats_request(client: OsuClient, players: List[int]):
-    for id in players:
+    for id in players[:32]:
         if id is client.id:
             continue
 
