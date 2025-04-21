@@ -3,6 +3,7 @@ from chio import PacketType, Message
 from typing import Callable
 
 from app.common.database.repositories import wrapper, messages
+from app.common.helpers import infringements
 from app.objects.channel import Channel
 from app.clients.osu import OsuClient
 from app.common import officer
@@ -82,8 +83,9 @@ def send_message(client: OsuClient, message: Message):
         client.last_minute_stamp = time()
         client.recent_message_count = 0
 
-    if client.recent_message_count > 35 and not client.is_bot:
-        client.silence(60, reason='Chat spamming')
+    if client.recent_message_count > 30 and not client.is_bot:
+        infringements.silence_user(client.object, 60, 'Chat spamming')
+        client.on_user_silenced()
         return
 
     channel.send_message(client, message.content.strip())
@@ -122,8 +124,9 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.last_minute_stamp = time()
         sender.recent_message_count = 0
 
-    if sender.recent_message_count > 35 and not sender.is_bot:
-        sender.silence(60, reason='Chat spamming')
+    if sender.recent_message_count > 30 and not sender.is_bot:
+        infringements.silence_user(sender.object, 60, 'Chat spamming')
+        sender.on_user_silenced()
         return
 
     parsed_message = message.content.strip()

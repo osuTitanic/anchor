@@ -8,10 +8,9 @@ from datetime import timedelta, datetime
 from chio import PacketType, TitleUpdate
 from threading import Thread
 
-from .common import officer
 from .common.cache import leaderboards
+from .common.helpers import infringements
 from .common.database.repositories import (
-    infringements,
     beatmapsets,
     beatmaps,
     matches,
@@ -1356,7 +1355,6 @@ def get_client_version(ctx: Context):
 @command(['monitor'], ['Admins'])
 def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
-
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
@@ -1375,7 +1373,6 @@ def monitor(ctx: Context) -> List | None:
 @command(['alert', 'announce', 'broadcast'], ['Admins', 'Developers'])
 def alert(ctx: Context) -> List | None:
     """<message> - Send a message to all players"""
-
     if not ctx.args:
         return [f'Invalid syntax: !{ctx.trigger} <message>']
 
@@ -1386,7 +1383,6 @@ def alert(ctx: Context) -> List | None:
 @command(['alertuser'], ['Admins', 'Developers'])
 def alertuser(ctx: Context) -> List | None:
     """<username> <message> - Send a notification to a player"""
-
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <message>']
 
@@ -1402,7 +1398,6 @@ def alertuser(ctx: Context) -> List | None:
 @command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def silence(ctx: Context) -> List | None:
     """<username> <duration> (<reason>)"""
-
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <duration> (<reason>)']
 
@@ -1410,130 +1405,86 @@ def silence(ctx: Context) -> List | None:
     duration = timeparse(ctx.args[1])
     reason = ' '.join(ctx.args[2:])
 
-    if (player := app.session.players.by_name_safe(name)):
-        player.silence(duration, reason)
-        silence_end = player.object.silence_end
-    else:
-        if not (player := users.fetch_by_name(name)):
-            return [f'Player "{name}" was not found.']
+    if not (user := users.fetch_by_name(name)):
+        return [f'Player "{name}" was not found.']
 
-        if player.silence_end:
-            player.silence_end += timedelta(seconds=duration)
-        else:
-            player.silence_end = datetime.now() + timedelta(seconds=duration)
-
-        users.update(
-            player.id,
-            {'silence_end': player.silence_end}
-        )
-
-        silence_end = player.silence_end
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=1,
-            length=(datetime.now() + timedelta(seconds=duration)),
-            description=reason
-        )
+    silence_end = infringements.silence_user(
+        user,
+        duration,
+        reason
+    )
 
     if not silence_end:
-        return [f'Failed to silence {player.name}.']
+        return [f'Failed to silence {user.name}.']
+
+    if (player_osu := app.session.players.by_name_osu(name)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_name_irc(name)):
+        player_irc.on_user_silenced()
 
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
 
-    return [f'{player.name} was silenced for {time_string}']
+    return [f'{user.name} was silenced for {time_string}']
 
 @command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unsilence(ctx: Context):
-    """- <username>"""
-
+    """<username>"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
     name = ctx.args[0]
 
-    if (player := app.session.players.by_name_safe(name)):
-        player.unsilence()
-        return [f'{player.name} was unsilenced.']
-
-    if not (player := users.fetch_by_name(name)):
+    if not (user := users.fetch_by_name(name)):
         return [f'Player "{name}" was not found.']
 
-    users.update(player.id, {'silence_end': None})
+    infringements.unsilence_user(user)
 
-    # Delete infringements from website
-    inf = infringements.fetch_recent_by_action(player.id, action=1)
-    if inf: infringements.delete_by_id(inf.id)
+    if (player_osu := app.session.players.by_name_osu(name)):
+        player_osu.on_user_unsilenced()
 
-    return [f'{player.name} was unsilenced.']
+    if (player_irc := app.session.players.by_name_irc(name)):
+        player_irc.on_user_unsilenced()
+
+    return [f'{user.name} was unsilenced.']
 
 @command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def restrict(ctx: Context) -> List | None:
-    """ <name> <length/permanent> (<reason>)"""
-
+    """<name> <length/permanent> (<reason>)"""
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <name> <length/permanent> (<reason>)']
 
     username = ctx.args[0]
-    length   = ctx.args[1]
-    reason   = ' '.join(ctx.args[2:])
+    length = ctx.args[1]
+    reason = ' '.join(ctx.args[2:])
+    until = None
 
     if not length.startswith('perma'):
         until = datetime.now() + timedelta(seconds=timeparse(length))
-    else:
-        until = None
 
-    if not (player := app.session.players.by_name_safe(username)):
-        # Player is not online, or was not found
-        player = users.fetch_by_name(username)
+    user = users.fetch_by_name(username)
 
-        if not player:
-            return [f'Player "{username}" was not found']
+    if not user:
+        return [f'Player "{username}" was not found']
 
-        player.restricted = True
+    infringements.restrict_user(
+        user,
+        reason,
+        until
+    )
 
-        # Update user
-        users.update(player.id, {'restricted': True})
+    if (player_osu := app.session.players.by_name_osu(user.name)):
+        player_osu.on_user_restricted(reason, until)
 
-        leaderboards.remove(
-            player.id,
-            player.country
-        )
+    if (player_irc := app.session.players.by_name_irc(user.name)):
+        player_irc.on_user_restricted(reason, until)
 
-        scores.hide_all(player.id)
-        stats.update_all(player.id, {'rank': 0})
-
-        groups.delete_entry(player.id, 999)
-        groups.delete_entry(player.id, 1000)
-
-        # Update hardware
-        clients.update_all(player.id, {'banned': True})
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=0,
-            length=until,
-            description=reason,
-            is_permanent=True if not until else False
-        )
-
-        officer.call(f'{player.name} was restricted. Reason: "{reason}"')
-    else:
-        # Player is online
-        player.restrict(
-            reason,
-            until
-        )
-
-    return [f'{player.name} was restricted.']
+    return [f'{user.name} was restricted.']
 
 @command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unrestrict(ctx: Context) -> List | None:
     """<name> <restore scores (true/false)>"""
-
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name> <restore scores (true/false)>']
 
@@ -1541,36 +1492,26 @@ def unrestrict(ctx: Context) -> List | None:
     restore_scores = True
 
     if len(ctx.args) > 1:
-        restore_scores = eval(ctx.args[1].capitalize())
+        restore_scores = ctx.args[1].lower() == 'true'
 
-    if not (player := users.fetch_by_name(username)):
+    if not (user := users.fetch_by_name(username)):
         return [f'Player "{username}" was not found.']
 
-    if not player.restricted:
-        return [f'Player "{username}" is not restricted.']
+    if not user.restricted:
+        return [f'Player "{user.name}" is not restricted.']
 
-    users.update(player.id, {'restricted': False})
+    infringements.unrestrict_user(
+        user,
+        restore_scores
+    )
 
-    # Add to player & supporter group
-    groups.create_entry(player.id, 999)
-    groups.create_entry(player.id, 1000)
+    if (player_osu := app.session.players.by_name_osu(user.name)):
+        player_osu.on_user_unrestricted()
 
-    # Update hardware
-    clients.update_all(player.id, {'banned': False})
+    if (player_irc := app.session.players.by_name_irc(user.name)):
+        player_irc.on_user_unrestricted()
 
-    if not restore_scores:
-        stats.delete_all(player.id)
-        leaderboards.remove(player.id, player.country)
-    else:
-        scores.restore_hidden_scores(player.id)
-
-    for user_stats in stats.fetch_all(player.id):
-        leaderboards.update(
-            user_stats,
-            player.country
-        )
-
-    return [f'Player "{username}" was unrestricted.']
+    return [f'Player "{user.name}" was unrestricted.']
 
 @command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def moderated(ctx: Context) -> List | None:

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.common.constants import Permissions
+from app.common.helpers import infringements
 from app.objects.locks import LockedSet
 from app.common import officer
 
@@ -178,10 +179,11 @@ class Channel:
         ])
 
         if has_bad_words and not sender.is_bot:
-            sender.silence(
-                duration_sec=60 * 10,
-                reason='Auto-silenced for using bad words in chat.'
+            infringements.silence_user(
+                sender.object, 60 * 5,
+                "Auto-silenced for using bad words in chat."
             )
+            sender.on_user_silenced()
             officer.call(f'Message: {message}')
             return
 

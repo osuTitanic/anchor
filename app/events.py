@@ -1,19 +1,10 @@
 
 from __future__ import annotations
 
-from app.common import officer
-from app.clients.base import Client
+from app.common.database.repositories import users
+from app.common.helpers import infringements
 from app.common.constants import GameMode
-from app.common.cache import leaderboards
-from app.common.database.repositories import (
-    infringements,
-    clients,
-    scores,
-    groups,
-    stats,
-    users
-)
-
+from app.clients.base import Client
 from datetime import datetime
 from typing import Optional
 
@@ -48,87 +39,57 @@ def restrict(
     autoban: bool = False,
     until: Optional[datetime] = None
 ) -> None:
-    if not (player := app.session.players.by_id(user_id)):
-        # Player is not online
-        player = users.fetch_by_id(user_id)
-
-        if not player:
-            # Player was not found
-            officer.call(f'Failed to restrict user with id {user_id}: User not found!')
-            return
-
-        # Update user
-        users.update(player.id, {'restricted': True})
-
-        # Remove permissions
-        groups.delete_entry(player.id, 999)
-        groups.delete_entry(player.id, 1000)
-
-        leaderboards.remove(
-            player.id,
-            player.country
-        )
-
-        # Hide scores
-        scores.hide_all(player.id)
-        stats.update_all(player.id, {'rank': 0})
-
-        # Update hardware
-        clients.update_all(player.id, {'banned': True})
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=0,
-            length=until,
-            description=reason,
-            is_permanent=True if not until else False
-        )
-
-        officer.call(
-            f'{player.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
-        )
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    player.restrict(reason, until, autoban)
+    infringements.restrict_user(
+        user,
+        reason,
+        until,
+        autoban
+    )
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_restricted(reason, until, autoban)
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_restricted(reason, until, autoban)
 
 @app.session.events.register('silence')
 def silence(user_id: int, duration: int, reason: str = ''):
-    if not (player := app.session.players.by_id(user_id)):
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    player.silence(duration, reason)
+    infringements.silence_user(
+        user,
+        duration,
+        reason
+    )
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_silenced()
 
 @app.session.events.register('unrestrict')
 def unrestrict(user_id: int, restore_scores: bool = True):
-    if not (player := users.fetch_by_id(user_id)):
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    if not player.restricted:
+    if not user.restricted:
         return
 
-    users.update(player.id, {'restricted': False})
+    infringements.unrestrict_user(
+        user,
+        restore_scores
+    )
 
-    # Add to player & supporter group
-    groups.create_entry(player.id, 999)
-    groups.create_entry(player.id, 1000)
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_unrestricted()
 
-    # Update hardware
-    clients.update_all(player.id, {'banned': False})
-
-    if restore_scores:
-        scores.restore_hidden_scores(player.id)
-    else:
-        stats.delete_all(player.id)
-        leaderboards.remove(player.id, player.country)
-
-    for user_stats in stats.fetch_all(player.id):
-        leaderboards.update(
-            user_stats,
-            player.country
-        )
-
-    officer.call(f'Player "{player.name}" was unrestricted.')
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_unrestricted()
 
 @app.session.events.register('announcement')
 def announcement(message: str):

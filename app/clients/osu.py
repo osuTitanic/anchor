@@ -11,6 +11,7 @@ from copy import copy
 from app.common.database import users, groups, stats, logins, clients
 from app.common.cache import status, usercount, leaderboards
 from app.common.helpers import clients as client_utils
+from app.common.helpers import infringements
 from app.common.constants import GameMode
 from app.common.constants import strings
 from app.common import officer, mail
@@ -421,7 +422,8 @@ class OsuClient(Client):
 
         if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
-            self.restrict('Multiaccounting', autoban=True)
+            infringements.restrict_user(self.object, 'Multiaccounting', autoban=True)
+            self.on_user_restricted('Multiaccounting', autoban=True)
             return
 
         if other_matches:
@@ -458,13 +460,13 @@ class OsuClient(Client):
         if self.info.display_city:
             self.presence.city = self.info.ip.city
 
-    def restrict(
+    def on_user_restricted(
         self,
         reason: str | None = None,
         until: datetime | None = None,
         autoban: bool = False
     ) -> None:
-        super().restrict(reason, until, autoban)
+        super().on_user_restricted(reason, until, autoban)
         self.on_login_failed(LoginError.UserBanned)
         self.close_connection("Restricted")
 

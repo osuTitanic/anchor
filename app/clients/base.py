@@ -4,17 +4,15 @@ from chio.constants import Mode, Permissions
 from datetime import datetime, timedelta
 from typing import Iterable, List
 
+from app.common.helpers import infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
 from app.objects.channel import Channel
 from app.common.constants import level
-from app.common import officer
 from app.common.database import (
     infringements,
     histories,
-    clients,
-    scores,
     groups,
     stats,
     users
@@ -67,7 +65,8 @@ class Client:
 
         if self.remaining_silence < 0:
             # User is not silenced anymore
-            self.unsilence()
+            infringements_helper.unsilence_user(self.object)
+            self.on_user_unsilenced()
             return False
 
         return True
@@ -80,7 +79,7 @@ class Client:
         if not self.object.silence_end:
             return 0
 
-        return (
+        return round(
             self.object.silence_end.timestamp() -
             datetime.now().timestamp()
         )
@@ -94,7 +93,8 @@ class Client:
             return False
 
         if not (recent := infringements.fetch_recent_by_action(self.id, action=0)):
-            self.unrestrict()
+            infringements_helper.unrestrict_user(self.object, True)
+            self.on_user_unrestricted()
             return False
 
         if recent.is_permanent:
@@ -106,7 +106,8 @@ class Client:
         remaining = (recent.length - datetime.now()).total_seconds()
 
         if remaining <= 0:
-            self.unrestrict()
+            infringements_helper.unrestrict_user(self.object, True)
+            self.on_user_unrestricted()
             return False
 
         return True
@@ -298,118 +299,39 @@ class Client:
         if reason:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
-    def silence(self, duration_sec: int, reason: str | None = None) -> None:
-        if self.is_bot:
-            return
+    def on_user_silenced(self) -> None:
+        self.reload()
+        self.enqueue_infringement_length(self.remaining_silence)
 
-        duration = timedelta(seconds=duration_sec)
+    def on_user_unsilenced(self):
+        self.reload()
+        self.enqueue_infringement_length(-1)
 
-        if not self.object.silence_end:
-            self.object.silence_end = datetime.now() + duration
-        else:
-            # Append duration, if user has been silenced already
-            self.object.silence_end += duration
-
-        # Update database
-        users.update(self.id, {'silence_end': self.object.silence_end})
-
-        # Enqueue to client
-        self.enqueue_infringement_length(duration_sec)
-
-        # Add entry inside infringements table
-        infringements.create(
-            self.id,
-            action=1,
-            length=(datetime.now() + duration),
-            description=reason
-        )
-
-        officer.call(
-            f'{self.name} was silenced for {timeago.format(datetime.now() + duration)}. '
-            f'Reason: "{reason}"'
-        )
-
-    def unsilence(self):
-        self.object.silence_end = None
-        self.enqueue_infringement_length(0)
-
-        # Update database
-        users.update(self.id, {'silence_end': None})
-
-        infringement = infringements.fetch_recent_by_action(
-            self.id,
-            action=1
-        )
-
-        if infringement:
-            infringements.delete_by_id(infringement.id)
-
-    def restrict(
+    def on_user_restricted(
         self,
         reason: str | None = None,
         until: datetime | None = None,
         autoban: bool = False
     ) -> None:
-        self.object.restricted = True
-
-        # Update database
-        users.update(self.id, {'restricted': True})
-
-        # Remove permissions
-        groups.delete_entry(self.id, 999)
-        groups.delete_entry(self.id, 1000)
-
-        # Update leaderboards
-        leaderboards.remove(
-            self.id,
-            self.object.country
-        )
-
-        scores.hide_all(self.id)
-        stats.update_all(self.id, {'rank': 0})
-
-        if reason:
-            self.enqueue_announcement(
-                f'You have been restricted for:\n{reason}'
-                f'\nYou will be able to play again {timeago.format(until)}.'
-                if until else ''
-            )
+        self.reload()
+        until_text = ""
 
         if until:
             self.enqueue_infringement_length(
                 round((until - datetime.now()).total_seconds())
             )
+            until_text = (
+                f'You will be able to play again {timeago.format(until)}.'
+            )
 
-        # Update hardware
-        clients.update_all(self.id, {'banned': True})
+        if reason:
+            self.enqueue_announcement(
+                f'You have been {"auto-" if autoban else ""}restricted for:'
+                f'\n{reason}\n{until_text}'
+            )
 
-        # Add entry inside infringements table
-        infringements.create(
-            self.id,
-            action=0,
-            length=until,
-            is_permanent=True
-                    if not until
-                    else False,
-            description=f'{"Autoban: " if autoban else ""}{reason}'
-        )
-
-        officer.call(
-            f'{self.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
-        )
-
-    def unrestrict(self) -> None:
-        users.update(self.id, {'restricted': False})
-        self.object.restricted = False
-
-        # Add to player & supporter group
-        groups.create_entry(self.id, 999)
-        groups.create_entry(self.id, 1000)
-
-        # Update hardware
-        clients.update_all(self.id, {'banned': False})
-
-        # Update client
+    def on_user_unrestricted(self) -> None:
+        self.reload()
         self.enqueue_infringement_length(-1)
 
     def enqueue_player(self, player: "Client") -> None:
