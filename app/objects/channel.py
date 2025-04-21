@@ -179,11 +179,7 @@ class Channel:
         ])
 
         if has_bad_words and not sender.is_bot:
-            infringements.silence_user(
-                sender.object, 60 * 5,
-                "Auto-silenced for using bad words in chat."
-            )
-            sender.on_user_silenced()
+            sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
             officer.call(f'Message: {message}')
             return
 

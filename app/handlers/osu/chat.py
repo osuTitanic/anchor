@@ -84,9 +84,7 @@ def send_message(client: OsuClient, message: Message):
         client.recent_message_count = 0
 
     if client.recent_message_count > 30 and not client.is_bot:
-        infringements.silence_user(client.object, 60, 'Chat spamming')
-        client.on_user_silenced()
-        return
+        return client.silence(60, 'Chat spamming')
 
     channel.send_message(client, message.content.strip())
     client.update_activity()
@@ -125,9 +123,7 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.recent_message_count = 0
 
     if sender.recent_message_count > 30 and not sender.is_bot:
-        infringements.silence_user(sender.object, 60, 'Chat spamming')
-        sender.on_user_silenced()
-        return
+        return sender.silence(60, 'Chat spamming')
 
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')

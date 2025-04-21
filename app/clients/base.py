@@ -1,8 +1,8 @@
 
 from chio.types import UserPresence, UserStats, UserStatus, Message
 from chio.constants import Mode, Permissions
-from datetime import datetime, timedelta
 from typing import Iterable, List
+from datetime import datetime
 
 from app.common.helpers import infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
@@ -35,11 +35,11 @@ class Client:
         self.id = 0
         self.name = ""
         self.protocol = "internal"
-        self.address = address
         self.port = port
-        self.presence = UserPresence()
-        self.status = UserStatus()
+        self.address = address
         self.stats = UserStats()
+        self.status = UserStatus()
+        self.presence = UserPresence()
         self.object: DBUser | None = None
         self.away_message: str | None = None
         self.logger = logging.getLogger(address)
@@ -65,8 +65,7 @@ class Client:
 
         if self.remaining_silence < 0:
             # User is not silenced anymore
-            infringements_helper.unsilence_user(self.object)
-            self.on_user_unsilenced()
+            self.unsilence()
             return False
 
         return True
@@ -93,8 +92,7 @@ class Client:
             return False
 
         if not (recent := infringements.fetch_recent_by_action(self.id, action=0)):
-            infringements_helper.unrestrict_user(self.object, True)
-            self.on_user_unrestricted()
+            self.unrestrict()
             return False
 
         if recent.is_permanent:
@@ -106,8 +104,7 @@ class Client:
         remaining = (recent.length - datetime.now()).total_seconds()
 
         if remaining <= 0:
-            infringements_helper.unrestrict_user(self.object, True)
-            self.on_user_unrestricted()
+            self.unrestrict()
             return False
 
         return True
@@ -298,6 +295,53 @@ class Client:
         """Closes the connection to the client"""
         if reason:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
+
+    def silence(self, duration: int, reason: str | None = None) -> datetime:
+        """Silences the user for a given duration"""
+        if not self.object:
+            return datetime.now()
+
+        silence_end = infringements_helper.silence_user(
+            self.object,
+            duration,
+            reason
+        )
+        self.on_user_silenced()
+        return silence_end
+    
+    def unsilence(self) -> None:
+        """Unsilences the user"""
+        if not self.object:
+            return
+
+        infringements_helper.unsilence_user(self.object)
+        self.on_user_unsilenced()
+
+    def restrict(
+        self,
+        reason: str | None = None,
+        until: datetime | None = None,
+        autoban: bool = False
+    ) -> None:
+        """Restricts the user for a given duration"""
+        if not self.object:
+            return
+
+        infringements_helper.restrict_user(
+            self.object,
+            reason=reason,
+            until=until,
+            autoban=autoban
+        )
+        self.on_user_restricted(reason, until)
+
+    def unrestrict(self) -> None:
+        """Unrestricts the user"""
+        if not self.object:
+            return
+
+        infringements_helper.unrestrict_user(self.object)
+        self.on_user_unrestricted()
 
     def on_user_silenced(self) -> None:
         self.reload()

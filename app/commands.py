@@ -1434,7 +1434,7 @@ def unsilence(ctx: Context):
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
-    name = ctx.args[0]
+    name = " ".join(ctx.args[0:])
 
     if not (user := users.fetch_by_name(name)):
         return [f'Player "{name}" was not found.']

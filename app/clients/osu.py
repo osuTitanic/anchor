@@ -31,7 +31,7 @@ import chio
 import app
 
 class OsuClient(Client):
-    def __init__(self, address: str, port: int):
+    def __init__(self, address: str, port: int) -> None:
         super().__init__(address, port)
         self.match: Match | None = None
         self.spectating: OsuClient | None = None
@@ -422,8 +422,7 @@ class OsuClient(Client):
 
         if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
-            infringements.restrict_user(self.object, 'Multiaccounting', autoban=True)
-            self.on_user_restricted('Multiaccounting', autoban=True)
+            self.restrict('Multiaccounting', autoban=True)
             return
 
         if other_matches:
