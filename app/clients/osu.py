@@ -331,6 +331,7 @@ class OsuClient(Client):
 
         usercount.set(len(app.session.players))
         status.delete(self.id)
+        self.update_activity()
 
         if self.is_tourney_client:
             # Clear any remaining tourney clients, if there are any
