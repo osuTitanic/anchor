@@ -105,7 +105,7 @@ def user_announcement(user_id: int, message: str):
 
 @app.session.events.register('user_update')
 def user_update(user_id: int, mode: int | None = None):
-    if not (player := app.session.players.by_id(user_id)):
+    if not (player := app.session.players.by_id_osu(user_id)):
         return
 
     if mode != None:
@@ -113,6 +113,7 @@ def user_update(user_id: int, mode: int | None = None):
         player.status.mode = GameMode(mode)
 
     player.reload(player.status.mode.value)
+    player.enqueue_stats(player)
     enqueue_stats(player)
 
     duplicates = app.session.players.by_rank(
@@ -126,6 +127,7 @@ def user_update(user_id: int, mode: int | None = None):
 
         # We have found a player with the same rank
         p.reload(p.status.mode.value)
+        p.enqueue_stats(p)
         enqueue_stats(p)
 
 @app.session.events.register('link')
