@@ -1352,6 +1352,28 @@ def get_client_version(ctx: Context):
 
     return [f"{target.name} is playing on {target.client.version.string}"]
 
+@command(['setranking', 'changeranking', 'switchranking'])
+def set_preferred_ranking(ctx: Context):
+    """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
+
+    if ctx.player.is_irc:
+        return ['This command is not available for IRC users.']
+
+    ranking = ctx.args[0].lower()
+
+    if ranking not in ('global', 'ppv1', 'tscore', 'rscore', 'clears'):
+        return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
+
+    ctx.player.preferred_ranking = ranking
+    ctx.player.enqueue_stats(ctx.player)
+
+    if ctx.player.io.requires_status_updates:
+        ctx.player.enqueue_players(app.session.players)
+
+    return [f'Your ranking was set to "{ranking}".']
+
 @command(['monitor'], ['Admins'])
 def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
