@@ -8,6 +8,7 @@ from twisted.internet import reactor
 
 import logging
 import config
+import app
 
 IPAddress = IPv4Address | IPv6Address
 
@@ -24,12 +25,15 @@ class TcpIrcProtocol(LineOnlyReceiver):
         self.logger.info(
             f'-> <{self.address}:{self.port}> (IRC)'
         )
-        self.enqueue_welcome()
         self.enqueue_error(
             "IRC connections are not supported yet. "
             "Please check back later!"
         )
-        self.close_connection()
+        self.enqueue_error_message(
+            "IRC connections are not supported yet. "
+            "Please check back later!"
+        )
+        reactor.callLater(5, self.close_connection)
 
     def connectionLost(self, reason: Failure) -> None:
         self.logger.info(
@@ -48,8 +52,9 @@ class TcpIrcProtocol(LineOnlyReceiver):
         self.transport.write(f"{message}\r\n".encode('utf-8'))
         self.logger.debug(f"<- {message}")
 
-    def enqueue_welcome(self) -> None:
-        self.enqueue_message(f"cho.{config.DOMAIN_NAME} :Welcome to osu!Bancho.")
+    def enqueue_error_message(self, error: str) -> None:
+        bot_prefix = f'{app.session.banchobot.name}!bot@{config.DOMAIN_NAME}'
+        self.enqueue_message(f":{bot_prefix} PRIVMSG #osu :{error}")
 
     def enqueue_error(self, error: str) -> None:
         self.enqueue_message(f"ERROR :{error}")
