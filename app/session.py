@@ -38,7 +38,7 @@ requests.headers = {
     'User-Agent': f'osuTitanic/anchor ({config.DOMAIN_NAME})'
 }
 
-handlers: Dict[PacketType, Callable] = {}
+osu_handlers: Dict[PacketType, Callable] = {}
 channels = Channels()
 storage = Storage()
 players = Players()

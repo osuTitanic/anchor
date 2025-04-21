@@ -12,7 +12,7 @@ from time import time
 
 def register(packet: PacketType) -> Callable:
     def wrapper(func) -> Callable:
-        session.handlers[packet] = func
+        session.osu_handlers[packet] = func
         return func
     return wrapper
 
