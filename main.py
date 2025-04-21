@@ -5,9 +5,9 @@ from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
 
-from app.servers import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
 from app.banchobot import BanchoBot
+from app.servers import *
 
 import importlib
 import logging
@@ -89,16 +89,18 @@ def on_startup_fail(e: Exception):
 
 @wrapper.exception_wrapper(on_startup_fail)
 def setup_servers():
-    ws_factory = WebsocketBanchoFactory()
-    http_factory = HttpBanchoFactory()
-    tcp_factory = TcpBanchoFactory()
+    osu_ws_factory = WebsocketBanchoFactory()
+    osu_http_factory = HttpBanchoFactory()
+    osu_tcp_factory = TcpBanchoFactory()
+    irc_tcp_factory = TcpIrcFactory()
 
     reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
-    reactor.listenTCP(config.HTTP_PORT, http_factory)
-    reactor.listenTCP(config.WS_PORT, ws_factory)
+    reactor.listenTCP(config.HTTP_PORT, osu_http_factory)
+    reactor.listenTCP(config.WS_PORT, osu_ws_factory)
+    reactor.listenTCP(config.IRC_PORT, irc_tcp_factory)
 
     for port in config.TCP_PORTS:
-        reactor.listenTCP(port, tcp_factory)
+        reactor.listenTCP(port, osu_tcp_factory)
 
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)

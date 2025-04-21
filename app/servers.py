@@ -8,6 +8,7 @@ from typing import Optional
 from .protocols.osu.ws import WebsocketOsuClient
 from .protocols.osu.http import HttpOsuHandler
 from .protocols.osu.tcp import TcpOsuClient
+from .protocols.irc.tcp import TcpIrcProtocol
 
 import app
 
@@ -45,3 +46,17 @@ class WebsocketBanchoFactory(WebSocketServerFactory):
 
     def stopFactory(self):
         app.session.logger.warning(f'Stopping factory: {self}')
+
+class TcpIrcFactory(Factory):
+    protocol = TcpIrcProtocol
+
+    def startFactory(self):
+        app.session.logger.info(f'Starting factory: {self}')
+
+    def stopFactory(self):
+        app.session.logger.warning(f'Stopping factory: {self}')
+
+    def buildProtocol(self, addr: IAddress) -> TcpIrcProtocol:
+        client = self.protocol(addr)
+        client.factory = self
+        return client
