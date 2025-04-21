@@ -116,6 +116,9 @@ def user_update(user_id: int, mode: int | None = None):
     player.enqueue_stats(player)
     enqueue_stats(player)
 
+    # Apply default ranking
+    app.session.players.apply_ranking('global')
+
     duplicates = app.session.players.by_rank(
         player.stats.rank,
         player.status.mode

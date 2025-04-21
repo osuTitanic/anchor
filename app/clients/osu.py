@@ -43,6 +43,7 @@ class OsuClient(Client):
         self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
 
+        self.preferred_ranking = 'global'
         self.filter = PresenceFilter.All
         self.logged_in = False
         self.in_lobby = False
@@ -211,6 +212,8 @@ class OsuClient(Client):
             # Update cache
             self.update_leaderboard_stats()
             self.update_status_cache()
+            self.reload_rankings()
+            self.reload_rank()
 
         self.logged_in = True
         self.on_login_success()
@@ -309,6 +312,16 @@ class OsuClient(Client):
             return handler_function(self)
 
         return handler_function(self, data)
+
+    def on_user_restricted(
+        self,
+        reason: str | None = None,
+        until: datetime | None = None,
+        autoban: bool = False
+    ) -> None:
+        super().on_user_restricted(reason, until, autoban)
+        self.on_login_failed(LoginError.UserBanned)
+        self.close_connection("Restricted")
 
     def close_connection(self, reason: str = "") -> None:
         if not self.logged_in:
@@ -459,16 +472,6 @@ class OsuClient(Client):
         if self.info.display_city:
             self.presence.city = self.info.ip.city
 
-    def on_user_restricted(
-        self,
-        reason: str | None = None,
-        until: datetime | None = None,
-        autoban: bool = False
-    ) -> None:
-        super().on_user_restricted(reason, until, autoban)
-        self.on_login_failed(LoginError.UserBanned)
-        self.close_connection("Restricted")
-
     def ensure_not_spectating(self) -> None:
         try:
             if not self.spectating:
@@ -516,18 +519,24 @@ class OsuClient(Client):
         self.enqueue_presence_bundle(players)
 
     def enqueue_presence(self, player: "Client") -> None:
+        player.apply_ranking(self.preferred_ranking)
         self.enqueue_packet(PacketType.BanchoUserPresence, player)
 
     def enqueue_presence_single(self, player: "Client") -> None:
+        player.apply_ranking(self.preferred_ranking)
         self.enqueue_packet(PacketType.BanchoUserPresenceSingle, player)
 
     def enqueue_presence_bundle(self, players: Iterable["Client"]) -> None:
+        for player in players:
+            player.apply_ranking(self.preferred_ranking)
+
         self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
 
     def enqueue_stats(self, player: "OsuClient") -> None:
         if player.is_irc:
             return
 
+        player.apply_ranking(self.preferred_ranking)
         self.enqueue_packet(PacketType.BanchoUserStats, player)
 
     def enqueue_announcement(self, message: str) -> None:
