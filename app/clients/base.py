@@ -46,6 +46,7 @@ class Client:
         self.last_response = time.time()
         self.last_minute_stamp = time.time()
         self.recent_message_count = 0
+        self.rankings = {}
         self.groups = []
 
     @property
@@ -223,12 +224,14 @@ class Client:
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
             self.update_object(mode)
+            self.reload_rankings()
             self.reload_rank()
             return self.object
 
     def reload_rank(self) -> int:
         """Check if redis rank desynced from database and update it, if needed"""
         cached_rank = leaderboards.global_rank(self.id, self.status.mode.value)
+        self.rankings['global'] = cached_rank
 
         if cached_rank != self.current_stats.rank:
             self.current_stats.rank = cached_rank
@@ -245,6 +248,29 @@ class Client:
                 self.current_stats,
                 self.object.country
             )
+
+    def reload_rankings(self) -> None:
+        """Reload all non-global rankings from the cache"""
+        self.rankings.update({
+            'tscore': leaderboards.total_score_rank(self.id, self.status.mode.value),
+            'rscore': leaderboards.score_rank(self.id, self.status.mode.value),
+            'clears': leaderboards.clears_rank(self.id, self.status.mode.value),
+            'ppv1': leaderboards.ppv1_rank(self.id, self.status.mode.value)
+        })
+
+    def apply_ranking(self, ranking: str = 'global') -> None:
+        self.stats.rank = self.rankings.get(
+            ranking,
+            self.current_stats.rank
+        )
+        self.stats.pp = (
+            round(self.current_stats.pp)
+            if ranking != 'ppv1' else
+            round(self.current_stats.ppv1)
+        )
+
+    def apply_default_ranking(self) -> None:
+        self.stats.rank = self.current_stats.rank
 
     def update_object(self, mode: int = 0) -> None:
         """Apply the current database object to the client"""
@@ -276,6 +302,9 @@ class Client:
 
     def update_status_cache(self) -> None:
         """Updates the player's status inside the cache"""
+        self.apply_ranking(
+            ranking='global'
+        )
         status.update(
             self.id,
             self.stats,

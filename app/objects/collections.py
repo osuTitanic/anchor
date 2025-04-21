@@ -244,6 +244,10 @@ class Players(MutableMapping[int | str, Client]):
         for p in self.osu_clients:
             p.enqueue_stats(player)
 
+    def apply_ranking(self, ranking: str = 'global') -> None:
+        for p in self.osu_clients:
+            p.apply_ranking(ranking)
+
     def send_announcement(self, message: str) -> None:
         for p in self:
             p.enqueue_announcement(message)
