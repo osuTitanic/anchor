@@ -1,7 +1,44 @@
-from . import en, es, fr
+from . import en, kr, fi, jp, zh, tw, hk, fr, de, da, sv, no, es, pl, nl, ru, bg, ro, id, ph, cs, mn, hu, it, tr, el, my, hr, vn, pt, ua, ar, th, he, si, rs, ca, cp
 
 __all__ = ["faq"]
 
 faq = {
-    "en": en.strings
+    "en": en.strings,
+    "kr": kr.strings,
+    "fi": fi.strings,
+    "jp": jp.strings,
+    "zh": zh.strings,
+    "tw": tw.strings,
+    "hk": hk.strings,
+    "fr": fr.strings,
+    "de": de.strings,
+    "da": da.strings,
+    "sv": sv.strings,
+    "no": no.strings,
+    "es": es.strings,
+    "pl": pl.strings,
+    "nl": nl.strings,
+    "ru": ru.strings,
+    "bg": bg.strings,
+    "ro": ro.strings,
+    "id": id.strings,
+    "ph": ph.strings,
+    "cs": cs.strings,
+    "mn": mn.strings,
+    "hu": hu.strings,
+    "it": it.strings,
+    "tr": tr.strings,
+    "el": el.strings,
+    "my": my.strings,
+    "hr": hr.strings,
+    "vn": vn.strings,
+    "pt": pt.strings,
+    "ua": ua.strings,
+    "ar": ar.strings,
+    "th": th.strings,
+    "he": he.strings,
+    "si": si.strings,
+    "rs": rs.strings,
+    "ca": ca.strings,
+    "cp": cp.strings
 }
