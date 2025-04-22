@@ -1695,8 +1695,6 @@ def crash(ctx: Context) -> List | None:
     target.enqueue_matchjoin_success(fake_match)
     return [f"{target.name} was crashed, hopefully :tf:"]
 
-# TODO: !rank
-
 @command(['faq'], hidden=False)
 def mp_help(ctx: Context):
     """<faq> - Gets information about a frequently asked question"""
@@ -1721,4 +1719,5 @@ def mp_help(ctx: Context):
 
     return faq[faq_lang][faq_string].splitlines()
 
+# TODO: !rank
 # TODO: !top
