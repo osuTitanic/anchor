@@ -44,6 +44,7 @@ class OsuClient(Client):
         self.filter = PresenceFilter.All
         self.logged_in = False
         self.in_lobby = False
+        self.is_osu = True
 
     @property
     def is_tourney_client(self) -> bool:
