@@ -312,7 +312,7 @@ class Client:
             self.id,
             self.stats,
             self.status,
-            hash=ClientHash.empty().string,
+            hash=ClientHash.empty("b0").string,
             version=0
         )
 
