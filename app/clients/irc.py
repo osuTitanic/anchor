@@ -276,6 +276,9 @@ class IrcClient(Client):
         )
 
     def enqueue_user_quit(self, quit: UserQuit) -> None:
+        if quit != QuitState.Gone:
+            return
+
         self.enqueue_command(
             "QUIT",
             quit.info.irc_prefix,
