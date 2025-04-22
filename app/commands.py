@@ -1712,10 +1712,10 @@ def mp_help(ctx: Context):
         faq_string = faq_string[colon_index + 1:]
 
     if faq_lang not in faq:
-        return f'Language "{faq_lang}" not found'
+        return [f'Language "{faq_lang}" not found']
     
     if faq_string not in faq[faq_lang]:
-        return f'FAQ "{faq_string}" not found'
+        return [f'FAQ "{faq_string}" not found']
 
     return faq[faq_lang][faq_string].splitlines()
 
