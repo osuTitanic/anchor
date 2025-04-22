@@ -1706,7 +1706,7 @@ def mp_help(ctx: Context):
     faq_string = ctx.args[0]
     faq_lang = 'en'
 
-    # es:spam, where es is the lang and spam is the faq string
+    # Example: "es:spam", where "es" is the lang and "spam" is the faq string
     colon_index = faq_string.find(':')
 
     if colon_index != -1:
