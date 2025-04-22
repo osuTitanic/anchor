@@ -40,6 +40,7 @@ from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
 from .clients.base import Client
+from .faq import faq
 
 import timeago
 import config
@@ -1683,6 +1684,29 @@ def crash(ctx: Context) -> List | None:
     target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, fake_match)
     return [f"{target.name} was crashed, hopefully :tf:"]
 
+@command(['faq'], hidden=False)
+def mp_help(ctx: Context):
+    """<faq> - Gets information about a frequently asked question"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <faq> - Gets information about a frequently asked question']
+
+    faq_string = ctx.args[0]
+    faq_lang = 'en'
+
+    # Example: "es:spam", where "es" is the lang and "spam" is the faq string
+    colon_index = faq_string.find(':')
+
+    if colon_index != -1:
+        faq_lang = faq_string[:colon_index]
+        faq_string = faq_string[colon_index + 1:]
+
+    if faq_lang not in faq:
+        return [f'Language "{faq_lang}" not found']
+    
+    if faq_string not in faq[faq_lang]:
+        return [f'FAQ "{faq_string}" not found']
+
+    return faq[faq_lang][faq_string].splitlines()
+
 # TODO: !rank
-# TODO: !faq
 # TODO: !top
