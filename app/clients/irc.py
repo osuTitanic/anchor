@@ -23,6 +23,10 @@ class IrcClient(Client):
         self.is_osu = False
         self.token = ""
 
+    @property
+    def local_prefix(self) -> str:
+        return self.resolve_username(self)
+
     def close_connection(self, reason: Any = None) -> None:
         if not self.logged_in:
             return
@@ -246,6 +250,10 @@ class IrcClient(Client):
     def send_server_error(self) -> None:
         self.enqueue_error("A server-side error occurred.")
 
+    def resolve_username(self, client: "Client") -> str:
+        # osu! irc clients need a "-osu" suffix to know they are osu! clients
+        return client.underscored_name + ("-osu" if client.is_osu and self.is_osu else "")
+
     def enqueue_line(self, line: str) -> None:
         self.logger.debug(f"-> {line}")
 
@@ -269,7 +277,7 @@ class IrcClient(Client):
         self.enqueue_command(
             irc.RPL_WELCOME,
             params=[
-                self.underscored_name,
+                self.local_prefix,
                 ":Welcome to osu!Bancho!"
             ]
         )
@@ -280,12 +288,12 @@ class IrcClient(Client):
         for index, line in enumerate(messages):
             self.enqueue_command(
                 irc.RPL_MOTD,
-                params=[self.underscored_name, ":" + line]
+                params=[self.local_prefix, ":" + line]
             )
 
         self.enqueue_command(
             irc.RPL_ENDOFMOTD,
-            params=[self.underscored_name, ":End of /MOTD command."]
+            params=[self.local_prefix, ":End of /MOTD command."]
         )
 
     def enqueue_error(self, error: str) -> None:
@@ -313,19 +321,19 @@ class IrcClient(Client):
         self.enqueue_command(
             irc.RPL_NAMREPLY,
             params=[
-                self.underscored_name, "=", channel,
-                ":" + " ".join(player.name for player in players)
+                self.local_prefix, "=", channel,
+                ":" + " ".join(self.resolve_username(player) for player in players)
             ]
         )
         self.enqueue_command(
             irc.RPL_ENDOFNAMES,
-            params=[self.underscored_name, channel, ":End of /NAMES list."]
+            params=[self.local_prefix, channel, ":End of /NAMES list."]
         )
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         self.enqueue_command(
             "JOIN",
-            player.irc_prefix,
+            self.resolve_username(player),
             params=[f":{channel}"]
         )
 
@@ -335,10 +343,8 @@ class IrcClient(Client):
 
         self.enqueue_command(
             "QUIT",
-            quit.info.irc_prefix,
-            params=[
-                ":quit"
-            ]
+            self.resolve_username(quit.info),
+            params=[":quit"]
         )
 
     def enqueue_channel_join_success(self, channel_name: str) -> None:
@@ -348,7 +354,7 @@ class IrcClient(Client):
         self.enqueue_command(
             irc.RPL_TOPIC,
             params=[
-                self.underscored_name, channel_name,
+                self.local_prefix, channel_name,
                 ":" + channel.topic
             ]
         )
@@ -363,7 +369,7 @@ class IrcClient(Client):
             params=[
                 channel.name,
                 channel.mode(self.permissions),
-                self.underscored_name
+                self.local_prefix
             ]
         )
 
