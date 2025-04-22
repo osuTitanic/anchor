@@ -226,10 +226,7 @@ class IrcClient(Client):
         self.logger.debug(f"<- <{message.target}> '{message.content}' ({message.sender})")
 
     def enqueue_banchobot_message(self, message: str) -> None:
-        self.enqueue_message(
-            message, app.session.banchobot,
-            "#osu" if self.logged_in else app.session.banchobot.name
-        )
+        self.enqueue_message(message, app.session.banchobot, "#osu")
 
     def enqueue_welcome(self) -> None:
         if self.is_osu:
