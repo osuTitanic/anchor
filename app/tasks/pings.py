@@ -6,6 +6,7 @@ import app
 
 PING_INTERVAL = 15
 PING_TIMEOUT = 60
+PING_TIMEOUT_HTTP = 180
 
 @app.session.tasks.submit(interval=PING_INTERVAL)
 def tcp_pings() -> None:
@@ -23,7 +24,7 @@ def tcp_pings() -> None:
         if last_response >= PING_TIMEOUT:
             player.close_connection('Client timed out')
 
-@app.session.tasks.submit(interval=PING_TIMEOUT)
+@app.session.tasks.submit(interval=PING_TIMEOUT_HTTP)
 def http_pings() -> None:
     """
     This task will handle client timeouts for http clients.
@@ -42,5 +43,5 @@ def http_pings() -> None:
             player.connectionLost()
             continue
 
-        if last_response >= PING_TIMEOUT:
+        if last_response >= PING_TIMEOUT_HTTP:
             player.close_connection('Client timed out')
