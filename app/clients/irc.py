@@ -171,7 +171,17 @@ class IrcClient(Client):
         if not self.is_osu:
             return
 
-        self.enqueue_banchobot_message("Please enter your IRC token to proceed!")
+        osu_login_ip = app.session.redis.get(
+            f"bancho:irc_login:{self.safe_name}"
+        )
+
+        if (osu_login_ip or b"").decode() != self.address:
+            self.enqueue_banchobot_message("Please enter your IRC token to proceed!")
+            return
+
+        # User has logged in via. /web/osu-login.php
+        self.token = self.object.irc_token
+        self.on_login_received()
 
     def handle_osu_login_callback(self, token: str) -> None:
         if not self.is_osu:
