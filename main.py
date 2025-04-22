@@ -26,9 +26,14 @@ logging.basicConfig(
 )
 
 def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART}')
+    app.session.logger.info(f'{ANCHOR_ASCII_ART.removesuffix("\n")}')
     app.session.logger.info(f'Running anchor-{config.VERSION}')
     os.makedirs(config.DATA_PATH, exist_ok=True)
+
+    app.session.logger.info('Loading bot...')
+    app.session.players.add(bot_player := BanchoBot())
+    app.session.banchobot = bot_player
+    app.session.logger.info(f'  - {bot_player.name}')
     app.session.logger.info('Loading channels...')
 
     for channel in channels.fetch_all():
@@ -43,11 +48,6 @@ def setup():
                 public=True
             )
         )
-
-    app.session.logger.info('Loading bot...')
-    app.session.players.add(bot_player := BanchoBot())
-    app.session.banchobot = bot_player
-    app.session.logger.info(f'  - {bot_player.name}')
 
     app.session.logger.info('Loading tasks...')
     importlib.import_module('app.tasks.pings')
@@ -67,6 +67,9 @@ def before_shutdown(*args):
         # Enqueue server restart packet to all players
         # They should reconnect after 15 seconds
         player.enqueue_server_restart(15 * 1000)
+
+    for player in app.session.players.irc_clients:
+        player.enqueue_server_restart(0)
 
     reactor.callLater(0.5, reactor.stop)
     app.session.events.submit('shutdown')
