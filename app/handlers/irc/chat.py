@@ -41,8 +41,7 @@ def handle_privmsg_command(
     message: str
 ) -> None:
     if not sender.logged_in:
-        sender.token = message
-        sender.handle_osu_login_callback()
+        sender.handle_osu_login_callback(message)
         return
 
     if sender.silenced:

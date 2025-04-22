@@ -173,10 +173,11 @@ class IrcClient(Client):
 
         self.enqueue_banchobot_message("Please enter your IRC token to proceed!")
 
-    def handle_osu_login_callback(self) -> None:
+    def handle_osu_login_callback(self, token: str) -> None:
         if not self.is_osu:
             return
 
+        self.token = token
         self.on_login_received()
 
     def send_welcome_sequence(self) -> None:
