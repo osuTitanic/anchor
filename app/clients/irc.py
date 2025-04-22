@@ -196,6 +196,10 @@ class IrcClient(Client):
         self.token = token
         self.on_login_received()
 
+    def update_status_cache(self) -> None:
+        if self.is_osu:
+            return super().update_status_cache()
+
     def send_welcome_sequence(self) -> None:
         self.enqueue_welcome()
         self.enqueue_motd(strings.ANCHOR_ASCII_ART)
