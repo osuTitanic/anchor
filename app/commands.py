@@ -272,7 +272,7 @@ def create_persistant_match(ctx: Context):
     if ctx.player.is_tourney_client:
         return ['You cannot create a persistant match inside of a tourney client.']
 
-    if ctx.player.match:
+    if not ctx.player.is_irc and ctx.player.match:
         return ['Please leave your current match first.']
 
     is_private = ctx.trigger in ('makeprivate', 'createprivate')
@@ -312,25 +312,25 @@ def create_persistant_match(ctx: Context):
     ctx.player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(ctx.player)
 
-    slot = match.slots[0]
-    slot.status = SlotStatus.NotReady
-    slot.player = ctx.player
-
-    events.create(
-        match.db_match.id,
-        type=EventType.Join,
-        data={
-            'user_id': ctx.player.id,
-            'name': ctx.player.name
-        }
-    )
-
-    match.logger.info(f'{ctx.player.name} joined')
-    match.update()
-
     if not ctx.player.is_irc:
+        slot = match.slots[0]
+        slot.status = SlotStatus.NotReady
+        slot.player = ctx.player
+
+        match.logger.info(f'{ctx.player.name} joined')
+        match.update()
+
         ctx.player.match = match
         ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
+
+        events.create(
+            match.db_match.id,
+            type=EventType.Join,
+            data={
+                'user_id': ctx.player.id,
+                'name': ctx.player.name
+            }
+        )
 
     match.chat.send_message(
         app.session.banchobot,
@@ -338,8 +338,9 @@ def create_persistant_match(ctx: Context):
         ignore_privileges=True
     )
 
-    # Force-revoke #multiplayer
-    ctx.player.enqueue_channel_revoked('#multiplayer')
+    if not ctx.player.is_irc:
+        # Force-revoke #multiplayer
+        ctx.player.enqueue_channel_revoked('#multiplayer')
 
     return ['Match created.']
 
@@ -1347,8 +1348,8 @@ def get_client_version(ctx: Context):
         if not (target := app.session.players.by_name_safe(name)):
             return ['Player is not online']
 
-        if target.is_irc:
-            return ['This player is connected via. IRC.']
+    if target.is_irc:
+        return [f'{target.name} is connected via. IRC.']
 
     return [f"{target.name} is playing on {target.client.version.string}"]
 
