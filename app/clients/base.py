@@ -1,13 +1,14 @@
 
-from chio.types import UserPresence, UserStats, UserStatus, Message
+from chio.types import UserPresence, UserStats, UserStatus, Message, UserQuit
 from chio.constants import Mode, Permissions
-from typing import Iterable, List
+from typing import Iterable, List, Set
 from datetime import datetime
 
 from app.common.helpers import infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
+from app.objects.multiplayer import Match
 from app.objects.channel import Channel
 from app.common.constants import level
 from app.common.database import (
@@ -46,6 +47,8 @@ class Client:
         self.last_response = time.time()
         self.last_minute_stamp = time.time()
         self.recent_message_count = 0
+        self.referee_matches: Set[Match] = set()
+        self.channels: Set[Channel] = set()
         self.rankings = {}
         self.groups = []
 
@@ -434,7 +437,7 @@ class Client:
     def enqueue_infringement_length(self, duration_seconds: int) -> None:
         ...
 
-    def enqueue_user_quit(self, player: "Client") -> None:
+    def enqueue_user_quit(self, quit: UserQuit) -> None:
         ...
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:

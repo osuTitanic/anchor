@@ -38,10 +38,7 @@ class OsuClient(Client):
         self.spectator_chat: SpectatorChannel | None = None
         self.spectators: LockedSet[OsuClient] = LockedSet()
         self.info: OsuClientInformation = OsuClientInformation.empty()
-
         self.io: BanchoIO = chio.select_latest_client()
-        self.referee_matches: Set[Match] = set()
-        self.channels: Set[Channel] = set()
 
         self.preferred_ranking = 'global'
         self.filter = PresenceFilter.All
@@ -570,8 +567,8 @@ class OsuClient(Client):
     def enqueue_message_object(self, message: Message) -> None:
         self.enqueue_packet(PacketType.BanchoMessage, message)
 
-    def enqueue_user_quit(self, player: "Client") -> None:
-        self.enqueue_packet(PacketType.BanchoUserQuit, player)
+    def enqueue_user_quit(self, quit: UserQuit) -> None:
+        self.enqueue_packet(PacketType.BanchoUserQuit, quit)
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_packet(PacketType.BanchoRestart, retry_in_ms)
