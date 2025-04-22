@@ -39,6 +39,7 @@ requests.headers = {
 }
 
 osu_handlers: Dict[PacketType, Callable] = {}
+irc_handlers: Dict[str, Callable] = {}
 channels = Channels()
 storage = Storage()
 players = Players()
