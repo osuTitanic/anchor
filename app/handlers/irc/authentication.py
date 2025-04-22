@@ -58,6 +58,11 @@ def handle_nick_command(
 ) -> None:
     client.name = nickname.lower()
 
+    if client.name == session.banchobot.name.lower():
+        client.enqueue_banchobot_message("no.")
+        client.close_connection("Tried to log in as BanchoBot.")
+        return
+
     if client.is_osu:
         client.name = client.name.removesuffix("-osu")
 
