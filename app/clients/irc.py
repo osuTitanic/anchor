@@ -114,6 +114,12 @@ class IrcClient(Client):
                 # Inform staff about maintenance mode
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
+            if (other_user := app.session.players.by_id_irc(user.id)):
+                # Another user is online with this account on irc
+                other_user.enqueue_error(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
+                other_user.close_connection("Logged in from another location")
+                return
+
             if not self.object.stats:
                 self.object.stats = [stats.create(self.id, mode, session) for mode in range(4)]
                 self.reload(self.object.preferred_mode)
