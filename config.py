@@ -49,6 +49,8 @@ DISABLE_CLIENT_VERIFICATION = eval(os.environ.get('DISABLE_CLIENT_VERIFICATION',
 ALLOW_MULTIACCOUNTING = eval(os.environ.get('ALLOW_MULTIACCOUNTING', 'False').capitalize())
 APPROVED_MAP_REWARDS = eval(os.environ.get('APPROVED_MAP_REWARDS', 'False').capitalize())
 MAINTENANCE = eval(os.environ.get('BANCHO_MAINTENANCE', 'False').capitalize())
+OSU_IRC_ENABLED = eval(os.environ.get('ENABLE_OSU_IRC', 'True').capitalize())
+IRC_ENABLED = eval(os.environ.get('ENABLE_IRC', 'True').capitalize())
 S3_ENABLED = eval(os.environ.get('ENABLE_S3', 'True').capitalize())
 DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 

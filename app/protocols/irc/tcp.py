@@ -26,12 +26,17 @@ class TcpIrcProtocol(IrcClient, IRC):
     def connectionMade(self) -> None:
         self.logger.info(f'-> <{self.address}:{self.port}> (IRC)')
 
+        if not config.IRC_ENABLED:
+            self.enqueue_error("IRC connections have been disabled. Please check back later!")
+            self.close_connection('IRC is disabled')
+
     def connectionLost(self, reason: Failure) -> None:
         self.logger.info(
             f'<{self.address}> -> Connection done.'
             if reason.type is ConnectionDone else
             f'<{self.address}> -> Lost connection: {reason.getErrorMessage()}'
         )
+        self.close_connection()
 
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
         deferred = threads.deferToThread(
