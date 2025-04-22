@@ -87,7 +87,6 @@ def send_message(client: OsuClient, message: Message):
         return client.silence(60, 'Chat spamming')
 
     channel.send_message(client, message.content.strip())
-    client.update_activity()
     client.recent_message_count += 1
 
 @register(PacketType.OsuPrivateMessage)
@@ -158,7 +157,6 @@ def send_private_message(sender: OsuClient, message: Message):
 
     sender.recent_message_count += 1
     sender.logger.info(f'[PM -> {target.name}]: {message.content}')
-    sender.update_activity()
 
 @register(PacketType.OsuSetIrcAwayMessage)
 def away_message(client: OsuClient, message: Message):
