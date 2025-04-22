@@ -16,19 +16,38 @@ def handle_ping_command(
     prefix: str,
     *args
 ) -> None:
-    client.enqueue_command("PONG", prefix, args)
+    client.enqueue_command(
+        "PONG",
+        prefix, args
+    )
 
 @register("NAMES")
 def handle_names_command(
     client: IrcClient,
     prefix: str,
-    channel: str
+    channel_name: str
 ) -> None:
-    if not (channel := session.channels.by_name(channel)):
-        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, [channel])
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_channel_revoked(channel_name)
         return
 
-    client.enqueue_players(channel.users, channel.name)
+    client.enqueue_players(
+        channel.users,
+        channel.name
+    )
+
+@register("MODE")
+def handle_mode_command(
+    client: IrcClient,
+    prefix: str,
+    channel_name: str,
+    *args
+) -> None:
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_channel_revoked(channel_name)
+        return
+
+    client.enqueue_mode(channel)
 
 @register("QUIT")
 def handle_quit(client: IrcClient, prefix: str, *args) -> None:

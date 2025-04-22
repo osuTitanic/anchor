@@ -25,10 +25,10 @@ def ensure_authenticated(func: Callable) -> Callable:
 def handle_join_command(
     client: IrcClient,
     prefix: str,
-    channel: str
+    channel_name: str
 ) -> None:
-    if not (channel := session.channels.by_name(channel)):
-        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, [channel])
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_channel_revoked(channel_name)
         return
 
     channel.add(client)
@@ -38,36 +38,36 @@ def handle_join_command(
 def handle_privmsg_command(
     sender: IrcClient,
     prefix: str,
-    target: str,
+    target_name: str,
     message: str
 ) -> None:
     if sender.silenced:
         sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
         return
 
-    if target.startswith("#"):
-        channel = session.channels.by_name(target)
+    if target_name.startswith("#"):
+        channel = session.channels.by_name(target_name)
 
         if not channel:
-            sender.enqueue_command(irc.ERR_NOSUCHCHANNEL, [target])
+            sender.enqueue_channel_revoked(target_name)
             return
         
         return channel.send_message(sender, message)
 
-    if not (target := session.players.by_name_safe(target)):
-        sender.enqueue_command(irc.ERR_NOSUCHNICK, [target])
+    if not (target := session.players.by_name_safe(target_name)):
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, [target_name])
         return
-    
+
     if target.id == sender.id:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
         return
-    
+
     if target.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
         return
-    
+
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
         return
 
     if (time.time() - sender.last_minute_stamp) > 60:
