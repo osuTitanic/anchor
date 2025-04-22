@@ -48,6 +48,7 @@ import string
 import time
 import app
 import os
+import faq
 
 @dataclass
 class Context:
@@ -1695,5 +1696,27 @@ def crash(ctx: Context) -> List | None:
     return [f"{target.name} was crashed, hopefully :tf:"]
 
 # TODO: !rank
-# TODO: !faq
+
+@command(['faq'], hidden=False)
+def mp_help(ctx: Context):
+    """<faq> - Gets information about a frequently asked question"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <faq> - Gets information about a frequently asked question']
+
+    faq_string = ctx.args[0]
+    faq_lang = 'en'
+
+    colon_index = faq_string.find(':') # es:spam, where es is the lang and spam is the faq string
+    if colon_index != -1:
+        faq_lang = faq_string[:colon_index]
+        faq_string = faq_string[colon_index + 1:]
+
+    if faq_lang not in faq:
+        return f'Language "{faq_lang}" not found'
+    
+    if faq_string not in faq[faq_lang]:
+        return f'FAQ "{faq_string}" not found'
+
+    return faq[faq_lang][faq_string]
+
 # TODO: !top
