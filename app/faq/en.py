@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Click here] to go to the osu!academy - Tutorials on all the basics of osu!",
     "achievements": "You get achievements by performing something special during a song, like getting a huge combo or playing all the beatmaps in a theme pack. Your profile shows what achievements you've got, and what you need to get. Some of the names are clues to what you need to do to get the achievement!        ",
     "add-skin": "If the file you've downloaded is in .osk format, drag the file to the osu! window or double click it.\nFor .rar/.zip files, extract the contents into a single folder and move it to your Skins folder. Make sure to do this while osu! is closed.",

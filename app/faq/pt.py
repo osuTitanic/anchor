@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Clique aqui] para ver a osu!academy - Aqui vocé encontra tutoriais para todas as coisas no osu!",
     "achievements": "Você conseguirá achievements (conquistas) completando tarefas específicas, como conseguindo um combo alto numa música ou jogando todos os beatmaps de um pack. Você pode ver suas conquistas no seu perfil. Alguns dos nomes são dicas para o quê você precisa fazer para conseguí-lo!",
     "add-skin": "Para adicionar uma nova skin (tema), transfira-a e arraste-a até a janela do osu! ou clique no arquivo .osk baixado pelo site.",

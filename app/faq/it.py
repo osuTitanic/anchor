@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Clicca qui] per vedere i video dell'osu!academy - video-tutorial per capire le basi del gioco.",
     "achievements": "Puoi ottenere achievements completandone gli obiettivi durante una canzone, come ad esempio raggiungendo una combo molto alta o giocando tutte le canzoni di un theme pack.\nPuoi vedere quelli già ottenuti sul tuo profilo o controllare gli obiettivi per sbloccarne altri. Ogni nome è un indizio per ottenere il rispettivo achievement.",
     "add-skin": "Per aggiungere una nuova skin scaricala e trascina il file nella finestra di osu!, oppure fai doppio click su di esso.",

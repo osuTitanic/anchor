@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Kliknij tutaj] Aby przejść do Akademii osu! - poradników dotyczących podstaw osu!",
     "achievements": "Osiągnięcia uzyskiwane są poprzez wykonanie pewnych zadań, takich jak osiągnięcie odpowiednio wysokiego combo lub zagranie każdej beatmapy z paczki tematycznej. \nOsiągnięcia możesz obejrzeć na swoim profilu. Dla większości osiągnięć wymagania są z góry wiadome, niektóre musisz rozpracować samemu.",
     "add-skin": "Aby dodać do gry nową skórkę, pobierz ją i przeciągnij do okna gry albo kliknij na nią dwukrotnie.",

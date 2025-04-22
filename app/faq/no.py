@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klikk her] for å vise osu!academy - Opplæringsvideoer for alt som har med osu! å gjøre!",
     "achievements": "Du kan oppnå prestasjoner ved å gjøre noe spesielt i løpet av en sang, som for eksempel å få en høy combo, eller ved å spille alle beatmappene i en temapakke. Profilen din viser hvilke prestasjoner du har oppnådd, og hva du fremdeles mangler. Noen av navnene er ledetråder angående hva som må gjøres for å oppnå prestasjonen!",
     "add-skin": "For å legge til nye skins, last ned og dra filen inn til osu! vinduet eller dobbelklikk filen.",

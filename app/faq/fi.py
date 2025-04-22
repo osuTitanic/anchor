@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klikkaa tästä] nähdäksesi osu!akademian - Videokurssit kaikista asioista jotka liittyvät osu!",
     "achievements": "Saat saavutuksia suorittamalla jotain erikoista kappaleen aikana, kuten saamalla massiivisen kombon tai pelaamalla kaikki beatmapit teemapaketissa. Profiilisi näyttää mitkä saavutukset sinulla on, ja mitä tarvitset. Jotkin nimistä ovat vihjeitä siihen mitä sinun pitää tehdä saadaksesi saavutuksen!",
     "add-skin": "Lisätäksesi uuden skinin, lataa ja raahaa tiedosto osu!:n ikkunaan tai kaksoisklikkaa sitä.",

@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klik di sini] untuk mengunjungi osu! academy - Tutorial seputar berbagai aspek dasar permainan osu!.",
     "achievements": "Achievement akan terbuka secara sendirinya dengan menyelesaikan hal-hal tertentu, semisal mendapatkan banyak kombo pada suatu lagu atau memainkan semua beatmap pada Theme Pack. Achievement yang telah didapatkan bisa dilihat pada profil kamu kemudian.\nUntuk sebagian besar cara mendapatkan Achievement bersangkutan cukup jelas, namun untuk sebagian kecil lainnya kamu harus menemukan sendiri bagaimana cara mendapatkannya.\n",
     "add-skin": "Jika format file yang kamu dowload adalah .osk, tarik file tersebut ke jendela osu! Anda atau klik dua kali file tersebut.\nUntuk format file .rar atau .zip, ekstrak isi file ke sebuah folder dan pindahkan folder tersebut ke folder skin Anda. Pastikan Anda telah menutup jendela osu! ketika memindahkan folder skin tersebut.",

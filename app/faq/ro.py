@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "",
     "achievements": "Achievementele pot fi obţinute prin efectuarea unei anumite acțiuni, cum ar fi obţinerea unui combo mare în cadrul unei mape sau jucarea fiecărei mape dintr-un set de mape. Vă puteţi vedea achievementele in profilul dumneavoastră. Pentru majoritatea achievementuri-lor e destul de clar ce trebuie să faci pentru a le obţine, însă pentru unele trebuie sa vă daţi seama singuri ce e de făcut.",
     "add-skin": "[https://osu.ppy.sh/forum/t/3580 Cum să adaugi skin-uri.]",

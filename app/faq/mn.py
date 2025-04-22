@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "",
     "achievements": "",
     "add-skin": "",

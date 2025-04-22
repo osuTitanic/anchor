@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Haga clic aquí] para ir a osu!academy - Tutoriales sobre todos los aspectos básicos de osu!",
     "achievements": "通过完成特定的任务你可以解锁成就，比如说某首歌得到很高的连击，或者一个主题包里的谱面都玩过一次。很多成就通过字面意思你就可以知道怎么取得，而另外一些就需要你动脑筋想想了。",
     "add-skin": "如果想添加新皮肤，只需下载后将皮肤文件拖进osu!游戏窗口，或者双击皮肤文件即可。",

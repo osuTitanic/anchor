@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Кликни тук]\nза да отидете във осу!академията - Инструкции на\nвсички основни неща в осу!",
     "achievements": "",
     "add-skin": "",

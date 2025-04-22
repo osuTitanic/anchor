@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klikni tukaj] za ogled osu! akademije - Videi za pomoč o igri osu!",
     "achievements": "Dosežke dobiš tako da narediš nekaj posebnega med pesmijo, na primer dobiš ogromen combo ali pa igraš vse beatmape v paketu. Na tvojem profilu so prikazani vsi dosežki ki si jih dobil, pa tudi tisti ki jih še lahko dobiš. Nekaj imen je namigov o tem kaj je treba storiti da dosežek dobiš!",
     "add-skin": "Da dodaš nov skin, ga prenesi in povleči datoteko v osu! okno ali jo dvoklikni.",

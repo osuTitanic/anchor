@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy 撳呢度] 瀏覽 osu! 學園，睇片學 osu! 。",
     "achievements": "你可以透過係玩嘅時候達成某個特定嘅目標（例如好高嘅連擊數），或者玩曬一個主題包裏面啲圖。你個主頁會顯示你而家攞左邊啲成就，同埋你仲有邊啲未攞。有時個成就名就係你攞到果個成就嘅提示啦。",
     "add-skin": "",

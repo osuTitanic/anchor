@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "The 'academy' FAQ as of last update is 91.89% complete.\r",
     "achievements": "The 'achievements' FAQ as of last update is 94.59% complete.\r",
     "add-skin": "The 'add-skin' FAQ as of last update is 91.89% complete.\r",

@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klik hier] om naar de osu! academy te gaan - Video instructies voor alle dingen die te maken hebben met osu!",
     "achievements": "Je krijgt achievements door het doen van iets speciaals tijdens een liedje, zoals het halen van een lange combo of het spelen van alle beatmaps in een beatmap thema pack. Op je profiel staan de achievements die je al hebt en die je nog moet. Sommige namen geven tips over wat je moet doen om de achievement te halen!",
     "add-skin": "Download een skin en sleep het bestand in het osu! venster of dubbelklik erop om deze toe te voegen.",

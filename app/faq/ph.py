@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy pindutin ito] para makita ang \nosu! academy -  Dito makikita ang mga video tutorials tungkol sa osu!",
     "achievements": "Makakamit mo ang mga achievements sa pamamagitan ng mga espesyal na gawain tulad ng pagkuha ng matataas na combo sa isang kanta, o sa paglaro sa bawat beatmap ng isang theme pack. Makikita mo ang iyong mga achievements sa loob ng iyong profile. Ang ibang pangalan ng mga achievement ay maaaring gamitin bilang bakas sa pagkamit ng mga ito!",
     "add-skin": "Para magdagdag ng panibagong skin, i-download mo ito at idrag sa loob ng osu! window o kung di ay pindutin ito ng dalawang beses.",

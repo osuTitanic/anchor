@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Dành cho những người mới bắt đầu chơi osu!]",
     "achievements": "Bạn sẽ nhận được những thành tựu bằng cách thể hiện những điều đặc biệt trong một bài hát, như đạt được combo cao hay chơi hết các beatmap trong một gói beatmap theo chủ đề riêng. Trang thông tin tài khoản của bạn sẽ lưu lại những thành tựu mà bạn đã đạt được cũng như những thành tựu mà bạn chưa hoàn thành. Tên của một số thành tựu cũng chính là gợi ý cách để bạn đạt được chúng.",
     "add-skin": "Nếu tập tin bạn đã tải về có đuôi là .osk, hãy kéo tập tin đó vào osu! hoặc đúp chuột hai lần tập tin đó. Đối với tập tin .rar/.zip, hãy giải nén nó vào một thư mục rồi chuyển nó vào thư mục Skin của bạn. Bạn nên thực hiện khi điều này khi osu! đang được tắt.",

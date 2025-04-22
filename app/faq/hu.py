@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Kattints ide] az osu! akadémia megtekintéséhez - Videóútmutatók minden osu!-val kapcsolatos dologhoz.",
     "achievements": "Achievementeket kapsz, ha valami különleges dolgot érsz el játék közben, például: egy hatalmas kombó, vagy egy bizonyos témájú csomagban az összes beatmap végigjátszása. A profilodon megnézheted, melyeket kaptad meg, és melyeket kell még megszerezned. Néhánynak a neve megsúgja, mit kell tenned érte!",
     "add-skin": "[https://osu.ppy.sh/forum/t/3580 Így tudsz új témákat hozzáadni az osu!-hoz]",

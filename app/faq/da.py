@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klik her] for at se osu! academy - Video-guides til alt osu!-relateret. ",
     "achievements": "Du opnår milepæle ved at gøre noget specielt i en sang, som at få en lang combo, eller ved at spille alle beatmaps i en temapakke. Din profil viser, hvilke milepæle du har opnået, og hvilke du mangler at få. Nogle af navnene er ledetråde til hvad du skal gøre for at opnå milepælen.",
     "add-skin": "For at tilføje et nyt skin, download det og træk filen ind i osu! vinduet eller dobbeltklikke på det.",

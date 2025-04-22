@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy 點選此處] 瀏覽 osu! 學園，看影片學 osu!。",
     "achievements": "你可以透過在打歌的時候達成某項特定目標（像是得到很高的連擊數），或是把一個主題包的圖通通打遍來獲得成就。你的個人檔案（Profile）會顯示你已經獲得的成就，以及你還沒獲得的成就。有些成就會用名字來提示你怎麼獲得哦！",
     "add-skin": "如果想匯入 Skin，下載完後將該檔案拖曳到 osu! 的視窗，或是點擊兩下打開即可。",

@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Kliknite ovdje] da biste pogledali osu! akademiju - osu! video vodič!",
     "achievements": "Postignuća dobivate tako da odradite određene zadatke, tipa dobivanjem golemih komboa na pjesmi, ili igrajući svaku mapu neke teme. Vaša postignuća možete vidjeti na vašem profilu. Za većinu je vrlo jasno što se treba uraditi da ih osvojite, ali za neke trebate shvatiti sami što uraditi.",
     "add-skin": "[https://osu.ppy.sh/forum/t/3580 Kako dodati skinove u osu!]",

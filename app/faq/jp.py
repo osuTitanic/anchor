@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "osu!に関する全てのチュートリアルが盛り込まれているosu!academyを見るには[http://www.youtube.com/user/osuacademy こちらをクリック] ",
     "achievements": "特定のコンボ数を達成したり1つのテーマパックに含まれている全てのビートマップをプレイするなど特別なことを行うと実績を得られます。\nプロフィールでは、実績とその取得方法が確認できます。未取得の実績の名前は取得方法の重要なヒントになり得ます。",
     "add-skin": "[https://osu.ppy.sh/forum/t/3580 osu!にスキンを適用する方法]",

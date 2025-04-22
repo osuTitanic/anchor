@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Feu clic ací] per a anar a la osu!academy - Tutorials per a allò més bàsic d'osu!",
     "achievements": "Pots aconseguir assoliments fent alguna cosa especial durant una cançó, com per exemple aconseguir un enorme combo o jugant tots els beatmaps en un paquet temàtic. El teu perfil mostra quins assoliments tens, i el que necessites conseguir. Alguns dels noms són pistes del que has de fer per a aconseguir l'assoliment! ",
     "add-skin": "Per a afegir una nova skin, descarrega-la i arrosega l'arxiu a la finestra d'osu!, o bé feu doble clic.",

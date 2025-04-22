@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Tekan sini] untuk memaparkan osu! academy - Video tutorial untuk segala hal berkaitan osu!",
     "achievements": "Anda akan memperoleh achievement jika anda berjaya menyelesaikan sesuatu, seperti mencapai kombo tertinggi dalam sesebuah lagu atau melengkapkan semua beatmap dalam Theme Pack. Profail anda akan menunjukkan achievement yang telah diperoleh, dan apa yang anda perlu peroleh. Sesetengah nama achievement itu sendiri ialah pembayang mengenai cara memperoleh achievement berkenaan.",
     "add-skin": "[https://osu.ppy.sh/forum/t/3580 Cara-cara untuk menambahkan koleksi skin anda di dalam osu!]",

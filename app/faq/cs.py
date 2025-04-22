@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[https://www.youtube.com/user/osuacademy Klikni zde] pro zobrazení osu! akademie - Videonávody o všech věcech ohledně osu!",
     "achievements": "Dostáváš achievementy předvedením něčeho speciálního v průběhu skladby, jako např. získání velkého komba nebo hraním všech beatmapů v jednom tématovém balíčku. Tvůj profil ukazuje které acheivementy jsi dostal a které zatím ne. Některá jména achievementů jsou vodítka k tomu co musíš pro získání daného achievementu udělat!",
     "add-skin": "Pro přídání nového skinu ho stáhni z internetu a přetáhni do osu! okna nebo na něj dvakrát poklepej.",

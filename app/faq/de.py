@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "",
     "achievements": "Du erhältst Erfolge durch das Erfüllen bestimmter Aufgaben, z.B. durch eine hohe Combo oder das Spielen aller Beatmaps eines Theme Packs. Du siehst deine Erfolge in deinem Profil. Bei den meisten sind die Bedingungen offensichtlich, alle anderen musst selbst herausfinden.",
     "add-skin": "Um einen neuen Skin hinzuzufügen, lade ihn herunter und ziehe die Datei in das osu! Fenster oder doppelklicke ihn.",

@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "Découvrez la [https://www.youtube.com/user/osuacademy osu!academy], des tutoriels en vidéo pour apprendre les bases d'osu! dans plusieurs domaines !",
     "achievements": "Vous obtenez des récompenses, aussi appelé médailles, en accomplissant certaines tâches, comme par exemple obtenir un gros combo sur une beatmap ou compléter un pack thématique. Vous pouvez voir la liste des médailles sur votre profil. La majorité d'entre eux sont suffisamment explicites sur la façon de les obtenir, mais pour d'autres, vous devrez deviner par vous-même.",
     "add-skin": "Pour ajouter un nouveau skin, rendez-vous dans la [https://osu.ppy.sh/forum/15 section Skinning] du forum puis ouvrez le fichier .osk ou déplacez-le dans la fenêtre du jeu.",

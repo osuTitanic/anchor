@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "[http://www.youtube.com/user/osuacademy Clickea aquí] para revisar los tutoriales de la osu!academy sobre todo lo básico acerca de osu!",
     "achievements": "Puedes conseguir logros haciendo algo especial en un mapa, como conseguir un gran combo, o jugar todos los mapas de un paquete. Tu perfil muestra qué logros has conseguido, y qué necesitas para conseguirlo. ¡Algunos de los nombres son pistas de lo que necesitas para conseguir el logro!",
     "add-skin": "Para añadir una nueva skin a osu!, descarga el archivo .osk y arrástralo a la ventana de osu! o haz doble clic sobre el archivo.",

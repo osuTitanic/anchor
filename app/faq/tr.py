@@ -1,6 +1,5 @@
 
 strings = {
-
     "academy": "osu!academy'e gitmek için [http://www.youtube.com/user/osuacademy buraya tıklayın.] - Oyunun temelleri ile ilgili birçok bilgiyi burada bulabilirsiniz.",
     "achievements": "Başarıları şarkı içinde büyük bir kombo yapmak, bir tema paketinin içerdiği bütün beatmapleri oynamak gibi bazı özel şeyler yaparak elde edebilirsiniz. Sahip olduğunuz ve olmadığınız başarıları profilinizde görebilirsiniz. Başarı isimlerinden bazıları onu nasıl elde edeceğiniz hakkında ipucu verir!",
     "add-skin": "Yeni bir tema eklemek için dosyayı indirin ve osu! penceresine sürükleyin ya da dosyaya çift tıklayın.\n.rar/.zip dosyaları için, içindekileri bir klasöre çıkartın ve Skins klasörüne sürükleyin. Bunu osu! kapalıyken yaptığınızdan emin olun.",
