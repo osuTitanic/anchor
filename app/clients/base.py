@@ -164,7 +164,23 @@ class Client:
         return self.presence.is_irc
 
     @property
+    def irc_prefix(self) -> str:
+        return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
+
+    @property
+    def safe_name(self) -> str:
+        return self.name.replace(" ", "_").lower()
+
+    @property
+    def underscored_name(self) -> str:
+        return self.name.replace(" ", "_")
+
+    @property
     def is_channel(self) -> bool:
+        return False
+
+    @property
+    def is_tourney_client(self) -> bool:
         return False
 
     @property
