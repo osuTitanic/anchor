@@ -34,13 +34,17 @@ def handle_join_command(
     channel.add(client)
 
 @register("PRIVMSG")
-@ensure_authenticated
 def handle_privmsg_command(
     sender: IrcClient,
     prefix: str,
     target_name: str,
     message: str
 ) -> None:
+    if not sender.logged_in:
+        sender.token = message
+        sender.handle_osu_login_callback()
+        return
+
     if sender.silenced:
         sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
         return

@@ -60,7 +60,9 @@ def handle_nick_command(
 
     if client.is_osu:
         client.name = client.name.removesuffix("-osu")
-        # TODO: Handle osu! login via. chat
 
     if client.token != "":
-        client.on_login_received()
+        return client.on_login_received()
+
+    # Let user enter in their token via. chat
+    return client.handle_osu_login()

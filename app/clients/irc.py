@@ -167,6 +167,18 @@ class IrcClient(Client):
         mapping.get(reason, self.send_server_error)()
         self.close_connection("Login failure")
 
+    def handle_osu_login(self) -> None:
+        if not self.is_osu:
+            return
+
+        self.enqueue_banchobot_message("Please enter your IRC token to proceed!")
+
+    def handle_osu_login_callback(self) -> None:
+        if not self.is_osu:
+            return
+
+        self.on_login_received()
+
     def send_welcome_sequence(self) -> None:
         self.enqueue_welcome()
         self.enqueue_motd(strings.ANCHOR_ASCII_ART)
