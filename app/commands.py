@@ -40,6 +40,7 @@ from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
 from .objects.player import Player
+from . import faq
 
 import timeago
 import config
@@ -48,7 +49,6 @@ import string
 import time
 import app
 import os
-import faq
 
 @dataclass
 class Context:
