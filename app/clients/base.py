@@ -243,6 +243,7 @@ class Client:
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
             self.update_object(mode)
+            self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
             return self.object

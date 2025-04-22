@@ -105,7 +105,11 @@ def user_announcement(user_id: int, message: str):
 
 @app.session.events.register('user_update')
 def user_update(user_id: int, mode: int | None = None):
-    if not (player := app.session.players.by_id_osu(user_id)):
+    if not (player := app.session.players.by_id(user_id)):
+        return
+
+    if player.is_irc and not player.is_osu:
+        # User is not using a 2007 osu! client
         return
 
     if mode != None:
