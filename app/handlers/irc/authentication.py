@@ -27,10 +27,10 @@ def handle_user_command(
     realname: str
 ) -> None:
     client.is_osu = (
+        (realname == "osu" or realname.isdigit()) and
         hostname == "False" and
         servername == "*" and
         username == "OSU" and
-        realname == "osu" and
         prefix == ""
     )
 
