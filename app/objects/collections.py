@@ -15,6 +15,7 @@ from app.protocols.osu.http import HttpOsuClient
 from app.clients.base import Client
 from app.clients.osu import OsuClient
 from app.clients.irc import IrcClient
+from chio import UserQuit
 
 class Players(MutableMapping[int | str, Client]):
     def __init__(self):
@@ -252,9 +253,9 @@ class Players(MutableMapping[int | str, Client]):
         for p in self:
             p.enqueue_announcement(message)
 
-    def send_user_quit(self, player: Client) -> None:
+    def send_user_quit(self, quit: UserQuit) -> None:
         for p in self:
-            p.enqueue_user_quit(player)
+            p.enqueue_user_quit(quit)
 
 from .channel import Channel
 
