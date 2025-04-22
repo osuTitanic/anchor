@@ -185,12 +185,22 @@ class IrcClient(Client):
         self.enqueue_command(irc.ERR_PASSWDMISMATCH, params=[":Bad authentication token."])
 
     def send_restricted_error(self) -> None:
+        if self.is_osu:
+            self.enqueue_banchobot_message("You are banned from this server.")
+            self.close_connection("Login failure")
+            return
+
         self.enqueue_command(
             irc.ERR_BANNEDFROMCHAN,
             params=[":You are banned from this server."]
         )
 
     def send_inactive_error(self) -> None:
+        if self.is_osu:
+            self.enqueue_banchobot_message("Your account has not been activated.")
+            self.close_connection("Login failure")
+            return
+
         self.enqueue_command(
             irc.ERR_NOTREGISTERED,
             params=[":Your account has not been activated."]
@@ -218,6 +228,10 @@ class IrcClient(Client):
         self.enqueue_message(message, app.session.banchobot, app.session.banchobot.name)
 
     def enqueue_welcome(self) -> None:
+        if self.is_osu:
+            self.enqueue_banchobot_message("Welcome to osu!Bancho.")
+            return
+
         self.enqueue_command(
             irc.RPL_WELCOME,
             params=[
@@ -241,9 +255,15 @@ class IrcClient(Client):
         )
 
     def enqueue_error(self, error: str) -> None:
+        if self.is_osu:
+            return self.enqueue_banchobot_message(error)
+
         self.enqueue_command("ERROR", params=[":" + error])
 
     def enqueue_announcement(self, message: str) -> None:
+        if self.is_osu:
+            return self.enqueue_banchobot_message(message)
+
         self.enqueue_command("NOTICE", params=[":" + message])
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
