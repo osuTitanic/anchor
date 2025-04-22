@@ -2,6 +2,7 @@
 from app.common.database import users, groups, stats, logins
 from app.common.cache import usercount, status
 from app.common.constants import strings
+from app.objects.channel import Channel
 from app.clients.base import Client
 
 from chio import Permissions, LoginError, UserQuit, Message, QuitState
@@ -321,15 +322,21 @@ class IrcClient(Client):
                 ":" + channel.topic
             ]
         )
+        self.enqueue_players(channel.users, channel.name)
+
+    def enqueue_channel_revoked(self, channel: str):
+        self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel])
+
+    def enqueue_mode(self, channel: Channel) -> None:
         self.enqueue_command(
             "MODE",
             params=[
-                channel_name,
+                channel.name,
                 channel.mode(self.permissions),
                 self.underscored_name
             ]
         )
-        self.enqueue_players(channel.users, channel.name)
 
-    def enqueue_channel_revoked(self, channel: str):
-        self.enqueue_command(irc.ERR_NOTONCHANNEL, params=[channel])
+    def enqueue_infringement_length(self, duration_seconds: int) -> None:
+        for channel in self.channels:
+            self.enqueue_mode(channel)
