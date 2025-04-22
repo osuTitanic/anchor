@@ -1,16 +1,15 @@
 
-from chio import Message, Channel as bChannel
+from chio import Message, Channel as bChannel, Permissions
 from typing import TYPE_CHECKING, List, Set
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
     from app.clients.osu import OsuClient
+    from app.clients.irc import IrcClient
     from app.clients import Client
 
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
-from app.common.constants import Permissions
-from app.common.helpers import infringements
 from app.objects.locks import LockedSet
 from app.common import officer
 
@@ -38,6 +37,7 @@ class Channel:
 
         self.logger = logging.getLogger(self.name)
         self.users: LockedSet["Client"] = LockedSet()
+        self.users.add(app.session.banchobot)
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -61,6 +61,10 @@ class Channel:
         return self.name
 
     @property
+    def irc_users(self) -> List["IrcClient"]:
+        return [user for user in self.users if user.is_irc]
+
+    @property
     def bancho_channel(self) -> bChannel:
         return bChannel(
             self.display_name,
@@ -74,6 +78,21 @@ class Channel:
 
     def can_write(self, perms: Permissions):
         return perms.value >= self.write_perms
+
+    def mode(self, perms: Permissions) -> str:
+        if not self.can_write(perms):
+            return '-v'
+
+        if Permissions.Peppy in perms:
+            return '+a'
+
+        if Permissions.Friend in perms:
+            return '+o'
+
+        if Permissions.BAT in perms:
+            return '+h'
+
+        return '+v'
 
     def add(self, player: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
@@ -100,6 +119,12 @@ class Channel:
             player.enqueue_channel_join_success(self.display_name)
 
         self.logger.info(f'{player.name} joined')
+
+        if self.name == "#osu":
+            return
+
+        for user in self.irc_users:
+            user.enqueue_player(player, self.name)
 
     def remove(self, player: "Client") -> None:
         self.users.remove(player)
