@@ -1,9 +1,9 @@
 
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
+from twisted.internet import reactor, threads
 from twisted.words.protocols.irc import IRC
 from twisted.python.failure import Failure
-from twisted.internet import reactor
 from app.clients.irc import IrcClient
 from app.clients import Client
 from typing import List, Any
@@ -34,11 +34,17 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
 
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
-        try:
-            self.on_command_received(command, prefix, params)
-        except Exception as e:
-            self.logger.error(f'Error while processing command: {e}', exc_info=e)
-            self.close_connection('Request processing error')
+        deferred = threads.deferToThread(
+            self.on_command_received,
+            command, prefix, params
+        )
+
+        deferred.addErrback(
+            lambda f: (
+                self.logger.error(f"Error processing command '{command}': {f.getErrorMessage()}", exc_info=f.value),
+                self.close_connection('Request processing error')
+            )
+        )
 
     def close_connection(self, reason: Any = None) -> None:
         super().close_connection(reason)
