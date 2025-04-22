@@ -1706,17 +1706,21 @@ def mp_help(ctx: Context):
     faq_string = ctx.args[0]
     faq_lang = 'en'
 
-    colon_index = faq_string.find(':') # es:spam, where es is the lang and spam is the faq string
+    # es:spam, where es is the lang and spam is the faq string
+    colon_index = faq_string.find(':')
+
     if colon_index != -1:
         faq_lang = faq_string[:colon_index]
         faq_string = faq_string[colon_index + 1:]
 
-    if faq_lang not in faq:
+    if faq_lang not in faq.faq:
         return f'Language "{faq_lang}" not found'
     
-    if faq_string not in faq[faq_lang]:
+    if faq_string not in faq.faq[faq_lang]:
         return f'FAQ "{faq_string}" not found'
 
-    return faq[faq_lang][faq_string]
+    return [
+        faq.faq[faq_lang][faq_string]
+    ]
 
 # TODO: !top
