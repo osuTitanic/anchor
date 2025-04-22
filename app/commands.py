@@ -1719,8 +1719,6 @@ def mp_help(ctx: Context):
     if faq_string not in faq.faq[faq_lang]:
         return f'FAQ "{faq_string}" not found'
 
-    return [
-        faq.faq[faq_lang][faq_string]
-    ]
+    return faq.faq[faq_lang][faq_string].splitlines()
 
 # TODO: !top
