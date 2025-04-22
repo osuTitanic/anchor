@@ -40,7 +40,7 @@ from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers
 from .objects.multiplayer import Match
 from .objects.player import Player
-from . import faq
+from .faq import faq
 
 import timeago
 import config
@@ -1713,12 +1713,12 @@ def mp_help(ctx: Context):
         faq_lang = faq_string[:colon_index]
         faq_string = faq_string[colon_index + 1:]
 
-    if faq_lang not in faq.faq:
+    if faq_lang not in faq:
         return f'Language "{faq_lang}" not found'
     
-    if faq_string not in faq.faq[faq_lang]:
+    if faq_string not in faq[faq_lang]:
         return f'FAQ "{faq_string}" not found'
 
-    return faq.faq[faq_lang][faq_string].splitlines()
+    return faq[faq_lang][faq_string].splitlines()
 
 # TODO: !top
