@@ -168,6 +168,9 @@ class BanchoBot(IrcClient):
         super().update_object(mode)
         self.stats.rank = 0
 
+    def reload_rankings(self) -> None:
+        self.rankings = {}
+
     def initialize(self) -> None:
         self.id = 1
         self.name = "BanchoBot"
