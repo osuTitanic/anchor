@@ -1,29 +1,30 @@
 
 from __future__ import annotations
 
-from chio import PacketType, ScoreFrame as bScoreFrame, Match as bMatch
 from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
 from datetime import datetime
 from copy import copy
+from chio import (
+    ScoreFrame as bScoreFrame,
+    Match as bMatch,
+    ScoringType,
+    PacketType,
+    SlotStatus,
+    MatchType,
+    TeamType,
+    SlotTeam,
+    Mods
+)
 
 if TYPE_CHECKING:
     from ..clients.osu import OsuClient
     from .channel import Channel
 
 from app.common.database.repositories import beatmaps, events, matches
+from app.common.constants import GameMode, EventType
 from app.common.database import DBMatch
-from app.common.constants import (
-    MatchScoringTypes,
-    MatchTeamTypes,
-    SlotStatus,
-    EventType,
-    MatchType,
-    SlotTeam,
-    GameMode,
-    Mods
-)
 
 import logging
 import config
@@ -124,8 +125,8 @@ class Match:
         self.seed = seed
 
         self.type = MatchType.Standard
-        self.scoring_type = MatchScoringTypes.Score
-        self.team_type = MatchTeamTypes.HeadToHead
+        self.scoring_type = ScoringType.Score
+        self.team_type = TeamType.HeadToHead
         self.persistent = persistant
         self.in_progress = False
         self.freemod = False
@@ -185,7 +186,7 @@ class Match:
 
     @property
     def ffa(self) -> bool:
-        return True if self.team_type in [MatchTeamTypes.TagTeamVs, MatchTeamTypes.TeamVs] else False
+        return True if self.team_type in [TeamType.TagTeamVs, TeamType.TeamVs] else False
 
     @property
     def player_slots(self) -> List[Slot]:
@@ -346,8 +347,8 @@ class Match:
         if self.team_type != new_match.team_type:
             # Changed team type
             if new_match.team_type in (
-                MatchTeamTypes.HeadToHead,
-                MatchTeamTypes.TagCoop
+                TeamType.HeadToHead,
+                TeamType.TagCoop
             ):
                 new_team = SlotTeam.Neutral
             else:
@@ -574,9 +575,9 @@ class Match:
             return
 
         ranking_type = {
-            MatchScoringTypes.Score: lambda s: s.last_frame.total_score,
-            MatchScoringTypes.Accuracy: lambda s: s.last_frame.accuracy(self.mode),
-            MatchScoringTypes.Combo: lambda s: s.last_frame.max_combo
+            ScoringType.Score: lambda s: s.last_frame.total_score,
+            ScoringType.Accuracy: lambda s: s.last_frame.accuracy(self.mode),
+            ScoringType.Combo: lambda s: s.last_frame.max_combo
         }[self.scoring_type]
 
         slots = [slot for slot in self.slots if slot.last_frame]

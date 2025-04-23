@@ -5,8 +5,17 @@ from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
-from chio import PacketType, TitleUpdate
 from threading import Thread
+from chio import (
+    TitleUpdate,
+    ScoringType,
+    SlotStatus,
+    PacketType,
+    MatchType,
+    SlotTeam,
+    TeamType,
+    Mods
+)
 
 from .common.cache import leaderboards
 from .common.helpers import infringements
@@ -16,23 +25,15 @@ from .common.database.repositories import (
     matches,
     clients,
     reports,
-    groups,
     events,
     scores,
-    stats,
     users
 )
 
 from .common.constants import (
-    MatchScoringTypes,
-    MatchTeamTypes,
     Permissions,
-    SlotStatus,
     EventType,
-    MatchType,
-    SlotTeam,
-    GameMode,
-    Mods
+    GameMode
 )
 
 from .objects.channel import Channel, MultiplayerChannel
@@ -680,7 +681,7 @@ def mp_force_invite(ctx: Context):
 
     slot = match.slots[slot_id]
 
-    if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
+    if match.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
         slot.team = SlotTeam.Red
 
     slot.status = SlotStatus.NotReady
@@ -820,10 +821,10 @@ def mp_set(ctx: Context):
 
     try:
         match: Match = ctx.get_context_object('match')
-        match.team_type = MatchTeamTypes(int(ctx.args[0]))
+        match.team_type = TeamType(int(ctx.args[0]))
 
         if len(ctx.args) > 1:
-            match.scoring_type = MatchScoringTypes(int(ctx.args[1]))
+            match.scoring_type = ScoringType(int(ctx.args[1]))
 
         if len(ctx.args) > 2:
             size = max(1, min(int(ctx.args[2]), config.MULTIPLAYER_MAX_SLOTS))
@@ -944,10 +945,10 @@ def mp_team(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <red/blue>']
 
     if team == "Neutral" and match.ffa:
-        match.team_type = MatchTeamTypes.HeadToHead
+        match.team_type = TeamType.HeadToHead
 
     elif team != "Neutral" and not match.ffa:
-        match.team_type = MatchTeamTypes.TeamVs
+        match.team_type = TeamType.TeamVs
 
     if not (player := match.get_player(name)):
         return [f'Could not find player "{name}"']
@@ -1675,8 +1676,8 @@ def crash(ctx: Context) -> List | None:
         ],
         host_id=-1,
         mode=GameMode.Osu,
-        scoring_type=MatchScoringTypes.Combo,
-        team_type=MatchTeamTypes.HeadToHead,
+        scoring_type=ScoringType.Combo,
+        team_type=TeamType.HeadToHead,
         freemod=False,
         seed=13381
     )
