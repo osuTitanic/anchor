@@ -164,6 +164,10 @@ class BanchoBot(IrcClient):
             '\n'.join(response)
         )
 
+    def update_object(self, mode: int = 0) -> None:
+        super().update_object(mode)
+        self.stats.rank = 0
+
     def initialize(self) -> None:
         self.id = 1
         self.name = "BanchoBot"
@@ -172,4 +176,3 @@ class BanchoBot(IrcClient):
         self.presence.city = "w00t p00t!"
         self.presence.is_irc = True
         self.reload()
-        self.stats.rank = 0
