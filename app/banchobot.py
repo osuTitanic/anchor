@@ -164,17 +164,19 @@ class BanchoBot(IrcClient):
             '\n'.join(response)
         )
 
+    def reload_rankings(self) -> None:
+        self.rankings = {"global": 0}
+
+    def reload_rank(self) -> None:
+        pass
+
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
         self.stats.rank = 0
 
-    def reload_rankings(self) -> None:
-        self.rankings = {}
-
     def initialize(self) -> None:
         self.id = 1
         self.name = "BanchoBot"
-        self.info = OsuClientInformation.empty()
         self.presence.country_index = 1
         self.presence.city = "w00t p00t!"
         self.presence.is_irc = True
