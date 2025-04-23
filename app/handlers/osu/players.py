@@ -95,6 +95,7 @@ def stats_request(client: OsuClient, players: List[int]):
 
 @register(PacketType.OsuUserStatus)
 def change_status(client: OsuClient, status: UserStatus):
+    mode_changed = status.mode != client.status.mode
     client.status.beatmap_checksum = status.beatmap_checksum
     client.status.beatmap_id = status.beatmap_id
     client.status.action = status.action
@@ -102,9 +103,13 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mode = status.mode
     client.status.text = status.text
 
-    client.update_object(status.mode.value)
+    # Update cache & check if rank changed
     client.update_status_cache()
     client.reload_rank()
+
+    if mode_changed:
+        client.update_object(status.mode.value)
+        client.reload_rankings()
 
     # Enqueue stats to themselves
     client.enqueue_stats(client)
