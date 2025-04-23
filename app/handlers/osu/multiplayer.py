@@ -11,13 +11,12 @@ from chio import (
     MatchJoin,
     TeamType,
     SlotTeam,
-    Message,
-    Mods
+    Message
 )
 
 from app.handlers.osu.chat import channel_leave
 from app.common.database import beatmaps, matches, events
-from app.common.constants import GameMode, EventType
+from app.common.constants import GameMode, EventType, Mods
 from app.objects.channel import MultiplayerChannel
 from app.objects.multiplayer import Match
 from app.clients.osu import OsuClient
