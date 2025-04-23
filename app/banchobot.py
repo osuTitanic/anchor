@@ -164,11 +164,14 @@ class BanchoBot(IrcClient):
             '\n'.join(response)
         )
 
-    def reload_rankings(self) -> None:
-        self.rankings = {"global": 0}
+    def apply_ranking(self, ranking: str = 'global') -> None:
+        pass
 
     def reload_rank(self) -> None:
         pass
+
+    def reload_rankings(self) -> None:
+        self.rankings = {"global": 0}
 
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
