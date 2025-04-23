@@ -13,7 +13,8 @@ from chio import (
     PacketType,
     MatchType,
     SlotTeam,
-    TeamType
+    TeamType,
+    Mods
 )
 
 from .common.cache import leaderboards
@@ -29,13 +30,7 @@ from .common.database.repositories import (
     users
 )
 
-from .common.constants import (
-    Permissions,
-    EventType,
-    GameMode,
-    Mods
-)
-
+from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import StartingTimers

@@ -14,7 +14,8 @@ from chio import (
     SlotStatus,
     MatchType,
     TeamType,
-    SlotTeam
+    SlotTeam,
+    Mods
 )
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from .channel import Channel
 
 from app.common.database.repositories import beatmaps, events, matches
-from app.common.constants import GameMode, EventType, Mods
+from app.common.constants import GameMode, EventType
 from app.common.database import DBMatch
 
 import logging
