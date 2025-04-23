@@ -11,7 +11,6 @@ from copy import copy
 from app.common.database import users, groups, stats, logins, clients
 from app.common.cache import status, usercount, leaderboards
 from app.common.helpers import clients as client_utils
-from app.common.helpers import infringements
 from app.common.constants import GameMode
 from app.common.constants import strings
 from app.common import officer, mail

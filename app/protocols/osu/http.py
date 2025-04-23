@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.objects.client import OsuClientInformation
-from app.common.streams import StreamIn
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
 
