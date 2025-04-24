@@ -85,12 +85,12 @@ class TcpOsuClient(OsuClient, Protocol):
                 self.stream.split(b'\n', 3)
             )
 
-            self.client = OsuClientInformation.from_string(
+            self.info = OsuClientInformation.from_string(
                 client.decode(),
                 self.address
             )
 
-            if not self.client:
+            if not self.info:
                 self.logger.warning(f'Failed to parse client: "{client.decode()}"')
                 self.close_connection()
                 return
@@ -103,7 +103,7 @@ class TcpOsuClient(OsuClient, Protocol):
                 super().on_login_received,
                 username.decode(),
                 password.decode(),
-                self.client
+                self.info
             )
 
             deferred.addErrback(

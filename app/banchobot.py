@@ -1,7 +1,6 @@
 
 from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
-from app.objects.client import OsuClientInformation
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
