@@ -1254,12 +1254,15 @@ def where(ctx: Context):
 
     if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
+    
+    if target.is_irc:
+        return ['This player is connected via. IRC']
 
-    if not target.client.ip:
+    if not target.info.ip:
         return ['The players location data could not be resolved']
 
-    city_string = f"({target.client.ip.city})" if target.client.display_city else ""
-    location_string = target.client.ip.country_name
+    city_string = f"({target.info.ip.city})" if target.info.display_city else ""
+    location_string = target.info.ip.country_name
 
     return [f'{target.name} is in {location_string} {city_string}']
 
