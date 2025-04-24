@@ -18,7 +18,7 @@ def add_friend(client: OsuClient, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    if abs(target.id) in client.friends:
+    if target.id in client.friends:
         return
 
     if target.id == client.id:
@@ -39,7 +39,7 @@ def remove_friend(client: OsuClient, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    if abs(target.id) not in client.friends:
+    if target.id not in client.friends:
         return
 
     relationships.delete(

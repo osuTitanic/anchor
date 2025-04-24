@@ -111,7 +111,7 @@ class Players(MutableMapping[int | str, Client]):
 
     def add_osu(self, player: OsuClient | HttpOsuClient) -> None:
         """Append a player to the collection"""
-        self.osu_id_mapping[abs(player.id)] = player
+        self.osu_id_mapping[player.id] = player
         self.osu_name_mapping[player.name] = player
 
         if player.protocol == 'http':
@@ -130,7 +130,7 @@ class Players(MutableMapping[int | str, Client]):
         if player.is_tourney_client:
             self.remove_from_collection('tourney_clients', player)
 
-        self.remove_from_mapping('osu_id_mapping', abs(player.id))
+        self.remove_from_mapping('osu_id_mapping', player.id)
         self.remove_from_mapping('osu_name_mapping', player.name)
 
         if player.protocol == 'http':
