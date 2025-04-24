@@ -151,4 +151,4 @@ def bancho_error(client: OsuClient, error: str):
 
 @register(PacketType.OsuChangeFriendOnlyDms)
 def change_friendonly_dms(client: OsuClient, enabled: bool):
-    client.client.friendonly_dms = enabled
+    client.info.friendonly_dms = enabled
