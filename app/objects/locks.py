@@ -70,7 +70,7 @@ class ReadWriteLock:
 class LockedSet(Set[T]):
     """A set that is thread-safe for concurrent read and write operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.set: Set[T] = set()
         self.lock = ReadWriteLock()
 

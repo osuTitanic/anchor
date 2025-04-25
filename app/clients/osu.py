@@ -190,11 +190,11 @@ class OsuClient(Client):
                 self.enqueue_infringement_length(-1)
 
             # Create login attempt in db
-            logins.create(
+            app.session.tasks.do_later(
+                logins.create,
                 self.id,
                 self.address,
-                self.info.version.string,
-                session
+                self.info.version.string
             )
 
             # Check for new hardware
@@ -403,7 +403,8 @@ class OsuClient(Client):
                 f'New hardware detected: {self.info.hash.string}'
             )
 
-            clients.create(
+            app.session.tasks.do_later(
+                clients.create,
                 self.id,
                 self.info.hash.md5,
                 self.info.hash.adapters_md5,
@@ -415,7 +416,8 @@ class OsuClient(Client):
             user_matches = [match for match in matches if match.user_id == self.id]
 
             if self.current_stats.playcount > 0 and not user_matches:
-                mail.send_new_location_email(
+                app.session.tasks.do_later(
+                    mail.send_new_location_email,
                     self.object,
                     self.info.ip.country_name
                 )

@@ -320,7 +320,8 @@ def create_persistant_match(ctx: Context):
         ctx.player.match = match
         ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-        events.create(
+        app.session.tasks.do_later(
+            events.create,
             match.db_match.id,
             type=EventType.Join,
             data={
@@ -569,7 +570,8 @@ def mp_host(ctx: Context):
     if target is match.host:
         return ['You are already the host.']
 
-    events.create(
+    app.session.tasks.do_later(
+        events.create,
         match.db_match.id,
         type=EventType.Host,
         data={
@@ -1212,7 +1214,8 @@ def report(ctx: Context) -> List | None:
         )
 
     # Create record in database
-    reports.create(
+    app.session.tasks.do_later(
+        reports.create,
         target.id,
         ctx.player.id,
         reason

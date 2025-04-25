@@ -225,7 +225,8 @@ class Channel:
             users=users
         )
 
-        messages.create(
+        app.session.tasks.do_later(
+            messages.create,
             sender.name,
             self.name,
             message[:512]

@@ -97,4 +97,3 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
 
     for p in client.spectators:
         p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
-

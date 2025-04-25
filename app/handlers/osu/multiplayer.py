@@ -204,7 +204,8 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     client.match = match
     client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-    events.create(
+    session.tasks.do_later(
+        events.create,
         match.db_match.id,
         type=EventType.Join,
         data={
@@ -250,7 +251,8 @@ def leave_match(client: OsuClient):
             kick=True
         )
 
-    events.create(
+    session.tasks.do_later(
+        events.create,
         client.match.db_match.id,
         type=EventType.Leave,
         data={
@@ -305,7 +307,8 @@ def leave_match(client: OsuClient):
                 client.match.host = slot.player
                 client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
-        events.create(
+        session.tasks.do_later(
+            events.create,
             client.match.db_match.id,
             type=EventType.Host,
             data={
@@ -557,7 +560,8 @@ def transfer_host(client: OsuClient, slot_id: int):
     client.match.host = target
     client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
-    events.create(
+    session.tasks.do_later(
+        events.create,
         client.match.db_match.id,
         type=EventType.Host,
         data={

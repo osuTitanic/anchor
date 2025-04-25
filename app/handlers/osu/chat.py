@@ -1,13 +1,12 @@
 
-from chio import PacketType, Message
-from typing import Callable
-
 from app.common.database.repositories import wrapper, messages
-from app.common.helpers import infringements
 from app.objects.channel import Channel
 from app.clients.osu import OsuClient
 from app.common import officer
 from app import session
+
+from chio import PacketType, Message
+from typing import Callable
 from time import time
 
 def register(packet: PacketType) -> Callable:
@@ -149,7 +148,8 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.name
     )
 
-    messages.create_private(
+    session.tasks.do_later(
+        messages.create_private,
         sender.id,
         target.id,
         message.content[:512]

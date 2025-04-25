@@ -99,11 +99,11 @@ class IrcClient(Client):
                 self.reload(self.object.preferred_mode)
 
             # Create login attempt in db
-            logins.create(
+            app.session.tasks.do_later(
+                logins.create,
                 self.id,
                 self.address,
-                "irc",
-                session
+                "irc"
             )
 
             # Update cache

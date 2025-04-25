@@ -335,7 +335,8 @@ class Client:
 
     def update_activity(self) -> None:
         """Updates the player's latest activity inside the database"""
-        users.update(
+        app.session.tasks.do_later(
+            users.update,
             user_id=self.id,
             updates={'latest_activity': datetime.now()}
         )

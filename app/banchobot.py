@@ -151,13 +151,15 @@ class BanchoBot(IrcClient):
             return
 
         # Store request/responses in database
-        messages.create_private(
+        app.session.tasks.do_later(
+            messages.create_private,
             context.player.id,
             self.object.id,
             context.message
         )
 
-        messages.create_private(
+        app.session.tasks.do_later(
+            messages.create_private,
             self.object.id,
             context.player.id,
             '\n'.join(response)
