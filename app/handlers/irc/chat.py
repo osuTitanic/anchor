@@ -122,7 +122,7 @@ def handle_privmsg_command(
         return
 
     if sender.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target, ":You are silenced."])
         return
 
     if target_name.startswith("#"):
@@ -135,19 +135,19 @@ def handle_privmsg_command(
         return channel.send_message(sender, message)
 
     if not (target := session.players.by_name_safe(target_name)):
-        sender.enqueue_command(irc.ERR_NOSUCHNICK, [target_name])
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, [target_name, ":No such nick/channel"])
         return
 
     if target.id == sender.id:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":You cannot send messages to yourself."])
         return
 
     if target.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":User is silenced."])
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":User is in friend-only mode."])
         return
 
     if (time.time() - sender.last_minute_stamp) > 60:

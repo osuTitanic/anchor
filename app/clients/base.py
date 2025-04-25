@@ -164,12 +164,12 @@ class Client:
         return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
 
     @property
-    def safe_name(self) -> str:
-        return self.name.replace(" ", "_").lower()
-
-    @property
     def underscored_name(self) -> str:
         return self.name.replace(" ", "_")
+
+    @property
+    def safe_name(self) -> str:
+        return self.underscored_name.lower()
 
     @property
     def avatar_filename(self) -> str:

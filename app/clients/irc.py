@@ -371,7 +371,7 @@ class IrcClient(Client):
         )
 
     def enqueue_channel_revoked(self, channel: str):
-        self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel])
+        self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel, ":No such channel"])
 
     def enqueue_mode(self, channel: Channel) -> None:
         self.enqueue_command(
