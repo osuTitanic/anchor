@@ -340,7 +340,7 @@ def create_persistant_match(ctx: Context):
         # Force-revoke #multiplayer
         ctx.player.enqueue_channel_revoked('#multiplayer')
 
-    return ['Match created.']
+    return [f'Created tournament match "[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} {match.name}]" ({match.chat.name}).']
 
 @mp_commands.register(['start', 'st'])
 def mp_start(ctx: Context):
@@ -453,7 +453,7 @@ def mp_map(ctx: Context):
     match.update()
 
     match.logger.info(f'Selected: {map.full_name}')
-    return [f'Selected: {map.link}']
+    return [f'Selected beatmap: {map.link}']
 
 @mp_commands.register(['mods', 'setmods'])
 def mp_mods(ctx: Context):
@@ -915,7 +915,7 @@ def mp_settings(ctx: Context):
     return [
         f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
         f"Beatmap: {beatmap_link}",
-        f"Active Mods: +{match.mods.short}",
+        f"Active Mods: +{match.mods.short} {'(Freemod)' if match.freemod else ''}",
         f"Team Mode: {match.team_type.name}",
         f"Win Condition: {match.scoring_type.name}",
         f"Players: {len(match.players)}",
