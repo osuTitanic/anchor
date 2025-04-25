@@ -1,28 +1,24 @@
-FROM python:3.13-alpine
+FROM python:3.14-rc-slim
 
 WORKDIR /bancho
 
-# Install system dependencies
-RUN apk update && apk add --no-cache \
-    postgresql-libs \
-    postgresql-dev \
-    git \
-    curl \
-    build-base \
+# Installing/Updating system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
     libffi-dev \
-    openssl-dev \
-    musl-dev
+    libssl-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Rust toolchain
+# Install rust toolchain
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Install Python dependencies
+# Install python dependencies
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy source code
 COPY . .
