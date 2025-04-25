@@ -36,19 +36,6 @@ def handle_names_command(
         channel.name
     )
 
-@register("MODE")
-def handle_mode_command(
-    client: IrcClient,
-    prefix: str,
-    channel_name: str,
-    *args
-) -> None:
-    if not (channel := session.channels.by_name(channel_name)):
-        client.enqueue_channel_revoked(channel_name)
-        return
-
-    client.enqueue_mode(channel)
-
 @register("QUIT")
 def handle_quit(client: IrcClient, prefix: str, *args) -> None:
     client.close_connection()
