@@ -200,6 +200,13 @@ class IrcClient(Client):
         self.token = token
         self.on_login_received()
 
+    def handle_timeout_callback(self) -> None:
+        if self.logged_in or self.is_osu:
+            return
+
+        self.send_token_error()
+        self.close_connection("No token provided")
+
     def update_status_cache(self) -> None:
         if self.is_osu:
             return super().update_status_cache()

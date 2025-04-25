@@ -74,11 +74,6 @@ def handle_nick_command(
 
     if client.token != "":
         return client.on_login_received()
-    
-    if not client.is_osu:
-        client.send_token_error()
-        client.close_connection("No token provided")
-        return
 
     # Let user enter in their token via. chat
     return client.handle_osu_login()
