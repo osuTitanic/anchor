@@ -10,13 +10,6 @@ def register(command: str) -> Callable:
         return func
     return wrapper
 
-def ensure_authenticated(func: Callable) -> Callable:
-    def wrapper(client: IrcClient, *args, **kwargs) -> None:
-        if not client.logged_in:
-            return
-        return func(client, *args, **kwargs)
-    return wrapper
-
 @register("PING")
 def handle_ping_command(
     client: IrcClient,
@@ -31,20 +24,3 @@ def handle_ping_command(
 @register("QUIT")
 def handle_quit(client: IrcClient, prefix: str, *args) -> None:
     client.close_connection()
-
-@register("NAMES")
-@ensure_authenticated
-def handle_names_command(
-    client: IrcClient,
-    prefix: str,
-    channel_names: str
-) -> None:
-    for channel_name in channel_names.split(","):
-        if not (channel := session.channels.by_name(channel_name)):
-            client.enqueue_channel_revoked(channel_name)
-            return
-
-        client.enqueue_players(
-            channel.users,
-            channel.name
-        )
