@@ -1351,7 +1351,7 @@ def get_client_version(ctx: Context):
     if target.is_irc:
         return [f'{target.name} is connected via. IRC.']
 
-    return [f"{target.name} is playing on {target.client.version.string}"]
+    return [f"{target.name} is playing on {target.info.version.string}"]
 
 @command(['setranking', 'changeranking', 'switchranking'])
 def set_preferred_ranking(ctx: Context):
