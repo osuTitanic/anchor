@@ -29,7 +29,7 @@ def handle_list_command(
 ) -> None:
     client.enqueue_command(
         irc.RPL_LISTSTART,
-        params=[client.underscored_name, "Channels :Users Name"]
+        params=[client.local_prefix, "Channels :Users Name"]
     )
 
     for channel in session.channels.values():
@@ -37,7 +37,7 @@ def handle_list_command(
             client.enqueue_command(
                 irc.RPL_LIST,
                 params=[
-                    client.underscored_name,
+                    client.local_prefix,
                     channel.name,
                     f"{channel.user_count}",
                     f":{channel.topic}"
@@ -46,7 +46,31 @@ def handle_list_command(
 
     client.enqueue_command(
         irc.RPL_LISTEND,
-        params=[client.underscored_name, ":End of /LIST"]
+        params=[client.local_prefix, ":End of /LIST"]
+    )
+
+@register("TOPIC")
+@ensure_authenticated
+def handle_topic_command(
+    client: IrcClient,
+    prefix: str,
+    channel_name: str,
+    *args
+) -> None:
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_channel_revoked(channel_name)
+        return
+
+    if not channel.can_read(client.permissions):
+        client.enqueue_channel_revoked(channel_name)
+        return
+
+    client.enqueue_command(
+        irc.RPL_TOPIC,
+        params=[
+            client.local_prefix, channel.name,
+            ":" + channel.topic
+        ]
     )
 
 @register("JOIN")
