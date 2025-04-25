@@ -25,13 +25,19 @@ def ensure_authenticated(func: Callable) -> Callable:
 def handle_join_command(
     client: IrcClient,
     prefix: str,
-    channel_name: str
+    channels: str
 ) -> None:
-    if not (channel := session.channels.by_name(channel_name)):
-        client.enqueue_channel_revoked(channel_name)
-        return
+    for channel_name in channels.split(","):
+        if not (channel := session.channels.by_name(channel_name)):
+            client.enqueue_channel_revoked(channel_name)
+            return
 
-    channel.add(client)
+        channel.add(client)
+
+        if client not in channel.users:
+            return
+
+        client.enqueue_players(channel.users, channel.name)
 
 @register("PRIVMSG")
 def handle_privmsg_command(

@@ -362,7 +362,6 @@ class IrcClient(Client):
                 ":" + channel.topic
             ]
         )
-        self.enqueue_players(channel.users, channel.name)
 
     def enqueue_channel_revoked(self, channel: str):
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel])
