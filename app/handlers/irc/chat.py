@@ -33,7 +33,7 @@ def handle_list_command(
     )
 
     for channel in session.channels.values():
-        if channel.public:
+        if channel.public and channel.can_read(client.permissions):
             client.enqueue_command(
                 irc.RPL_LIST,
                 params=[
