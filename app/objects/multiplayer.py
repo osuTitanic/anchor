@@ -401,8 +401,7 @@ class Match:
             f'{player.name} was kicked from the match'
         )
 
-        app.session.tasks.do_later(
-            events.create,
+        events.create(
             self.db_match.id,
             type=EventType.Kick,
             data={
@@ -418,8 +417,7 @@ class Match:
                     self.host = slot.player
                     self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
-            app.session.tasks.do_later(
-                events.create,
+            events.create(
                 self.db_match.id,
                 type=EventType.Host,
                 data={
@@ -501,8 +499,7 @@ class Match:
         self.logger.info('Match started')
         self.update()
 
-        app.session.tasks.do_later(
-            events.create,
+        events.create(
             self.db_match.id,
             type=EventType.Start,
             data={
@@ -539,8 +536,7 @@ class Match:
             type=EventType.Start
         )
 
-        app.session.tasks.do_later(
-            events.create,
+        events.create(
             player.match.db_match.id,
             type=EventType.Abort,
             data={
@@ -596,8 +592,7 @@ class Match:
         if not match_results:
             return
 
-        app.session.tasks.do_later(
-            events.create,
+        events.create(
             self.db_match.id,
             type=EventType.Result,
             data={
