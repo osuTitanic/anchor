@@ -3,6 +3,7 @@ from typing import Callable, Dict, Tuple, List
 from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from app.common import officer
+from queue import Queue
 
 import logging
 import time
@@ -15,6 +16,8 @@ class Tasks:
     def __init__(self) -> None:
         self.tasks: Dict[str, Tuple[int, Callable, bool]] = {}
         self.logger = logging.getLogger('anchor')
+        self.queue = Queue()
+        self.shutdown = False
 
     def submit(self, interval: int, threaded: bool = False) -> Callable:
         def wrapper(func: Callable) -> Callable:
@@ -22,6 +25,9 @@ class Tasks:
             self.tasks[func.__name__] = (interval, func, threaded)
             return func
         return wrapper
+
+    def do_later(self, function: Callable, *args, **kwargs) -> None:
+        self.queue.put((function, args, kwargs))
 
     def start(self) -> None:
         for name, (interval, func, threaded) in self.tasks.items():

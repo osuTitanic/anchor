@@ -50,6 +50,7 @@ def setup():
         )
 
     app.session.logger.info('Loading tasks...')
+    importlib.import_module('app.tasks.queue')
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
     importlib.import_module('app.tasks.activities')
@@ -73,6 +74,8 @@ def before_shutdown(*args):
 
     reactor.callLater(0.5, reactor.stop)
     app.session.events.submit('shutdown')
+    app.session.tasks.shutdown = True
+    app.session.tasks.do_later(lambda: None)
 
 signal.signal(signal.SIGINT, before_shutdown)
 
