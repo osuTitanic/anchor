@@ -102,6 +102,11 @@ class OsuClient(Client):
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
 
+            if not bcrypt.checkpw(password.encode(), user.bcrypt.encode()):
+                self.logger.warning('Login Failed: Authentication error')
+                self.on_login_failed(LoginError.InvalidLogin)
+                return
+
             self.object = user
             self.update_object(user.preferred_mode)
 
@@ -112,11 +117,6 @@ class OsuClient(Client):
             self.object.target_relationships
             self.object.relationships
             self.object.groups
-
-            if not bcrypt.checkpw(password.encode(), user.bcrypt.encode()):
-                self.logger.warning('Login Failed: Authentication error')
-                self.on_login_failed(LoginError.InvalidLogin)
-                return
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
