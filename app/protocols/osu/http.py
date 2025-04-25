@@ -193,6 +193,7 @@ class HttpOsuHandler(Resource):
     def render_GET(self, request: Request):
         request.setHeader('content-type', 'text/html; charset=utf-8')
         request.setHeader('server', 'bancho')
+        request.setHeader('connection', 'close')
         return ANCHOR_WEB_RESPONSE.encode('utf-8')
 
     def render_POST(self, request: Request):
