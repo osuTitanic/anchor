@@ -39,6 +39,20 @@ def handle_join_command(
 
         client.enqueue_players(channel.users, channel.name)
 
+@register("PART")
+@ensure_authenticated
+def handle_part_command(
+    client: IrcClient,
+    prefix: str,
+    channels: str
+) -> None:
+    for channel_name in channels.split(","):
+        if not (channel := session.channels.by_name(channel_name)):
+            client.enqueue_channel_revoked(channel_name)
+            return
+
+        channel.remove(client)
+
 @register("PRIVMSG")
 def handle_privmsg_command(
     sender: IrcClient,
