@@ -920,9 +920,10 @@ def mp_settings(ctx: Context):
         f"Win Condition: {match.scoring_type.name}",
         f"Players: {len(match.players)}",
        *[
-            f"{match.slots.index(slot) + 1} ({slot.status.name}) - "
+            f"Slot {match.slots.index(slot) + 1} ({slot.status.name}) - "
             f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
-            f"{f' +{slot.mods.short}' if slot.mods > 0 else ' '} [{f'Host' if match.host == slot.player else ''}]"
+            f"{f' Team {slot.team.name}' if match.ffa else ''}"
+            f"{f' +{slot.mods.short}' if slot.mods > 0 else ''} [{f'Host' if match.host == slot.player else ''}]"
             for slot in match.slots
             if slot.has_player
         ]
