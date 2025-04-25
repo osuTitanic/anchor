@@ -317,13 +317,18 @@ class IrcClient(Client):
         self.enqueue_channel_join_success(channel.name)
 
     def enqueue_players(self, players: Iterable[Client], channel: str = "#osu") -> None:
-        self.enqueue_command(
-            irc.RPL_NAMREPLY,
-            params=[
-                self.local_prefix, "=", channel,
-                ":" + " ".join(self.resolve_username(player) for player in players)
-            ]
-        )
+        usernames = [self.resolve_username(player) for player in players]
+        chunk_size = 10
+
+        for i in range(0, len(usernames), chunk_size):
+            self.enqueue_command(
+                irc.RPL_NAMREPLY,
+                params=[
+                    self.local_prefix, "=", channel,
+                    ":" + " ".join(usernames[i:i + chunk_size])
+                ]
+            )
+
         self.enqueue_command(
             irc.RPL_ENDOFNAMES,
             params=[self.local_prefix, channel, ":End of /NAMES list."]
