@@ -20,6 +20,35 @@ def ensure_authenticated(func: Callable) -> Callable:
         return func(client, *args, **kwargs)
     return wrapper
 
+@register("LIST")
+@ensure_authenticated
+def handle_list_command(
+    client: IrcClient,
+    prefix: str,
+    *args
+) -> None:
+    client.enqueue_command(
+        irc.RPL_LISTSTART,
+        params=[client.underscored_name, "Channels :Users Name"]
+    )
+
+    for channel in session.channels.values():
+        if channel.public:
+            client.enqueue_command(
+                irc.RPL_LIST,
+                params=[
+                    client.underscored_name,
+                    channel.name,
+                    f"{channel.user_count}",
+                    f":{channel.topic}"
+                ]
+            )
+
+    client.enqueue_command(
+        irc.RPL_LISTEND,
+        params=[client.underscored_name, ":End of /LIST"]
+    )
+
 @register("JOIN")
 @ensure_authenticated
 def handle_join_command(
