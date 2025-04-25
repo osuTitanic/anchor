@@ -179,11 +179,11 @@ def handle_privmsg_command(
         )
 
     sender.recent_message_count += 1
-    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
+    sender.logger.info(f'[PM -> {target.name}]: {message}')
 
     session.tasks.do_later(
         messages.create_private,
         sender.id,
         target.id,
-        message.content[:512]
+        message
     )
