@@ -156,10 +156,6 @@ class Client:
         return self.presence.permissions
 
     @property
-    def avatar_filename(self) -> str:
-        return f"{self.id}_000.png"
-
-    @property
     def is_irc(self) -> bool:
         return self.presence.is_irc
 
@@ -174,6 +170,10 @@ class Client:
     @property
     def underscored_name(self) -> str:
         return self.name.replace(" ", "_")
+
+    @property
+    def avatar_filename(self) -> str:
+        return f"{self.id}_000.png"
 
     @property
     def is_channel(self) -> bool:

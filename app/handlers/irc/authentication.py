@@ -64,16 +64,21 @@ def handle_nick_command(
 ) -> None:
     client.name = nickname.lower()
 
+    if client.is_osu:
+        client.name = client.name.removesuffix("-osu")
+
     if client.name == session.banchobot.name.lower():
         client.enqueue_banchobot_message("no.")
         client.close_connection("Tried to log in as BanchoBot.")
         return
 
-    if client.is_osu:
-        client.name = client.name.removesuffix("-osu")
-
     if client.token != "":
         return client.on_login_received()
+    
+    if not client.is_osu:
+        client.send_token_error()
+        client.close_connection("No token provided")
+        return
 
     # Let user enter in their token via. chat
     return client.handle_osu_login()
