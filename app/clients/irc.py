@@ -27,36 +27,6 @@ class IrcClient(Client):
     def local_prefix(self) -> str:
         return self.resolve_username(self)
 
-    def close_connection(self, reason: Any = None) -> None:
-        if not self.logged_in:
-            return
-
-        if reason is not None:
-            self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
-
-        app.session.players.remove(self)
-        self.logged_in = False
-
-        for channel in copy(self.channels):
-            channel.remove(self)
-
-        usercount.set(len(app.session.players))
-        status.delete(self.id)
-        self.update_activity()
-
-        # Check if there are any other remaining clients connected
-        remaining_client = app.session.players.by_id(self.id)
-        quit_state = QuitState.Gone
-
-        if remaining_client:
-            quit_state = (
-                QuitState.IrcRemaining if remaining_client.is_irc else
-                QuitState.OsuRemaining
-            )
-
-        user_quit = UserQuit(self, quit_state)
-        app.session.players.send_user_quit(user_quit)
-
     def on_command_received(self, command: str, prefix: str, params: List[str]) -> None:
         self.logger.debug(f"-> <{command}> {prefix} ({', '.join(params)})")
         self.last_response = time.time()
@@ -177,6 +147,36 @@ class IrcClient(Client):
         mapping.get(reason, self.send_server_error)()
         self.close_connection("Login failure")
 
+    def close_connection(self, reason: Any = None) -> None:
+        if reason is not None:
+            self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
+
+        if not self.logged_in:
+            return
+
+        app.session.players.remove(self)
+        self.logged_in = False
+
+        for channel in copy(self.channels):
+            channel.remove(self)
+
+        usercount.set(len(app.session.players))
+        status.delete(self.id)
+        self.update_activity()
+
+        # Check if there are any other remaining clients connected
+        remaining_client = app.session.players.by_id(self.id)
+        quit_state = QuitState.Gone
+
+        if remaining_client:
+            quit_state = (
+                QuitState.IrcRemaining if remaining_client.is_irc else
+                QuitState.OsuRemaining
+            )
+
+        user_quit = UserQuit(self, quit_state)
+        app.session.players.send_user_quit(user_quit)
+
     def handle_osu_login(self) -> None:
         if not self.is_osu:
             return
@@ -211,21 +211,21 @@ class IrcClient(Client):
     def send_token_error(self) -> None:
         if self.is_osu:
             self.enqueue_banchobot_message("The token you entered was invalid. Please try again!")
-            self.close_connection("Login failure")
             return
 
-        self.enqueue_motd("Welcome to osu!Bancho.")
-        self.enqueue_motd("-")
-        self.enqueue_motd("- You are required to authenticate before accessing this service.")
-        self.enqueue_motd("- Please click the following link to receive your password:")
-        self.enqueue_motd(f"- https://osu.{config.DOMAIN_NAME}/account/settings/security")
-        self.enqueue_motd("-")
+        self.enqueue_motd(
+            "Welcome to osu!Bancho.\n"
+            "-\n"
+            "- You are required to authenticate before accessing this service.\n"
+            "- Please click the following link to receive your password:\n"
+           f"- https://osu.{config.DOMAIN_NAME}/account/settings/security\n"
+            "-"
+        )
         self.enqueue_command(irc.ERR_PASSWDMISMATCH, params=[":Bad authentication token."])
 
     def send_restricted_error(self) -> None:
         if self.is_osu:
             self.enqueue_banchobot_message("You are banned from this server.")
-            self.close_connection("Login failure")
             return
 
         self.enqueue_command(
@@ -236,7 +236,6 @@ class IrcClient(Client):
     def send_inactive_error(self) -> None:
         if self.is_osu:
             self.enqueue_banchobot_message("Your account has not been activated.")
-            self.close_connection("Login failure")
             return
 
         self.enqueue_command(
