@@ -101,7 +101,8 @@ def handle_join_command(
 def handle_part_command(
     client: IrcClient,
     prefix: str,
-    channels: str
+    channels: str,
+    *args
 ) -> None:
     for channel_name in channels.split(","):
         if not (channel := session.channels.by_name(channel_name)):
