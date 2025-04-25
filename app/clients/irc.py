@@ -321,7 +321,7 @@ class IrcClient(Client):
         if not autojoin:
             return
 
-        self.enqueue_channel_join_success(channel.name)
+        self.enqueue_player(self, channel.name)
 
     def enqueue_players(self, players: Iterable[Client], channel: str = "#osu") -> None:
         usernames = [self.resolve_username(player) for player in players]
