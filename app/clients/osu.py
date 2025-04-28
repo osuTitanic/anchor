@@ -409,8 +409,7 @@ class OsuClient(Client):
                 self.info.hash.md5,
                 self.info.hash.adapters_md5,
                 self.info.hash.uninstall_id,
-                self.info.hash.diskdrive_signature,
-                session=session
+                self.info.hash.diskdrive_signature
             )
 
             user_matches = [match for match in matches if match.user_id == self.id]
