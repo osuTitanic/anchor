@@ -352,6 +352,10 @@ def change_slot(client: OsuClient, slot_id: int):
     slot.reset()
 
     client.match.update()
+    client.match.send_referee_message(
+        f'{client.name} moved to slot {slot_id + 1}.',
+        session.banchobot
+    )
 
 @register(PacketType.OsuMatchChangeSettings)
 def change_settings(client: OsuClient, match: Match):
@@ -473,6 +477,10 @@ def ready(client: OsuClient):
 
     slot.status = SlotStatus.Ready
     client.match.update()
+    client.match.send_referee_message(
+        f'{client.name} is ready.',
+        session.banchobot
+    )
 
 @register(PacketType.OsuMatchHasBeatmap)
 @register(PacketType.OsuMatchNotReady)
@@ -554,6 +562,10 @@ def change_team(client: OsuClient):
     }[slot.team]
 
     client.match.update()
+    client.match.send_referee_message(
+        f'{client.name} joined team {slot.team.name}.',
+        session.banchobot
+    )
 
 @register(PacketType.OsuMatchTransferHost)
 def transfer_host(client: OsuClient, slot_id: int):
