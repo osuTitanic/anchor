@@ -20,6 +20,7 @@ from chio import (
 
 if TYPE_CHECKING:
     from ..clients.osu import OsuClient
+    from ..clients.base import Client
     from .channel import Channel
 
 from app.common.database.repositories import beatmaps, events, matches
@@ -719,3 +720,16 @@ class Match:
         # Force-finish the match
         self.update()
         self.finish()
+
+    def send_referee_message(self, message: str, sender: "Client") -> None:
+        for referee in self.referee_players:
+            referee_client = app.session.players.by_id(referee)
+
+            if not referee_client:
+                continue
+
+            referee_client.enqueue_message(
+                message,
+                sender,
+                self.chat.name
+            )

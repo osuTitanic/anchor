@@ -227,18 +227,10 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    # Send message to referee clients
-    for referee in match.referee_players:
-        referee_client = session.players.by_id(referee)
-
-        if not referee_client:
-            continue
-
-        referee_client.enqueue_message(
-            f"{client.name} joined in slot {slot_id + 1}.",
-            session.banchobot,
-            match.chat.name
-        )
+    client.match.send_referee_message(
+        f"{client.name} joined in slot {slot_id + 1}.",
+        session.banchobot
+    )
 
 @register(PacketType.OsuMatchPart)
 def leave_match(client: OsuClient):
@@ -332,18 +324,10 @@ def leave_match(client: OsuClient):
     if client.id not in client.match.referee_players:
         client.match.chat.remove(client)
 
-    # Send message to referee clients
-    for referee in client.match.referee_players:
-        referee_client = session.players.by_id(referee)
-
-        if not referee_client:
-            continue
-
-        referee_client.enqueue_message(
-            f"{client.name} left the game.",
-            session.banchobot,
-            client.match.chat.name
-        )
+    client.match.send_referee_message(
+        f"{client.name} left the game.",
+        session.banchobot
+    )
 
     client.match.update()
     client.match = None
