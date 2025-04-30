@@ -431,6 +431,10 @@ def change_mods(client: OsuClient, mods: Mods):
             client.match.logger.info(
                 f'{client.name} changed their mods to {slot.mods.short}'
             )
+            client.match.send_referee_message(
+                f'{client.name} changed their mods to {slot.mods.short}',
+                session.banchobot
+            )
     else:
         if client is not client.match.host:
             client.logger.warning(f'{client.name} tried to change mods, but was not host')
@@ -442,7 +446,13 @@ def change_mods(client: OsuClient, mods: Mods):
         if Mods.DoubleTime|Mods.Nightcore in client.match.mods:
             client.match.mods &= ~Mods.DoubleTime
 
-        client.match.logger.info(f'Changed mods to: {client.match.mods.short}')
+        client.match.logger.info(
+            f'Changed mods to: {client.match.mods.short}'
+        )
+        client.match.send_referee_message(
+            f'Changed mods to: {client.match.mods.short}',
+            session.banchobot
+        )
 
     mods_changed = client.match.mods != mods_before
 
@@ -708,6 +718,12 @@ def match_complete(client: OsuClient):
 
     slot.status = SlotStatus.Complete
     client.match.update()
+
+    client.match.send_referee_message(
+        f'{client.name} finished playing '
+        f'(Score: {slot.last_frame.total_score}, {"FAILED" if slot.has_failed else "PASSED"})',
+        session.banchobot
+    )
 
     if any([slot.is_playing for slot in client.match.slots]):
         return
