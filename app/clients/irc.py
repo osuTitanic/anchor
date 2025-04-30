@@ -190,7 +190,7 @@ class IrcClient(Client):
             return
 
         # User has logged in via. /web/osu-login.php
-        self.token = self.object.irc_token
+        self.token = users.fetch_irc_token(self.safe_name)
         self.on_login_received()
 
     def handle_osu_login_callback(self, token: str) -> None:
