@@ -501,7 +501,7 @@ class Match:
 
         self.chat.send_message(
             app.session.banchobot,
-            'Good luck, have fun!'
+            'The match has started. Good luck, have fun!'
         )
 
         events.create(
@@ -684,12 +684,6 @@ class Match:
             self.logger.debug(f'Match timer running: {remaining_time} seconds left')
 
         time.sleep(1)
-
-        self.chat.send_message(
-            app.session.banchobot,
-            'Match was started. Good luck!'
-        )
-
         self.starting = None
         self.start()
 

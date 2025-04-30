@@ -369,8 +369,7 @@ def mp_start(ctx: Context):
         if any([s.status == SlotStatus.NotReady for s in match.slots]):
             return [f'Not all players are ready ("!{mp_commands.trigger}" {ctx.trigger} force" to start anyways)']
 
-        match.start()
-        return ['Match was started. Good luck!']
+        return match.start()
 
     if ctx.args[0].isdecimal():
         # Host wants to start a timer
@@ -409,8 +408,7 @@ def mp_start(ctx: Context):
         return ['Match timer was cancelled.']
 
     elif ctx.args[0] in ('force', 'f'):
-        match.start()
-        return ['Match was started. Good luck!']
+        return match.start()
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
