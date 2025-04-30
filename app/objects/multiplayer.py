@@ -422,7 +422,7 @@ class Match:
                 self.db_match.id,
                 type=EventType.Host,
                 data={
-                    'new': {'id': self.host.id, 'name': self.host.name},
+                    'new': {'id': self.host_id, 'name': self.host.name},
                     'previous': {'id': player.id, 'name': player.name}
                 }
             )
@@ -517,7 +517,7 @@ class Match:
                 'scoring_mode': self.scoring_type.value,
                 'mods': self.mods.value,
                 'freemod': self.freemod,
-                'host': self.host.id,
+                'host': self.host_id,
                 'start_time': str(datetime.now())
             }
         )
@@ -618,7 +618,7 @@ class Match:
                 'scoring_mode': self.scoring_type.value,
                 'mods': self.mods.value,
                 'freemod': self.freemod,
-                'host': self.host.id,
+                'host': self.host_id,
                 'start_time': start_event.data['start_time'],
                 'end_time': str(datetime.now()),
                 'results': [

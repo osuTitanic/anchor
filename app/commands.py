@@ -299,7 +299,7 @@ def create_persistant_match(ctx: Context):
     match.db_match = matches.create(
         match.name,
         match.id,
-        match.host.id
+        match.host_id
     )
 
     app.session.logger.info(
@@ -577,7 +577,7 @@ def mp_host(ctx: Context):
         type=EventType.Host,
         data={
             'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host.id, 'name': match.host.name}
+            'new': {'id': match.host_id, 'name': match.host.name}
         }
     )
 

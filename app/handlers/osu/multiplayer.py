@@ -117,7 +117,7 @@ def create_match(client: OsuClient, bancho_match: Match):
     match.db_match = matches.create(
         match.name,
         match.id,
-        match.host.id
+        match.host_id
     )
 
     session.logger.info(f'Created match: "{match.name}"')
@@ -317,7 +317,7 @@ def leave_match(client: OsuClient):
             type=EventType.Host,
             data={
                 'previous': {'id': client.id, 'name': client.name},
-                'new': {'id': client.match.host.id, 'name': client.match.host.name}
+                'new': {'id': client.match.host_id, 'name': client.match.host.name}
             }
         )
 
