@@ -291,6 +291,7 @@ def create_persistant_match(ctx: Context):
     ctx.player.referee_matches.add(match.id)
     match.referee_players.append(ctx.player.id)
     match.chat = MultiplayerChannel(match)
+    match.chat.name = f'#multi_{match.id}'
     app.session.channels.add(match.chat)
 
     match.db_match = matches.create(
