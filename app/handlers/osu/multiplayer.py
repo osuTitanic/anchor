@@ -23,6 +23,7 @@ from app.objects.multiplayer import Match
 from app.clients.osu import OsuClient
 from app import session
 
+import logging
 import config
 import time
 
@@ -109,6 +110,7 @@ def create_match(client: OsuClient, bancho_match: Match):
     for index, slot in enumerate(bancho_match.slots):
         match.slots[index].status = slot.status
 
+    match.logger = logging.getLogger(f'multi_{match.id}')
     match.chat = MultiplayerChannel(match)
     session.channels.add(match.chat)
 
