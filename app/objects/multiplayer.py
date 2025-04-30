@@ -499,6 +499,11 @@ class Match:
         self.logger.info('Match started')
         self.update()
 
+        self.chat.send_message(
+            app.session.banchobot,
+            'Good luck, have fun!'
+        )
+
         events.create(
             self.db_match.id,
             type=EventType.Start,
@@ -565,6 +570,11 @@ class Match:
 
         self.logger.info('Match finished')
         self.update()
+
+        self.chat.send_message(
+            app.session.banchobot,
+            'The match has finished!'
+        )
 
         start_event = events.fetch_last_by_type(
             self.db_match.id,
