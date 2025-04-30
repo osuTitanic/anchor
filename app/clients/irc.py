@@ -137,6 +137,9 @@ class IrcClient(Client):
 
             channel.add(self)
 
+            # Send users in channel
+            self.enqueue_players(channel.users, channel.name)
+
     def on_login_failed(self, reason: LoginError) -> None:
         mapping = {
             LoginError.InvalidLogin: self.send_token_error,
@@ -317,7 +320,7 @@ class IrcClient(Client):
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_announcement("Bancho is restarting, please wait...")
 
-    def enqueue_channel(self, channel, autojoin = False):
+    def enqueue_channel(self, channel: Channel, autojoin = False):
         if not autojoin:
             return
 

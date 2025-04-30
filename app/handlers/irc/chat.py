@@ -84,7 +84,7 @@ def handle_join_command(
         if not (channel := session.channels.by_name(channel_name)):
             client.enqueue_channel_revoked(channel_name)
             return
-        
+
         if not channel.public and not client.is_staff:
             client.enqueue_channel_revoked(channel_name)
             return
