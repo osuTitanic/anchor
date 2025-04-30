@@ -5,9 +5,9 @@ from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
 
-from app.server import TcpBanchoFactory, HttpBanchoFactory, WebsocketBanchoFactory
 from app.objects.channel import Channel
 from app.banchobot import BanchoBot
+from app.servers import *
 
 import importlib
 import logging
@@ -26,9 +26,14 @@ logging.basicConfig(
 )
 
 def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART}')
+    app.session.logger.info(f'{ANCHOR_ASCII_ART.removesuffix("\n")}')
     app.session.logger.info(f'Running anchor-{config.VERSION}')
     os.makedirs(config.DATA_PATH, exist_ok=True)
+
+    app.session.logger.info('Loading bot...')
+    app.session.players.add(bot_player := BanchoBot())
+    app.session.banchobot = bot_player
+    app.session.logger.info(f'  - {bot_player.name}')
     app.session.logger.info('Loading channels...')
 
     for channel in channels.fetch_all():
@@ -44,12 +49,8 @@ def setup():
             )
         )
 
-    app.session.logger.info('Loading bot...')
-    app.session.players.add(bot_player := BanchoBot())
-    app.session.banchobot = bot_player
-    app.session.logger.info(f'  - {bot_player.name}')
-
     app.session.logger.info('Loading tasks...')
+    importlib.import_module('app.tasks.queue')
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
     importlib.import_module('app.tasks.activities')
@@ -63,13 +64,18 @@ def setup():
         status.delete(player_id)
 
 def before_shutdown(*args):
-    for player in app.session.players.tcp_clients:
+    for player in app.session.players.tcp_osu_clients:
         # Enqueue server restart packet to all players
         # They should reconnect after 15 seconds
         player.enqueue_server_restart(15 * 1000)
 
+    for player in app.session.players.irc_clients:
+        player.enqueue_server_restart(0)
+
     reactor.callLater(0.5, reactor.stop)
     app.session.events.submit('shutdown')
+    app.session.tasks.shutdown = True
+    app.session.tasks.do_later(lambda: None)
 
 signal.signal(signal.SIGINT, before_shutdown)
 
@@ -89,16 +95,18 @@ def on_startup_fail(e: Exception):
 
 @wrapper.exception_wrapper(on_startup_fail)
 def setup_servers():
-    ws_factory = WebsocketBanchoFactory()
-    http_factory = HttpBanchoFactory()
-    tcp_factory = TcpBanchoFactory()
+    osu_ws_factory = WebsocketBanchoFactory()
+    osu_http_factory = HttpBanchoFactory()
+    osu_tcp_factory = TcpBanchoFactory()
+    irc_tcp_factory = TcpIrcFactory()
 
     reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
-    reactor.listenTCP(config.HTTP_PORT, http_factory)
-    reactor.listenTCP(config.WS_PORT, ws_factory)
+    reactor.listenTCP(config.HTTP_PORT, osu_http_factory)
+    reactor.listenTCP(config.WS_PORT, osu_ws_factory)
+    reactor.listenTCP(config.IRC_PORT, irc_tcp_factory)
 
     for port in config.TCP_PORTS:
-        reactor.listenTCP(port, tcp_factory)
+        reactor.listenTCP(port, osu_tcp_factory)
 
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)

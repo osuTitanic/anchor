@@ -1,7 +1,22 @@
 
+from collections.abc import MutableMapping as _MutableMapping
 from contextlib import contextmanager
-from typing import TypeVar, Set
 from threading import Lock
+from typing import (
+    MutableMapping,
+    Iterator,
+    Optional,
+    Iterable,
+    TypeVar,
+    Tuple,
+    List,
+    Any,
+    Set
+)
+
+T = TypeVar('T')
+K = TypeVar('K')
+V = TypeVar('V')
 
 class ReadWriteLock:
     def __init__(self):
@@ -52,16 +67,14 @@ class ReadWriteLock:
         finally:
             self.release_write()
 
-T = TypeVar('T')
-
 class LockedSet(Set[T]):
     """A set that is thread-safe for concurrent read and write operations."""
 
-    def __init__(self):
-        self.set = set()
+    def __init__(self) -> None:
+        self.set: Set[T] = set()
         self.lock = ReadWriteLock()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[T]:
         with self.lock.read_context():
             return iter(self.set)
 
@@ -88,22 +101,22 @@ class LockedSet(Set[T]):
             except KeyError:
                 pass
 
-class LockedList(list):
+class LockedList(List[T]):
     """A list that is thread-safe for concurrent read and write operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.lock = ReadWriteLock()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> T:
         with self.lock.read_context():
             return super().__getitem__(index)
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, index: int, value: T):
         with self.lock.write_context():
             super().__setitem__(index, value)
 
-    def __delitem__(self, index):
+    def __delitem__(self, index: int):
         with self.lock.write_context():
             super().__delitem__(index)
 
@@ -111,25 +124,97 @@ class LockedList(list):
         with self.lock.read_context():
             return super().__len__()
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: T) -> bool:
         with self.lock.read_context():
             return super().__contains__(item)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[T]:
         with self.lock.read_context():
             return super().__iter__()
 
-    def append(self, item) -> None:
+    def append(self, item: T) -> None:
         with self.lock.write_context():
             super().append(item)
 
-    def extend(self, iterable) -> None:
+    def extend(self, iterable: Iterable[T]) -> None:
         with self.lock.write_context():
             super().extend(iterable)
 
-    def remove(self, item) -> None:
+    def remove(self, item: T) -> None:
         with self.lock.write_context():
             try:
                 super().remove(item)
             except ValueError:
                 pass
+
+class LockedDict(_MutableMapping, MutableMapping[K, V]):
+    """A dict that is thread-safe for concurrent read and write operations."""
+
+    def __init__(self, *args, **kwargs):
+        self.dict: dict[K, V] = dict(*args, **kwargs)
+        self.lock = ReadWriteLock()
+
+    def __getitem__(self, key: K) -> V:
+        with self.lock.read_context():
+            return self.dict[key]
+
+    def __setitem__(self, key: K, value: V) -> None:
+        with self.lock.write_context():
+            self.dict[key] = value
+
+    def __delitem__(self, key: K) -> None:
+        with self.lock.write_context():
+            del self.dict[key]
+
+    def __len__(self) -> int:
+        with self.lock.read_context():
+            return len(self.dict)
+
+    def __iter__(self) -> Iterator[K]:
+        with self.lock.read_context():
+            snapshot = list(self.dict.keys())
+        return iter(snapshot)
+
+    def __contains__(self, key: object) -> bool:
+        with self.lock.read_context():
+            return key in self.dict
+
+    def __repr__(self) -> str:
+        with self.lock.read_context():
+            return f"{self.__class__.__name__}({self.dict!r})"
+
+    def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
+        with self.lock.read_context():
+            return self.dict.get(key, default)
+
+    def pop(self, key: K, default: Any = None) -> Any:
+        with self.lock.write_context():
+            return self.dict.pop(key, default)
+
+    def popitem(self) -> Tuple[K, V]:
+        with self.lock.write_context():
+            return self.dict.popitem()
+
+    def clear(self) -> None:
+        with self.lock.write_context():
+            self.dict.clear()
+
+    def update(self, *args, **kwargs) -> None:
+        with self.lock.write_context():
+            self.dict.update(*args, **kwargs)
+
+    def keys(self) -> Iterable[K]:
+        with self.lock.read_context():
+            return list(self.dict.keys())
+
+    def values(self) -> Iterable[V]:
+        with self.lock.read_context():
+            return list(self.dict.values())
+
+    def items(self) -> Iterable[Tuple[K, V]]:
+        with self.lock.read_context():
+            return list(self.dict.items())
+
+    def setdefault(self, key: K, default: V = None) -> V:
+        with self.lock.write_context():
+            return self.dict.setdefault(key, default)

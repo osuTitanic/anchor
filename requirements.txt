@@ -14,3 +14,4 @@ bcrypt==4.3.0
 sendgrid==6.11.0
 timeago==1.0.16
 autobahn==24.4.2
+git+https://github.com/Lekuruu/chio.py

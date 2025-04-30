@@ -1,20 +1,10 @@
 
 from __future__ import annotations
 
-from app.objects.player import Player
-from app.common import officer
-from app.common.objects import bMessage
+from app.common.database.repositories import users
+from app.common.helpers import infringements
 from app.common.constants import GameMode
-from app.common.cache import leaderboards
-from app.common.database.repositories import (
-    infringements,
-    clients,
-    scores,
-    groups,
-    stats,
-    users
-)
-
+from app.clients.base import Client
 from datetime import datetime
 from typing import Optional
 
@@ -40,7 +30,7 @@ def logout(user_id: int):
     if not (player := app.session.players.by_id(user_id)):
         return
 
-    player.close_connection()
+    player.close_connection("Kicked by logout event")
 
 @app.session.events.register('restrict')
 def restrict(
@@ -49,92 +39,62 @@ def restrict(
     autoban: bool = False,
     until: Optional[datetime] = None
 ) -> None:
-    if not (player := app.session.players.by_id(user_id)):
-        # Player is not online
-        player = users.fetch_by_id(user_id)
-
-        if not player:
-            # Player was not found
-            officer.call(f'Failed to restrict user with id {user_id}: User not found!')
-            return
-
-        # Update user
-        users.update(player.id, {'restricted': True})
-
-        # Remove permissions
-        groups.delete_entry(player.id, 999)
-        groups.delete_entry(player.id, 1000)
-
-        leaderboards.remove(
-            player.id,
-            player.country
-        )
-
-        # Hide scores
-        scores.hide_all(player.id)
-        stats.update_all(player.id, {'rank': 0})
-
-        # Update hardware
-        clients.update_all(player.id, {'banned': True})
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=0,
-            length=until,
-            description=reason,
-            is_permanent=True if not until else False
-        )
-
-        officer.call(
-            f'{player.name} was {"auto-" if autoban else ""}restricted. Reason: "{reason}"'
-        )
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    player.restrict(reason, until, autoban)
+    infringements.restrict_user(
+        user,
+        reason,
+        until,
+        autoban
+    )
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_restricted(reason, until, autoban)
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_restricted(reason, until, autoban)
 
 @app.session.events.register('silence')
 def silence(user_id: int, duration: int, reason: str = ''):
-    if not (player := app.session.players.by_id(user_id)):
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    player.silence(duration, reason)
+    infringements.silence_user(
+        user,
+        duration,
+        reason
+    )
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_silenced()
 
 @app.session.events.register('unrestrict')
 def unrestrict(user_id: int, restore_scores: bool = True):
-    if not (player := users.fetch_by_id(user_id)):
+    if not (user := users.fetch_by_id(user_id)):
         return
 
-    if not player.restricted:
+    if not user.restricted:
         return
 
-    users.update(player.id, {'restricted': False})
+    infringements.unrestrict_user(
+        user,
+        restore_scores
+    )
 
-    # Add to player & supporter group
-    groups.create_entry(player.id, 999)
-    groups.create_entry(player.id, 1000)
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_unrestricted()
 
-    # Update hardware
-    clients.update_all(player.id, {'banned': False})
-
-    if restore_scores:
-        scores.restore_hidden_scores(player.id)
-    else:
-        stats.delete_all(player.id)
-        leaderboards.remove(player.id, player.country)
-
-    for user_stats in stats.fetch_all(player.id):
-        leaderboards.update(
-            user_stats,
-            player.country
-        )
-
-    officer.call(f'Player "{player.name}" was unrestricted.')
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_unrestricted()
 
 @app.session.events.register('announcement')
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
-    app.session.players.announce(message)
+    app.session.players.send_announcement(message)
 
 @app.session.events.register('user_announcement')
 def user_announcement(user_id: int, message: str):
@@ -148,15 +108,23 @@ def user_update(user_id: int, mode: int | None = None):
     if not (player := app.session.players.by_id(user_id)):
         return
 
+    if player.is_irc and not player.is_osu:
+        # User is not using a 2007 osu! client
+        return
+
     if mode != None:
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
-    player.reload_object()
+    player.reload(player.status.mode.value)
+    player.enqueue_stats(player)
     enqueue_stats(player)
 
+    # Apply default ranking
+    app.session.players.apply_ranking('global')
+
     duplicates = app.session.players.by_rank(
-        player.rank,
+        player.stats.rank,
         player.status.mode
     )
 
@@ -165,8 +133,9 @@ def user_update(user_id: int, mode: int | None = None):
             continue
 
         # We have found a player with the same rank
-        player.reload_object()
-        enqueue_stats(player)
+        p.reload(p.status.mode.value)
+        p.enqueue_stats(p)
+        enqueue_stats(p)
 
 @app.session.events.register('link')
 def link_discord_user(user_id: int, code: str):
@@ -179,13 +148,9 @@ def link_discord_user(user_id: int, code: str):
         return
 
     player.enqueue_message(
-        bMessage(
-            app.session.banchobot.name,
-            f'Your verification code is: "{code}". Please type it into discord to link your account!',
-            player.name,
-            sender_id=app.session.banchobot.id,
-            is_private=True
-        )
+        f'Your verification code is: "{code}". Please type it into discord to link your account!',
+        app.session.banchobot,
+        player.name
     )
 
 @app.session.events.register('external_message')
@@ -224,33 +189,19 @@ def external_dm(
     )
 
     target.enqueue_message(
-        msg := bMessage(
-            sender.name,
-            message,
-            target.name,
-            sender_id=sender.id,
-            is_private=True
-        )
+        message, sender, target.name
     )
 
     if (online_sender := app.session.players.by_id(sender_id)):
-        online_sender.enqueue_message(msg)
+        online_sender.enqueue_message(message, sender, target.name)
 
 @app.session.events.register('shutdown')
 def shutdown() -> None:
     exit(0)
 
-def enqueue_stats(player: Player):
-    for p in app.session.players:
-        if p.client.version.date > 20121223 and p.id != player.id:
-            # Client will request the stats
-            # themselves when pressing F9
-            continue
-
-        if p.client.version.date <= 377:
-            # Client needs the "update" flag to
-            # be set for the stats to be updated
-            p.enqueue_presence(player, update=True)
-            continue
-
-        p.enqueue_stats(player)
+def enqueue_stats(player: Client):
+    try:
+        player.status.update_stats = True
+        app.session.players.send_stats(player)
+    finally:
+        player.status.update_stats = False
