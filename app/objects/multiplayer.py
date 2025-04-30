@@ -549,8 +549,11 @@ class Match:
                 'beatmap_id': self.beatmap_id,
                 'beatmap_text': self.beatmap_text,
                 'beatmap_hash': self.beatmap_checksum,
-                'start_time': start_event.data['start_time'],
-                'end_time': str(datetime.now())
+                'end_time': str(datetime.now()),
+                'start_time': (
+                    start_event.data['start_time']
+                    if start_event else time.time()
+                )
             }
         )
 
