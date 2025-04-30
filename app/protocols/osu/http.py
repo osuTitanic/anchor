@@ -114,7 +114,7 @@ class HttpOsuHandler(Resource):
                 client
             )
         except Exception as e:
-            player.logger.error(f'Failed to process login: {e}')
+            player.logger.error(f'Failed to process login: {e}', exc_info=e)
             player.close_connection('Login failure')
             request.setHeader('connection', 'close')
             request.setResponseCode(500)
@@ -136,7 +136,8 @@ class HttpOsuHandler(Resource):
 
     def on_login_error(self, failure: Failure, request: Request) -> None:
         app.session.logger.error(
-            f'Failed to process login: {failure.getErrorMessage()}'
+            f'Failed to process login: {failure.getErrorMessage()}',
+            exc_info=failure.value
         )
 
         if request.finished or request._disconnected:
@@ -171,7 +172,7 @@ class HttpOsuHandler(Resource):
         request.finish()
 
     def on_request_error(self, failure: Failure, player: HttpOsuClient, request: Request) -> None:
-        player.logger.error(f'Failed to process request: {failure.getErrorMessage()}')
+        player.logger.error(f'Failed to process request: {failure.getErrorMessage()}', exc_info=failure.value)
         player.close_connection('Request processing error')
 
         if request.finished or request._disconnected:
