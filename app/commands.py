@@ -1406,7 +1406,7 @@ def get_client_version(ctx: Context):
 
     return [f"{target.name} is playing on {target.info.version.string}"]
 
-@command(['setranking', 'changeranking', 'switchranking'])
+@command(['setranking', 'setrank'])
 def set_preferred_ranking(ctx: Context):
     """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
     if len(ctx.args) < 1:
@@ -1417,9 +1417,22 @@ def set_preferred_ranking(ctx: Context):
 
     ranking = ctx.args[0].lower()
 
-    if ranking not in ('global', 'ppv1', 'tscore', 'rscore', 'clears'):
+    valid_aliases = (
+        'global', 'ppv1', 'tscore',
+        'rscore', 'clears', 'ppv2',
+        'rankedscore', 'totalscore'
+    )
+
+    alias_mapping = {
+        'ppv2': 'global',
+        'rankedscore': 'rscore',
+        'totalscore': 'tscore'
+    }
+
+    if ranking not in valid_aliases:
         return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
 
+    ranking = alias_mapping.get(ranking, ranking)
     ctx.player.preferred_ranking = ranking
     ctx.player.enqueue_stats(ctx.player)
 
