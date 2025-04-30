@@ -205,7 +205,7 @@ class Match:
             for slot in self.slots
             if (
                 slot.status == SlotStatus.Playing and
-                slot.player.client.version.date > 323
+                slot.player.info.version.date > 323
             )
         ]
 
