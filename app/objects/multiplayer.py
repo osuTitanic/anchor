@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Tuple, List
+from datetime import datetime, timedelta
 from threading import Thread, Timer
 from dataclasses import dataclass
-from datetime import datetime
 from copy import copy
 from chio import (
     ScoreFrame as bScoreFrame,
@@ -90,9 +90,16 @@ class Slot:
         self.has_failed = False
 
 @dataclass(slots=True)
-class StartingTimers:
+class MatchTimer:
     time: float
     thread: Thread
+
+    @property
+    def ending(self) -> datetime:
+        return datetime.fromtimestamp(self.time)
+
+    def start(self) -> None:
+        self.thread.start()
 
 class Match:
     def __init__(
@@ -136,7 +143,8 @@ class Match:
         self.referee_players: List[int] = []
         self.banned_players: List[int] = []
 
-        self.starting: StartingTimers | None = None
+        self.countdown: MatchTimer | None = None
+        self.starting: MatchTimer | None = None
         self.completion_timer: Timer | None = None
         self.db_match: DBMatch | None = None
         self.chat: "Channel" | None = None
@@ -651,9 +659,9 @@ class Match:
             }
         )
 
-    def execute_timer(self) -> None:
+    def execute_start_timer(self) -> None:
         if not self.starting:
-            self.logger.warning('Tried to execute timer, but match was not starting.')
+            self.logger.warning('Tried to execute starting timer, but match was not starting.')
             return
 
         remaining_time = round(self.starting.time - time.time())
@@ -662,7 +670,9 @@ class Match:
         if remaining_time in intervals:
             intervals.remove(remaining_time)
 
-        self.logger.debug(f'Match timer starting: {remaining_time} seconds left')
+        self.logger.debug(
+            f'Match countdown starting: {remaining_time} seconds left'
+        )
 
         for interval in intervals:
             if remaining_time < interval:
@@ -682,14 +692,60 @@ class Match:
 
             self.chat.send_message(
                 app.session.banchobot,
-                f'Match starting in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
+                f'Match starts in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
 
-            self.logger.debug(f'Match timer running: {remaining_time} seconds left')
+            self.logger.debug(f'Match countdown running: {remaining_time} seconds left')
 
         time.sleep(1)
         self.starting = None
         self.start()
+
+    def execute_countdown(self) -> None:
+        if not self.countdown:
+            self.logger.warning('Tried to execute countdown, but timer was not present.')
+            return
+
+        remaining_time = round(self.countdown.time - time.time())
+        intervals = [60, 30, 10, 5, 4, 3, 2, 1]
+    
+        if remaining_time in intervals:
+            intervals.remove(remaining_time)
+
+        self.logger.debug(
+            f'Countdown running: {remaining_time} seconds left'
+        )
+
+        for interval in intervals:
+            if remaining_time < interval:
+                continue
+
+            until_next_message = remaining_time - interval
+
+            while until_next_message > 0:
+                if not self.countdown:
+                    # Timer was cancelled
+                    return
+
+                time.sleep(1)
+                until_next_message -= 1
+
+            remaining_time = round(self.countdown.time - time.time())
+
+            self.chat.send_message(
+                app.session.banchobot,
+                f'Countdown ends in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
+            )
+
+            self.logger.debug(f'Countdown running: {remaining_time} seconds left')
+
+        time.sleep(1)
+        self.countdown = None
+
+        self.chat.send_message(
+            app.session.banchobot,
+            'Countdown finished.'
+        )
 
     def process_score_update(self, scoreframe: bScoreFrame) -> None:
         self.last_activity = time.time()

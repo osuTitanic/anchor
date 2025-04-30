@@ -33,8 +33,7 @@ from .common.database.repositories import (
 from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
-from .objects.multiplayer import StartingTimers
-from .objects.multiplayer import Match
+from .objects.multiplayer import Match, MatchTimer
 from .clients.base import Client
 from .faq import faq
 
@@ -360,7 +359,7 @@ def mp_start(ctx: Context):
         # Check if match is starting
         if match.starting:
             time_remaining = round(match.starting.time - time.time())
-            return [f'Match starting in {time_remaining} seconds.']
+            return [f'Match starts in {time_remaining} seconds.']
 
         if not match.player_slots:
             return ['There are no players inside this match.']
@@ -376,29 +375,28 @@ def mp_start(ctx: Context):
         if match.starting:
             # Timer is already running
             time_remaining = round(match.starting.time - time.time())
-            return [f'Match starting in {time_remaining} seconds.']
+            return [f'Match starts in {time_remaining} seconds.']
 
         duration = int(ctx.args[0])
 
         if duration < 0:
             return ['no.']
 
-        if duration > 300:
+        if duration > 60*5:
             return ['Please lower your duration!']
 
-        match.starting = StartingTimers(
+        match.starting = MatchTimer(
             time.time() + duration,
-            timer := Thread(
-                target=match.execute_timer,
+            Thread(
+                target=match.execute_start_timer,
                 daemon=True
             )
         )
+        match.starting.start()
 
-        timer.start()
+        return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-        return [f'Match starting in {duration} {"seconds" if duration != 1 else "second"}.']
-
-    elif ctx.args[0] in ('cancel', 'c'):
+    elif ctx.args[0] in ('cancel', 'c', 'stop'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -411,6 +409,56 @@ def mp_start(ctx: Context):
         return match.start()
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
+
+@mp_commands.register(['timer', 'countdown', 'wait'])
+def mp_timer(ctx: Context):
+    """<seconds/cancel> - Start a countdown timer"""
+    if len(ctx.args) > 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <seconds/cancel>']
+
+    match: Match = ctx.get_context_object('match')
+
+    if not ctx.args and match.countdown:
+        time_remaining = round(match.countdown.time - time.time())
+        return [f'Countdown ends in {time_remaining} seconds.']
+
+    elif not ctx.args:
+        return ['Countdown is not active.']
+
+    elif ctx.args[0].isdecimal():
+        # Host wants to start a timer
+        if match.countdown:
+            # Timer is already running
+            time_remaining = round(match.countdown.time - time.time())
+            return [f'Countdown ends in {time_remaining} seconds.']
+
+        duration = int(ctx.args[0])
+
+        if duration < 0:
+            return ['no.']
+
+        if duration > 60*15:
+            return ['Please lower your duration!']
+
+        match.countdown = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=match.execute_countdown,
+                daemon=True
+            )
+        )
+        match.countdown.start()
+
+        return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
+
+    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+        # Host wants to cancel the timer
+        if not match.countdown:
+            return ['Countdown is not active!']
+
+        # The countdown thread will check if 'starting' is None
+        match.countdown = None
+        return ['Countdown was cancelled.']
 
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
