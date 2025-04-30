@@ -484,6 +484,10 @@ class Match:
     def start(self):
         if self.player_count <= 0:
             self.logger.warning('Host tried to start match without any players')
+            self.chat.send_message(
+                app.session.banchobot,
+                'Match was not started, because no players were ready.'
+            )
             return
 
         for slot in self.slots:
