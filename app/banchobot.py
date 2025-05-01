@@ -1,17 +1,16 @@
 
-from app.objects.channel import Channel, SpectatorChannel, MultiplayerChannel
+from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
-from app.common.database import users, groups, messages
-from app.common.constants import Permissions
-from app.objects.client import OsuClient
-from app.common.objects import bMessage
-from app.objects.player import Player
+from app.common.database import messages
+from app.clients.irc import IrcClient
+from app.clients.base import Client
 from typing import Tuple, List
+from chio import Message
 
 import shlex
 import app
 
-class BanchoBot(Player):
+class BanchoBot(IrcClient):
     def __init__(self):
         super().__init__('127.0.0.1', 13381)
         self.initialize()
@@ -19,8 +18,8 @@ class BanchoBot(Player):
     def process_command(
         self,
         message: str,
-        sender: Player,
-        target: Channel | Player
+        sender: Client,
+        target: Channel | Client
     ) -> Tuple[Context, Command, List[str]]:
         trigger, *args = self.parse_command(message)
 
@@ -112,7 +111,7 @@ class BanchoBot(Player):
             return
 
         # Send to others, if command is not hidden
-        if not command.hidden and type(context.target) is Channel:
+        if not command.hidden and context.target.is_channel:
             context.target.send_message(
                 context.player,
                 context.message,
@@ -130,13 +129,9 @@ class BanchoBot(Player):
         context.player.logger.info(f'[{context.player.name}]: {context.message}')
         context.player.logger.info(f'[{self.name}]: {", ".join(response)}')
 
-        is_channel = (
-            type(context.target) in (Channel, SpectatorChannel, MultiplayerChannel)
-        )
-
         target_name = (
             context.target.name
-            if not is_channel
+            if not context.target.is_channel
             else context.target.display_name
         )
 
@@ -145,8 +140,8 @@ class BanchoBot(Player):
 
         # Send to sender only
         for message in response:
-            context.player.enqueue_message(
-                bMessage(
+            context.player.enqueue_message_object(
+                Message(
                     self.name, message,
                     target_name, self.id
                 )
@@ -156,27 +151,37 @@ class BanchoBot(Player):
             return
 
         # Store request/responses in database
-        messages.create_private(
+        app.session.tasks.do_later(
+            messages.create_private,
             context.player.id,
             self.object.id,
             context.message
         )
 
-        messages.create_private(
+        app.session.tasks.do_later(
+            messages.create_private,
             self.object.id,
             context.player.id,
             '\n'.join(response)
         )
 
+    def apply_ranking(self, ranking: str = 'global') -> None:
+        pass
+
+    def reload_rank(self) -> None:
+        pass
+
+    def reload_rankings(self) -> None:
+        self.rankings = {"global": 0}
+
+    def update_object(self, mode: int = 0) -> None:
+        super().update_object(mode)
+        self.stats.rank = 0
+
     def initialize(self) -> None:
-        with app.session.database.managed_session() as session:
-            self.object = users.fetch_by_id(1, session=session)
-            self.client = OsuClient.empty()
-            self.id = -self.object.id
-            self.name = self.object.name
-            self.stats  = self.object.stats
-            self.client.ip.country_code = "OC"
-            self.client.ip.city = "w00t p00t!"
-            self.permissions = Permissions(
-                groups.get_player_permissions(1, session=session)
-            )
+        self.id = 1
+        self.name = "BanchoBot"
+        self.presence.country_index = 1
+        self.presence.city = "w00t p00t!"
+        self.presence.is_irc = True
+        self.reload()

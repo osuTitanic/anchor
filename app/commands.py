@@ -6,41 +6,39 @@ from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 from threading import Thread
+from chio import (
+    TitleUpdate,
+    ScoringType,
+    SlotStatus,
+    PacketType,
+    MatchType,
+    SlotTeam,
+    TeamType,
+    Mods
+)
 
-from .common import officer
 from .common.cache import leaderboards
+from .common.helpers import infringements
 from .common.database.repositories import (
-    infringements,
     beatmapsets,
     beatmaps,
     matches,
     clients,
     reports,
-    groups,
     events,
     scores,
-    stats,
     users
 )
 
-from .common.constants import (
-    MatchScoringTypes,
-    MatchTeamTypes,
-    Permissions,
-    SlotStatus,
-    EventType,
-    MatchType,
-    SlotTeam,
-    GameMode,
-    Mods
-)
-
+from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
-from .objects.multiplayer import StartingTimers
-from .objects.multiplayer import Match
-from .objects.player import Player
+from .objects.multiplayer import Match, MatchTimer
+from .clients.base import Client
+from .faq import faq
 
+import logging
+import timeago
 import timeago
 import config
 import random
@@ -51,9 +49,9 @@ import os
 
 @dataclass
 class Context:
-    player: Player
+    player: Client
     trigger: str
-    target: Channel | Player
+    target: Channel | Client
     args: List[str]
     set: CommandSet | None = None
     objects: Dict[str, Any] = field(default_factory=dict)
@@ -139,7 +137,7 @@ def maintenance_mode(ctx: Context) -> List[str]:
             if player.is_admin:
                 continue
 
-            player.close_connection()
+            player.close_connection("Server maintenance")
 
     return [
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
@@ -159,11 +157,13 @@ def set_config_value(ctx: Context) -> List[str]:
 
     if env_name.startswith('MENUICON'):
         # Enqueue menu icon to all players
-        for player in app.session.players:
-            player.send_packet(
-                player.packets.MENU_ICON,
-                config.MENUICON_IMAGE,
-                config.MENUICON_URL
+        for player in app.session.players.osu_clients:
+            player.enqueue_packet(
+                PacketType.BanchoTitleUpdate,
+                TitleUpdate(
+                    config.MENUICON_IMAGE,
+                    config.MENUICON_URL
+                )
             )
 
     return ['Config was updated.']
@@ -270,7 +270,7 @@ def create_persistant_match(ctx: Context):
     if ctx.player.is_tourney_client:
         return ['You cannot create a persistant match inside of a tourney client.']
 
-    if ctx.player.match:
+    if not ctx.player.is_irc and ctx.player.match:
         return ['Please leave your current match first.']
 
     is_private = ctx.trigger in ('makeprivate', 'createprivate')
@@ -287,18 +287,18 @@ def create_persistant_match(ctx: Context):
 
     if not app.session.matches.append(match):
         ctx.player.logger.warning('Failed to append match to collection')
-        ctx.player.enqueue_matchjoin_fail()
         return ['Could not create match.']
 
     ctx.player.referee_matches.add(match.id)
     match.referee_players.append(ctx.player.id)
     match.chat = MultiplayerChannel(match)
+    match.logger = logging.getLogger(f'multi_{match.id}')
     app.session.channels.add(match.chat)
 
     match.db_match = matches.create(
         match.name,
         match.id,
-        match.host.id
+        match.host_id
     )
 
     app.session.logger.info(
@@ -311,24 +311,26 @@ def create_persistant_match(ctx: Context):
     ctx.player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(ctx.player)
 
-    slot = match.slots[0]
-    slot.status = SlotStatus.NotReady
-    slot.player = ctx.player
+    if not ctx.player.is_irc:
+        slot = match.slots[0]
+        slot.status = SlotStatus.NotReady
+        slot.player = ctx.player
 
-    events.create(
-        match.db_match.id,
-        type=EventType.Join,
-        data={
-            'user_id': ctx.player.id,
-            'name': ctx.player.name
-        }
-    )
+        match.logger.info(f'{ctx.player.name} joined')
+        match.update()
 
-    match.logger.info(f'{ctx.player.name} joined')
-    match.update()
+        ctx.player.match = match
+        ctx.player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-    ctx.player.match = match
-    ctx.player.enqueue_matchjoin_success(match.bancho_match)
+        app.session.tasks.do_later(
+            events.create,
+            match.db_match.id,
+            type=EventType.Join,
+            data={
+                'user_id': ctx.player.id,
+                'name': ctx.player.name
+            }
+        )
 
     match.chat.send_message(
         app.session.banchobot,
@@ -336,10 +338,11 @@ def create_persistant_match(ctx: Context):
         ignore_privileges=True
     )
 
-    # Force-revoke #multiplayer
-    ctx.player.revoke_channel('#multiplayer')
+    if not ctx.player.is_irc:
+        # Force-revoke #multiplayer
+        ctx.player.enqueue_channel_revoked('#multiplayer')
 
-    return ['Match created.']
+    return [f'Created tournament match "[http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} {match.name}]" ({match.chat.name}).']
 
 @mp_commands.register(['start', 'st'])
 def mp_start(ctx: Context):
@@ -356,7 +359,7 @@ def mp_start(ctx: Context):
         # Check if match is starting
         if match.starting:
             time_remaining = round(match.starting.time - time.time())
-            return [f'Match starting in {time_remaining} seconds.']
+            return [f'Match starts in {time_remaining} seconds.']
 
         if not match.player_slots:
             return ['There are no players inside this match.']
@@ -365,37 +368,35 @@ def mp_start(ctx: Context):
         if any([s.status == SlotStatus.NotReady for s in match.slots]):
             return [f'Not all players are ready ("!{mp_commands.trigger}" {ctx.trigger} force" to start anyways)']
 
-        match.start()
-        return ['Match was started. Good luck!']
+        return match.start()
 
     if ctx.args[0].isdecimal():
         # Host wants to start a timer
         if match.starting:
             # Timer is already running
             time_remaining = round(match.starting.time - time.time())
-            return [f'Match starting in {time_remaining} seconds.']
+            return [f'Match starts in {time_remaining} seconds.']
 
         duration = int(ctx.args[0])
 
         if duration < 0:
             return ['no.']
 
-        if duration > 300:
+        if duration > 60*5:
             return ['Please lower your duration!']
 
-        match.starting = StartingTimers(
+        match.starting = MatchTimer(
             time.time() + duration,
-            timer := Thread(
-                target=match.execute_timer,
+            Thread(
+                target=match.execute_start_timer,
                 daemon=True
             )
         )
+        match.starting.start()
 
-        timer.start()
+        return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-        return [f'Match starting in {duration} {"seconds" if duration != 1 else "second"}.']
-
-    elif ctx.args[0] in ('cancel', 'c'):
+    elif ctx.args[0] in ('cancel', 'c', 'stop'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -405,10 +406,59 @@ def mp_start(ctx: Context):
         return ['Match timer was cancelled.']
 
     elif ctx.args[0] in ('force', 'f'):
-        match.start()
-        return ['Match was started. Good luck!']
+        return match.start()
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
+
+@mp_commands.register(['timer', 'countdown', 'wait'])
+def mp_timer(ctx: Context):
+    """<seconds/cancel> - Start a countdown timer"""
+    if len(ctx.args) > 1:
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <seconds/cancel>']
+
+    match: Match = ctx.get_context_object('match')
+
+    if not ctx.args and match.countdown:
+        time_remaining = round(match.countdown.time - time.time())
+        return [f'Countdown ends in {time_remaining} seconds.']
+
+    elif not ctx.args:
+        return ['Countdown is not active.']
+
+    elif ctx.args[0].isdecimal():
+        # Host wants to start a timer
+        if match.countdown:
+            # Timer is already running
+            time_remaining = round(match.countdown.time - time.time())
+            return [f'Countdown ends in {time_remaining} seconds.']
+
+        duration = int(ctx.args[0])
+
+        if duration < 0:
+            return ['no.']
+
+        if duration > 60*15:
+            return ['Please lower your duration!']
+
+        match.countdown = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=match.execute_countdown,
+                daemon=True
+            )
+        )
+        match.countdown.start()
+
+        return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
+
+    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+        # Host wants to cancel the timer
+        if not match.countdown:
+            return ['Countdown is not active!']
+
+        # The countdown thread will check if 'starting' is None
+        match.countdown = None
+        return ['Countdown was cancelled.']
 
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
@@ -446,13 +496,13 @@ def mp_map(ctx: Context):
         return ['Could not find that beatmap.']
 
     match.beatmap_id = map.id
-    match.beatmap_hash = map.md5
-    match.beatmap_name = map.full_name
+    match.beatmap_checksum = map.md5
+    match.beatmap_text = map.full_name
     match.mode = GameMode(map.mode)
     match.update()
 
     match.logger.info(f'Selected: {map.full_name}')
-    return [f'Selected: {map.link}']
+    return [f'Selected beatmap: {map.link}']
 
 @mp_commands.register(['mods', 'setmods'])
 def mp_mods(ctx: Context):
@@ -569,17 +619,18 @@ def mp_host(ctx: Context):
     if target is match.host:
         return ['You are already the host.']
 
-    events.create(
+    app.session.tasks.do_later(
+        events.create,
         match.db_match.id,
         type=EventType.Host,
         data={
             'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host.id, 'name': match.host.name}
+            'new': {'id': match.host_id, 'name': match.host.name}
         }
     )
 
     match.host = target
-    match.host.enqueue_match_transferhost()
+    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
     match.logger.info(f'Changed host to: {target.name}')
     match.update()
 
@@ -604,7 +655,7 @@ bot_invites = [
     "Uhh... sorry, no time to play. (°_o)",
     "I'm too busy!",
     "nope.",
-    "idk how to play this game... ¯\(°_o)/¯"
+    "idk how to play this game... ¯\\(°_o)/¯"
 ]
 
 @mp_commands.register(['invite', 'inv'])
@@ -619,8 +670,11 @@ def mp_invite(ctx: Context):
     if name == app.session.banchobot.name:
         return [bot_invites[random.randrange(0, len(bot_invites))]]
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     if target is ctx.player:
         return ['You are already here.']
@@ -628,7 +682,8 @@ def mp_invite(ctx: Context):
     if target.match is match:
         return ['This player is already here.']
 
-    target.enqueue_invite(
+    target.enqueue_packet(
+        PacketType.BanchoInvite,
         bMessage(
             ctx.player.name,
             f'Come join my multiplayer match: {match.embed}',
@@ -651,8 +706,11 @@ def mp_force_invite(ctx: Context):
     if not ctx.player.is_admin and not match.persistent:
         return ['You are not allowed to force invite players.']
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     if target.match is match:
         return [f'{target.name} is already in this match.']
@@ -669,14 +727,14 @@ def mp_force_invite(ctx: Context):
 
     slot = match.slots[slot_id]
 
-    if match.team_type in (MatchTeamTypes.TeamVs, MatchTeamTypes.TagTeamVs):
+    if match.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
         slot.team = SlotTeam.Red
 
     slot.status = SlotStatus.NotReady
     slot.player = target
 
     target.match = match
-    target.enqueue_matchjoin_success(match.bancho_match)
+    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
     match.logger.info(f'{target.name} joined')
     match.update()
@@ -754,7 +812,7 @@ def mp_ban(ctx: Context):
     if name == ctx.player.name:
         return ["no."]
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
 
     match.ban_player(player)
@@ -774,7 +832,7 @@ def mp_unban(ctx: Context):
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return [f'Could not find the player "{name}".']
 
     if player.id not in match.banned_players:
@@ -809,10 +867,10 @@ def mp_set(ctx: Context):
 
     try:
         match: Match = ctx.get_context_object('match')
-        match.team_type = MatchTeamTypes(int(ctx.args[0]))
+        match.team_type = TeamType(int(ctx.args[0]))
 
         if len(ctx.args) > 1:
-            match.scoring_type = MatchScoringTypes(int(ctx.args[1]))
+            match.scoring_type = ScoringType(int(ctx.args[1]))
 
         if len(ctx.args) > 2:
             size = max(1, min(int(ctx.args[2]), config.MULTIPLAYER_MAX_SLOTS))
@@ -899,21 +957,22 @@ def mp_settings(ctx: Context):
     """- View the current match settings"""
     match: Match = ctx.get_context_object('match')
     beatmap_link = (
-        f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_name}]'
-        if match.beatmap_id > 0 else match.beatmap_name
+        f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_text}]'
+        if match.beatmap_id > 0 else match.beatmap_text
     )
 
     return [
         f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
         f"Beatmap: {beatmap_link}",
-        f"Active Mods: +{match.mods.short}",
+        f"Active Mods: +{match.mods.short} {'(Freemod)' if match.freemod else ''}",
         f"Team Mode: {match.team_type.name}",
         f"Win Condition: {match.scoring_type.name}",
         f"Players: {len(match.players)}",
        *[
-            f"{match.slots.index(slot) + 1} ({slot.status.name}) - "
+            f"Slot {match.slots.index(slot) + 1} ({slot.status.name}) - "
             f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
-            f"{f' +{slot.mods.short}' if slot.mods > 0 else ' '} [{f'Host' if match.host == slot.player else ''}]"
+            f"{f' Team {slot.team.name}' if match.ffa else ''}"
+            f"{f' +{slot.mods.short}' if slot.mods > 0 else ''} [{f'Host' if match.host == slot.player else ''}]"
             for slot in match.slots
             if slot.has_player
         ]
@@ -933,10 +992,10 @@ def mp_team(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <red/blue>']
 
     if team == "Neutral" and match.ffa:
-        match.team_type = MatchTeamTypes.HeadToHead
+        match.team_type = TeamType.HeadToHead
 
     elif team != "Neutral" and not match.ffa:
-        match.team_type = MatchTeamTypes.TeamVs
+        match.team_type = TeamType.TeamVs
 
     if not (player := match.get_player(name)):
         return [f'Could not find player "{name}"']
@@ -1026,7 +1085,7 @@ def mp_addref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find player "{name}".']
 
     if target.id in match.referee_players:
@@ -1068,7 +1127,7 @@ def mp_removeref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return [f'Could not find player "{name}".']
 
     if target.id not in match.referee_players:
@@ -1080,7 +1139,7 @@ def mp_removeref(ctx: Context):
     match.chat.remove(target)
     match.referee_players.remove(target.id)
     target.referee_matches.remove(match)
-    target.revoke_channel(match.chat.bancho_channel.name)
+    target.enqueue_channel_revoked(match.chat.bancho_channel.name)
 
     return [f'Removed "{target.name}" from match referee status.']
 
@@ -1205,7 +1264,8 @@ def report(ctx: Context) -> List | None:
         )
 
     # Create record in database
-    reports.create(
+    app.session.tasks.do_later(
+        reports.create,
         target.id,
         ctx.player.id,
         reason
@@ -1245,14 +1305,17 @@ def where(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
+    
+    if target.is_irc:
+        return ['This player is connected via. IRC']
 
-    if not target.client.ip:
+    if not target.info.ip:
         return ['The players location data could not be resolved']
 
-    city_string = f"({target.client.ip.city})" if target.client.display_city else ""
-    location_string = target.client.ip.country_name
+    city_string = f"({target.info.ip.city})" if target.info.display_city else ""
+    location_string = target.info.ip.country_name
 
     return [f'{target.name} is in {location_string} {city_string}']
 
@@ -1264,7 +1327,7 @@ def get_stats(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name(name)):
+    if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
 
     global_rank = leaderboards.global_rank(target.id, target.status.mode.value)
@@ -1278,7 +1341,7 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
-@command(['recent', 'r', 'last'], hidden=False)
+@command(['recent', 'r', 'last', 'rs'], hidden=False)
 def recent(ctx: Context):
     """- Get information about your last score"""
     target_player = ctx.player
@@ -1286,7 +1349,7 @@ def recent(ctx: Context):
     if ctx.args:
         name = ' '.join(ctx.args[0:])
 
-        if not (target_player := app.session.players.by_name(name)):
+        if not (target_player := app.session.players.by_name_safe(name)):
             return ['Player is not online']
 
     with app.session.database.managed_session() as session:
@@ -1335,48 +1398,86 @@ def get_client_version(ctx: Context):
         # Select a different player
         name = ' '.join(ctx.args[0:])
 
-        if not (target := app.session.players.by_name(name)):
+        if not (target := app.session.players.by_name_safe(name)):
             return ['Player is not online']
 
-    return [f"{target.name} is playing on {target.client.version.string}"]
+    if target.is_irc:
+        return [f'{target.name} is connected via. IRC.']
+
+    return [f"{target.name} is playing on {target.info.version.string}"]
+
+@command(['setranking', 'setrank'])
+def set_preferred_ranking(ctx: Context):
+    """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
+
+    if ctx.player.is_irc:
+        return ['This command is not available for IRC users.']
+
+    ranking = ctx.args[0].lower()
+
+    valid_aliases = (
+        'global', 'ppv1', 'tscore',
+        'rscore', 'clears', 'ppv2',
+        'rankedscore', 'totalscore'
+    )
+
+    alias_mapping = {
+        'ppv2': 'global',
+        'rankedscore': 'rscore',
+        'totalscore': 'tscore'
+    }
+
+    if ranking not in valid_aliases:
+        return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
+
+    ranking = alias_mapping.get(ranking, ranking)
+    ctx.player.preferred_ranking = ranking
+    ctx.player.enqueue_stats(ctx.player)
+
+    if ctx.player.io.requires_status_updates:
+        ctx.player.enqueue_players(app.session.players)
+
+    return [f'Your ranking was set to "{ranking}".']
 
 @command(['monitor'], ['Admins'])
 def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
-
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
     name = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(name)):
+    if not (player := app.session.players.by_name_safe(name)):
         return ['Player is not online']
+    
+    if player.is_irc:
+        return ['Player is connected via. IRC']
 
-    player.enqueue_monitor()
+    player.enqueue_packet(PacketType.BanchoMonitor)
 
     return ['Player has been monitored']
 
 @command(['alert', 'announce', 'broadcast'], ['Admins', 'Developers'])
 def alert(ctx: Context) -> List | None:
     """<message> - Send a message to all players"""
-
     if not ctx.args:
         return [f'Invalid syntax: !{ctx.trigger} <message>']
 
-    app.session.players.announce(' '.join(ctx.args))
+    app.session.players.send_announcement(' '.join(ctx.args))
 
     return [f'Alert was sent to {len(app.session.players)} players.']
 
 @command(['alertuser'], ['Admins', 'Developers'])
 def alertuser(ctx: Context) -> List | None:
     """<username> <message> - Send a notification to a player"""
-
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <message>']
 
     username = ctx.args[0]
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'Could not find player "{username}".']
 
     player.enqueue_announcement(' '.join(ctx.args[1:]))
@@ -1386,7 +1487,6 @@ def alertuser(ctx: Context) -> List | None:
 @command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def silence(ctx: Context) -> List | None:
     """<username> <duration> (<reason>)"""
-
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <username> <duration> (<reason>)']
 
@@ -1394,130 +1494,86 @@ def silence(ctx: Context) -> List | None:
     duration = timeparse(ctx.args[1])
     reason = ' '.join(ctx.args[2:])
 
-    if (player := app.session.players.by_name(name)):
-        player.silence(duration, reason)
-        silence_end = player.object.silence_end
-    else:
-        if not (player := users.fetch_by_name(name)):
-            return [f'Player "{name}" was not found.']
+    if not (user := users.fetch_by_name(name)):
+        return [f'Player "{name}" was not found.']
 
-        if player.silence_end:
-            player.silence_end += timedelta(seconds=duration)
-        else:
-            player.silence_end = datetime.now() + timedelta(seconds=duration)
-
-        users.update(
-            player.id,
-            {'silence_end': player.silence_end}
-        )
-
-        silence_end = player.silence_end
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=1,
-            length=(datetime.now() + timedelta(seconds=duration)),
-            description=reason
-        )
+    silence_end = infringements.silence_user(
+        user,
+        duration,
+        reason
+    )
 
     if not silence_end:
-        return [f'Failed to silence {player.name}.']
+        return [f'Failed to silence {user.name}.']
+
+    if (player_osu := app.session.players.by_name_osu(name)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_name_irc(name)):
+        player_irc.on_user_silenced()
 
     time_string = timeago.format(silence_end)
     time_string = time_string.replace('in ', '')
 
-    return [f'{player.name} was silenced for {time_string}']
+    return [f'{user.name} was silenced for {time_string}']
 
 @command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unsilence(ctx: Context):
-    """- <username>"""
-
+    """<username>"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name>']
 
-    name = ctx.args[0]
+    name = " ".join(ctx.args[0:])
 
-    if (player := app.session.players.by_name(name)):
-        player.unsilence()
-        return [f'{player.name} was unsilenced.']
-
-    if not (player := users.fetch_by_name(name)):
+    if not (user := users.fetch_by_name(name)):
         return [f'Player "{name}" was not found.']
 
-    users.update(player.id, {'silence_end': None})
+    infringements.unsilence_user(user)
 
-    # Delete infringements from website
-    inf = infringements.fetch_recent_by_action(player.id, action=1)
-    if inf: infringements.delete_by_id(inf.id)
+    if (player_osu := app.session.players.by_name_osu(name)):
+        player_osu.on_user_unsilenced()
 
-    return [f'{player.name} was unsilenced.']
+    if (player_irc := app.session.players.by_name_irc(name)):
+        player_irc.on_user_unsilenced()
+
+    return [f'{user.name} was unsilenced.']
 
 @command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def restrict(ctx: Context) -> List | None:
-    """ <name> <length/permanent> (<reason>)"""
-
+    """<name> <length/permanent> (<reason>)"""
     if len(ctx.args) < 2:
         return [f'Invalid syntax: !{ctx.trigger} <name> <length/permanent> (<reason>)']
 
     username = ctx.args[0]
-    length   = ctx.args[1]
-    reason   = ' '.join(ctx.args[2:])
+    length = ctx.args[1]
+    reason = ' '.join(ctx.args[2:])
+    until = None
 
     if not length.startswith('perma'):
         until = datetime.now() + timedelta(seconds=timeparse(length))
-    else:
-        until = None
 
-    if not (player := app.session.players.by_name(username)):
-        # Player is not online, or was not found
-        player = users.fetch_by_name(username)
+    user = users.fetch_by_name(username)
 
-        if not player:
-            return [f'Player "{username}" was not found']
+    if not user:
+        return [f'Player "{username}" was not found']
 
-        player.restricted = True
+    infringements.restrict_user(
+        user,
+        reason,
+        until
+    )
 
-        # Update user
-        users.update(player.id, {'restricted': True})
+    if (player_osu := app.session.players.by_name_osu(user.name)):
+        player_osu.on_user_restricted(reason, until)
 
-        leaderboards.remove(
-            player.id,
-            player.country
-        )
+    if (player_irc := app.session.players.by_name_irc(user.name)):
+        player_irc.on_user_restricted(reason, until)
 
-        scores.hide_all(player.id)
-        stats.update_all(player.id, {'rank': 0})
-
-        groups.delete_entry(player.id, 999)
-        groups.delete_entry(player.id, 1000)
-
-        # Update hardware
-        clients.update_all(player.id, {'banned': True})
-
-        # Add entry inside infringements table
-        infringements.create(
-            player.id,
-            action=0,
-            length=until,
-            description=reason,
-            is_permanent=True if not until else False
-        )
-
-        officer.call(f'{player.name} was restricted. Reason: "{reason}"')
-    else:
-        # Player is online
-        player.restrict(
-            reason,
-            until
-        )
-
-    return [f'{player.name} was restricted.']
+    return [f'{user.name} was restricted.']
 
 @command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def unrestrict(ctx: Context) -> List | None:
     """<name> <restore scores (true/false)>"""
-
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <name> <restore scores (true/false)>']
 
@@ -1525,36 +1581,26 @@ def unrestrict(ctx: Context) -> List | None:
     restore_scores = True
 
     if len(ctx.args) > 1:
-        restore_scores = eval(ctx.args[1].capitalize())
+        restore_scores = ctx.args[1].lower() == 'true'
 
-    if not (player := users.fetch_by_name(username)):
+    if not (user := users.fetch_by_name(username)):
         return [f'Player "{username}" was not found.']
 
-    if not player.restricted:
-        return [f'Player "{username}" is not restricted.']
+    if not user.restricted:
+        return [f'Player "{user.name}" is not restricted.']
 
-    users.update(player.id, {'restricted': False})
+    infringements.unrestrict_user(
+        user,
+        restore_scores
+    )
 
-    # Add to player & supporter group
-    groups.create_entry(player.id, 999)
-    groups.create_entry(player.id, 1000)
+    if (player_osu := app.session.players.by_name_osu(user.name)):
+        player_osu.on_user_unrestricted()
 
-    # Update hardware
-    clients.update_all(player.id, {'banned': False})
+    if (player_irc := app.session.players.by_name_irc(user.name)):
+        player_irc.on_user_unrestricted()
 
-    if not restore_scores:
-        stats.delete_all(player.id)
-        leaderboards.remove(player.id, player.country)
-    else:
-        scores.restore_hidden_scores(player.id)
-
-    for user_stats in stats.fetch_all(player.id):
-        leaderboards.update(
-            user_stats,
-            player.country
-        )
-
-    return [f'Player "{username}" was unrestricted.']
+    return [f'Player "{user.name}" was unrestricted.']
 
 @command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
 def moderated(ctx: Context) -> List | None:
@@ -1562,7 +1608,7 @@ def moderated(ctx: Context) -> List | None:
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
         return [f'Invalid syntax: !{ctx.trigger} <on/off>']
 
-    if type(ctx.target) != Channel:
+    if not ctx.target.is_channel:
         return ['Target is not a channel.']
 
     ctx.target.moderated = ctx.args[0] == "on"
@@ -1577,10 +1623,10 @@ def kick(ctx: Context) -> List | None:
 
     username = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'User "{username}" was not found.']
 
-    player.close_connection()
+    player.close_connection(f"Kicked by '{ctx.player.name}'")
 
     return [f'{player.name} was disconnected from bancho.']
 
@@ -1592,12 +1638,15 @@ def kill(ctx: Context) -> List | None:
 
     username = ' '.join(ctx.args[0:])
 
-    if not (player := app.session.players.by_name(username)):
+    if not (player := app.session.players.by_name_safe(username)):
         return [f'User "{username}" was not found.']
 
-    player.permissions = Permissions(255)
-    player.enqueue_permissions()
-    player.enqueue_ping()
+    if player.is_irc:
+        return [f'User "{username}" is connected via. IRC']
+
+    player.presence.permissions = Permissions(255)
+    player.enqueue_packet(PacketType.BanchoLoginPermissions, player.permissions)
+    player.enqueue_packet(PacketType.BanchoPing)
 
     return [f'{player.name} was disconnected from bancho.']
 
@@ -1646,15 +1695,18 @@ def rtx(ctx: Context) -> List | None:
 
     username = ctx.args[0]
     message = "Zallius' eyes have awoken"
-    target = app.session.players.by_name(username)
+    target = app.session.players.by_name_safe(username)
 
     if not target:
         return [f'User "{username}" was not found.']
+
+    if target.is_irc:
+        return [f'User "{username}" is connected via. IRC']
     
     if len(ctx.args) > 1:
         message = ' '.join(ctx.args[1:])
 
-    target.send_packet(target.packets.RTX, message)
+    target.enqueue_packet(PacketType.BanchoRTX, message)
     return [f"{target.name} was RTX'd."]
 
 @command(['crash'], ['Admins', 'Developers'], hidden=False)
@@ -1664,10 +1716,13 @@ def crash(ctx: Context) -> List | None:
         return [f'Invalid syntax: !{ctx.trigger} <username>']
     
     username = " ".join(ctx.args[0:])
-    target = app.session.players.by_name(username)
+    target = app.session.players.by_name_safe(username)
 
     if not target:
         return [f'User "{username}" was not found.']
+
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
 
     fake_match = bMatch(
         id=0,
@@ -1685,15 +1740,38 @@ def crash(ctx: Context) -> List | None:
         ],
         host_id=-1,
         mode=GameMode.Osu,
-        scoring_type=MatchScoringTypes.Combo,
-        team_type=MatchTeamTypes.HeadToHead,
+        scoring_type=ScoringType.Combo,
+        team_type=TeamType.HeadToHead,
         freemod=False,
         seed=13381
     )
-    target.enqueue_match(fake_match)
-    target.enqueue_matchjoin_success(fake_match)
+    target.enqueue_packet(PacketType.BanchoMatchUpdate, fake_match)
+    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, fake_match)
     return [f"{target.name} was crashed, hopefully :tf:"]
 
+@command(['faq'], hidden=False)
+def mp_help(ctx: Context):
+    """<faq> - Gets information about a frequently asked question"""
+    if len(ctx.args) <= 0:
+        return [f'Invalid syntax: !{ctx.trigger} <faq> - Gets information about a frequently asked question']
+
+    faq_string = ctx.args[0]
+    faq_lang = 'en'
+
+    # Example: "es:spam", where "es" is the lang and "spam" is the faq string
+    colon_index = faq_string.find(':')
+
+    if colon_index != -1:
+        faq_lang = faq_string[:colon_index]
+        faq_string = faq_string[colon_index + 1:]
+
+    if faq_lang not in faq:
+        return [f'Language "{faq_lang}" not found']
+    
+    if faq_string not in faq[faq_lang]:
+        return [f'FAQ "{faq_string}" not found']
+
+    return faq[faq_lang][faq_string].splitlines()
+
 # TODO: !rank
-# TODO: !faq
 # TODO: !top

@@ -1,17 +1,20 @@
-FROM python:3.13-bullseye
+FROM python:3.14-rc-slim
 
 WORKDIR /bancho
 
 # Installing/Updating system dependencies
-RUN apt update -y
-RUN apt install postgresql git curl -y
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    libffi-dev \
+    libssl-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install rust toolchain
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Update pip
-RUN pip install --upgrade pip
 
 # Install python dependencies
 COPY requirements.txt ./

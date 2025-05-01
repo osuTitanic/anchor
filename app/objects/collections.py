@@ -2,6 +2,7 @@
 from __future__ import annotations
 from enum import Enum
 from typing import (
+    MutableMapping,
     Iterator,
     Tuple,
     Dict,
@@ -9,41 +10,55 @@ from typing import (
     Set
 )
 
-from .locks import ReadWriteLock
-from ..http import HttpPlayer
-from .player import Player
+from app.objects.locks import LockedDict, LockedSet
+from app.protocols.osu.http import HttpOsuClient
+from app.clients.base import Client
+from app.clients.osu import OsuClient
+from app.clients.irc import IrcClient
+from chio import UserQuit
 
-class Players:
+class Players(MutableMapping[int | str, Client]):
     def __init__(self):
-        self.id_mapping: Dict[int, Player] = {}
-        self.name_mapping: Dict[str, Player] = {}
-        self.token_mapping: Dict[str, Player] = {}
-        self.tourney_clients: Set[Player] = set()
-        self.in_lobby: Set[Player] = set()
-        self.lock = ReadWriteLock()
+        # Lookup by id & name for osu! and irc clients
+        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
+        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
+        self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
+
+        # osu! specific
+        self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
+        self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
+        self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
 
     @property
-    def tcp_clients(self) -> Tuple[Player]:
-        return tuple(p for p in self if p.protocol == 'tcp')
+    def osu_clients(self) -> Tuple[OsuClient]:
+        return tuple(self.osu_id_mapping.values())
 
     @property
-    def http_clients(self) -> Tuple[HttpPlayer]:
-        with self.lock.read_context():
-            snapshot = tuple(self.token_mapping.values())
-        return snapshot
+    def irc_clients(self) -> Tuple[IrcClient]:
+        return tuple(self.irc_id_mapping.values())
+    
+    @property
+    def tcp_osu_clients(self) -> Tuple[OsuClient]:
+        """Get all tcp osu! clients"""
+        return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'tcp')
+    
+    @property
+    def http_osu_clients(self) -> Tuple[HttpOsuClient]:
+        """Get all http osu! clients"""
+        return tuple(p for p in self.osu_token_mapping.values())
 
     def __repr__(self) -> str:
         return '<Players>'
 
     def __len__(self):
-        with self.lock.read_context():
-            return len(self.id_mapping)
+        return len(self.osu_id_mapping) + len(self.irc_id_mapping)
 
-    def __setitem__(self, _, value: Player | HttpPlayer) -> None:
+    def __setitem__(self, _, value: Client) -> None:
         """Set a player in the collection"""
         return self.add(value)
 
-    def __getitem__(self, key: int | str) -> Player | None:
+    def __getitem__(self, key: int | str) -> Client | None:
         """Get a player by id or name"""
         if isinstance(key, int):
             return self.by_id(key)
@@ -51,52 +66,86 @@ class Players:
             return self.by_name(key)
         return None
 
+    def __delitem__(self, key: int | str) -> None:
+        """Remove a player from the collection"""
+        player = None
+
+        if isinstance(key, int):
+            player = self.by_id(key)
+        elif isinstance(key, str):
+            player = self.by_name(key)
+
+        if player is not None:
+            self.remove(player)
+
     def __iter__(self):
-        with self.lock.read_context():
-            snapshot = list(self.id_mapping.values())
-        return iter(snapshot)
+        snapshot_osu = list(self.osu_id_mapping.values())
+        snapshot_irc = list(self.irc_id_mapping.values())
+        return iter(snapshot_osu + snapshot_irc)
 
-    def __contains__(self, player: Player | HttpPlayer) -> bool:
+    def __contains__(self, player: Client) -> bool:
         """Check if a player is in the collection"""
-        with self.lock.read_context():
-            if isinstance(player, Player):
-                return player.id in self.id_mapping
-            elif isinstance(player, HttpPlayer):
-                return player.token in self.token_mapping
-            return False
+        if isinstance(player, OsuClient):
+            return player.id in self.osu_id_mapping
+        elif isinstance(player, IrcClient):
+            return player.id in self.irc_id_mapping
+        return False
 
-    def get(self, value: int | str) -> Player | None:
+    def get(self, value: int | str) -> Client:
         """Get a player by id or name"""
         return self[value]
 
-    def add(self, player: Player | HttpPlayer) -> None:
+    def add(self, player: Client) -> None:
         """Append a player to the collection"""
-        with self.lock.write_context():
-            self.id_mapping[abs(player.id)] = player
-            self.name_mapping[player.name] = player
+        if isinstance(player, OsuClient):
+            self.add_osu(player)
+        elif isinstance(player, IrcClient):
+            self.add_irc(player)
 
-            if isinstance(player, HttpPlayer):
-                self.token_mapping[player.token] = player
+    def remove(self, player: Client) -> None:
+        """Remove a player from the collection"""
+        if isinstance(player, OsuClient):
+            self.remove_osu(player)
+        elif isinstance(player, IrcClient):
+            self.remove_irc(player)
 
-            if player.is_tourney_client:
-                self.tourney_clients.add(player)
+    def add_osu(self, player: OsuClient | HttpOsuClient) -> None:
+        """Append a player to the collection"""
+        self.osu_id_mapping[player.id] = player
+        self.osu_name_mapping[player.name] = player
+
+        if player.protocol == 'http':
+            self.osu_token_mapping[player.token] = player
+
+        if player.is_tourney_client:
+            self.osu_tournament_clients.add(player)
 
         self.send_player(player)
 
-    def remove(self, player: Player | HttpPlayer) -> None:
+    def remove_osu(self, player: OsuClient | HttpOsuClient) -> None:
         """Remove a player from the collection"""
-        with self.lock.write_context():
-            if player.in_lobby:
-                self.remove_from_collection('in_lobby', player)
+        if player.in_lobby:
+            self.remove_from_collection('in_lobby', player)
 
-            if player.is_tourney_client:
-                self.remove_from_collection('tourney_clients', player)
+        if player.is_tourney_client:
+            self.remove_from_collection('tourney_clients', player)
 
-            self.remove_from_mapping('id_mapping', abs(player.id))
-            self.remove_from_mapping('name_mapping', player.name)
+        self.remove_from_mapping('osu_id_mapping', player.id)
+        self.remove_from_mapping('osu_name_mapping', player.name)
 
-            if player.protocol is 'http':
-                self.remove_from_mapping('token_mapping', player.token)
+        if player.protocol == 'http':
+            self.remove_from_mapping('osu_token_mapping', player.token)
+
+    def add_irc(self, player: IrcClient) -> None:
+        """Append a player to the collection"""
+        self.irc_id_mapping[player.id] = player
+        self.irc_name_mapping[player.name] = player
+        self.send_player(player)
+
+    def remove_irc(self, player: IrcClient) -> None:
+        """Remove a player from the collection"""
+        self.remove_from_mapping('irc_id_mapping', player.id)
+        self.remove_from_mapping('irc_name_mapping', player.name)
 
     def remove_from_mapping(self, name: str, key: str) -> None:
         try:
@@ -104,82 +153,109 @@ class Players:
         except (KeyError, ValueError, AttributeError):
             pass
 
-    def remove_from_collection(self, name: str, player: Player) -> None:
+    def remove_from_collection(self, name: str, player: Client) -> None:
         """Remove a player from the collection"""
         try:
             getattr(self, name).remove(player)
         except (KeyError, ValueError, AttributeError):
             pass
 
-    def by_id(self, id: int) -> Player | None:
+    def by_id(self, id: int) -> Client | None:
         """Get a player by id"""
-        with self.lock.read_context():
-            return self.id_mapping.get(id, None)
+        return (
+            self.osu_id_mapping.get(id, None) or
+            self.irc_id_mapping.get(id, None)
+        )
 
-    def by_name(self, name: str) -> Player | None:
+    def by_name(self, name: str) -> Client | None:
         """Get a player by name"""
-        with self.lock.read_context():
-            return self.name_mapping.get(name, None)
+        return (
+            self.osu_name_mapping.get(name, None) or
+            self.irc_name_mapping.get(name, None)
+        )
 
-    def by_token(self, token: str) -> Player | None:
-        """Get a player by token"""
-        with self.lock.read_context():
-            return self.token_mapping.get(token, None)
+    def by_name_safe(self, name: str) -> Client | None:
+        """Get a player by underscored name"""
+        return (
+            self.osu_name_mapping.get(name, None) or
+            self.osu_name_mapping.get(name.replace('_', ' '), None) or
+            self.irc_name_mapping.get(name, None) or
+            self.irc_name_mapping.get(name.replace('_', ' '), None)
+        )
 
-    def by_rank(self, rank: int, mode: int) -> List[Player]:
+    def by_token(self, token: str) -> Client | None:
+        """Get an osu! player by token"""
+        return self.osu_token_mapping.get(token, None)
+
+    def by_id_osu(self, id: int) -> OsuClient | None:
+        """Get an osu! player by id"""
+        return self.osu_id_mapping.get(id, None)
+    
+    def by_name_osu(self, name: str) -> OsuClient | None:
+        """Get an osu! player by name"""
+        return self.osu_name_mapping.get(name, None)
+
+    def by_id_irc(self, id: int) -> IrcClient | None:
+        """Get an irc player by id"""
+        return self.irc_id_mapping.get(id, None)
+    
+    def by_name_irc(self, name: str) -> IrcClient | None:
+        """Get an irc player by name"""
+        return self.irc_name_mapping.get(name, None)
+
+    def by_rank(self, rank: int, mode: int) -> List[Client]:
         """Get all players with the specified rank"""
-        return [p for p in self if p.rank == rank and p.status.mode == mode]
+        return [p for p in self.osu_clients if p.stats.rank == rank and p.status.mode == mode]
 
-    def tourney_clients_by_id(self, id: int) -> List[Player]:
-        """Get all tourney clients for a player id"""
-        return [p for p in self.tourney_clients if p.id == id]
+    def tournament_clients(self, id: int) -> List[OsuClient]:
+        """Get all connected tournament clients for a player"""
+        return [p for p in self.osu_tournament_clients if p.id == id]
 
-    def clear_tourney_clients(self, id: int) -> None:
+    def clear_tournament_clients(self, id: int) -> None:
         """Clear all tourney clients by player id"""
-        for p in self.tourney_clients_by_id(id):
+        for p in self.tournament_clients(id):
             self.remove(p)
 
-    def enqueue(self, data: bytes, immune = []) -> None:
-        """Send raw data to all players"""
-        for p in self:
-            if p not in immune:
-                p.enqueue(data)
+    def send_packet(self, packet: Enum, *args) -> None:
+        for p in self.osu_clients:
+            p.enqueue_packet(packet, *args)
 
-    def send_packet(self, packet: Enum, *args):
-        for p in self:
-            p.send_packet(packet, *args)
-
-    def send_player(self, player: Player):
+    def send_player(self, player: Client) -> None:
         for p in self:
             p.enqueue_player(player)
 
-    def send_player_bundle(self, players: List[Player]):
+    def send_player_bundle(self, players: List[Client]) -> None:
         for p in self:
             p.enqueue_players(players)
 
-    def send_presence(self, player: Player, update: bool = False):
-        for p in self:
-            p.enqueue_presence(player, update)
+    def send_presence(self, player: Client) -> None:
+        for p in self.osu_clients:
+            p.enqueue_presence(player)
 
-    def send_stats(self, player: Player):
-        for p in self:
-            if p.client.version.date > 20121223:
+    def send_stats(self, player: OsuClient) -> None:
+        for p in self.osu_clients:
+            if not p.io.requires_status_updates:
                 # Client will request the stats
-                # themselves when pressing F9
-                continue
+                # themselves, when pressing F9
+                return
 
             p.enqueue_stats(player)
 
-    def announce(self, message: str):
+    def send_stats_forced(self, player: OsuClient) -> None:
+        for p in self.osu_clients:
+            p.enqueue_stats(player)
+
+    def apply_ranking(self, ranking: str = 'global') -> None:
+        for p in self.osu_clients:
+            p.apply_ranking(ranking)
+
+    def send_announcement(self, message: str) -> None:
         for p in self:
             p.enqueue_announcement(message)
 
-    def send_user_quit(self, user_quit):
+    def send_user_quit(self, quit: UserQuit) -> None:
         for p in self:
-            try:
-                p.enqueue_quit(user_quit)
-            except AttributeError:
-                continue
+            p.enqueue_user_quit(quit)
 
 from .channel import Channel
 
@@ -209,7 +285,7 @@ class Channels(Dict[str, Channel]):
             return
 
         for p in c.users:
-            p.revoke_channel(c.display_name)
+            p.enqueue_channel_revoked(c.display_name)
 
         if c.name in self:
             del self[c.name]

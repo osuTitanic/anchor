@@ -1,3 +1,2 @@
 
-from .client import OsuClient
-from .status import Status
+from .client import OsuClientInformation

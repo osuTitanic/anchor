@@ -130,7 +130,7 @@ class ClientHash:
             diskdrive_signature
         )
 
-class OsuClient:
+class OsuClientInformation:
     def __init__(
         self,
         ip: location.Geolocation,
@@ -152,9 +152,9 @@ class OsuClient:
         return self.hash.adapters == 'runningunderwine'
 
     @classmethod
-    def from_string(cls, line: str, ip: str) -> "OsuClient":
+    def from_string(cls, line: str, ip: str) -> "OsuClientInformation":
         if len(args := line.split('|')) < 2:
-            return OsuClient.empty()
+            return OsuClientInformation.empty()
 
         # Sent in every client version
         build_version = args[0]
@@ -180,7 +180,7 @@ class OsuClient:
             ).utcoffset().total_seconds() / 60 / 60
         )
 
-        return OsuClient(
+        return OsuClientInformation(
             geolocation,
             ClientVersion.from_string(build_version),
             ClientHash.from_string(client_hash),
@@ -190,8 +190,8 @@ class OsuClient:
         )
 
     @classmethod
-    def empty(cls) -> "OsuClient":
-        return OsuClient(
+    def empty(cls) -> "OsuClientInformation":
+        return OsuClientInformation(
             location.fetch_geolocation('127.0.0.1'),
             ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
             ClientHash.empty('b20136969'),
