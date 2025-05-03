@@ -56,7 +56,7 @@ def setup():
     importlib.import_module('app.tasks.activities')
 
     # Reset usercount
-    usercount.set(0)
+    usercount.set(1)
 
     # Reset player statuses
     for key in status.get_keys():
@@ -80,9 +80,6 @@ def before_shutdown(*args):
 signal.signal(signal.SIGINT, before_shutdown)
 
 def shutdown():
-    for player in app.session.players:
-        status.delete(player.id)
-
     def force_exit(*args):
         app.session.logger.warning("Force exiting...")
         os._exit(0)
