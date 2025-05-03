@@ -1435,10 +1435,9 @@ def set_preferred_ranking(ctx: Context):
     ranking = alias_mapping.get(ranking, ranking)
     ctx.player.preferred_ranking = ranking
     ctx.player.enqueue_stats(ctx.player)
-    ctx.player.enqueue_players(app.session.players.irc_clients)
 
     if ctx.player.io.requires_status_updates:
-        ctx.player.enqueue_players(app.session.players.osu_clients)
+        ctx.player.enqueue_players(app.session.players)
 
     app.session.tasks.do_later(
         users.update,
