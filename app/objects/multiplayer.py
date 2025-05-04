@@ -280,6 +280,7 @@ class Match:
                 continue
 
             slot.status = SlotStatus.NotReady
+            slot.has_failed = False
             slot.skipped = False
             slot.loaded = False
 
