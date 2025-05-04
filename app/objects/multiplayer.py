@@ -468,6 +468,9 @@ class Match:
         app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
 
+        if not self.db_match:
+            return
+
         last_game = events.fetch_last_by_type(
             self.db_match.id,
             type=EventType.Result
