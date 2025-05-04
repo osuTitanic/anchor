@@ -604,18 +604,18 @@ def transfer_host(client: OsuClient, slot_id: int):
     client.match.update()
 
 @register(PacketType.OsuMatchChangePassword)
-def change_password(client: OsuClient, new_password: str):
+def change_password(client: OsuClient, update: Match):
     if not client.match:
         return
 
     if client is not client.match.host:
         return
 
-    client.match.password = new_password
+    client.match.password = update.password
     client.match.update()
 
     client.match.logger.info(
-        f'Changed password to: {new_password}'
+        f'Changed password to: {update.password}'
     )
 
 @register(PacketType.OsuMatchStart)
