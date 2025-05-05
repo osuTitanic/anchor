@@ -280,6 +280,7 @@ class Match:
                 continue
 
             slot.status = SlotStatus.NotReady
+            slot.has_failed = False
             slot.skipped = False
             slot.loaded = False
 
@@ -467,6 +468,9 @@ class Match:
 
         app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
+
+        if not self.db_match:
+            return
 
         last_game = events.fetch_last_by_type(
             self.db_match.id,

@@ -1439,6 +1439,12 @@ def set_preferred_ranking(ctx: Context):
     if ctx.player.io.requires_status_updates:
         ctx.player.enqueue_players(app.session.players)
 
+    app.session.tasks.do_later(
+        users.update,
+        ctx.player.id,
+        {"preferred_ranking": ranking}
+    )
+
     return [f'Your ranking was set to "{ranking}".']
 
 @command(['monitor'], ['Admins'])

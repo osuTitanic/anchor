@@ -462,6 +462,7 @@ class OsuClient(Client):
 
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
+        self.preferred_ranking = self.object.preferred_ranking
         self.presence.country_index = self.info.ip.country_index
         self.presence.longitude = self.info.ip.longitude
         self.presence.latitude = self.info.ip.latitude
