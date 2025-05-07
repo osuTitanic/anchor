@@ -6,8 +6,7 @@ from typing import (
     Iterator,
     Tuple,
     Dict,
-    List,
-    Set
+    List
 )
 
 from app.objects.locks import LockedDict, LockedSet
@@ -18,7 +17,7 @@ from app.clients.irc import IrcClient
 from chio import UserQuit
 
 class Players(MutableMapping[int | str, Client]):
-    def __init__(self):
+    def __init__(self) -> None:
         # Lookup by id & name for osu! and irc clients
         self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
         self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
@@ -37,12 +36,12 @@ class Players(MutableMapping[int | str, Client]):
     @property
     def irc_clients(self) -> Tuple[IrcClient]:
         return tuple(self.irc_id_mapping.values())
-    
+
     @property
     def tcp_osu_clients(self) -> Tuple[OsuClient]:
         """Get all tcp osu! clients"""
         return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'tcp')
-    
+
     @property
     def http_osu_clients(self) -> Tuple[HttpOsuClient]:
         """Get all http osu! clients"""
