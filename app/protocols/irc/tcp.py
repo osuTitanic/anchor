@@ -25,6 +25,7 @@ class TcpIrcProtocol(IrcClient, IRC):
 
     def connectionMade(self) -> None:
         self.logger.info(f'-> <{self.address}:{self.port}> (IRC)')
+        self.connected = True
 
         if not config.IRC_ENABLED:
             self.enqueue_error("IRC connections have been disabled. Please check back later!")

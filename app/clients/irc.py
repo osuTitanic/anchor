@@ -19,6 +19,7 @@ class IrcClient(Client):
     def __init__(self, address: str, port: int):
         super().__init__(address, port)
         self.presence.is_irc = True
+        self.connected = False
         self.logged_in = False
         self.is_osu = False
         self.token = ""
@@ -151,6 +152,8 @@ class IrcClient(Client):
         self.close_connection("Login failure")
 
     def close_connection(self, reason: Any = None) -> None:
+        self.connected = False
+
         if reason is not None:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
@@ -204,6 +207,9 @@ class IrcClient(Client):
         self.on_login_received()
 
     def handle_timeout_callback(self) -> None:
+        if not self.connected:
+            return
+
         if self.logged_in or self.is_osu:
             return
 
