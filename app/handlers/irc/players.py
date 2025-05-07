@@ -23,6 +23,22 @@ def handle_names_command(
             channel.name
         )
 
+@register("WHO")
+@ensure_authenticated
+def handle_who_command(
+    client: IrcClient,
+    prefix: str,
+    channel: str
+) -> None:
+    client.enqueue_command(
+        irc.RPL_ENDOFWHO,
+        params=[
+            client.local_prefix,
+            channel,
+            f":End of /WHO list."
+        ]
+    )
+
 @register("WHOIS")
 @ensure_authenticated
 def handle_whois_command(
