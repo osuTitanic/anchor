@@ -166,7 +166,7 @@ def handle_privmsg_command(
         return
 
     if target.id == sender.id:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":You cannot send messages to yourself.")
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":You cannot send messages to yourself.")
         return
 
     if target.silenced:

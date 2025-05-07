@@ -413,7 +413,7 @@ class IrcClient(Client):
         # after joining the channel
         reactor.callLater(0.1, enqueue)
 
-    def enqueue_channel_revoked(self, channel: str):
+    def enqueue_channel_revoked(self, channel: str) -> None:
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
 
     def enqueue_away_message(self, target: "Client") -> None:
