@@ -52,12 +52,28 @@ def handle_topic_command(
     if not channel.can_read(client.permissions):
         client.enqueue_channel_revoked(channel_name)
         return
+    
+    if not channel.topic:
+        client.enqueue_command(
+            irc.RPL_NOTOPIC,
+            params=[client.local_prefix, channel.name, ":No topic is set"]
+        )
+        return
 
     client.enqueue_command(
         irc.RPL_TOPIC,
         params=[
             client.local_prefix, channel.name,
             ":" + channel.topic
+        ]
+    )
+    client.enqueue_command(
+        "333", # RPL_TOPICWHOTIME
+        params=[
+            client.local_prefix,
+            channel.name,
+            channel.owner,
+            f'{int(channel.created_at)}'
         ]
     )
 
@@ -98,6 +114,49 @@ def handle_part_command(
             return
 
         channel.remove(client)
+
+@register("MODE")
+def handle_mode_command(
+    client: IrcClient,
+    prefix: str,
+    *args
+) -> None:
+    if len(args) <= 0:
+        return
+
+    is_self = args[0] == client.local_prefix
+
+    if is_self:
+        return client.enqueue_command(
+            irc.RPL_UMODEIS,
+            params=[client.local_prefix, "+i"]
+        )
+    
+    if not (channel := session.channels.by_name(args[0])):
+        return client.enqueue_command(
+            irc.ERR_USERSDONTMATCH,
+            params=[client.local_prefix, ":Cannot change mode for this user"]
+        )
+    
+    if len(args) > 1:
+        return
+    
+    client.enqueue_command(
+        irc.RPL_CHANNELMODEIS,
+        params=[
+            client.local_prefix,
+            channel.name,
+            "+nt"
+        ]
+    )
+    client.enqueue_command(
+        "329", # RPL_CREATIONTIME
+        params=[
+            client.local_prefix,
+            channel.name,
+            f'{int(channel.created_at)}'
+        ]
+    )
 
 @register("PRIVMSG")
 def handle_privmsg_command(

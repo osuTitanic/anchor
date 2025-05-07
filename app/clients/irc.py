@@ -378,6 +378,15 @@ class IrcClient(Client):
                 ":" + channel.topic
             ]
         )
+        self.enqueue_command(
+            "333", # RPL_TOPICWHOTIME
+            params=[
+                self.local_prefix,
+                channel.name,
+                channel.owner,
+                f'{int(channel.created_at)}'
+            ]
+        )
 
     def enqueue_channel_revoked(self, channel: str):
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel, ":No such channel"])
