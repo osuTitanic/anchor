@@ -392,13 +392,15 @@ class IrcClient(Client):
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel, ":No such channel"])
         
     def enqueue_away_message(self, target: "Client") -> None:
-        if not target.away_message:
+        if self.id in target.away_senders:
+            # Already sent the away message
             return
 
         self.enqueue_command(
             irc.RPL_AWAY,
             params=[self.local_prefix, f":{target.away_message or ''}"]
         )
+        target.away_senders.add(self.id)
 
     def enqueue_mode(self, channel: Channel) -> None:
         self.enqueue_command(

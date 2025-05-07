@@ -570,14 +570,20 @@ class OsuClient(Client):
         self.enqueue_packet(PacketType.BanchoMessage, message)
 
     def enqueue_away_message(self, target: "Client") -> None:
+        if self.id in target.away_senders:
+            # Already sent the away message
+            return
+
         self.enqueue_message(
             f'\x01ACTION is away: {target.away_message}\x01',
             target,
             target.name
         )
+        target.away_senders.add(self.id)
 
     def enqueue_user_quit(self, quit: UserQuit) -> None:
         self.enqueue_packet(PacketType.BanchoUserQuit, quit)
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_packet(PacketType.BanchoRestart, retry_in_ms)
+        

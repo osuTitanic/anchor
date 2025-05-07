@@ -219,11 +219,7 @@ def handle_privmsg_command(
         message = message[:497] + '... (truncated)'
 
     if target.away_message:
-        sender.enqueue_message(
-            f'\x01ACTION is away: {target.away_message}\x01',
-            target,
-            target.name
-        )
+        return sender.enqueue_away_message(target)
 
     sender.recent_message_count += 1
     sender.logger.info(f'[PM -> {target.name}]: {message}')

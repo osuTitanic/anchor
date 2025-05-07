@@ -43,6 +43,7 @@ class Client:
         self.presence = UserPresence()
         self.object: DBUser | None = None
         self.away_message: str | None = None
+        self.away_senders: Set[int] = set()
         self.logger = logging.getLogger(address)
         self.last_response = time.time()
         self.last_minute_stamp = time.time()

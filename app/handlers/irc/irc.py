@@ -29,6 +29,7 @@ def handle_away_command(
 
     if message:
         client.away_message = message
+        client.away_senders.clear()
         client.enqueue_command(
             irc.RPL_NOWAWAY,
             params=[client.local_prefix, ":You have been marked as being away"]
