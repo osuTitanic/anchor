@@ -44,9 +44,18 @@ def handle_who_command(
 def handle_whois_command(
     client: IrcClient,
     prefix: str,
-    local_nickname: str,
-    target_nickname: str
+    *args
 ) -> None:
+    if len(args) <= 0:
+        client.enqueue_command(
+            irc.ERR_NOSUCHNICK,
+            params=[client.local_prefix, ":No such nick/channel"]
+        )
+        return
+
+    local_nickname = client.local_prefix
+    target_nickname = args[-1]
+
     if not (target := app.session.players.by_name_safe(target_nickname)):
         client.enqueue_command(irc.ERR_NOSUCHNICK, params=[target_nickname, ":No such nick/channel"])
         return
