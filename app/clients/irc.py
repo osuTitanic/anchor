@@ -251,8 +251,8 @@ class IrcClient(Client):
             return
 
         self.enqueue_command(
-            irc.ERR_BANNEDFROMCHAN,
-            params=[":You are banned from this server."]
+            irc.ERR_YOUREBANNEDCREEP,
+            params=[self.local_prefix, ":You are banned from this server."]
         )
 
     def send_inactive_error(self) -> None:
@@ -262,7 +262,7 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.ERR_NOTREGISTERED,
-            params=[":Your account has not been activated."]
+            params=[self.local_prefix, ":Your account has not been activated."]
         )
 
     def send_maintenance_error(self) -> None:
