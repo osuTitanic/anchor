@@ -69,8 +69,8 @@ def handle_nick_command(
         client.close_connection("Tried to log in as BanchoBot.")
         return
 
-    if client.token != "":
-        return client.on_login_received()
+    if client.is_osu and not client.token:
+        # Let user enter in their token via. chat
+        return client.handle_osu_login()
 
-    # Let user enter in their token via. chat
-    return client.handle_osu_login()
+    return client.on_login_received()
