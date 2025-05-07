@@ -333,17 +333,17 @@ class IrcClient(Client):
                 params=[self.local_prefix, ":" + line]
             )
 
-    def enqueue_error(self, error: str) -> None:
-        if self.is_osu:
-            return self.enqueue_banchobot_message(error)
-
-        self.enqueue_command("ERROR", params=[":" + error])
-
     def enqueue_announcement(self, message: str) -> None:
         if self.is_osu:
             return self.enqueue_banchobot_message(message)
 
-        self.enqueue_command("NOTICE", params=[":" + message])
+        messages = message.splitlines()
+
+        for line in messages:
+            self.enqueue_command("NOTICE", params=[self.local_prefix, ":" + line])
+
+    def enqueue_error(self, error: str = "") -> None:
+        self.enqueue_announcement(error or "An unknown error occurred.")
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_announcement("Bancho is restarting, please wait...")
