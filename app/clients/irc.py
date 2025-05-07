@@ -6,8 +6,9 @@ from app.objects.channel import Channel
 from app.clients.base import Client
 
 from chio import Permissions, LoginError, UserQuit, Message, QuitState
-from twisted.words.protocols import irc
 from typing import List, Any, Iterable
+from twisted.words.protocols import irc
+from twisted.internet import reactor
 from copy import copy
 
 import logging
@@ -371,22 +372,27 @@ class IrcClient(Client):
         if not (channel := app.session.channels.by_name(channel_name)):
             return
 
-        self.enqueue_command(
-            irc.RPL_TOPIC,
-            params=[
-                self.local_prefix, channel_name,
-                ":" + channel.topic
-            ]
-        )
-        self.enqueue_command(
-            "333", # RPL_TOPICWHOTIME
-            params=[
-                self.local_prefix,
-                channel.name,
-                channel.owner,
-                f'{int(channel.created_at)}'
-            ]
-        )
+        def enqueue() -> None:
+            self.enqueue_command(
+                irc.RPL_TOPIC,
+                params=[
+                    self.local_prefix, channel_name,
+                    ":" + channel.topic
+                ]
+            )
+            self.enqueue_command(
+                "333", # RPL_TOPICWHOTIME
+                params=[
+                    self.local_prefix,
+                    channel.name,
+                    channel.owner,
+                    f'{int(channel.created_at)}'
+                ]
+            )
+
+        # Avoid sending the topic too early
+        # after joining the channel
+        reactor.callLater(0.1, enqueue)
 
     def enqueue_channel_revoked(self, channel: str):
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel, ":No such channel"])
