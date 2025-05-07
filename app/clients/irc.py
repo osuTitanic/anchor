@@ -431,6 +431,7 @@ class IrcClient(Client):
     def enqueue_mode(self, channel: Channel) -> None:
         self.enqueue_command_raw(
             "MODE",
+            app.session.banchobot.irc_prefix,
             params=[
                 channel.name,
                 channel.mode(self.permissions),
