@@ -378,17 +378,17 @@ class IrcClient(Client):
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         self.enqueue_command_raw(
             "JOIN",
-            self.resolve_username(player),
+            f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
             params=[f":{channel}"]
         )
 
     def enqueue_user_quit(self, quit: UserQuit) -> None:
-        if quit != QuitState.Gone:
+        if quit.state != QuitState.Gone:
             return
 
         self.enqueue_command_raw(
             "QUIT",
-            self.resolve_username(quit.info),
+            f"{self.resolve_username(quit.info)}!cho@{config.DOMAIN_NAME}",
             params=[":quit"]
         )
 
