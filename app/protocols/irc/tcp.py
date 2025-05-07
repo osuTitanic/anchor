@@ -41,6 +41,13 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
         self.close_connection()
 
+    def dataReceived(self, data: Any) -> None:
+        try:
+            return super().dataReceived(data)
+        except UnicodeDecodeError:
+            self.logger.warning(f"Failed to decode irc request ({len(data)} bytes)")
+            self.close_connection("Invalid data received")
+
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
         deferred = threads.deferToThread(
             self.on_command_received,
