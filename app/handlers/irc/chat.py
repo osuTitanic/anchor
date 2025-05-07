@@ -1,5 +1,4 @@
 
-from typing import List, Optional, Callable
 from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.common.database import messages

@@ -136,11 +136,7 @@ def send_private_message(sender: OsuClient, message: Message):
         message.content = message.content[:497] + '... (truncated)'
 
     if target.away_message:
-        sender.enqueue_message(
-            f'\x01ACTION is away: {target.away_message}\x01',
-            target,
-            target.name
-        )
+        return sender.enqueue_away_message(target)
 
     target.enqueue_message(
         message.content,

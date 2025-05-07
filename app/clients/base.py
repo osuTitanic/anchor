@@ -459,6 +459,9 @@ class Client:
     def enqueue_message_object(self, message: Message) -> None:
         ...
 
+    def enqueue_away_message(self, target: "Client") -> None:
+        ...
+
     def enqueue_announcement(self, message: str) -> None:
         ...
 

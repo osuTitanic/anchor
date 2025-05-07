@@ -569,6 +569,13 @@ class OsuClient(Client):
     def enqueue_message_object(self, message: Message) -> None:
         self.enqueue_packet(PacketType.BanchoMessage, message)
 
+    def enqueue_away_message(self, target: "Client") -> None:
+        self.enqueue_message(
+            f'\x01ACTION is away: {target.away_message}\x01',
+            target,
+            target.name
+        )
+
     def enqueue_user_quit(self, quit: UserQuit) -> None:
         self.enqueue_packet(PacketType.BanchoUserQuit, quit)
 
