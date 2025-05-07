@@ -300,16 +300,23 @@ class IrcClient(Client):
 
     def enqueue_motd(self, message: str) -> None:
         messages = message.splitlines()
+        first_message = messages.pop(0)
+        last_message = messages.pop(-1)
+        
+        self.enqueue_command(
+            irc.RPL_MOTDSTART,
+            params=[self.local_prefix, ":" + first_message]
+        )
 
         for index, line in enumerate(messages):
             self.enqueue_command(
                 irc.RPL_MOTD,
                 params=[self.local_prefix, ":" + line]
             )
-
+        
         self.enqueue_command(
             irc.RPL_ENDOFMOTD,
-            params=[self.local_prefix, ":End of /MOTD command."]
+            params=[self.local_prefix, ":" + last_message]
         )
 
     def enqueue_error(self, error: str) -> None:
