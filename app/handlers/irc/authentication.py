@@ -73,4 +73,5 @@ def handle_nick_command(
         # Let user enter in their token via. chat
         return client.handle_osu_login()
 
-    return client.on_login_received()
+    if client.token != "":
+        return client.on_login_received()
