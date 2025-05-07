@@ -31,8 +31,8 @@ class TcpIrcProtocol(IrcClient, IRC):
             self.enqueue_error("IRC connections have been disabled. Please check back later!")
             self.close_connection('IRC is disabled')
 
-        # Ensure client is logged in after 15 seconds, else close connection
-        reactor.callLater(15, self.handle_timeout_callback)
+        # Ensure client is logged in after 8 seconds, else close connection
+        reactor.callLater(8, self.handle_timeout_callback)
 
     def connectionLost(self, reason: Failure) -> None:
         self.logger.info(
