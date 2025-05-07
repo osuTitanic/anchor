@@ -1,7 +1,10 @@
 
+from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
-from app import session
+
+import config
+import app
 
 @register("NAMES")
 @ensure_authenticated
@@ -11,7 +14,7 @@ def handle_names_command(
     channel_names: str
 ) -> None:
     for channel_name in channel_names.split(","):
-        if not (channel := session.channels.by_name(channel_name)):
+        if not (channel := app.session.channels.by_name(channel_name)):
             client.enqueue_channel_revoked(channel_name)
             return
 
@@ -19,3 +22,57 @@ def handle_names_command(
             channel.users,
             channel.name
         )
+
+@register("WHOIS")
+@ensure_authenticated
+def handle_whois_command(
+    client: IrcClient,
+    prefix: str,
+    local_nickname: str,
+    target_nickname: str
+) -> None:
+    if not (target := app.session.players.by_name_safe(target_nickname)):
+        client.enqueue_command(irc.ERR_NOSUCHNICK, params=[target_nickname, ":No such nick/channel"])
+        return
+
+    channel_names = [
+        channel.name
+        for channel in target.channels
+        if channel.public
+    ]
+
+    client.enqueue_command(
+        irc.RPL_WHOISUSER,
+        params=[
+            local_nickname,
+            target_nickname,
+            target.url,
+            '*',
+            f':{target.url}'
+        ]
+    )
+    client.enqueue_command(
+        irc.RPL_WHOISCHANNELS,
+        params=[
+            local_nickname,
+            target_nickname,
+            f":{' '.join(channel_names)}"
+        ]
+    )
+    client.enqueue_command(
+        irc.RPL_WHOISSERVER,
+        params=[
+            local_nickname,
+            target_nickname,
+            f'cho.{config.DOMAIN_NAME}',
+            f':anchor',
+        ]
+    )
+    client.enqueue_command(
+        irc.RPL_ENDOFWHOIS,
+        params=[
+            local_nickname,
+            target_nickname,
+            f":End of /WHOIS list."
+        ]
+    )

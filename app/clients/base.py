@@ -112,10 +112,14 @@ class Client:
             return False
 
         return True
+    
+    @property
+    def url(self) -> str:
+        return f'http://osu.{config.DOMAIN_NAME}/u/{self.id}'
 
     @property
     def link(self) -> str:
-        return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
+        return f'[{self.url} {self.name}]'
 
     @property
     def current_stats(self) -> DBStats | None:
