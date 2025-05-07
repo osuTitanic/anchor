@@ -70,7 +70,7 @@ def handle_whois_command(
         irc.RPL_WHOISUSER,
         params=[
             local_nickname,
-            target_nickname,
+            target.underscored_name,
             target.url,
             '*',
             f':{target.url}'
@@ -80,7 +80,7 @@ def handle_whois_command(
         irc.RPL_WHOISCHANNELS,
         params=[
             local_nickname,
-            target_nickname,
+            target.underscored_name,
             f":{' '.join(channel_names)}"
         ]
     )
@@ -88,7 +88,7 @@ def handle_whois_command(
         irc.RPL_WHOISSERVER,
         params=[
             local_nickname,
-            target_nickname,
+            target.underscored_name,
             f'cho.{config.DOMAIN_NAME}',
             f':anchor',
         ]
@@ -97,7 +97,7 @@ def handle_whois_command(
         irc.RPL_ENDOFWHOIS,
         params=[
             local_nickname,
-            target_nickname,
+            target.underscored_name,
             f":End of /WHOIS list."
         ]
     )
