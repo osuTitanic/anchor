@@ -40,9 +40,6 @@ def handle_user_command(
         client.close_connection("osu! IRC is disabled")
         return
 
-    if client.token != "" and client.name != "":
-        client.on_login_received()
-
 @register("PASS")
 @ensure_unauthenticated
 def handle_pass_command(
