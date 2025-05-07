@@ -223,14 +223,19 @@ class IrcClient(Client):
 
     def send_welcome_sequence(self) -> None:
         self.enqueue_welcome()
-        self.enqueue_motd(strings.ANCHOR_ASCII_ART)
+        self.enqueue_motd(
+            strings.ANCHOR_ASCII_ART +
+            f'web:    https://osu.{config.DOMAIN_NAME}\n'
+            f'status: https://status.{config.DOMAIN_NAME}\n'
+            f'github: https://github.com/osuTitanic/\n\n'
+        )
 
     def send_token_error(self) -> None:
         if self.is_osu:
             self.enqueue_banchobot_message("The token you entered was invalid. Please try again!")
             return
 
-        self.enqueue_motd(
+        self.enqueue_motd_raw(
             "Welcome to osu!Bancho.\n"
             "-\n"
             "- You are required to authenticate before accessing this service.\n"
@@ -302,7 +307,7 @@ class IrcClient(Client):
         messages = message.splitlines()
         first_message = messages.pop(0)
         last_message = messages.pop(-1)
-        
+
         self.enqueue_command(
             irc.RPL_MOTDSTART,
             params=[self.local_prefix, ":" + first_message]
@@ -313,11 +318,20 @@ class IrcClient(Client):
                 irc.RPL_MOTD,
                 params=[self.local_prefix, ":" + line]
             )
-        
+
         self.enqueue_command(
             irc.RPL_ENDOFMOTD,
             params=[self.local_prefix, ":" + last_message]
         )
+
+    def enqueue_motd_raw(self, message: str) -> None:
+        messages = message.splitlines()
+
+        for index, line in enumerate(messages):
+            self.enqueue_command(
+                irc.RPL_MOTD,
+                params=[self.local_prefix, ":" + line]
+            )
 
     def enqueue_error(self, error: str) -> None:
         if self.is_osu:
