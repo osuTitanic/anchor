@@ -14,6 +14,7 @@ from app.objects.locks import LockedSet
 from app.common import officer
 
 import logging
+import time
 import app
 
 class Channel:
@@ -38,6 +39,7 @@ class Channel:
         self.logger = logging.getLogger(self.name)
         self.users: LockedSet["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
+        self.created_at = time.time()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
