@@ -32,11 +32,8 @@ def handle_who_command(
 ) -> None:
     client.enqueue_command(
         irc.RPL_ENDOFWHO,
-        params=[
-            client.local_prefix,
-            channel,
-            f":End of /WHO list."
-        ]
+        channel,
+        f":End of /WHO list."
     )
 
 @register("WHOIS")
@@ -48,8 +45,9 @@ def handle_whois_command(
 ) -> None:
     if len(args) <= 0:
         client.enqueue_command(
-            irc.ERR_NOSUCHNICK,
-            params=[client.local_prefix, ":No such nick/channel"]
+            irc.ERR_NEEDMOREPARAMS,
+            "WHOIS",
+            f":Not enough parameters"
         )
         return
 
@@ -57,7 +55,7 @@ def handle_whois_command(
     target_nickname = args[-1]
 
     if not (target := app.session.players.by_name_safe(target_nickname)):
-        client.enqueue_command(irc.ERR_NOSUCHNICK, params=[target_nickname, ":No such nick/channel"])
+        client.enqueue_command(irc.ERR_NOSUCHNICK, target_nickname, ":No such nick/channel")
         return
 
     channel_names = [
@@ -68,36 +66,24 @@ def handle_whois_command(
 
     client.enqueue_command(
         irc.RPL_WHOISUSER,
-        params=[
-            local_nickname,
-            target.underscored_name,
-            target.url,
-            '*',
-            f':{target.url}'
-        ]
+        target.underscored_name,
+        target.url,
+        '*',
+        f':{target.url}'
     )
     client.enqueue_command(
         irc.RPL_WHOISCHANNELS,
-        params=[
-            local_nickname,
-            target.underscored_name,
-            f":{' '.join(channel_names)}"
-        ]
+        target.underscored_name,
+        f":{' '.join(channel_names)}"
     )
     client.enqueue_command(
         irc.RPL_WHOISSERVER,
-        params=[
-            local_nickname,
-            target.underscored_name,
-            f'cho.{config.DOMAIN_NAME}',
-            f':anchor',
-        ]
+        target.underscored_name,
+        f'cho.{config.DOMAIN_NAME}',
+        f':anchor',
     )
     client.enqueue_command(
         irc.RPL_ENDOFWHOIS,
-        params=[
-            local_nickname,
-            target.underscored_name,
-            f":End of /WHOIS list."
-        ]
+        target.underscored_name,
+        f":End of /WHOIS list."
     )

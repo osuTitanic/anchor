@@ -9,6 +9,7 @@ from chio import Permissions, LoginError, UserQuit, Message, QuitState
 from typing import List, Any, Iterable
 from twisted.words.protocols import irc
 from twisted.internet import reactor
+from functools import cached_property
 from copy import copy
 
 import logging
@@ -25,7 +26,7 @@ class IrcClient(Client):
         self.is_osu = False
         self.token = ""
 
-    @property
+    @cached_property
     def local_prefix(self) -> str:
         return self.resolve_username(self)
 
@@ -243,7 +244,7 @@ class IrcClient(Client):
            f"- https://osu.{config.DOMAIN_NAME}/account/settings/security\n"
             "-"
         )
-        self.enqueue_command(irc.ERR_PASSWDMISMATCH, params=[":Bad authentication token."])
+        self.enqueue_command(irc.ERR_PASSWDMISMATCH, ":Bad authentication token.")
 
     def send_restricted_error(self) -> None:
         if self.is_osu:
@@ -252,7 +253,7 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.ERR_YOUREBANNEDCREEP,
-            params=[self.local_prefix, ":You are banned from this server."]
+            ":You are banned from this server."
         )
 
     def send_inactive_error(self) -> None:
@@ -262,7 +263,7 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.ERR_NOTREGISTERED,
-            params=[self.local_prefix, ":Your account has not been activated."]
+            ":Your account has not been activated."
         )
 
     def send_maintenance_error(self) -> None:
@@ -278,8 +279,15 @@ class IrcClient(Client):
     def enqueue_line(self, line: str) -> None:
         self.logger.debug(f"-> {line}")
 
-    def enqueue_command(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
+    def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")
+        
+    def enqueue_command(self, command: str, *params, **tags) -> None:
+        self.enqueue_command_raw(
+            command,
+            params=[self.local_prefix] + list(params),
+            tags=tags
+        )
 
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
         self.logger.debug(f"<- <{target}> '{message}' ({sender})")
@@ -297,10 +305,7 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.RPL_WELCOME,
-            params=[
-                self.local_prefix,
-                ":Welcome to osu!Bancho!"
-            ]
+            ":Welcome to osu!Bancho!"
         )
 
     def enqueue_motd(self, message: str) -> None:
@@ -310,18 +315,18 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.RPL_MOTDSTART,
-            params=[self.local_prefix, ":" + first_message]
+            ":" + first_message
         )
 
         for index, line in enumerate(messages):
             self.enqueue_command(
                 irc.RPL_MOTD,
-                params=[self.local_prefix, ":" + line]
+                ":" + line
             )
 
         self.enqueue_command(
             irc.RPL_ENDOFMOTD,
-            params=[self.local_prefix, ":" + last_message]
+            ":" + last_message
         )
 
     def enqueue_motd_raw(self, message: str) -> None:
@@ -330,7 +335,7 @@ class IrcClient(Client):
         for index, line in enumerate(messages):
             self.enqueue_command(
                 irc.RPL_MOTD,
-                params=[self.local_prefix, ":" + line]
+                ":" + line
             )
 
     def enqueue_announcement(self, message: str) -> None:
@@ -340,7 +345,7 @@ class IrcClient(Client):
         messages = message.splitlines()
 
         for line in messages:
-            self.enqueue_command("NOTICE", params=[self.local_prefix, ":" + line])
+            self.enqueue_command("NOTICE", ":" + line)
 
     def enqueue_error(self, error: str = "") -> None:
         self.enqueue_announcement(error or "An unknown error occurred.")
@@ -361,19 +366,17 @@ class IrcClient(Client):
         for i in range(0, len(usernames), chunk_size):
             self.enqueue_command(
                 irc.RPL_NAMREPLY,
-                params=[
-                    self.local_prefix, "=", channel,
-                    ":" + " ".join(usernames[i:i + chunk_size])
-                ]
+                "=", channel,
+                ":" + " ".join(usernames[i:i + chunk_size])
             )
 
         self.enqueue_command(
             irc.RPL_ENDOFNAMES,
-            params=[self.local_prefix, channel, ":End of /NAMES list."]
+            channel, ":End of /NAMES list."
         )
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
-        self.enqueue_command(
+        self.enqueue_command_raw(
             "JOIN",
             self.resolve_username(player),
             params=[f":{channel}"]
@@ -383,7 +386,7 @@ class IrcClient(Client):
         if quit != QuitState.Gone:
             return
 
-        self.enqueue_command(
+        self.enqueue_command_raw(
             "QUIT",
             self.resolve_username(quit.info),
             params=[":quit"]
@@ -396,19 +399,14 @@ class IrcClient(Client):
         def enqueue() -> None:
             self.enqueue_command(
                 irc.RPL_TOPIC,
-                params=[
-                    self.local_prefix, channel_name,
-                    ":" + channel.topic
-                ]
+                channel_name,
+                ":" + channel.topic
             )
             self.enqueue_command(
                 "333", # RPL_TOPICWHOTIME
-                params=[
-                    self.local_prefix,
-                    channel.name,
-                    channel.owner,
-                    f'{int(channel.created_at)}'
-                ]
+                channel.name,
+                channel.owner,
+                f'{int(channel.created_at)}'
             )
 
         # Avoid sending the topic too early
@@ -416,8 +414,8 @@ class IrcClient(Client):
         reactor.callLater(0.1, enqueue)
 
     def enqueue_channel_revoked(self, channel: str):
-        self.enqueue_command(irc.ERR_NOSUCHCHANNEL, params=[channel, ":No such channel"])
-        
+        self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
+
     def enqueue_away_message(self, target: "Client") -> None:
         if self.id in target.away_senders:
             # Already sent the away message
@@ -425,16 +423,13 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.RPL_AWAY,
-            params=[
-                self.local_prefix,
-                target.resolve_username(self),
-                f":{target.away_message or ''}"
-            ]
+            target.resolve_username(self),
+            f":{target.away_message or ''}"
         )
         target.away_senders.add(self.id)
 
     def enqueue_mode(self, channel: Channel) -> None:
-        self.enqueue_command(
+        self.enqueue_command_raw(
             "MODE",
             params=[
                 channel.name,

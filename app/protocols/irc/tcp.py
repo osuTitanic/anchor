@@ -70,7 +70,7 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.logger.debug(f"-> {line}")
         self.sendLine(line)
 
-    def enqueue_command(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
+    def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")
         self.sendCommand(command, params, prefix, tags)
 

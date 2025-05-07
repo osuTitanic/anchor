@@ -16,24 +16,21 @@ def handle_list_command(
 ) -> None:
     client.enqueue_command(
         irc.RPL_LISTSTART,
-        params=[client.local_prefix, "Channels :Users Name"]
+        "Channels :Users Name"
     )
 
     for channel in session.channels.values():
         if channel.public and channel.can_read(client.permissions):
             client.enqueue_command(
                 irc.RPL_LIST,
-                params=[
-                    client.local_prefix,
-                    channel.name,
-                    f"{channel.user_count}",
-                    f":{channel.topic}"
-                ]
+                channel.name,
+                f"{channel.user_count}",
+                f":{channel.topic}"
             )
 
     client.enqueue_command(
         irc.RPL_LISTEND,
-        params=[client.local_prefix, ":End of /LIST"]
+        ":End of /LIST"
     )
 
 @register("TOPIC")
@@ -51,29 +48,24 @@ def handle_topic_command(
     if not channel.can_read(client.permissions):
         client.enqueue_channel_revoked(channel_name)
         return
-    
+
     if not channel.topic:
         client.enqueue_command(
             irc.RPL_NOTOPIC,
-            params=[client.local_prefix, channel.name, ":No topic is set"]
+            channel.name, ":No topic is set"
         )
         return
 
     client.enqueue_command(
         irc.RPL_TOPIC,
-        params=[
-            client.local_prefix, channel.name,
-            ":" + channel.topic
-        ]
+        channel.name,
+        ":" + channel.topic
     )
     client.enqueue_command(
         "333", # RPL_TOPICWHOTIME
-        params=[
-            client.local_prefix,
-            channel.name,
-            channel.owner,
-            f'{int(channel.created_at)}'
-        ]
+        channel.name,
+        channel.owner,
+        f'{int(channel.created_at)}'
     )
 
 @register("JOIN")
@@ -126,35 +118,23 @@ def handle_mode_command(
     is_self = args[0] == client.local_prefix
 
     if is_self:
-        return client.enqueue_command(
-            irc.RPL_UMODEIS,
-            params=[client.local_prefix, "+i"]
-        )
-    
+        return client.enqueue_command(irc.RPL_UMODEIS, "+i")
+
     if not (channel := session.channels.by_name(args[0])):
-        return client.enqueue_command(
-            irc.ERR_USERSDONTMATCH,
-            params=[client.local_prefix, ":Cannot change mode for this user"]
-        )
-    
+        return client.enqueue_command(irc.ERR_USERSDONTMATCH, ":Cannot change mode for this user")
+
     if len(args) > 1:
         return
-    
+
     client.enqueue_command(
         irc.RPL_CHANNELMODEIS,
-        params=[
-            client.local_prefix,
-            channel.name,
-            "+nt"
-        ]
+        channel.name,
+        "+nt"
     )
     client.enqueue_command(
         "329", # RPL_CREATIONTIME
-        params=[
-            client.local_prefix,
-            channel.name,
-            f'{int(channel.created_at)}'
-        ]
+        channel.name,
+        f'{int(channel.created_at)}'
     )
 
 @register("PRIVMSG")
@@ -169,7 +149,7 @@ def handle_privmsg_command(
         return
 
     if sender.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, params=[target, ":You are silenced."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target, ":You are silenced.")
         return
 
     if target_name.startswith("#"):
@@ -182,19 +162,19 @@ def handle_privmsg_command(
         return channel.send_message(sender, message)
 
     if not (target := session.players.by_name_safe(target_name)):
-        sender.enqueue_command(irc.ERR_NOSUCHNICK, params=[target_name, ":No such nick/channel"])
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":No such nick/channel")
         return
 
     if target.id == sender.id:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, params=[target_name, ":You cannot send messages to yourself."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":You cannot send messages to yourself.")
         return
 
     if target.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, params=[target_name, ":User is silenced."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is silenced.")
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, params=[target_name, ":User is in friend-only mode."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is in friend-only mode.")
         return
 
     if (time.time() - sender.last_minute_stamp) > 60:

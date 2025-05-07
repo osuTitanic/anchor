@@ -21,8 +21,10 @@ class Players(MutableMapping[int | str, Client]):
         # Lookup by id & name for osu! and irc clients
         self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
         self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
         self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
         self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
+        self.osu_safe_name_mapping: LockedDict[str, OsuClient] = LockedDict()
 
         # osu! specific
         self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
@@ -112,6 +114,7 @@ class Players(MutableMapping[int | str, Client]):
         """Append a player to the collection"""
         self.osu_id_mapping[player.id] = player
         self.osu_name_mapping[player.name] = player
+        self.osu_safe_name_mapping[player.safe_name] = player
 
         if player.protocol == 'http':
             self.osu_token_mapping[player.token] = player
@@ -131,6 +134,7 @@ class Players(MutableMapping[int | str, Client]):
 
         self.remove_from_mapping('osu_id_mapping', player.id)
         self.remove_from_mapping('osu_name_mapping', player.name)
+        self.remove_from_mapping('osu_safe_name_mapping', player.safe_name)
 
         if player.protocol == 'http':
             self.remove_from_mapping('osu_token_mapping', player.token)
@@ -139,12 +143,14 @@ class Players(MutableMapping[int | str, Client]):
         """Append a player to the collection"""
         self.irc_id_mapping[player.id] = player
         self.irc_name_mapping[player.name] = player
+        self.irc_safe_name_mapping[player.safe_name] = player
         self.send_player(player)
 
     def remove_irc(self, player: IrcClient) -> None:
         """Remove a player from the collection"""
         self.remove_from_mapping('irc_id_mapping', player.id)
         self.remove_from_mapping('irc_name_mapping', player.name)
+        self.remove_from_mapping('irc_safe_name_mapping', player.safe_name)
 
     def remove_from_mapping(self, name: str, key: str) -> None:
         try:
@@ -174,12 +180,11 @@ class Players(MutableMapping[int | str, Client]):
         )
 
     def by_name_safe(self, name: str) -> Client | None:
-        """Get a player by underscored name"""
+        """Get a player by a lowercased & underscored name"""
+        safe_name = name.lower().replace(' ', '_')
         return (
-            self.osu_name_mapping.get(name, None) or
-            self.osu_name_mapping.get(name.replace('_', ' '), None) or
-            self.irc_name_mapping.get(name, None) or
-            self.irc_name_mapping.get(name.replace('_', ' '), None)
+            self.osu_safe_name_mapping.get(safe_name, None) or
+            self.irc_safe_name_mapping.get(safe_name, None)
         )
 
     def by_token(self, token: str) -> Client | None:

@@ -2,6 +2,7 @@
 from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
+from config import DOMAIN_NAME
 
 @register("QUIT")
 def handle_quit(client: IrcClient, prefix: str, *args) -> None:
@@ -13,9 +14,13 @@ def handle_ping_command(
     prefix: str,
     *args
 ) -> None:
-    client.enqueue_command(
+    client.enqueue_command_raw(
         "PONG",
-        prefix, args
+        prefix,
+        params=[
+            f"cho.{DOMAIN_NAME}",
+            *args
+        ]
     )
 
 @register("AWAY")
@@ -32,12 +37,12 @@ def handle_away_command(
         client.away_senders.clear()
         client.enqueue_command(
             irc.RPL_NOWAWAY,
-            params=[client.local_prefix, ":You have been marked as being away"]
+            ":You have been marked as being away"
         )
         return
 
     client.away_message = None
     client.enqueue_command(
         irc.RPL_UNAWAY,
-        params=[client.local_prefix, ":You are no longer marked as being away"]
+        ":You are no longer marked as being away"
     )
