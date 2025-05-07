@@ -398,7 +398,11 @@ class IrcClient(Client):
 
         self.enqueue_command(
             irc.RPL_AWAY,
-            params=[self.local_prefix, f":{target.away_message or ''}"]
+            params=[
+                self.local_prefix,
+                target.resolve_username(self),
+                f":{target.away_message or ''}"
+            ]
         )
         target.away_senders.add(self.id)
 
