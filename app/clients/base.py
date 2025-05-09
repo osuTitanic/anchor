@@ -268,11 +268,12 @@ class Client:
                 {'rank': cached_rank}
             )
 
-            # Update rank history
-            histories.update_rank(
-                self.current_stats,
-                self.object.country
-            )
+            if not config.FROZEN_RANK_UPDATES:
+                # Update rank history
+                histories.update_rank(
+                    self.current_stats,
+                    self.object.country
+                )
 
     def reload_rankings(self) -> None:
         """Reload all non-global rankings from the cache"""
