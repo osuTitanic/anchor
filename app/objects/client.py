@@ -169,14 +169,18 @@ class OsuClientInformation:
             display_city = args[2]
             client_hash = args[3]
             friendonly_dms = args[4]
-            geolocation = location.fetch_geolocation(ip)
+        except (ValueError, IndexError):
+            pass
 
-            utc_offset = int(
-                datetime.now(
-                    pytz.timezone(geolocation.timezone)
-                ).utcoffset().total_seconds() / 60 / 60
-            )
+        geolocation = location.fetch_geolocation(ip)
 
+        utc_offset = int(
+            datetime.now(
+                pytz.timezone(geolocation.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
+
+        try:
             return OsuClientInformation(
                 geolocation,
                 ClientVersion.from_string(build_version),
@@ -185,7 +189,7 @@ class OsuClientInformation:
                 display_city = display_city == "1",
                 friendonly_dms = friendonly_dms == "1"
             )
-        except (ValueError, IndexError):
+        except (ValueError, TypeError, IndexError):
             pass
 
     @classmethod
