@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install rust toolchain
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 
 # Install python dependencies
 COPY requirements.txt ./
