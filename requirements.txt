@@ -9,7 +9,7 @@ boto3-type-annotations-with-docs==0.3.1
 boto3<2
 pytz==2025.2
 pytimeparse==1.1.8
-geoip2==5.0.1
+geoip2==5.1.0
 bcrypt==4.3.0
 sendgrid==6.11.0
 timeago==1.0.16
