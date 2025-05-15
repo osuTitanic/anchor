@@ -324,6 +324,10 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
+        self.logged_in = False
+        app.session.channels.remove(self.spectator_chat)
+        app.session.players.remove(self)
+
         if reason:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
@@ -332,10 +336,6 @@ class OsuClient(Client):
 
         if self.match:
             self.match.kick_player(self)
-
-        app.session.channels.remove(self.spectator_chat)
-        app.session.players.remove(self)
-        self.logged_in = False
 
         for channel in copy(self.channels):
             channel.remove(self)
@@ -495,8 +495,6 @@ class OsuClient(Client):
                 self.spectating.spectator_chat.remove(
                     self.spectating
                 )
-
-            self.spectating = None
         except Exception as e:
             self.logger.error(f"Failed to stop spectating: {e}")
         finally:
