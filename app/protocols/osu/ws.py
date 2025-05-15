@@ -2,7 +2,7 @@
 
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
-from twisted.internet import threads
+from twisted.internet import threads, reactor
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
@@ -104,14 +104,14 @@ class WebsocketOsuClient(WebSocketServerProtocol):
     def close_connection(self, reason: str = ""):
         self.player.close_connection(reason)
 
+    def enqueue_packet(self, packet: PacketType, *args) -> None:
+        self.player.io.write_packet(self.stream, packet, *args)
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+
     def enqueue(self, data: bytes):
         if self.state != self.STATE_OPEN:
             self.logger.debug('Cannot send data to a closed channel')
             self.player.close_connection()
             return
 
-        self.sendMessage(data, isBinary=True)
-
-    def enqueue_packet(self, packet: PacketType, *args) -> None:
-        self.player.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        reactor.callFromThread(self.sendMessage, data, True)
