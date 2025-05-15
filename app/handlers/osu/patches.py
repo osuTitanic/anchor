@@ -1,13 +1,17 @@
 
-# NOTE: This is a "hack" to get 16-player matches working
-#       by making the remaining slots locked.
-
 from config import MULTIPLAYER_MAX_SLOTS
 from copy import copy
 
-from chio.clients import b20150915
+from chio.clients import b20150915, b334
 from chio.io import *
 from chio import *
+
+# Disable the compression to avoid issues with clients
+# such as oldsu!, that just ignores it.
+b334.disable_compression = True
+
+# This is a "hack" to get 16-player matches working
+# by making the remaining slots locked.
 
 def adjust_slot_size(match: Match) -> List[MatchSlot]:
     # Limit slots to max slots
@@ -20,7 +24,6 @@ def adjust_slot_size(match: Match) -> List[MatchSlot]:
         for _ in range(remaining_slots):
             slot = MatchSlot(status=SlotStatus.Locked)
             slots.append(slot)
-
     return slots
 
 @classmethod

@@ -2,7 +2,7 @@
 
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
-from twisted.internet import threads, reactor
+from twisted.internet import threads
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
@@ -114,4 +114,4 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.player.close_connection()
             return
 
-        reactor.callFromThread(self.sendMessage, data, True)
+        self.sendMessage(data, isBinary=True)
