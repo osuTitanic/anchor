@@ -1,25 +1,73 @@
 
-from config import MULTIPLAYER_MAX_SLOTS
+from typing import Tuple, Any, List
 from copy import copy
 
 from chio.clients import b20150915, b334
 from chio.io import *
 from chio import *
 
+import config
+import time
+import app
+import os
+
 # Disable the compression to avoid issues with clients
 # such as oldsu!, that just ignores it.
 b334.disable_compression = True
 
+# To make testing chio easier, we want to log all sorts of
+# request packets the client sends to the server.
+def log_incoming_packet(version: int, packet: str, data: bytes) -> None:
+    if not data:
+        return
+
+    filename = f'{packet}_{int(time.time())}.bin'
+    folder = f'{config.DATA_PATH}/packets/{version}/'
+    filepath = os.path.join(folder, filename)
+    os.makedirs(folder, exist_ok=True)
+
+    with open(filepath, 'wb') as f:
+        f.write(data)
+        
+@classmethod
+def read_packet(cls, stream: Stream) -> Tuple[PacketType, Any]:
+    packet_id = read_u16(stream)
+    packet = cls.convert_input_packet(packet_id)
+
+    if not packet.is_client_packet:
+        raise ValueError(f"Packet '{packet.name}' is not a client packet")
+
+    packet_reader = getattr(cls, packet.handler_name, None)
+
+    if not packet_reader:
+        raise NotImplementedError(f"Version '{cls.version}' does not implement packet '{packet.name}'")
+
+    compression = read_boolean(stream)
+    packet_length = read_u32(stream)
+    packet_data = stream.read(packet_length)
+
+    if compression:
+        packet_data = decompress(packet_data)
+
+    app.session.tasks.do_later(
+        log_incoming_packet,
+        cls.version, packet.name, packet_data
+    )
+
+    return packet, packet_reader(MemoryStream(packet_data))
+
+# Apply the reader patch
+b334.read_packet = read_packet
+
 # This is a "hack" to get 16-player matches working
 # by making the remaining slots locked.
-
 def adjust_slot_size(match: Match) -> List[MatchSlot]:
     # Limit slots to max slots
-    slots = match.slots[:MULTIPLAYER_MAX_SLOTS]
+    slots = match.slots[:config.MULTIPLAYER_MAX_SLOTS]
 
-    if len(slots) < MULTIPLAYER_MAX_SLOTS:
+    if len(slots) < config.MULTIPLAYER_MAX_SLOTS:
         # Not enough slots -> fill empty slots
-        remaining_slots = MULTIPLAYER_MAX_SLOTS - len(slots)
+        remaining_slots = config.MULTIPLAYER_MAX_SLOTS - len(slots)
 
         for _ in range(remaining_slots):
             slot = MatchSlot(status=SlotStatus.Locked)
@@ -32,7 +80,7 @@ def write_match(cls, output: Match) -> bytes:
     match.slots = copy(match.slots)
     match.slots += (
         [MatchSlot(status=SlotStatus.Locked)] *
-        max(cls.slot_size - MULTIPLAYER_MAX_SLOTS, 0)
+        max(cls.slot_size - config.MULTIPLAYER_MAX_SLOTS, 0)
     )
 
     stream = MemoryStream()
@@ -115,6 +163,6 @@ def read_match(cls, stream: MemoryStream) -> Match:
     match.slots = adjust_slot_size(match)
     return match
 
-if MULTIPLAYER_MAX_SLOTS == 8:
+if config.MULTIPLAYER_MAX_SLOTS == 8:
     b20150915.read_match = read_match
     b20150915.write_match = write_match
