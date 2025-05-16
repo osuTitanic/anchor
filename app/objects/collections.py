@@ -241,7 +241,7 @@ class Players(MutableMapping[int | str, Client]):
             if not p.io.requires_status_updates:
                 # Client will request the stats
                 # themselves, when pressing F9
-                return
+                continue
 
             p.enqueue_stats(player)
 
