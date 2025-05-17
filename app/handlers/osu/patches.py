@@ -2,7 +2,7 @@
 from typing import Tuple, Any, List
 from copy import copy
 
-from chio.clients import b20150915, b334
+from chio.clients import b20150915, b334, b282
 from chio.io import *
 from chio import *
 
@@ -56,8 +56,32 @@ def read_packet(cls, stream: Stream) -> Tuple[PacketType, Any]:
 
     return packet, packet_reader(MemoryStream(packet_data))
 
+@classmethod
+def read_packet_no_compression(cls, stream: Stream) -> Tuple[PacketType, Any]:
+    packet_id = read_u16(stream)
+    packet = cls.convert_input_packet(packet_id)
+
+    if not packet.is_client_packet:
+        raise ValueError(f"Packet '{packet.name}' is not a client packet")
+
+    packet_reader = getattr(cls, packet.handler_name, None)
+
+    if not packet_reader:
+        raise NotImplementedError(f"Version '{cls.version}' does not implement packet '{packet.name}'")
+
+    packet_length = read_u32(stream)
+    packet_data = read_gzip(stream, packet_length)
+
+    app.session.tasks.do_later(
+        log_incoming_packet,
+        cls.version, packet.name, packet_data
+    )
+
+    return packet, packet_reader(MemoryStream(packet_data))
+
 # Apply the reader patch
 b334.read_packet = read_packet
+b282.read_packet = read_packet_no_compression
 
 # This is a "hack" to get 16-player matches working
 # by making the remaining slots locked.
