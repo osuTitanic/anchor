@@ -378,6 +378,7 @@ class IrcClient(Client):
             irc.RPL_ENDOFNAMES,
             channel, ":End of /NAMES list."
         )
+        usernames.clear()
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
