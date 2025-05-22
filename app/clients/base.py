@@ -73,7 +73,7 @@ class Client:
 
         if self.remaining_silence < 0:
             # User is not silenced anymore
-            self.unsilence()
+            self.unsilence(expired=True)
             return False
 
         return True
@@ -368,12 +368,12 @@ class Client:
         self.on_user_silenced()
         return silence_end
     
-    def unsilence(self) -> None:
+    def unsilence(self, expired: bool = False) -> None:
         """Unsilences the user"""
         if not self.object:
             return
 
-        infringements_helper.unsilence_user(self.object)
+        infringements_helper.unsilence_user(self.object, expired)
         self.on_user_unsilenced()
 
     def restrict(
