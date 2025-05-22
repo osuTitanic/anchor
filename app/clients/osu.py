@@ -536,7 +536,7 @@ class OsuClient(Client):
         targets.clear()
 
     def enqueue_presence(self, player: "Client") -> None:
-        if player.hidden:
+        if player.hidden and player != self:
             return
 
         player.apply_ranking(self.preferred_ranking)
@@ -546,7 +546,7 @@ class OsuClient(Client):
         if player.is_irc:
             return
 
-        if player.hidden:
+        if player.hidden and player != self:
             return
 
         player.apply_ranking(self.preferred_ranking)
