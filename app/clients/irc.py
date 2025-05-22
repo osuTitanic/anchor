@@ -360,7 +360,7 @@ class IrcClient(Client):
         self.enqueue_player(self, channel.name)
 
     def enqueue_players(self, players: Iterable[Client], channel: str = "#osu") -> None:
-        usernames = [self.resolve_username(player) for player in players]
+        usernames = [self.resolve_username(player) for player in players if not player.hidden]
         chunk_size = 10
 
         for i in range(0, len(usernames), chunk_size):
@@ -376,6 +376,9 @@ class IrcClient(Client):
         )
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
+        if player.hidden:
+            return
+
         self.enqueue_command_raw(
             "JOIN",
             f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
@@ -384,6 +387,9 @@ class IrcClient(Client):
 
     def enqueue_user_quit(self, quit: UserQuit) -> None:
         if quit.state != QuitState.Gone:
+            return
+        
+        if quit.info.hidden:
             return
 
         self.enqueue_command_raw(

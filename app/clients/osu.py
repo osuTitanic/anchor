@@ -515,22 +515,38 @@ class OsuClient(Client):
     def enqueue_players(self, players: Iterable["Client"]) -> None:
         self.enqueue_presence_bundle(players)
 
-    def enqueue_presence(self, player: "Client") -> None:
-        player.apply_ranking(self.preferred_ranking)
-        self.enqueue_packet(PacketType.BanchoUserPresence, player)
-
     def enqueue_presence_single(self, player: "Client") -> None:
+        if player.hidden:
+            return
+
         player.apply_ranking(self.preferred_ranking)
         self.enqueue_packet(PacketType.BanchoUserPresenceSingle, player)
 
     def enqueue_presence_bundle(self, players: Iterable["Client"]) -> None:
-        for player in players:
-            player.apply_ranking(self.preferred_ranking)
+        targets = []        
 
-        self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
+        for player in players:
+            if player.hidden:
+                continue
+
+            player.apply_ranking(self.preferred_ranking)
+            targets.append(player)
+
+        self.enqueue_packet(PacketType.BanchoUserPresenceBundle, targets)
+        targets.clear()
+
+    def enqueue_presence(self, player: "Client") -> None:
+        if player.hidden:
+            return
+
+        player.apply_ranking(self.preferred_ranking)
+        self.enqueue_packet(PacketType.BanchoUserPresence, player)
 
     def enqueue_stats(self, player: "OsuClient") -> None:
         if player.is_irc:
+            return
+
+        if player.hidden:
             return
 
         player.apply_ranking(self.preferred_ranking)
@@ -580,8 +596,10 @@ class OsuClient(Client):
         target.away_senders.add(self.id)
 
     def enqueue_user_quit(self, quit: UserQuit) -> None:
+        if quit.info.hidden:
+            return
+
         self.enqueue_packet(PacketType.BanchoUserQuit, quit)
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_packet(PacketType.BanchoRestart, retry_in_ms)
-        

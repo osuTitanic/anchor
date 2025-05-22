@@ -38,18 +38,21 @@ class Client:
         self.protocol = "internal"
         self.port = port
         self.address = address
+        self.logger = logging.getLogger(address)
+        
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
         self.object: DBUser | None = None
+
         self.away_message: str | None = None
         self.away_senders: Set[int] = set()
-        self.logger = logging.getLogger(address)
-        self.last_response = time.time()
-        self.last_minute_stamp = time.time()
-        self.recent_message_count = 0
         self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
+        self.last_minute_stamp = time.time()
+        self.last_response = time.time()
+        self.recent_message_count = 0
+        self.hidden = False
         self.rankings = {}
         self.groups = []
 
