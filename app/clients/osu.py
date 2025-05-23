@@ -526,17 +526,28 @@ class OsuClient(Client):
         self.enqueue_packet(PacketType.BanchoUserPresenceSingle, player)
 
     def enqueue_presence_bundle(self, players: Iterable["Client"]) -> None:
-        targets = []        
+        supports_bundles = self.io.version >= 20121224
+        chunk_size = 512
+        targets = []
 
         for player in players:
             if player.hidden:
                 continue
 
-            player.apply_ranking(self.preferred_ranking)
             targets.append(player)
 
-        self.enqueue_packet(PacketType.BanchoUserPresenceBundle, targets)
-        targets.clear()
+            if supports_bundles:
+                continue
+
+            player.apply_ranking(self.preferred_ranking)
+
+        if len(targets) <= chunk_size:
+            self.enqueue_packet(PacketType.BanchoUserPresenceBundle, targets)
+            return
+
+        for i in range(0, len(targets), chunk_size):
+            chunk = targets[i:i + chunk_size]
+            self.enqueue_packet(PacketType.BanchoUserPresenceBundle, chunk)
 
     def enqueue_presence(self, player: "Client") -> None:
         if player.hidden and player != self:

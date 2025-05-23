@@ -369,7 +369,7 @@ class IrcClient(Client):
             for player in players
             if not player.hidden or player == self
         ]
-        chunk_size = 10
+        chunk_size = 15
 
         for i in range(0, len(usernames), chunk_size):
             self.enqueue_command(
@@ -382,7 +382,6 @@ class IrcClient(Client):
             irc.RPL_ENDOFNAMES,
             channel, ":End of /NAMES list."
         )
-        usernames.clear()
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
