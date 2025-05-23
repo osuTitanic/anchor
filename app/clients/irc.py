@@ -106,7 +106,8 @@ class IrcClient(Client):
                 logins.create,
                 self.id,
                 self.address,
-                "irc"
+                "irc",
+                priority=4
             )
 
             # Update cache

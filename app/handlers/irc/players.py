@@ -21,7 +21,8 @@ def handle_names_command(
         app.session.tasks.do_later(
             client.enqueue_players,
             channel.users,
-            channel.name
+            channel.name,
+            priority=2
         )
 
 @register("WHO")

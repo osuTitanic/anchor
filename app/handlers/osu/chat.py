@@ -148,7 +148,8 @@ def send_private_message(sender: OsuClient, message: Message):
         messages.create_private,
         sender.id,
         target.id,
-        message.content[:512]
+        message.content[:512],
+        priority=3
     )
 
     sender.recent_message_count += 1

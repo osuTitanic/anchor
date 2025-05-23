@@ -329,7 +329,8 @@ def create_persistant_match(ctx: Context):
             data={
                 'user_id': ctx.player.id,
                 'name': ctx.player.name
-            }
+            },
+            priority=2
         )
 
     match.chat.send_message(
@@ -626,7 +627,8 @@ def mp_host(ctx: Context):
         data={
             'previous': {'id': target.id, 'name': target.name},
             'new': {'id': match.host_id, 'name': match.host.name}
-        }
+        },
+        priority=2
     )
 
     match.host = target
@@ -1268,7 +1270,8 @@ def report(ctx: Context) -> List | None:
         reports.create,
         target.id,
         ctx.player.id,
-        reason
+        reason,
+        priority=3
     )
 
     return ['Chat moderators have been alerted. Thanks for your help.']
@@ -1442,7 +1445,8 @@ def set_preferred_ranking(ctx: Context):
     app.session.tasks.do_later(
         users.update,
         ctx.player.id,
-        {"preferred_ranking": ranking}
+        {"preferred_ranking": ranking},
+        priority=1
     )
 
     return [f'Your ranking was set to "{ranking}".']

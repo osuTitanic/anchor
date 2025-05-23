@@ -92,7 +92,8 @@ def handle_join_command(
         session.tasks.do_later(
             client.enqueue_players,
             channel.users,
-            channel.name
+            channel.name,
+            priority=1
         )
 
 @register("PART")
@@ -212,5 +213,6 @@ def handle_privmsg_command(
         messages.create_private,
         sender.id,
         target.id,
-        message
+        message,
+        priority=3
     )

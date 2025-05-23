@@ -2,11 +2,11 @@
 from typing import Callable, Dict, Tuple, List
 from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
+from queue import PriorityQueue
 from app.common import officer
-from queue import Queue
 
+import itertools
 import logging
-import time
 
 class Tasks:
     """
@@ -16,20 +16,42 @@ class Tasks:
     def __init__(self) -> None:
         self.tasks: Dict[str, Tuple[int, Callable, bool]] = {}
         self.logger = logging.getLogger('anchor')
-        self.queue = Queue()
+        self.counter = itertools.count()
+        self.queue = PriorityQueue()
         self.shutdown = False
 
     def submit(self, interval: int, threaded: bool = False) -> Callable:
+        """
+        Decorator to register a task with a given interval and threading option.
+        """
         def wrapper(func: Callable) -> Callable:
             self.logger.info(f'Registered task: "{func.__name__}"')
             self.tasks[func.__name__] = (interval, func, threaded)
             return func
         return wrapper
 
-    def do_later(self, function: Callable, *args, **kwargs) -> None:
-        self.queue.put((function, args, kwargs))
+    def do_later(
+        self,
+        function: Callable,
+        *args,
+        priority: int = 0,
+        **kwargs
+    ) -> None:
+        """
+        Schedule a function to be called later with a given priority.
+        Lower numbers indicate higher priority.
+        """
+        if self.queue.empty():
+            # Reset counter if the queue is empty
+            self.counter = itertools.count()
+
+        count = next(self.counter)
+        self.queue.put((priority, count, function, args, kwargs))
 
     def start(self) -> None:
+        """
+        Start the task loop by scheduling all registered tasks.
+        """
         for name, (interval, func, threaded) in self.tasks.items():
             reactor.callLater(
                 max(interval, 1), self.start_task,
@@ -43,6 +65,10 @@ class Tasks:
         func: Callable,
         threaded: bool
     ) -> Deferred:
+        """
+        Internal method to start a task with the given name, interval, and function.
+        It will use the deferred system of twisted to handle the task execution & callbacks.
+        """
         def on_task_done() -> None:
             self.logger.debug(f'Task "{name}" completed')
 

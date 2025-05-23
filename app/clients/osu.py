@@ -194,7 +194,8 @@ class OsuClient(Client):
                 logins.create,
                 self.id,
                 self.address,
-                self.info.version.string
+                self.info.version.string,
+                priority=3
             )
 
             # Check for new hardware
@@ -412,7 +413,8 @@ class OsuClient(Client):
                 self.info.hash.md5,
                 self.info.hash.adapters_md5,
                 self.info.hash.uninstall_id,
-                self.info.hash.diskdrive_signature
+                self.info.hash.diskdrive_signature,
+                priority=3
             )
 
             user_matches = [match for match in matches if match.user_id == self.id]
@@ -421,7 +423,8 @@ class OsuClient(Client):
                 app.session.tasks.do_later(
                     mail.send_new_location_email,
                     self.object,
-                    self.info.ip.country_name
+                    self.info.ip.country_name,
+                    priority=4
                 )
 
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:

@@ -217,21 +217,24 @@ class Channel:
         # Filter out sender
         users = {user for user in self.users if user != sender}
 
-        self.broadcast_message(
+        app.session.tasks.do_later(
+            self.broadcast_message,
             Message(
                 sender.name,
                 message,
                 self.display_name,
                 sender.id
             ),
-            users=users
+            users=users,
+            priority=1
         )
 
         app.session.tasks.do_later(
             messages.create,
             sender.name,
             self.name,
-            message[:512]
+            message[:512],
+            priority=3
         )
 
     def handle_external_message(
@@ -240,14 +243,16 @@ class Channel:
         sender: str,
         sender_id: int
     ) -> None:
-        self.broadcast_message(
+        app.session.tasks.do_later(
+            self.broadcast_message,
             Message(
                 sender,
                 message,
                 self.display_name,
                 sender_id
             ),
-            users=self.users
+            users=self.users,
+            priority=1
         )
 
 class SpectatorChannel(Channel):

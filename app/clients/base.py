@@ -347,7 +347,8 @@ class Client:
         app.session.tasks.do_later(
             users.update,
             user_id=self.id,
-            updates={'latest_activity': datetime.now()}
+            updates={'latest_activity': datetime.now()},
+            priority=3
         )
 
     def close_connection(self, reason: str = "") -> None:
