@@ -18,7 +18,8 @@ def handle_names_command(
             client.enqueue_channel_revoked(channel_name)
             return
 
-        client.enqueue_players(
+        app.session.tasks.do_later(
+            client.enqueue_players,
             channel.users,
             channel.name
         )

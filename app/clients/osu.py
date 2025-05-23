@@ -238,7 +238,10 @@ class OsuClient(Client):
         self.enqueue_stats(self)
 
         # Enqueue other players
-        self.enqueue_players(app.session.players)
+        app.session.tasks.do_later(
+            self.enqueue_players,
+            app.session.players
+        )
 
         # Append to player collection
         app.session.players.add(self)

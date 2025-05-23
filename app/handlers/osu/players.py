@@ -68,7 +68,10 @@ def receive_updates(client: OsuClient, filter: PresenceFilter):
         else client.online_friends
     )
 
-    client.enqueue_players(players)
+    session.tasks.do_later(
+        client.enqueue_players,
+        players
+    )
 
 @register(PacketType.OsuPresenceRequest)
 def presence_request(client: OsuClient, players: List[int]):

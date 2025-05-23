@@ -141,7 +141,11 @@ class IrcClient(Client):
             channel.add(self)
 
             # Send users in channel
-            self.enqueue_players(channel.users, channel.name)
+            app.session.tasks.do_later(
+                self.enqueue_players,
+                channel.users,
+                channel.name
+            )
 
     def on_login_failed(self, reason: LoginError) -> None:
         mapping = {
