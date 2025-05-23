@@ -531,7 +531,7 @@ class OsuClient(Client):
         chunk = []
 
         for player in players:
-            if player.hidden:
+            if player.hidden and player != self:
                 continue
 
             if not supports_bundles:
@@ -539,9 +539,11 @@ class OsuClient(Client):
 
             chunk.append(player)
 
-            if len(chunk) >= chunk_size:
-                self.enqueue_packet(PacketType.BanchoUserPresenceBundle, chunk)
-                chunk = []
+            if len(chunk) < chunk_size:
+                continue
+
+            self.enqueue_packet(PacketType.BanchoUserPresenceBundle, chunk)
+            chunk = []
 
         if not chunk:
             return

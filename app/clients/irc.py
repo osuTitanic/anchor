@@ -364,18 +364,29 @@ class IrcClient(Client):
         self.enqueue_player(self, channel.name)
 
     def enqueue_players(self, players: Iterable[Client], channel: str = "#osu") -> None:
-        usernames = [
-            self.resolve_username(player)
-            for player in players
-            if not player.hidden or player == self
-        ]
         chunk_size = 15
+        chunk = []
 
-        for i in range(0, len(usernames), chunk_size):
+        for player in players:
+            if player.hidden and player != self:
+                continue
+
+            chunk.append(self.resolve_username(player))
+
+            if len(chunk) < chunk_size:
+                continue
+
             self.enqueue_command(
                 irc.RPL_NAMREPLY,
-                "=", channel,
-                ":" + " ".join(usernames[i:i + chunk_size])
+                "=", channel, ":" + " ".join(chunk)
+            )
+            chunk = []
+
+        if chunk:
+            # Send remaining players
+            self.enqueue_command(
+                irc.RPL_NAMREPLY,
+                "=", channel, ":" + " ".join(chunk)
             )
 
         self.enqueue_command(
