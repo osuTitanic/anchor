@@ -1,5 +1,6 @@
 
 from app.session import tasks, logger
+from app.common import officer
 
 @tasks.submit(interval=1, threaded=True)
 def execute_task_queue():
@@ -20,7 +21,7 @@ def execute_task_queue():
                 future = tasks.do_later_futures.pop(0)
                 future.result(timeout=30)
         except Exception as e:
-            logger.error(f"Failed to execute '{func.__name__}': {e}")
+            officer.call(f"Failed to execute '{func.__name__}'.", exc_info=e)
         finally:
             tasks.do_later_queue.task_done()
 
