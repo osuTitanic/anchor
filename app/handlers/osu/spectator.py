@@ -102,7 +102,7 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     # are too many spectators
     session.tasks.do_later(
         broadcast_frames,
-        client. bundle,
+        client, bundle,
         priority=1
     )
 
