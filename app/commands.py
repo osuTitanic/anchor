@@ -1451,6 +1451,22 @@ def set_preferred_ranking(ctx: Context):
 
     return [f'Your ranking was set to "{ranking}".']
 
+@command(['asklevi', 'doyoureallywanttoaskpeppy'])
+def asklevi(ctx: Context):
+    """- Makes you able to message Levi, if he's online"""
+    if not (levi := app.session.players.by_id(2)):
+        return ['Levi is not online right now.']
+
+    if levi is ctx.player:
+        return ["Oh, hey, it's you. Didn't know you were this lonely."]
+
+    ctx.player.enqueue_message(
+        "You can message me now, maybe i'll even respond.",
+        levi, levi.name
+    )
+
+    return [f'You can now message {levi.name}.']
+
 @command(['monitor'], ['Admins'])
 def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
