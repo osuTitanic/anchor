@@ -14,6 +14,16 @@ class BanchoBot(IrcClient):
     def __init__(self):
         super().__init__('127.0.0.1', 13381)
         self.initialize()
+        
+    def process_and_send_response(
+        self,
+        message: str,
+        sender: Client,
+        target: Channel | Client
+    ) -> None:
+        self.send_command_response(
+            *self.process_command(message, sender, target)
+        )
 
     def process_command(
         self,

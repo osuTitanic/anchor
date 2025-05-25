@@ -196,8 +196,9 @@ class Channel:
 
         if message.startswith('!') and not ignore_commands:
             # A command was executed
-            return app.session.banchobot.send_command_response(
-                *app.session.banchobot.process_command(message, sender, self)
+            return app.session.tasks.do_later(
+                app.session.banchobot.process_and_send_response,
+                message, sender, self, priority=1
             )
 
         has_bad_words = any([

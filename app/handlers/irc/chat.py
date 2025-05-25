@@ -195,8 +195,9 @@ def handle_privmsg_command(
     has_command_prefix = parsed_message.startswith('!')
 
     if has_command_prefix or target is session.banchobot:
-        return session.banchobot.send_command_response(
-            *session.banchobot.process_command(parsed_message, sender, target)
+        return session.tasks.do_later(
+            session.banchobot.process_and_send_response,
+            parsed_message, sender, target, priority=1
         )
 
     if len(message) > 512:
