@@ -95,5 +95,16 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     if not client.spectators:
         return
 
+    if len(client.spectators) <= 256:
+        return broadcast_frames()
+
+    # Send them to the queue, if there
+    # are too many spectators
+    session.tasks.do_later(
+        broadcast_frames,
+        priority=1
+    )
+
+def broadcast_frames(client: OsuClient, bundle: ReplayFrameBundle):
     for p in client.spectators:
         p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
