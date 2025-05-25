@@ -236,7 +236,7 @@ def spectate_user(ctx: Context):
         player.status.mode = target.status.mode
         player.status.beatmap_checksum = target.status.beatmap_checksum
         player.status.beatmap_id = target.status.beatmap_id
-        time.sleep(0.05)
+        time.sleep(0.01)
 
     return [f'All online players are now spectating {target.name}.']
 
