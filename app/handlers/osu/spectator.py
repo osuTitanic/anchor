@@ -47,10 +47,10 @@ def start_spectating(client: OsuClient, player_id: int):
     # Enqueue to target
     target.spectators.add(client)
     target.enqueue_packet(PacketType.BanchoSpectatorJoined, client.id)
-    target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
 
     # Check if target joined #spectator
     if target not in target.spectator_chat.users and not client.is_tourney_client:
+        target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
         target.spectator_chat.add(target)
 
 @register(PacketType.OsuStopSpectating)
@@ -73,8 +73,6 @@ def stop_spectating(client: OsuClient):
     # Enqueue to others
     for p in client.spectating.spectators:
         p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, client.id)
-
-    # TODO: Kick from spectator channel if no spectators left?
 
     client.logger.info(f'Stopped spectating "{client.spectating.name}".')
     client.spectating = None
