@@ -14,6 +14,7 @@ from chio import (
     MatchType,
     SlotTeam,
     TeamType,
+    Status,
     Mods
 )
 
@@ -34,6 +35,7 @@ from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import Match, MatchTimer
+from .handlers.osu import spectator
 from .clients.base import Client
 from .faq import faq
 
@@ -201,6 +203,42 @@ def execute_console(ctx: Context):
 
     input = ' '.join(ctx.args)
     return [str(eval(input))]
+
+@system_commands.register(['spectateuser', 'spectate'], ['Admins'])
+def spectate_user(ctx: Context):
+    """<name> - Force all online players to spectate a user"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:])
+    target = app.session.players.by_name_safe(name)
+
+    if not target:
+        return [f'Could not find the player "{name}".']
+    
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
+
+    for player in app.session.players.osu_clients:
+        if player.is_admin or player.is_tourney_client:
+            continue
+
+        if player is target:
+            continue
+
+        if player.spectating:
+            continue
+
+        spectator.start_spectating(player, target.id)
+        player.status.action = Status.Watching
+        player.status.text = target.status.text
+        player.status.mods = target.status.mods
+        player.status.mode = target.status.mode
+        player.status.beatmap_checksum = target.status.beatmap_checksum
+        player.status.beatmap_id = target.status.beatmap_id
+        time.sleep(0.05)
+
+    return [f'All online players are now spectating {target.name}.']
 
 def resolve_match(ctx: Context) -> Match | None:
     if type(ctx.target) != MultiplayerChannel:
