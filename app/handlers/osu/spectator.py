@@ -16,7 +16,7 @@ def start_spectating(client: OsuClient, player_id: int):
     if player_id == client.id:
         client.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
-    
+
     if player_id == -1:
         # This can happen on tourney clients
         return
