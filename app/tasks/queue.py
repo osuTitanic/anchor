@@ -19,7 +19,7 @@ def execute_task_queue():
             if len(tasks.do_later_futures) >= tasks.do_later_workers:
                 # Wait for first future to complete, cancel it if necessary
                 future = tasks.do_later_futures.pop(0)
-                future.result(timeout=30)
+                future.result(timeout=120)
         except Exception as e:
             officer.call(f"Failed to execute '{func.__name__}'.", exc_info=e)
         finally:
