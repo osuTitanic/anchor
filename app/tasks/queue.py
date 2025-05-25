@@ -1,18 +1,29 @@
 
-import app
+from app.session import tasks, logger
 
-@app.session.tasks.submit(interval=1, threaded=True)
+@tasks.submit(interval=1, threaded=True)
 def execute_task_queue():
-    """Execute all tasks submitted via. tasks.do_later(...), e.g. database writes."""
+    """
+    Execute all tasks submitted via. tasks.do_later(...), e.g. database writes.
+    """
     while True:
         try:
-            _, _, func, args, kwargs = app.session.tasks.queue.get()
-            func(*args, **kwargs)
-        except Exception as e:
-            app.session.logger.error(f"Failed to execute '{func.__name__}': {e}")
-        finally:
-            app.session.tasks.queue.task_done()
+            # Get the latest task, sorted by priority
+            _, _, func, args, kwargs = tasks.do_later_queue.get()
 
-        if app.session.tasks.shutdown:
-            app.session.logger.debug("Shutting down task queue.")
+            # Submit task to executor
+            future = tasks.do_later_executor.submit(func, *args, **kwargs)
+            tasks.do_later_futures.append(future)
+
+            if len(tasks.do_later_futures) >= tasks.do_later_workers:
+                # Wait for first future to complete, cancel it if necessary
+                future = tasks.do_later_futures.pop(0)
+                future.result(timeout=30)
+        except Exception as e:
+            logger.error(f"Failed to execute '{func.__name__}': {e}")
+        finally:
+            tasks.do_later_queue.task_done()
+
+        if tasks.shutdown:
+            logger.debug("Shutting down task queue.")
             break

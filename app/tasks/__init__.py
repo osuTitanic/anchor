@@ -1,4 +1,5 @@
 
+from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Callable, Dict, Tuple, List
 from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
@@ -7,6 +8,7 @@ from app.common import officer
 
 import itertools
 import logging
+import config
 
 class Tasks:
     """
@@ -17,8 +19,14 @@ class Tasks:
         self.tasks: Dict[str, Tuple[int, Callable, bool]] = {}
         self.logger = logging.getLogger('anchor')
         self.counter = itertools.count()
-        self.queue = PriorityQueue()
         self.shutdown = False
+
+        # Initialize "do later" queue which offloads tasks
+        # that don't need to be executed immediately
+        self.do_later_workers = config.BANCHO_WORKERS // 4
+        self.do_later_executor = ThreadPoolExecutor(max_workers=self.do_later_workers)
+        self.do_later_futures: List[Future] = []
+        self.do_later_queue = PriorityQueue()
 
     def submit(self, interval: int, threaded: bool = False) -> Callable:
         """
@@ -41,12 +49,12 @@ class Tasks:
         Schedule a function to be called later with a given priority.
         Lower numbers indicate higher priority.
         """
-        if self.queue.empty():
+        if self.do_later_queue.empty():
             # Reset counter if the queue is empty
             self.counter = itertools.count()
 
         count = next(self.counter)
-        self.queue.put((priority, count, function, args, kwargs))
+        self.do_later_queue.put((priority, count, function, args, kwargs))
 
     def start(self) -> None:
         """
