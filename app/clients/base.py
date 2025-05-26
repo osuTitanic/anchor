@@ -38,17 +38,21 @@ class Client:
         self.protocol = "internal"
         self.port = port
         self.address = address
+        self.logger = logging.getLogger(address)
+        
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
         self.object: DBUser | None = None
+
         self.away_message: str | None = None
-        self.logger = logging.getLogger(address)
-        self.last_response = time.time()
-        self.last_minute_stamp = time.time()
-        self.recent_message_count = 0
+        self.away_senders: Set[int] = set()
         self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
+        self.last_minute_stamp = time.time()
+        self.last_response = time.time()
+        self.recent_message_count = 0
+        self.hidden = False
         self.rankings = {}
         self.groups = []
 
@@ -69,7 +73,7 @@ class Client:
 
         if self.remaining_silence < 0:
             # User is not silenced anymore
-            self.unsilence()
+            self.unsilence(expired=True)
             return False
 
         return True
@@ -112,10 +116,14 @@ class Client:
             return False
 
         return True
+    
+    @property
+    def url(self) -> str:
+        return f'http://osu.{config.DOMAIN_NAME}/u/{self.id}'
 
     @property
     def link(self) -> str:
-        return f'[http://osu.{config.DOMAIN_NAME}/u/{self.id} {self.name}]'
+        return f'[{self.url} {self.name}]'
 
     @property
     def current_stats(self) -> DBStats | None:
@@ -263,11 +271,12 @@ class Client:
                 {'rank': cached_rank}
             )
 
-            # Update rank history
-            histories.update_rank(
-                self.current_stats,
-                self.object.country
-            )
+            if not config.FROZEN_RANK_UPDATES:
+                # Update rank history
+                histories.update_rank(
+                    self.current_stats,
+                    self.object.country
+                )
 
     def reload_rankings(self) -> None:
         """Reload all non-global rankings from the cache"""
@@ -338,7 +347,8 @@ class Client:
         app.session.tasks.do_later(
             users.update,
             user_id=self.id,
-            updates={'latest_activity': datetime.now()}
+            updates={'latest_activity': datetime.now()},
+            priority=3
         )
 
     def close_connection(self, reason: str = "") -> None:
@@ -359,12 +369,12 @@ class Client:
         self.on_user_silenced()
         return silence_end
     
-    def unsilence(self) -> None:
+    def unsilence(self, expired: bool = False) -> None:
         """Unsilences the user"""
         if not self.object:
             return
 
-        infringements_helper.unsilence_user(self.object)
+        infringements_helper.unsilence_user(self.object, expired)
         self.on_user_unsilenced()
 
     def restrict(
@@ -453,6 +463,9 @@ class Client:
         ...
 
     def enqueue_message_object(self, message: Message) -> None:
+        ...
+
+    def enqueue_away_message(self, target: "Client") -> None:
         ...
 
     def enqueue_announcement(self, message: str) -> None:

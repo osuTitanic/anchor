@@ -14,6 +14,7 @@ from chio import (
     MatchType,
     SlotTeam,
     TeamType,
+    Status,
     Mods
 )
 
@@ -34,6 +35,7 @@ from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
 from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import Match, MatchTimer
+from .handlers.osu import spectator
 from .clients.base import Client
 from .faq import faq
 
@@ -202,6 +204,42 @@ def execute_console(ctx: Context):
     input = ' '.join(ctx.args)
     return [str(eval(input))]
 
+@system_commands.register(['spectateuser', 'spectate'], ['Admins'])
+def spectate_user(ctx: Context):
+    """<name> - Force all online players to spectate a user"""
+    if len(ctx.args) < 1:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <name>']
+
+    name = ' '.join(ctx.args[0:])
+    target = app.session.players.by_name_safe(name)
+
+    if not target:
+        return [f'Could not find the player "{name}".']
+    
+    if target.is_irc:
+        return ['This player is connected via. IRC.']
+
+    for player in app.session.players.osu_clients:
+        if player.is_admin or player.is_tourney_client:
+            continue
+
+        if player is target:
+            continue
+
+        if player.spectating:
+            continue
+
+        spectator.start_spectating(player, target.id)
+        player.status.action = Status.Watching
+        player.status.text = target.status.text
+        player.status.mods = target.status.mods
+        player.status.mode = target.status.mode
+        player.status.beatmap_checksum = target.status.beatmap_checksum
+        player.status.beatmap_id = target.status.beatmap_id
+        time.sleep(0.01)
+
+    return [f'All online players are now spectating {target.name}.']
+
 def resolve_match(ctx: Context) -> Match | None:
     if type(ctx.target) != MultiplayerChannel:
         # User is not inside a multiplayer channel
@@ -329,7 +367,8 @@ def create_persistant_match(ctx: Context):
             data={
                 'user_id': ctx.player.id,
                 'name': ctx.player.name
-            }
+            },
+            priority=2
         )
 
     match.chat.send_message(
@@ -626,7 +665,8 @@ def mp_host(ctx: Context):
         data={
             'previous': {'id': target.id, 'name': target.name},
             'new': {'id': match.host_id, 'name': match.host.name}
-        }
+        },
+        priority=2
     )
 
     match.host = target
@@ -1268,7 +1308,8 @@ def report(ctx: Context) -> List | None:
         reports.create,
         target.id,
         ctx.player.id,
-        reason
+        reason,
+        priority=3
     )
 
     return ['Chat moderators have been alerted. Thanks for your help.']
@@ -1442,10 +1483,27 @@ def set_preferred_ranking(ctx: Context):
     app.session.tasks.do_later(
         users.update,
         ctx.player.id,
-        {"preferred_ranking": ranking}
+        {"preferred_ranking": ranking},
+        priority=1
     )
 
     return [f'Your ranking was set to "{ranking}".']
+
+@command(['asklevi', 'doyoureallywanttoaskpeppy'])
+def asklevi(ctx: Context):
+    """- Makes you able to message Levi, if he's online"""
+    if not (levi := app.session.players.by_id(2)):
+        return ['Levi is not online right now.']
+
+    if levi is ctx.player:
+        return ["Oh, hey, it's you. Didn't know you were this lonely."]
+
+    ctx.player.enqueue_message(
+        "You can message me now, maybe i'll even respond.",
+        levi, levi.name
+    )
+
+    return [f'You can now message {levi.name}.']
 
 @command(['monitor'], ['Admins'])
 def monitor(ctx: Context) -> List | None:

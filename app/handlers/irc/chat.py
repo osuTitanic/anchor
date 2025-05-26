@@ -1,24 +1,11 @@
 
-from typing import List, Optional, Callable
 from twisted.words.protocols import irc
+from app.handlers.irc.decorators import *
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app import session
 
 import time
-
-def register(command: str) -> Callable:
-    def wrapper(func) -> Callable:
-        session.irc_handlers[command] = func
-        return func
-    return wrapper
-
-def ensure_authenticated(func: Callable) -> Callable:
-    def wrapper(client: IrcClient, *args, **kwargs) -> None:
-        if not client.logged_in:
-            return
-        return func(client, *args, **kwargs)
-    return wrapper
 
 @register("LIST")
 @ensure_authenticated
@@ -29,24 +16,21 @@ def handle_list_command(
 ) -> None:
     client.enqueue_command(
         irc.RPL_LISTSTART,
-        params=[client.local_prefix, "Channels :Users Name"]
+        "Channels :Users Name"
     )
 
     for channel in session.channels.values():
         if channel.public and channel.can_read(client.permissions):
             client.enqueue_command(
                 irc.RPL_LIST,
-                params=[
-                    client.local_prefix,
-                    channel.name,
-                    f"{channel.user_count}",
-                    f":{channel.topic}"
-                ]
+                channel.name,
+                f"{channel.user_count}",
+                f":{channel.topic}"
             )
 
     client.enqueue_command(
         irc.RPL_LISTEND,
-        params=[client.local_prefix, ":End of /LIST"]
+        ":End of /LIST"
     )
 
 @register("TOPIC")
@@ -65,12 +49,23 @@ def handle_topic_command(
         client.enqueue_channel_revoked(channel_name)
         return
 
+    if not channel.topic:
+        client.enqueue_command(
+            irc.RPL_NOTOPIC,
+            channel.name, ":No topic is set"
+        )
+        return
+
     client.enqueue_command(
         irc.RPL_TOPIC,
-        params=[
-            client.local_prefix, channel.name,
-            ":" + channel.topic
-        ]
+        channel.name,
+        ":" + channel.topic
+    )
+    client.enqueue_command(
+        "333", # RPL_TOPICWHOTIME
+        channel.name,
+        channel.owner,
+        f'{int(channel.created_at)}'
     )
 
 @register("JOIN")
@@ -94,7 +89,12 @@ def handle_join_command(
         if client not in channel.users:
             return
 
-        client.enqueue_players(channel.users, channel.name)
+        session.tasks.do_later(
+            client.enqueue_players,
+            channel.users,
+            channel.name,
+            priority=1
+        )
 
 @register("PART")
 @ensure_authenticated
@@ -111,6 +111,37 @@ def handle_part_command(
 
         channel.remove(client)
 
+@register("MODE")
+def handle_mode_command(
+    client: IrcClient,
+    prefix: str,
+    *args
+) -> None:
+    if len(args) <= 0:
+        return
+
+    is_self = args[0] == client.local_prefix
+
+    if is_self:
+        return client.enqueue_command(irc.RPL_UMODEIS, "+i")
+
+    if not (channel := session.channels.by_name(args[0])):
+        return client.enqueue_command(irc.ERR_USERSDONTMATCH, ":Cannot change mode for this user")
+
+    if len(args) > 1:
+        return
+
+    client.enqueue_command(
+        irc.RPL_CHANNELMODEIS,
+        channel.name,
+        "+nt"
+    )
+    client.enqueue_command(
+        "329", # RPL_CREATIONTIME
+        channel.name,
+        f'{int(channel.created_at)}'
+    )
+
 @register("PRIVMSG")
 def handle_privmsg_command(
     sender: IrcClient,
@@ -123,7 +154,7 @@ def handle_privmsg_command(
         return
 
     if sender.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target, ":You are silenced."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target, ":You are silenced.")
         return
 
     if target_name.startswith("#"):
@@ -136,19 +167,19 @@ def handle_privmsg_command(
         return channel.send_message(sender, message)
 
     if not (target := session.players.by_name_safe(target_name)):
-        sender.enqueue_command(irc.ERR_NOSUCHNICK, [target_name, ":No such nick/channel"])
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":No such nick/channel")
         return
 
     if target.id == sender.id:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":You cannot send messages to yourself."])
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":You cannot send messages to yourself.")
         return
 
     if target.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":User is silenced."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is silenced.")
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, [target_name, ":User is in friend-only mode."])
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is in friend-only mode.")
         return
 
     if (time.time() - sender.last_minute_stamp) > 60:
@@ -164,8 +195,9 @@ def handle_privmsg_command(
     has_command_prefix = parsed_message.startswith('!')
 
     if has_command_prefix or target is session.banchobot:
-        return session.banchobot.send_command_response(
-            *session.banchobot.process_command(parsed_message, sender, target)
+        return session.tasks.do_later(
+            session.banchobot.process_and_send_response,
+            parsed_message, sender, target, priority=1
         )
 
     if len(message) > 512:
@@ -173,11 +205,7 @@ def handle_privmsg_command(
         message = message[:497] + '... (truncated)'
 
     if target.away_message:
-        sender.enqueue_message(
-            f'\x01ACTION is away: {target.away_message}\x01',
-            target,
-            target.name
-        )
+        return sender.enqueue_away_message(target)
 
     sender.recent_message_count += 1
     sender.logger.info(f'[PM -> {target.name}]: {message}')
@@ -186,5 +214,6 @@ def handle_privmsg_command(
         messages.create_private,
         sender.id,
         target.id,
-        message
+        message,
+        priority=3
     )

@@ -104,6 +104,10 @@ class WebsocketOsuClient(WebSocketServerProtocol):
     def close_connection(self, reason: str = ""):
         self.player.close_connection(reason)
 
+    def enqueue_packet(self, packet: PacketType, *args) -> None:
+        self.player.io.write_packet(self.stream, packet, *args)
+        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+
     def enqueue(self, data: bytes):
         if self.state != self.STATE_OPEN:
             self.logger.debug('Cannot send data to a closed channel')
@@ -111,7 +115,3 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             return
 
         self.sendMessage(data, isBinary=True)
-
-    def enqueue_packet(self, packet: PacketType, *args) -> None:
-        self.player.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')

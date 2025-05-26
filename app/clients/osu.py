@@ -194,7 +194,8 @@ class OsuClient(Client):
                 logins.create,
                 self.id,
                 self.address,
-                self.info.version.string
+                self.info.version.string,
+                priority=3
             )
 
             # Check for new hardware
@@ -238,7 +239,10 @@ class OsuClient(Client):
         self.enqueue_stats(self)
 
         # Enqueue other players
-        self.enqueue_players(app.session.players)
+        app.session.tasks.do_later(
+            self.enqueue_players,
+            app.session.players
+        )
 
         # Append to player collection
         app.session.players.add(self)
@@ -324,6 +328,10 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
+        self.logged_in = False
+        app.session.channels.remove(self.spectator_chat)
+        app.session.players.remove(self)
+
         if reason:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
@@ -332,10 +340,6 @@ class OsuClient(Client):
 
         if self.match:
             self.match.kick_player(self)
-
-        app.session.channels.remove(self.spectator_chat)
-        app.session.players.remove(self)
-        self.logged_in = False
 
         for channel in copy(self.channels):
             channel.remove(self)
@@ -409,7 +413,8 @@ class OsuClient(Client):
                 self.info.hash.md5,
                 self.info.hash.adapters_md5,
                 self.info.hash.uninstall_id,
-                self.info.hash.diskdrive_signature
+                self.info.hash.diskdrive_signature,
+                priority=3
             )
 
             user_matches = [match for match in matches if match.user_id == self.id]
@@ -418,7 +423,8 @@ class OsuClient(Client):
                 app.session.tasks.do_later(
                     mail.send_new_location_email,
                     self.object,
-                    self.info.ip.country_name
+                    self.info.ip.country_name,
+                    priority=4
                 )
 
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:
@@ -495,8 +501,6 @@ class OsuClient(Client):
                 self.spectating.spectator_chat.remove(
                     self.spectating
                 )
-
-            self.spectating = None
         except Exception as e:
             self.logger.error(f"Failed to stop spectating: {e}")
         finally:
@@ -517,22 +521,51 @@ class OsuClient(Client):
     def enqueue_players(self, players: Iterable["Client"]) -> None:
         self.enqueue_presence_bundle(players)
 
-    def enqueue_presence(self, player: "Client") -> None:
-        player.apply_ranking(self.preferred_ranking)
-        self.enqueue_packet(PacketType.BanchoUserPresence, player)
-
     def enqueue_presence_single(self, player: "Client") -> None:
+        if player.hidden:
+            return
+
         player.apply_ranking(self.preferred_ranking)
         self.enqueue_packet(PacketType.BanchoUserPresenceSingle, player)
 
     def enqueue_presence_bundle(self, players: Iterable["Client"]) -> None:
-        for player in players:
-            player.apply_ranking(self.preferred_ranking)
+        supports_bundles = self.io.version >= 20121224
+        chunk_size = 512
+        chunk = []
 
-        self.enqueue_packet(PacketType.BanchoUserPresenceBundle, players)
+        for player in players:
+            if player.hidden and player != self:
+                continue
+
+            if not supports_bundles:
+                player.apply_ranking(self.preferred_ranking)
+
+            chunk.append(player)
+
+            if len(chunk) < chunk_size:
+                continue
+
+            self.enqueue_packet(PacketType.BanchoUserPresenceBundle, chunk)
+            chunk = []
+
+        if not chunk:
+            return
+
+        # Send remaining players, if any are remaining
+        self.enqueue_packet(PacketType.BanchoUserPresenceBundle, chunk)
+
+    def enqueue_presence(self, player: "Client") -> None:
+        if player.hidden and player != self:
+            return
+
+        player.apply_ranking(self.preferred_ranking)
+        self.enqueue_packet(PacketType.BanchoUserPresence, player)
 
     def enqueue_stats(self, player: "OsuClient") -> None:
         if player.is_irc:
+            return
+
+        if player.hidden and player != self:
             return
 
         player.apply_ranking(self.preferred_ranking)
@@ -569,7 +602,22 @@ class OsuClient(Client):
     def enqueue_message_object(self, message: Message) -> None:
         self.enqueue_packet(PacketType.BanchoMessage, message)
 
+    def enqueue_away_message(self, target: "Client") -> None:
+        if self.id in target.away_senders:
+            # Already sent the away message
+            return
+
+        self.enqueue_message(
+            f'\x01ACTION is away: {target.away_message}\x01',
+            target,
+            target.name
+        )
+        target.away_senders.add(self.id)
+
     def enqueue_user_quit(self, quit: UserQuit) -> None:
+        if quit.info.hidden:
+            return
+
         self.enqueue_packet(PacketType.BanchoUserQuit, quit)
 
     def enqueue_server_restart(self, retry_in_ms: int) -> None:

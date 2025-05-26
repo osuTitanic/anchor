@@ -156,16 +156,16 @@ class OsuClientInformation:
         if len(args := line.split('|')) < 2:
             return OsuClientInformation.empty()
 
-        # Sent in every client version
-        build_version = args[0]
-        utc_offset = args[1]
-
-        # Not sent in every client version
-        client_hash = ClientHash.empty(build_version).string
-        friendonly_dms = '0'
-        display_city = '0'
-
         try:
+            # Sent in every client version
+            build_version = args[0]
+            utc_offset = args[1]
+
+            # Not sent in every client version
+            client_hash = ClientHash.empty(build_version).string
+            friendonly_dms = '0'
+            display_city = '0'
+
             display_city = args[2]
             client_hash = args[3]
             friendonly_dms = args[4]
@@ -180,14 +180,17 @@ class OsuClientInformation:
             ).utcoffset().total_seconds() / 60 / 60
         )
 
-        return OsuClientInformation(
-            geolocation,
-            ClientVersion.from_string(build_version),
-            ClientHash.from_string(client_hash),
-            utc_offset,
-            display_city = display_city == "1",
-            friendonly_dms = friendonly_dms == "1"
-        )
+        try:
+            return OsuClientInformation(
+                geolocation,
+                ClientVersion.from_string(build_version),
+                ClientHash.from_string(client_hash),
+                utc_offset,
+                display_city = display_city == "1",
+                friendonly_dms = friendonly_dms == "1"
+            )
+        except (ValueError, TypeError, IndexError):
+            pass
 
     @classmethod
     def empty(cls) -> "OsuClientInformation":

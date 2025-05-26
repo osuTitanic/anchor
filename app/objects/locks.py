@@ -75,16 +75,19 @@ class LockedSet(Set[T]):
         self.lock = ReadWriteLock()
 
     def __iter__(self) -> Iterable[T]:
-        with self.lock.read_context():
-            return iter(self.set)
+        return iter(self.snapshot())
 
     def __len__(self) -> int:
-        with self.lock.read_context():
-            return len(self.set)
+        return len(self.snapshot())
 
     def __contains__(self, item: T) -> bool:
+        return item in self.snapshot()
+
+    def snapshot(self) -> Set[T]:
+        """Returns a snapshot of the set."""
         with self.lock.read_context():
-            return item in self.set
+            items = set(self.set)
+        return items
 
     def add(self, item: T) -> None:
         with self.lock.write_context():

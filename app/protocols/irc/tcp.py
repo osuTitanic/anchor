@@ -25,13 +25,14 @@ class TcpIrcProtocol(IrcClient, IRC):
 
     def connectionMade(self) -> None:
         self.logger.info(f'-> <{self.address}:{self.port}> (IRC)')
+        self.connected = True
 
         if not config.IRC_ENABLED:
             self.enqueue_error("IRC connections have been disabled. Please check back later!")
             self.close_connection('IRC is disabled')
 
-        # Ensure client is logged in after 90 seconds, else close connection
-        reactor.callLater(5, self.handle_timeout_callback)
+        # Ensure client is logged in after 8 seconds, else close connection
+        reactor.callLater(8, self.handle_timeout_callback)
 
     def connectionLost(self, reason: Failure) -> None:
         self.logger.info(
@@ -40,6 +41,13 @@ class TcpIrcProtocol(IrcClient, IRC):
             f'<{self.address}> -> Lost connection: {reason.getErrorMessage()}'
         )
         self.close_connection()
+
+    def dataReceived(self, data: Any) -> None:
+        try:
+            return super().dataReceived(data)
+        except UnicodeDecodeError:
+            self.logger.warning(f"Failed to decode irc request ({len(data)} bytes)")
+            self.close_connection("Invalid data received")
 
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
         deferred = threads.deferToThread(
@@ -62,7 +70,7 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.logger.debug(f"-> {line}")
         self.sendLine(line)
 
-    def enqueue_command(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
+    def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")
         self.sendCommand(command, params, prefix, tags)
 

@@ -39,7 +39,7 @@ def setup():
     for channel in channels.fetch_all():
         app.session.logger.info(f'  - {channel.name}')
         app.session.channels.add(
-            Channel(
+            channel := Channel(
                 channel.name,
                 channel.topic,
                 'BanchoBot',
@@ -48,6 +48,7 @@ def setup():
                 public=True
             )
         )
+        app.session.banchobot.channels.add(channel)
 
     app.session.logger.info('Loading tasks...')
     importlib.import_module('app.tasks.queue')

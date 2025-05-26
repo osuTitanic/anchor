@@ -16,7 +16,7 @@ def start_spectating(client: OsuClient, player_id: int):
     if player_id == client.id:
         client.logger.warning('Failed to start spectating: Player tried to spectate himself?')
         return
-    
+
     if player_id == -1:
         # This can happen on tourney clients
         return
@@ -47,10 +47,10 @@ def start_spectating(client: OsuClient, player_id: int):
     # Enqueue to target
     target.spectators.add(client)
     target.enqueue_packet(PacketType.BanchoSpectatorJoined, client.id)
-    target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
 
     # Check if target joined #spectator
     if target not in target.spectator_chat.users and not client.is_tourney_client:
+        target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
         target.spectator_chat.add(target)
 
 @register(PacketType.OsuStopSpectating)
@@ -74,8 +74,6 @@ def stop_spectating(client: OsuClient):
     for p in client.spectating.spectators:
         p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, client.id)
 
-    # TODO: Kick from spectator channel if no spectators left?
-
     client.logger.info(f'Stopped spectating "{client.spectating.name}".')
     client.spectating = None
 
@@ -95,5 +93,17 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     if not client.spectators:
         return
 
+    if len(client.spectators) <= 256:
+        return broadcast_frames(client, bundle)
+
+    # Send them to the queue, if there
+    # are too many spectators
+    session.tasks.do_later(
+        broadcast_frames,
+        client, bundle,
+        priority=1
+    )
+
+def broadcast_frames(client: OsuClient, bundle: ReplayFrameBundle):
     for p in client.spectators:
         p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)

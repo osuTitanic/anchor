@@ -14,6 +14,7 @@ from app.objects.locks import LockedSet
 from app.common import officer
 
 import logging
+import time
 import app
 
 class Channel:
@@ -38,6 +39,7 @@ class Channel:
         self.logger = logging.getLogger(self.name)
         self.users: LockedSet["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
+        self.created_at = time.time()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -194,8 +196,9 @@ class Channel:
 
         if message.startswith('!') and not ignore_commands:
             # A command was executed
-            return app.session.banchobot.send_command_response(
-                *app.session.banchobot.process_command(message, sender, self)
+            return app.session.tasks.do_later(
+                app.session.banchobot.process_and_send_response,
+                message, sender, self, priority=1
             )
 
         has_bad_words = any([
@@ -215,21 +218,24 @@ class Channel:
         # Filter out sender
         users = {user for user in self.users if user != sender}
 
-        self.broadcast_message(
+        app.session.tasks.do_later(
+            self.broadcast_message,
             Message(
                 sender.name,
                 message,
                 self.display_name,
                 sender.id
             ),
-            users=users
+            users=users,
+            priority=1
         )
 
         app.session.tasks.do_later(
             messages.create,
             sender.name,
             self.name,
-            message[:512]
+            message[:512],
+            priority=3
         )
 
     def handle_external_message(
@@ -238,14 +244,16 @@ class Channel:
         sender: str,
         sender_id: int
     ) -> None:
-        self.broadcast_message(
+        app.session.tasks.do_later(
+            self.broadcast_message,
             Message(
                 sender,
                 message,
                 self.display_name,
                 sender_id
             ),
-            users=self.users
+            users=self.users,
+            priority=1
         )
 
 class SpectatorChannel(Channel):

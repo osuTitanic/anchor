@@ -5,8 +5,7 @@ import time
 import app
 
 PING_INTERVAL = 15
-PING_TIMEOUT = 60
-PING_TIMEOUT_HTTP = 180
+PING_TIMEOUT = 180
 
 @app.session.tasks.submit(interval=PING_INTERVAL)
 def tcp_pings() -> None:
@@ -19,12 +18,16 @@ def tcp_pings() -> None:
             continue
 
         player.enqueue_packet(PacketType.BanchoPing)
+
+        if is_server_overloaded():
+            continue
+
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT:
             player.close_connection('Client timed out')
 
-@app.session.tasks.submit(interval=PING_TIMEOUT_HTTP)
+@app.session.tasks.submit(interval=PING_TIMEOUT)
 def http_pings() -> None:
     """
     This task will handle client timeouts for http clients.
@@ -35,6 +38,9 @@ def http_pings() -> None:
         if player.is_bot:
             continue
 
+        if is_server_overloaded():
+            continue
+
         last_response = (time.time() - player.last_response)
 
         if not player.connected:
@@ -43,5 +49,9 @@ def http_pings() -> None:
             player.connectionLost()
             continue
 
-        if last_response >= PING_TIMEOUT_HTTP:
+        if last_response >= PING_TIMEOUT:
             player.close_connection('Client timed out')
+
+def is_server_overloaded() -> bool:
+    task_queue_size = app.session.tasks.do_later_queue.qsize()
+    return task_queue_size >= 50
