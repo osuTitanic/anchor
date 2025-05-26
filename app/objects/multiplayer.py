@@ -490,6 +490,10 @@ class Match:
             self.logger.warning('Host tried to start match without any players')
             return
 
+        if self.in_progress:
+            self.logger.warning('Host tried to start match, but it was already in progress')
+            return
+
         for slot in self.slots:
             if not slot.has_player:
                 continue
@@ -497,12 +501,13 @@ class Match:
             if slot.status == SlotStatus.NotReady:
                 continue
 
-            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self)
-
             if slot.status != SlotStatus.NoMap:
                 slot.status = SlotStatus.Playing
 
-        playing_slots = [s for s in self.player_slots if s.status == SlotStatus.Playing]
+        playing_slots = [
+            slot for slot in self.player_slots
+            if slot.status == SlotStatus.Playing
+        ]
 
         if not playing_slots:
             self.logger.info('Could not start match, because no one was ready.')
@@ -512,9 +517,12 @@ class Match:
             )
             return
 
-        self.in_progress = True
         self.logger.info('Match started')
+        self.in_progress = True
         self.update()
+
+        for slot in playing_slots:
+            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self)
 
         self.chat.send_message(
             app.session.banchobot,
