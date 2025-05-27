@@ -109,7 +109,7 @@ def user_update(user_id: int, mode: int | None = None):
         return
 
     if player.is_irc and not player.is_osu:
-        # User is not using a 2007 osu! client
+        # User is not using an osu! client
         return
 
     if mode != None:

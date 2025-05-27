@@ -197,3 +197,7 @@ class BanchoBot(IrcClient):
         self.presence.city = "w00t p00t!"
         self.presence.is_irc = True
         self.reload()
+
+        if not self.object:
+            # BanchoBot user object was not found inside the database
+            self.logger.warning("Failed to load BanchoBot!")

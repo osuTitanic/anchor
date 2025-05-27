@@ -19,9 +19,6 @@ def tcp_pings() -> None:
 
         player.enqueue_packet(PacketType.BanchoPing)
 
-        if is_server_overloaded():
-            continue
-
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT:
@@ -38,9 +35,6 @@ def http_pings() -> None:
         if player.is_bot:
             continue
 
-        if is_server_overloaded():
-            continue
-
         last_response = (time.time() - player.last_response)
 
         if not player.connected:
@@ -51,7 +45,3 @@ def http_pings() -> None:
 
         if last_response >= PING_TIMEOUT:
             player.close_connection('Client timed out')
-
-def is_server_overloaded() -> bool:
-    task_queue_size = app.session.tasks.do_later_queue.qsize()
-    return task_queue_size >= 50
