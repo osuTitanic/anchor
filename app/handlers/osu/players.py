@@ -89,7 +89,7 @@ def presence_request_all(client: OsuClient):
 @register(PacketType.OsuUserStatsRequest)
 def stats_request(client: OsuClient, players: List[int]):
     for id in players[:32]:
-        if id is client.id:
+        if id == client.id:
             continue
 
         if not (target := session.players.by_id(id)):
