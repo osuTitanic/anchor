@@ -147,7 +147,8 @@ def handle_privmsg_command(
     sender: IrcClient,
     prefix: str,
     target_name: str,
-    message: str
+    message: str,
+    *args
 ) -> None:
     if not sender.logged_in:
         sender.handle_osu_login_callback(message)
