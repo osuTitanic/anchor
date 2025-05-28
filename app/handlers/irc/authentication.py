@@ -11,9 +11,9 @@ def handle_user_command(
     client: IrcClient,
     prefix: str,
     username: str,
-    hostname: str,
-    servername: str,
-    realname: str
+    hostname: str | None = None,
+    servername: str | None = None,
+    realname: str | None = None
 ) -> None:
     client.is_osu = (
         (realname == "osu" or realname.isdigit()) and
