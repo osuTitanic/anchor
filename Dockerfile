@@ -24,6 +24,9 @@ RUN pip install -r requirements.txt
 # Copy source code
 COPY . .
 
-STOPSIGNAL SIGINT
+# Generate __pycache__ directories
+ENV PYTHONDONTWRITEBYTECODE=1
+RUN python -m compileall -q app
 
+STOPSIGNAL SIGINT
 CMD ["python3", "main.py"]
