@@ -296,7 +296,7 @@ def mp_help(ctx: Context):
 
     return response
 
-@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True, groups=['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True)
 def create_persistant_match(ctx: Context):
     """<name> - Create a new persistant match"""
     if len(ctx.args) < 1:
@@ -1106,7 +1106,7 @@ def mp_listrefs(ctx: Context):
         if referees else "There are no referees in this match."
     ]
 
-@mp_commands.register(['addref', 'addreferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['addref', 'addreferee'])
 def mp_addref(ctx: Context):
     """<username> - Add a referee to this match"""
     match: Match = ctx.get_context_object('match')
@@ -1148,7 +1148,7 @@ def mp_addref(ctx: Context):
 
     return [f'Added "{target.name}" as a match referee.']
 
-@mp_commands.register(['removeref', 'remref', 'removereferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['removeref', 'remref', 'removereferee'])
 def mp_removeref(ctx: Context):
     """<username> - Remove a referee from this match"""
     match: Match = ctx.get_context_object('match')
