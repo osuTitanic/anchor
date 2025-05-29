@@ -172,9 +172,17 @@ class OsuClientInformation:
         except (ValueError, IndexError):
             pass
 
+        geolocation = location.fetch_geolocation(ip)
+
+        utc_offset = int(
+            datetime.now(
+                pytz.timezone(geolocation.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
+
         try:
             return OsuClientInformation(
-                location.fetch_geolocation(ip),
+                geolocation,
                 ClientVersion.from_string(build_version),
                 ClientHash.from_string(client_hash),
                 utc_offset,
