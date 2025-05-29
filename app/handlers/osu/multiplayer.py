@@ -132,8 +132,7 @@ def create_match(client: OsuClient, bancho_match: Match):
 
     match.chat.send_message(
         session.banchobot,
-        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privileges=True
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here]."
     )
 
 @register(PacketType.OsuMatchJoin)

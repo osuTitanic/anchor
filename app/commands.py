@@ -373,8 +373,7 @@ def create_persistant_match(ctx: Context):
 
     match.chat.send_message(
         app.session.banchobot,
-        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privileges=True
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here]."
     )
 
     if not ctx.player.is_irc:

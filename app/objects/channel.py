@@ -162,54 +162,59 @@ class Channel:
         self,
         sender: "Client",
         message: str,
-        ignore_privileges=False,
         ignore_commands=False
     ) -> None:
-        if sender not in self.users and not sender.is_bot:
-            # Player did not join this channel
-            sender.enqueue_channel_revoked(self.display_name)
-            sender.logger.warning(
-                f'Failed to send message: "{message}" on {self.name}, '
-                'because player did not join the channel.'
-            )
-            return
+        is_banchobot = (
+            sender == app.session.banchobot
+        )
 
-        if self.moderated and sender != app.session.banchobot:
-            allowed_groups = [
-                'Admins',
-                'Developers',
-                'Beatmap Approval Team',
-                'Global Moderator Team',
-                'Tournament Manager Team'
-            ]
-
-            if not any([group in sender.groups for group in allowed_groups]):
+        # Skip validation checks for BanchoBot
+        if not is_banchobot:
+            if sender not in self.users:
+                # Player did not join this channel
+                sender.enqueue_channel_revoked(self.display_name)
+                sender.logger.warning(
+                    f'Failed to send message: "{message}" on {self.name}, '
+                    'because player did not join the channel.'
+                )
                 return
 
-        if sender.silenced:
-            sender.logger.warning('Failed to send message: Sender was silenced.')
-            return
+            if self.moderated:
+                allowed_groups = [
+                    'Admins',
+                    'Developers',
+                    'Beatmap Approval Team',
+                    'Global Moderator Team',
+                    'Tournament Manager Team'
+                ]
 
-        if not self.can_write(sender.permissions) and not ignore_privileges:
-            sender.logger.warning(f'Failed to send message: "{message}".')
-            return
+                if not any([group in sender.groups for group in allowed_groups]):
+                    return
 
-        if message.startswith('!') and not ignore_commands:
-            # A command was executed
-            return app.session.tasks.do_later(
-                app.session.banchobot.process_and_send_response,
-                message, sender, self, priority=1
-            )
+            if sender.silenced:
+                sender.logger.warning('Failed to send message: Sender was silenced.')
+                return
 
-        has_bad_words = any([
-            word in message.lower()
-            for word in BAD_WORDS
-        ])
+            if not self.can_write(sender.permissions):
+                sender.logger.warning(f'Failed to send message: "{message}".')
+                return
 
-        if has_bad_words and not sender.is_bot:
-            sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
-            officer.call(f'Message: {message}')
-            return
+            if message.startswith('!') and not ignore_commands:
+                # A command was executed
+                return app.session.tasks.do_later(
+                    app.session.banchobot.process_and_send_response,
+                    message, sender, self, priority=1
+                )
+
+            has_bad_words = any([
+                word in message.lower()
+                for word in BAD_WORDS
+            ])
+
+            if has_bad_words and not sender.is_bot:
+                sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
+                officer.call(f'Message: {message}')
+                return
 
         # Limit message size to 512 characters
         if len(message) > 512:
