@@ -284,17 +284,21 @@ def leave_match(client: OsuClient):
 
         match_id = client.match.db_match.id
 
+        # Fetch last game event
         last_game = events.fetch_last_by_type(
             match_id,
             type=EventType.Result
         )
 
         if not last_game:
-            # No games were played
+            # No games were played -> delete match
             matches.delete(match_id)
         else:
             matches.update(match_id, {'ended_at': datetime.now()})
             events.create(match_id, type=EventType.Disband)
+
+        if not client.match:
+            return
 
         client.match.logger.info('Match was disbanded.')
         client.match = None
