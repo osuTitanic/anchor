@@ -71,6 +71,17 @@ def silence(user_id: int, duration: int, reason: str = ''):
     if (player_irc := app.session.players.by_id_irc(user.id)):
         player_irc.on_user_silenced()
 
+@app.session.events.register('update_user_silence')
+def update_user_silence(user_id: int):
+    if not (user := users.fetch_by_id(user_id)):
+        return
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_silenced()
+
 @app.session.events.register('unrestrict')
 def unrestrict(user_id: int, restore_scores: bool = True):
     if not (user := users.fetch_by_id(user_id)):
