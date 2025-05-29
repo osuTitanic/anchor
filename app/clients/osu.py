@@ -472,6 +472,7 @@ class OsuClient(Client):
         self.presence.country_index = self.info.ip.country_index
         self.presence.longitude = self.info.ip.longitude
         self.presence.latitude = self.info.ip.latitude
+        self.presence.timezone = self.info.utc_offset
         self.presence.is_irc = False
 
         if self.info.display_city:
