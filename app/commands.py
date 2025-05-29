@@ -1555,6 +1555,9 @@ def silence(ctx: Context) -> List | None:
     if not (user := users.fetch_by_name(name)):
         return [f'Player "{name}" was not found.']
 
+    if not duration:
+        return [f'Invalid duration "{ctx.args[1]}". Please use a valid time format.']
+
     silence_end = infringements.silence_user(
         user,
         duration,
@@ -1608,7 +1611,11 @@ def restrict(ctx: Context) -> List | None:
     until = None
 
     if not length.startswith('perma'):
-        until = datetime.now() + timedelta(seconds=timeparse(length))
+        duration = timeparse(length)
+        until = datetime.now() + timedelta(seconds=duration or 0)
+        
+        if duration is None:
+            return [f'Invalid duration "{length}". Please use a valid time format.']
 
     user = users.fetch_by_name(username)
 
