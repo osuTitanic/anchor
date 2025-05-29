@@ -168,60 +168,28 @@ class Channel:
             sender == app.session.banchobot
         )
 
-        # Skip validation checks for BanchoBot
-        if not is_banchobot:
-            if sender not in self.users:
-                # Player did not join this channel
-                sender.enqueue_channel_revoked(self.display_name)
-                sender.logger.warning(
-                    f'Failed to send message: "{message}" on {self.name}, '
-                    'because player did not join the channel.'
-                )
-                return
+        is_valid_message = self.validate_message(
+            sender,
+            message
+        )
 
-            if self.moderated:
-                allowed_groups = [
-                    'Admins',
-                    'Developers',
-                    'Beatmap Approval Team',
-                    'Global Moderator Team',
-                    'Tournament Manager Team'
-                ]
+        if not is_valid_message and not is_banchobot:
+            # Message validation failed
+            return
 
-                if not any([group in sender.groups for group in allowed_groups]):
-                    return
+        if message.startswith('!') and not ignore_commands:
+            # A command was executed
+            return app.session.tasks.do_later(
+                app.session.banchobot.process_and_send_response,
+                message, sender, self, priority=1
+            )
 
-            if sender.silenced:
-                sender.logger.warning('Failed to send message: Sender was silenced.')
-                return
-
-            if not self.can_write(sender.permissions):
-                sender.logger.warning(f'Failed to send message: "{message}".')
-                return
-
-            if message.startswith('!') and not ignore_commands:
-                # A command was executed
-                return app.session.tasks.do_later(
-                    app.session.banchobot.process_and_send_response,
-                    message, sender, self, priority=1
-                )
-
-            has_bad_words = any([
-                word in message.lower()
-                for word in BAD_WORDS
-            ])
-
-            if has_bad_words and not sender.is_bot:
-                sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
-                officer.call(f'Message: {message}')
-                return
-
-        # Limit message size to 512 characters
         if len(message) > 512:
+            # Limit message size to 512 characters
             message = message[:497] + '... (truncated)'
 
         # Filter out sender
-        users = {user for user in self.users if user != sender}
+        users = [user for user in self.users if user != sender]
 
         app.session.tasks.do_later(
             self.broadcast_message,
@@ -242,6 +210,50 @@ class Channel:
             message[:512],
             priority=3
         )
+    
+    def validate_message(
+        self,
+        sender: "Client",
+        message: str
+    ) -> bool:
+        if sender not in self.users:
+            # Player did not join this channel
+            sender.enqueue_channel_revoked(self.display_name)
+            sender.logger.warning(
+                f'Failed to send message: "{message}" on {self.name}, '
+                'because player did not join the channel.'
+            )
+            return False
+
+        if self.moderated:
+            allowed_groups = [
+                'Admins',
+                'Developers',
+                'Beatmap Approval Team',
+                'Global Moderator Team',
+                'Tournament Manager Team'
+            ]
+
+            if not any([group in sender.groups for group in allowed_groups]):
+                return False
+
+        if sender.silenced:
+            sender.logger.warning('Failed to send message: Sender was silenced.')
+            return False
+
+        if not self.can_write(sender.permissions):
+            sender.logger.warning(f'Failed to send message: "{message}".')
+            return False
+
+        has_bad_words = any([
+            word in message.lower()
+            for word in BAD_WORDS
+        ])
+
+        if has_bad_words and not sender.is_bot:
+            sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
+            officer.call(f'Message: {message}')
+            return False
 
     def handle_external_message(
         self,
