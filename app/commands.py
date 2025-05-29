@@ -827,11 +827,6 @@ def mp_kick(ctx: Context):
             continue
 
         match.kick_player(player)
-
-        if all(slot.empty for slot in match.slots):
-            match.close()
-            match.logger.info('Match was disbanded.')
-
         return ["Player was kicked from the match."]
 
     return [f'Could not find the player "{name}".']
