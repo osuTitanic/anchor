@@ -407,19 +407,6 @@ class Match:
         if (slot := self.get_slot(player)):
             slot.reset()
 
-        self.logger.info(
-            f'{player.name} was kicked from the match'
-        )
-
-        events.create(
-            self.db_match.id,
-            type=EventType.Kick,
-            data={
-                'user_id': player.id,
-                'name': player.name
-            }
-        )
-
         if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
@@ -436,7 +423,21 @@ class Match:
                 }
             )
 
+        self.logger.info(f'{player.name} was kicked from the match')
         self.update()
+
+        if not matches.exists(self.db_match.id):
+            # Match was already closed
+            return
+
+        events.create(
+            self.db_match.id,
+            type=EventType.Kick,
+            data={
+                'user_id': player.id,
+                'name': player.name
+            }
+        )
 
     def ban_player(self, player: "OsuClient"):
         self.banned_players.append(player.id)
