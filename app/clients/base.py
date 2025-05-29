@@ -361,13 +361,13 @@ class Client:
         if not self.object:
             return datetime.now()
 
-        silence_end = infringements_helper.silence_user(
+        infringements_helper.silence_user(
             self.object,
             duration,
             reason
         )
         self.on_user_silenced()
-        return silence_end
+        return self.object.silence_end
     
     def unsilence(self, expired: bool = False) -> None:
         """Unsilences the user"""

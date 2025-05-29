@@ -1558,13 +1558,13 @@ def silence(ctx: Context) -> List | None:
     if not duration:
         return [f'Invalid duration "{ctx.args[1]}". Please use a valid time format.']
 
-    silence_end = infringements.silence_user(
+    record = infringements.silence_user(
         user,
         duration,
         reason
     )
 
-    if not silence_end:
+    if not record:
         return [f'Failed to silence {user.name}.']
 
     if (player_osu := app.session.players.by_name_osu(name)):
@@ -1573,7 +1573,7 @@ def silence(ctx: Context) -> List | None:
     if (player_irc := app.session.players.by_name_irc(name)):
         player_irc.on_user_silenced()
 
-    time_string = timeago.format(silence_end)
+    time_string = timeago.format(user.silence_end)
     time_string = time_string.replace('in ', '')
 
     return [f'{user.name} was silenced for {time_string}']
