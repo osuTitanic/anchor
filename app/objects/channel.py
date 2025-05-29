@@ -254,6 +254,8 @@ class Channel:
             sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
             officer.call(f'Message: {message}')
             return False
+        
+        return True
 
     def handle_external_message(
         self,
