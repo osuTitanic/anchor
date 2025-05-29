@@ -426,6 +426,11 @@ class Match:
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
 
+        if all(slot.empty for slot in self.slots):
+            self.close()
+            self.logger.info('Match was disbanded.')
+            return
+
         if not matches.exists(self.db_match.id):
             # Match was already closed
             return
