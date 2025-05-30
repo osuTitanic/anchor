@@ -87,8 +87,15 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
 
     def enqueue_message_object(self, message: Message) -> None:
-        self.enqueue_message(
-            message.content,
-            message.sender,
-            message.target
+        self.logger.debug(
+            f"<- <{message.target}> '{message}' ({message.sender})"
+        )
+        prefix = (
+            f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+        )
+        self.sendMessage(
+            "PRIVMSG",
+            message.target.replace(" ", "_"),
+            ":" + message.content,
+            prefix=prefix
         )
