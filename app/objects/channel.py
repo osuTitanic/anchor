@@ -115,12 +115,34 @@ class Channel:
 
         player.channels.add(self)
         self.users.add(player)
-        self.update()
+        self.logger.info(f'{player.name} joined')
+        self.broadcast_join(player)
 
         if not no_response:
             player.enqueue_channel_join_success(self.display_name)
 
-        self.logger.info(f'{player.name} joined')
+    def remove(self, player: "Client") -> None:
+        self.users.remove(player)
+        self.logger.info(f'{player.name} left')
+        self.broadcast_part(player)
+
+        if self in player.channels:
+            player.channels.remove(self)
+
+    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message.content}')
+
+        for user in users:
+            user.enqueue_message_object(message)
+
+    def broadcast_part(self, player: "Client") -> None:
+        self.update_osu_clients()
+        
+        for user in self.irc_users:
+            user.enqueue_part(player, self.name)
+
+    def broadcast_join(self, player: "Client") -> None:
+        self.update_osu_clients()
 
         if self.name == "#osu":
             return
@@ -128,14 +150,7 @@ class Channel:
         for user in self.irc_users:
             user.enqueue_player(player, self.name)
 
-    def remove(self, player: "Client") -> None:
-        self.users.remove(player)
-        self.update()
-
-        if self in player.channels:
-            player.channels.remove(self)
-
-    def update(self) -> None:
+    def update_osu_clients(self) -> None:
         if not self.public:
             # Only enqueue to users in this channel
             for player in self.users:
@@ -151,12 +166,6 @@ class Channel:
                     self,
                     autojoin=False
                 )
-
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
-        self.logger.info(f'[{message.sender}]: {message.content}')
-
-        for user in users:
-            user.enqueue_message_object(message)
 
     def send_message(
         self,
@@ -301,7 +310,7 @@ class SpectatorChannel(Channel):
 
         return super().add(player, no_response)
 
-    def update(self) -> None:
+    def update_osu_clients(self) -> None:
         for player in app.session.players:
             if self.can_read(player.permissions):
                 player.enqueue_channel(
@@ -347,14 +356,14 @@ class MultiplayerChannel(Channel):
 
         player.channels.add(self)
         self.users.add(player)
-        self.update()
+        self.update_osu_clients()
 
         if not no_response:
             player.enqueue_channel_join_success(self.resolve_name(player))
 
         self.logger.info(f'{player.name} joined')
 
-    def update(self) -> None:
+    def update_osu_clients(self) -> None:
         channel_object = self.bancho_channel
 
         # Only enqueue to users in this channel
