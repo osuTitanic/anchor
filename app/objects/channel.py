@@ -137,7 +137,17 @@ class Channel:
 
     def broadcast_part(self, player: "Client") -> None:
         self.update_osu_clients()
-        
+
+        player = next(
+            (p for p in self.users if p.id == player.id),
+            None
+        )
+
+        # If another player is still in the channel,
+        # do not broadcast part to irc users
+        if player is not None:
+            return
+
         for user in self.irc_users:
             user.enqueue_part(player, self.name)
 
