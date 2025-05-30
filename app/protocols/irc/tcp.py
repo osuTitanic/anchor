@@ -76,9 +76,19 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.sendCommand(command, params, prefix, tags)
 
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
-        self.logger.debug(f"<- <{target}> '{message}' ({sender})")
-        self.sendMessage("PRIVMSG", target, ":" + message, prefix=sender.irc_prefix)
+        self.logger.debug(
+            f"<- <{target}> '{message}' ({sender})"
+        )
+        self.sendMessage(
+            "PRIVMSG",
+            target.replace(" ", "_"),
+            ":" + message,
+            prefix=sender.irc_prefix
+        )
 
     def enqueue_message_object(self, message: Message) -> None:
-        self.logger.debug(f"<- <{message.target}> '{message.content}' ({message.sender})")
-        self.sendMessage("PRIVMSG", message.target, ":" + message.content, prefix=message.sender)
+        self.enqueue_message(
+            message.content,
+            message.sender,
+            message.target
+        )
