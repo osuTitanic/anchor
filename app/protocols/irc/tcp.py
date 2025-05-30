@@ -28,8 +28,9 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.connected = True
 
         if not config.IRC_ENABLED:
-            self.enqueue_error("IRC connections have been disabled. Please check back later!")
+            self.enqueue_welcome("IRC connections have been disabled. Please check back later!")
             self.close_connection('IRC is disabled')
+            return
 
         # Ensure client is logged in after 8 seconds, else close connection
         reactor.callLater(8, self.handle_timeout_callback)
