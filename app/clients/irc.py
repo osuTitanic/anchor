@@ -10,6 +10,7 @@ from typing import List, Any, Iterable
 from twisted.words.protocols import irc
 from twisted.internet import reactor
 from functools import cached_property
+from datetime import datetime
 from copy import copy
 
 import logging
@@ -157,6 +158,16 @@ class IrcClient(Client):
         }
         mapping.get(reason, self.send_server_error)()
         self.close_connection("Login failure")
+
+    def on_user_restricted(
+        self,
+        reason: str | None = None,
+        until: datetime | None = None,
+        autoban: bool = False
+    ) -> None:
+        super().on_user_restricted(reason, until, autoban)
+        self.send_restricted_error()
+        self.close_connection("Restricted")
 
     def close_connection(self, reason: Any = None) -> None:
         self.connected = False
