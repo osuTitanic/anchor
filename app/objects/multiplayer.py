@@ -247,8 +247,10 @@ class Match:
         return None
 
     def get_player(self, name: str) -> "OsuClient" | None:
+        safe_name = name.lower().replace(" ", "_")
+
         for player in self.players:
-            if player.name == name:
+            if player.safe_name == safe_name:
                 return player
 
         return None
