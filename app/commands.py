@@ -597,6 +597,8 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
         return Mods.from_string(mods_string), freemod
     except (ValueError, TypeError):
         pass
+    
+    return Mods.NoMod, False
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
