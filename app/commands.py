@@ -550,9 +550,7 @@ def mp_mods(ctx: Context):
 
     # TODO: Filter out invalid mods
     mods, freemod = parse_mods_from_args(ctx.args)
-
-    if mods is None:
-        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+    mods = mods if mods is not None else Mods.NoMod
 
     if mods.value >= 4294967295:
         # This would hit the integer limit
@@ -580,7 +578,10 @@ def mp_mods(ctx: Context):
 
 def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
     try:
-        freemod = any(arg.lower() in ('freemod', 'fm') for arg in args)
+        freemod = any(
+            arg.lower() in ('freemod', 'fm')
+            for arg in args
+        )
 
         if args[0].isdecimal():
             # Parse mods as an integer
@@ -592,11 +593,11 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
 
         if len(args[0]) % 2 != 0:
             # Mod string must be a multiple of 2
-            return Mods.NoMod, False
+            return None, freemod
 
         return Mods.from_string(mods_string), freemod
     except (ValueError, TypeError):
-        return Mods.NoMod, False
+        return None, False
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
