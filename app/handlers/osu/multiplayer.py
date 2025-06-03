@@ -560,6 +560,7 @@ def change_team(client: OsuClient):
         return
 
     slot.team = {
+        SlotTeam.Neutral: SlotTeam.Red,
         SlotTeam.Blue: SlotTeam.Red,
         SlotTeam.Red: SlotTeam.Blue
     }[slot.team]
