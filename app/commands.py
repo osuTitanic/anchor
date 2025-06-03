@@ -562,15 +562,15 @@ def mp_mods(ctx: Context):
         return [f'Mods are already set to {match.mods.short}{"FM" if freemod else ""}.']
 
     match.freemod = freemod
+    match.mods = mods
 
     if match.freemod:
         # Set match mods
         match.mods = mods & ~Mods.FreeModAllowed
 
-        # Set host mods
-        match.host_slot.mods = mods & ~Mods.SpeedMods
-    else:
-        match.mods = mods
+        if match.host_slot:
+            # Set host mods, if host exists
+            match.host_slot.mods = mods & ~Mods.SpeedMods
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
     match.update()
