@@ -205,17 +205,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     client.match = match
     client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-    events.create(
-        match.db_match.id,
-        type=EventType.Join,
-        data={
-            'user_id': client.id,
-            'name': client.name
-        }
-    )
-
     match.logger.info(f'{client.name} joined')
     match.update()
+
+    match.send_referee_message(
+        f"{client.name} joined in slot {slot_id + 1}.",
+        session.banchobot
+    )
 
     for client in session.players.osu_tournament_clients:
         # Ensure that all tourney clients got the client's presence
@@ -226,9 +222,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    client.match.send_referee_message(
-        f"{client.name} joined in slot {slot_id + 1}.",
-        session.banchobot
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={
+            'user_id': client.id,
+            'name': client.name
+        }
     )
 
 @register(PacketType.OsuMatchPart)
