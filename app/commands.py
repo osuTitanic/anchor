@@ -434,7 +434,7 @@ def mp_start(ctx: Context):
 
         return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -489,7 +489,7 @@ def mp_timer(ctx: Context):
 
         return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.countdown:
             return ['Countdown is not active!']
