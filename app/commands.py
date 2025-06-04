@@ -658,21 +658,27 @@ def mp_host(ctx: Context):
     if target is match.host:
         return ['You are already the host.']
 
-    match.host = target
-    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
-    match.logger.info(f'Changed host to: {target.name}')
-    match.update()
-
     app.session.tasks.do_later(
         events.create,
         match.db_match.id,
         type=EventType.Host,
         data={
-            'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host_id, 'name': match.host.name}
+            'new': {
+                'id': target.id,
+                'name': target.name
+            },
+            'previous': {
+                'id': match.host_id,
+                'name': match.host.name if match.host else 'Unknown'
+            }
         },
         priority=2
     )
+
+    match.host = target
+    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
+    match.logger.info(f'Changed host to: {target.name}')
+    match.update()
 
     return [f'{target.name} is now host of this match.']
 
