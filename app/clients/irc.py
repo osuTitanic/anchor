@@ -462,6 +462,7 @@ class IrcClient(Client):
 
     def enqueue_channel_revoked(self, channel: str) -> None:
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
+        self.enqueue_command_raw("KICK", params=[channel, self.local_prefix, ":Channel has been revoked"])
 
     def enqueue_away_message(self, target: "Client") -> None:
         if self.id in target.away_senders:
