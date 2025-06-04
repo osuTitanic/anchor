@@ -498,6 +498,18 @@ def mp_timer(ctx: Context):
         match.countdown = None
         return ['Countdown was cancelled.']
 
+@mp_commands.register(['aborttimer', 'stoptimer', 'canceltimer'])
+def mp_abort_timer(ctx: Context):
+    """- Abort the current match timer"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match.countdown:
+        return ['Countdown is not active!']
+    
+    # The countdown thread will check if 'countdown' is None
+    match.countdown = None
+    return ['Countdown was cancelled.']
+
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
