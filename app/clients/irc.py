@@ -149,6 +149,19 @@ class IrcClient(Client):
                 channel.name
             )
 
+        # Re-add matches that this player is a referee for
+        self.referee_matches.update([
+            match for match in app.session.matches.persistent
+            if self.id in match.referee_players
+        ])
+
+        for match in self.referee_matches:
+            # Join the match channel automatically
+            channel_object = match.chat.bancho_channel
+            channel_object.name = match.chat.name
+            self.enqueue_channel(channel_object, autojoin=True)
+            match.chat.add(self)
+
     def on_login_failed(self, reason: LoginError) -> None:
         mapping = {
             LoginError.InvalidLogin: self.send_token_error,
