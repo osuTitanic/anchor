@@ -852,9 +852,10 @@ def mp_ban(ctx: Context):
 
     match.ban_player(player)
 
-    if all(slot.empty for slot in match.slots):
+    if all(slot.empty for slot in match.slots) and not match.persistent:
         match.close()
         match.logger.info('Match was disbanded.')
+        return
 
     return ["Player was banned from the match."]
 
