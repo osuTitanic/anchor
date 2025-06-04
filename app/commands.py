@@ -434,7 +434,7 @@ def mp_start(ctx: Context):
 
         return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -489,7 +489,7 @@ def mp_timer(ctx: Context):
 
         return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.countdown:
             return ['Countdown is not active!']
@@ -497,6 +497,18 @@ def mp_timer(ctx: Context):
         # The countdown thread will check if 'starting' is None
         match.countdown = None
         return ['Countdown was cancelled.']
+
+@mp_commands.register(['aborttimer', 'stoptimer', 'canceltimer'])
+def mp_abort_timer(ctx: Context):
+    """- Abort the current match timer"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match.countdown:
+        return ['Countdown is not active!']
+    
+    # The countdown thread will check if 'countdown' is None
+    match.countdown = None
+    return ['Countdown was cancelled.']
 
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
@@ -658,21 +670,27 @@ def mp_host(ctx: Context):
     if target is match.host:
         return ['You are already the host.']
 
-    match.host = target
-    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
-    match.logger.info(f'Changed host to: {target.name}')
-    match.update()
-
     app.session.tasks.do_later(
         events.create,
         match.db_match.id,
         type=EventType.Host,
         data={
-            'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host_id, 'name': match.host.name}
+            'new': {
+                'id': target.id,
+                'name': target.name
+            },
+            'previous': {
+                'id': match.host_id,
+                'name': match.host.name if match.host else 'Unknown'
+            }
         },
         priority=2
     )
+
+    match.host = target
+    match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
+    match.logger.info(f'Changed host to: {target.name}')
+    match.update()
 
     return [f'{target.name} is now host of this match.']
 
