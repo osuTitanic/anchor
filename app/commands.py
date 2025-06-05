@@ -1148,7 +1148,7 @@ def mp_addref(ctx: Context):
     if target.id == ctx.player.id:
         return ["You cannot add yourself as a referee."]
 
-    if target.match:
+    if not target.is_irc and target.match:
         return [f'{target.name} is already in a match.']
 
     match.referee_players.append(target.id)
