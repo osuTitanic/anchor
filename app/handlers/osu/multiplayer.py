@@ -480,12 +480,9 @@ def ready(client: OsuClient):
 
     slot.status = SlotStatus.Ready
     client.match.update()
-    client.match.send_referee_message(
-        f'{client.name} is ready.',
-        session.banchobot
-    )
 
     if all(slot.status == SlotStatus.Ready for slot in client.match.player_slots):
+        # Notify match referee's that all players are ready
         client.match.send_referee_message(
             'All players are ready.',
             session.banchobot
