@@ -149,6 +149,19 @@ class IrcClient(Client):
                 channel.name
             )
 
+        # Re-add matches that this player is a referee for
+        self.referee_matches.update([
+            match for match in app.session.matches.persistent
+            if self.id in match.referee_players
+        ])
+
+        for match in self.referee_matches:
+            # Join the match channel automatically
+            channel_object = match.chat.bancho_channel
+            channel_object.name = match.chat.name
+            self.enqueue_channel(channel_object, autojoin=True)
+            match.chat.add(self)
+
     def on_login_failed(self, reason: LoginError) -> None:
         mapping = {
             LoginError.InvalidLogin: self.send_token_error,
@@ -462,6 +475,7 @@ class IrcClient(Client):
 
     def enqueue_channel_revoked(self, channel: str) -> None:
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
+        self.enqueue_command_raw("KICK", params=[channel, self.local_prefix, ":Channel has been revoked"])
 
     def enqueue_away_message(self, target: "Client") -> None:
         if self.id in target.away_senders:

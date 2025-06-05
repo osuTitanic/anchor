@@ -205,17 +205,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     client.match = match
     client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-    events.create(
-        match.db_match.id,
-        type=EventType.Join,
-        data={
-            'user_id': client.id,
-            'name': client.name
-        }
-    )
-
     match.logger.info(f'{client.name} joined')
     match.update()
+
+    match.send_referee_message(
+        f"{client.name} joined in slot {slot_id + 1}.",
+        session.banchobot
+    )
 
     for client in session.players.osu_tournament_clients:
         # Ensure that all tourney clients got the client's presence
@@ -226,9 +222,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    client.match.send_referee_message(
-        f"{client.name} joined in slot {slot_id + 1}.",
-        session.banchobot
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={
+            'user_id': client.id,
+            'name': client.name
+        }
     )
 
 @register(PacketType.OsuMatchPart)
@@ -480,10 +480,13 @@ def ready(client: OsuClient):
 
     slot.status = SlotStatus.Ready
     client.match.update()
-    client.match.send_referee_message(
-        f'{client.name} is ready.',
-        session.banchobot
-    )
+
+    if all(slot.status == SlotStatus.Ready for slot in client.match.player_slots):
+        # Notify match referee's that all players are ready
+        client.match.send_referee_message(
+            'All players are ready.',
+            session.banchobot
+        )
 
 @register(PacketType.OsuMatchHasBeatmap)
 @register(PacketType.OsuMatchNotReady)
@@ -560,6 +563,7 @@ def change_team(client: OsuClient):
         return
 
     slot.team = {
+        SlotTeam.Neutral: SlotTeam.Red,
         SlotTeam.Blue: SlotTeam.Red,
         SlotTeam.Red: SlotTeam.Blue
     }[slot.team]
@@ -712,10 +716,8 @@ def score_update(client: OsuClient, scoreframe: ScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    reactor.callFromThread(
-        client.match.process_score_update,
-        scoreframe
-    )
+    # Append to score queue
+    client.match.score_queue.put(scoreframe)
 
 @register(PacketType.OsuMatchComplete)
 def match_complete(client: OsuClient):

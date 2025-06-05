@@ -35,21 +35,21 @@ def start_spectating(client: OsuClient, player_id: int):
     client.logger.info(f'Started spectating "{target.name}".')
     client.spectating = target
 
-    # Join their channel
-    client.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
-    target.spectator_chat.add(client)
+    # Enqueue to target
+    target.spectators.add(client)
+    target.enqueue_packet(PacketType.BanchoSpectatorJoined, client.id)
 
     # Enqueue fellow spectators
     for p in target.spectators:
         client.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, p.id)
         p.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, client.id)
 
-    # Enqueue to target
-    target.spectators.add(client)
-    target.enqueue_packet(PacketType.BanchoSpectatorJoined, client.id)
+    # Join their channel
+    client.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
+    target.spectator_chat.add(client)
 
     # Check if target joined #spectator
-    if target not in target.spectator_chat.users and not client.is_tourney_client:
+    if target not in target.spectator_chat.users:
         target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
         target.spectator_chat.add(target)
 

@@ -434,7 +434,7 @@ def mp_start(ctx: Context):
 
         return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -489,7 +489,7 @@ def mp_timer(ctx: Context):
 
         return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.countdown:
             return ['Countdown is not active!']
@@ -497,6 +497,18 @@ def mp_timer(ctx: Context):
         # The countdown thread will check if 'starting' is None
         match.countdown = None
         return ['Countdown was cancelled.']
+
+@mp_commands.register(['aborttimer', 'stoptimer', 'canceltimer'])
+def mp_abort_timer(ctx: Context):
+    """- Abort the current match timer"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match.countdown:
+        return ['Countdown is not active!']
+    
+    # The countdown thread will check if 'countdown' is None
+    match.countdown = None
+    return ['Countdown was cancelled.']
 
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
@@ -550,9 +562,7 @@ def mp_mods(ctx: Context):
 
     # TODO: Filter out invalid mods
     mods, freemod = parse_mods_from_args(ctx.args)
-
-    if mods is None:
-        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+    mods = mods if mods is not None else Mods.NoMod
 
     if mods.value >= 4294967295:
         # This would hit the integer limit
@@ -564,15 +574,15 @@ def mp_mods(ctx: Context):
         return [f'Mods are already set to {match.mods.short}{"FM" if freemod else ""}.']
 
     match.freemod = freemod
+    match.mods = mods
 
     if match.freemod:
         # Set match mods
         match.mods = mods & ~Mods.FreeModAllowed
 
-        # Set host mods
-        match.host_slot.mods = mods & ~Mods.SpeedMods
-    else:
-        match.mods = mods
+        if match.host_slot:
+            # Set host mods, if host exists
+            match.host_slot.mods = mods & ~Mods.SpeedMods
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
     match.update()
@@ -580,7 +590,10 @@ def mp_mods(ctx: Context):
 
 def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
     try:
-        freemod = any(arg.lower() in ('freemod', 'fm') for arg in args)
+        freemod = any(
+            arg.lower() in ('freemod', 'fm')
+            for arg in args
+        )
 
         if args[0].isdecimal():
             # Parse mods as an integer
@@ -592,11 +605,11 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
 
         if len(args[0]) % 2 != 0:
             # Mod string must be a multiple of 2
-            return
+            return None, freemod
 
         return Mods.from_string(mods_string), freemod
     except (ValueError, TypeError):
-        pass
+        return None, False
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
@@ -662,8 +675,14 @@ def mp_host(ctx: Context):
         match.db_match.id,
         type=EventType.Host,
         data={
-            'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host_id, 'name': match.host.name}
+            'new': {
+                'id': target.id,
+                'name': target.name
+            },
+            'previous': {
+                'id': match.host_id,
+                'name': match.host.name if match.host else 'Unknown'
+            }
         },
         priority=2
     )
@@ -851,9 +870,10 @@ def mp_ban(ctx: Context):
 
     match.ban_player(player)
 
-    if all(slot.empty for slot in match.slots):
+    if all(slot.empty for slot in match.slots) and not match.persistent:
         match.close()
         match.logger.info('Match was disbanded.')
+        return
 
     return ["Player was banned from the match."]
 
@@ -1128,7 +1148,7 @@ def mp_addref(ctx: Context):
     if target.id == ctx.player.id:
         return ["You cannot add yourself as a referee."]
 
-    if target.match:
+    if not target.is_irc and target.match:
         return [f'{target.name} is already in a match.']
 
     match.referee_players.append(target.id)
