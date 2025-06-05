@@ -485,6 +485,12 @@ def ready(client: OsuClient):
         session.banchobot
     )
 
+    if all(slot.status == SlotStatus.Ready for slot in client.match.player_slots):
+        client.match.send_referee_message(
+            'All players are ready.',
+            session.banchobot
+        )
+
 @register(PacketType.OsuMatchHasBeatmap)
 @register(PacketType.OsuMatchNotReady)
 def not_ready(client: OsuClient):
