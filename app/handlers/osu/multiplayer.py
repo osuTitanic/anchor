@@ -713,10 +713,8 @@ def score_update(client: OsuClient, scoreframe: ScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    reactor.callFromThread(
-        client.match.process_score_update,
-        scoreframe
-    )
+    # Append to score queue
+    client.match.score_queue.put(scoreframe)
 
 @register(PacketType.OsuMatchComplete)
 def match_complete(client: OsuClient):

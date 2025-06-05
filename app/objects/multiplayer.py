@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Tuple, List
 from datetime import datetime, timedelta
 from threading import Thread, Timer
 from dataclasses import dataclass
+from queue import Queue
 from copy import copy
 from chio import (
     ScoreFrame as bScoreFrame,
@@ -77,16 +78,16 @@ class Slot:
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status
-        self.team   = other.team
-        self.mods   = other.mods
+        self.team = other.team
+        self.mods = other.mods
 
     def reset(self, new_status = SlotStatus.Open) -> None:
-        self.player     = None
-        self.status     = new_status
-        self.team       = SlotTeam.Neutral
-        self.mods       = Mods.NoMod
-        self.loaded     = False
-        self.skipped    = False
+        self.player = None
+        self.status = new_status
+        self.team = SlotTeam.Neutral
+        self.mods = Mods.NoMod
+        self.loaded = False
+        self.skipped = False
         self.has_failed = False
 
 @dataclass(slots=True)
@@ -123,7 +124,6 @@ class Match:
         self.beatmap_id = beatmap_id
         self.beatmap_text = beatmap_name
         self.beatmap_checksum = beatmap_hash
-
         self.previous_beatmap_id = beatmap_id
         self.previous_beatmap_name = beatmap_name
         self.previous_beatmap_hash = beatmap_hash
@@ -131,7 +131,6 @@ class Match:
         self.mods = Mods.NoMod
         self.mode = mode
         self.seed = seed
-
         self.type = MatchType.Standard
         self.scoring_type = ScoringType.Score
         self.team_type = TeamType.HeadToHead
@@ -140,6 +139,7 @@ class Match:
         self.freemod = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
+        self.score_queue: Queue[bScoreFrame] = Queue()
         self.referee_players: List[int] = []
         self.banned_players: List[int] = []
 
@@ -537,6 +537,9 @@ class Match:
             'The match has started. Good luck, have fun!'
         )
 
+        # Start score update loop
+        self.schedule_score_update()
+
         events.create(
             self.db_match.id,
             type=EventType.Start,
@@ -770,15 +773,37 @@ class Match:
             app.session.banchobot,
             'Countdown finished.'
         )
+        
+    def schedule_score_update(self) -> None:
+        if not self.in_progress:
+            return
 
-    def process_score_update(self, scoreframe: bScoreFrame) -> None:
-        self.last_activity = time.time()
+        app.session.tasks.do_later(
+            self.process_score_update,
+            priority=0
+        )
 
-        for p in self.players:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+    def process_score_update(self) -> None:
+        if not self.in_progress:
+            return
+        
+        while not self.score_queue.empty():
+            scoreframe = self.score_queue.get()
 
-        for p in app.session.players.osu_in_lobby:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+            if not scoreframe:
+                continue
+
+            # Process the score update
+            self.last_activity = time.time()
+
+            for p in self.players:
+                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+
+            for p in app.session.players.osu_in_lobby:
+                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+        
+        # Schedule the next score update
+        self.schedule_score_update()
 
     def start_finish_timeout(self) -> None:
         if self.completion_timer:
