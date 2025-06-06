@@ -181,7 +181,8 @@ class Channel:
         self,
         sender: "Client",
         message: str,
-        ignore_commands=False
+        ignore_commands: bool = False,
+        priority: int = 1
     ) -> None:
         is_banchobot = (
             sender == app.session.banchobot
@@ -219,7 +220,7 @@ class Channel:
                 sender.id
             ),
             users=users,
-            priority=1
+            priority=priority
         )
 
         app.session.tasks.do_later(
@@ -227,7 +228,7 @@ class Channel:
             sender.name,
             self.name,
             message[:512],
-            priority=3
+            priority=priority + 1
         )
     
     def validate_message(

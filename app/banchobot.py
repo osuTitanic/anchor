@@ -131,7 +131,8 @@ class BanchoBot(IrcClient):
             for message in response:
                 context.target.send_message(
                     self, message,
-                    ignore_commands=True
+                    ignore_commands=True,
+                    priority=2
                 )
 
             return
