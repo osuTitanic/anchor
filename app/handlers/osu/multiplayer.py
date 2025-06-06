@@ -481,7 +481,7 @@ def ready(client: OsuClient):
     slot.status = SlotStatus.Ready
     client.match.update()
 
-    if all(slot.status == SlotStatus.Ready for slot in client.match.player_slots):
+    if all([slot.status == SlotStatus.Ready for slot in client.match.player_slots]):
         # Notify match referee's that all players are ready
         client.match.send_referee_message(
             'All players are ready.',
