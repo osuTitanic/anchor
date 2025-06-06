@@ -267,7 +267,7 @@ class Match:
         match_password = copy(self.password)
 
         if self.password:
-            match_password = " "
+            self.password = " "
 
         # Enqueue to lobby players
         for player in app.session.players.osu_in_lobby:
