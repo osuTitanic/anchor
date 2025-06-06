@@ -831,13 +831,16 @@ class Match:
 
     def send_referee_message(self, message: str, sender: "Client") -> None:
         for referee in self.referee_players:
-            referee_client = app.session.players.by_id(referee)
+            if referee_client := app.session.players.by_id_osu(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
 
-            if not referee_client:
-                continue
-
-            referee_client.enqueue_message(
-                message,
-                sender,
-                self.chat.name
-            )
+            if referee_client := app.session.players.by_id_irc(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
