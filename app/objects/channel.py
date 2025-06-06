@@ -182,7 +182,7 @@ class Channel:
         sender: "Client",
         message: str,
         ignore_commands: bool = False,
-        priority: int = 1
+        do_later: bool = True
     ) -> None:
         is_banchobot = (
             sender == app.session.banchobot
@@ -212,23 +212,29 @@ class Channel:
         users = [user for user in self.users if user != sender]
 
         app.session.tasks.do_later(
-            self.broadcast_message,
-            Message(
-                sender.name,
-                message,
-                self.display_name,
-                sender.id
-            ),
-            users=users,
-            priority=priority
-        )
-
-        app.session.tasks.do_later(
             messages.create,
             sender.name,
             self.name,
             message[:512],
-            priority=priority + 1
+            priority=2
+        )
+
+        message_object = Message(
+            sender.name,
+            message,
+            self.display_name,
+            sender.id
+        )
+
+        if not do_later:
+            self.broadcast_message(message_object, users)
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message,
+            message_object,
+            users=users,
+            priority=1
         )
     
     def validate_message(
