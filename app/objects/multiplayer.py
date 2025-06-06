@@ -809,7 +809,7 @@ class Match:
         if self.completion_timer:
             return
 
-        self.completion_timer = Timer(8, self.finish_timeout)
+        self.completion_timer = Timer(14, self.finish_timeout)
         self.completion_timer.start()
 
     def finish_timeout(self) -> None:
