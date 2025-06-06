@@ -577,12 +577,26 @@ def mp_mods(ctx: Context):
     match.mods = mods
 
     if match.freemod:
-        # Set match mods
-        match.mods = mods & ~Mods.FreeModAllowed
+        for slot in match.slots:
+            if not (slot.status.value & SlotStatus.HasPlayer.value):
+                continue
 
-        if match.host_slot:
-            # Set host mods, if host exists
-            match.host_slot.mods = mods & ~Mods.SpeedMods
+            # Set current mods to every player inside the match, if they are not speed mods
+            slot.mods = mods & ~Mods.SpeedMods
+            
+            # TODO: Fix for older clients without freemod support
+            # slot.mods = []
+
+        # The speedmods are kept in the match mods
+        match.mods = mods & ~Mods.FreeModAllowed
+    else:
+        # Keep mods from host, if the host exists
+        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
+        match.mods |= host_mods
+
+        # Reset any mod from players
+        for slot in match.slots:
+            slot.mods = Mods.NoMod
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
     match.update()
