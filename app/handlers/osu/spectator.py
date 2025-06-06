@@ -50,7 +50,7 @@ def start_spectating(client: OsuClient, player_id: int):
 
     # Check if target joined #spectator
     if target not in target.spectator_chat.users:
-        target.enqueue_channel(target.spectator_chat.bancho_channel, autojoin=True)
+        target.enqueue_channel(target.spectator_chat.bancho_channel)
         target.spectator_chat.add(target)
 
 @register(PacketType.OsuStopSpectating)
