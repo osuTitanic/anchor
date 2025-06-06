@@ -428,7 +428,7 @@ class Match:
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
 
-        if all(slot.empty for slot in self.slots):
+        if all(slot.empty for slot in self.slots) and not self.persistent:
             self.close()
             self.logger.info('Match was disbanded.')
             return
