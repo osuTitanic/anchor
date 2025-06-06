@@ -603,7 +603,7 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
         mods_string = "".join(args[0:]).replace(',', '').replace("freemod", "")
         freemod = "fm" in mods_string.lower() or freemod
 
-        if len(args[0]) % 2 != 0:
+        if len(mods_string) % 2 != 0:
             # Mod string must be a multiple of 2
             return None, freemod
 
