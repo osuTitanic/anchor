@@ -809,7 +809,7 @@ class Match:
 
         while self.in_progress or not self.score_queue.empty():
             try:
-                scoreframe = self.score_queue.get(timeout=8)
+                scoreframe = self.score_queue.get(timeout=6)
             except Exception:
                 continue
 
