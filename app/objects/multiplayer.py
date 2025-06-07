@@ -596,6 +596,11 @@ class Match:
         self.update()
 
     def finish(self):
+        if self.completion_timer:
+            # Cancel the completion timer
+            self.completion_timer.cancel()
+            self.completion_timer = None
+
         # Get players that have been playing this round
         players = [
             slot.player for slot in self.slots
