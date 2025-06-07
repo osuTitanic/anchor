@@ -827,9 +827,6 @@ class Match:
         for p in self.players:
             p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
 
-        for p in app.session.players.osu_in_lobby:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
-
     def start_finish_timeout(self) -> None:
         if self.completion_timer:
             return
