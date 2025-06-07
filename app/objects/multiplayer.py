@@ -146,6 +146,7 @@ class Match:
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
         self.completion_timer: Timer | None = None
+        self.score_thread: Thread | None = None
         self.db_match: DBMatch | None = None
         self.chat: "Channel" | None = None
 
@@ -538,7 +539,7 @@ class Match:
         )
 
         # Start score update loop
-        self.schedule_score_update()
+        self.schedule_score_updates()
 
         events.create(
             self.db_match.id,
@@ -773,43 +774,61 @@ class Match:
             app.session.banchobot,
             'Countdown finished.'
         )
-        
-    def schedule_score_update(self) -> None:
+
+    def schedule_score_updates(self) -> None:
         if not self.in_progress:
             return
+        
+        if self.score_thread and self.score_thread.is_alive():
+            # Let's hope this never happens, it *should* never happen
+            self.logger.warning('Score thread is still running, starting anyways...')
 
-        app.session.tasks.do_later(
-            self.process_score_update,
-            priority=0
+        self.score_thread = Thread(
+            target=self.process_score_updates,
+            name=f'Match {self.id} Score Processor',
+            daemon=True
         )
+        self.score_thread.start()
 
-    def process_score_update(self) -> None:
-        if not self.in_progress:
-            return
+    def process_score_updates(self) -> None:
+        # Wait for first score frame, without timeout
+        scoreframe = self.score_queue.get()
         
-        while not self.score_queue.empty():
-            scoreframe = self.score_queue.get()
+        if not scoreframe:
+            self.logger.warning('Score processor started without any score frame.')
+            return
+
+        # Broadcast first score frame and proceed to loop
+        self.broadcast_score_update(scoreframe)
+
+        while self.in_progress:
+            try:
+                scoreframe = self.score_queue.get(timeout=8)
+            except Exception:
+                continue
 
             if not scoreframe:
                 continue
 
-            # Process the score update
-            self.last_activity = time.time()
+            self.broadcast_score_update(scoreframe)
 
-            for p in self.players:
-                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
-
-            for p in app.session.players.osu_in_lobby:
-                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+        self.logger.info('Score processor finished.')
+        self.score_thread = None
         
-        # Schedule the next score update
-        self.schedule_score_update()
+    def broadcast_score_update(self, scoreframe: bScoreFrame) -> None:
+        self.last_activity = time.time()
+
+        for p in self.players:
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+
+        for p in app.session.players.osu_in_lobby:
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
 
     def start_finish_timeout(self) -> None:
         if self.completion_timer:
             return
 
-        self.completion_timer = Timer(14, self.finish_timeout)
+        self.completion_timer = Timer(12, self.finish_timeout)
         self.completion_timer.start()
 
     def finish_timeout(self) -> None:
@@ -817,7 +836,7 @@ class Match:
 
         if not self.in_progress:
             return
-        
+
         for slot in self.player_slots:
             if not slot.is_playing:
                 continue
