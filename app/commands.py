@@ -760,7 +760,8 @@ def mp_invite(ctx: Context):
             ctx.player.name,
             f'Come join my multiplayer match: {match.embed}',
             ctx.player.name,
-            ctx.player.id
+            ctx.player.id,
+            is_private=True
         )
     )
 

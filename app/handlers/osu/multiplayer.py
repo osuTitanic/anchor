@@ -70,7 +70,8 @@ def invite(client: OsuClient, target_id: int):
             client.name,
             f'Come join my multiplayer match: {client.match.embed}',
             client.name,
-            client.id
+            client.id,
+            is_private=True
         )
     )
 
