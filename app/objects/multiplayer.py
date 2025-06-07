@@ -778,10 +778,11 @@ class Match:
     def schedule_score_updates(self) -> None:
         if not self.in_progress:
             return
-        
+
         if self.score_thread and self.score_thread.is_alive():
             # Let's hope this never happens, it *should* never happen
-            self.logger.warning('Score thread is still running, starting anyways...')
+            self.logger.warning('Score thread is still running, aborting...')
+            return
 
         self.score_thread = Thread(
             target=self.process_score_updates,
@@ -793,7 +794,7 @@ class Match:
     def process_score_updates(self) -> None:
         # Wait for first score frame, without timeout
         scoreframe = self.score_queue.get()
-        
+
         if not scoreframe:
             self.logger.warning('Score processor started without any score frame.')
             return
@@ -801,7 +802,7 @@ class Match:
         # Broadcast first score frame and proceed to loop
         self.broadcast_score_update(scoreframe)
 
-        while self.in_progress:
+        while self.in_progress or not self.score_queue.empty():
             try:
                 scoreframe = self.score_queue.get(timeout=8)
             except Exception:
