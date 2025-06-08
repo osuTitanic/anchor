@@ -106,9 +106,6 @@ class Tasks:
         deferred.addErrback(lambda f: on_task_failed(f.value))
         return deferred
 
-    def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
-        return threads.deferToThread(func, *args, **kwargs)
-
     def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
         def run(deferred: Deferred, func: Callable, *args, **kwargs) -> None:
             try:
@@ -120,3 +117,6 @@ class Tasks:
         deferred = Deferred()
         reactor.callLater(0, run, deferred, func, *args, **kwargs)
         return deferred
+
+    def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
+        return threads.deferToThread(func, *args, **kwargs)
