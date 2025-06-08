@@ -719,6 +719,7 @@ def score_update(client: OsuClient, scoreframe: ScoreFrame):
 
     # Append to score queue
     client.match.score_queue.put(scoreframe)
+    client.match.last_activity = time.time()
 
 @register(PacketType.OsuMatchComplete)
 def match_complete(client: OsuClient):
@@ -729,7 +730,7 @@ def match_complete(client: OsuClient):
         return
 
     client.match.last_activity = time.time()
-    client.match.start_finish_timeout()
+    client.match.schedule_finish_timeout()
 
     if not (slot := client.match.get_slot(client)):
         return

@@ -692,6 +692,22 @@ class Match:
             }
         )
 
+    def send_referee_message(self, message: str, sender: "Client") -> None:
+        for referee in self.referee_players:
+            if referee_client := app.session.players.by_id_osu(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
+            if referee_client := app.session.players.by_id_irc(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
     def execute_start_timer(self) -> None:
         if not self.starting:
             self.logger.warning('Tried to execute starting timer, but match was not starting.')
@@ -799,13 +815,17 @@ class Match:
     def process_score_updates(self) -> None:
         # Wait for first score frame, without timeout
         scoreframe = self.score_queue.get()
+        target_players = self.players
 
         if not scoreframe:
             self.logger.warning('Score processor started without any score frame.')
             return
 
         # Broadcast first score frame and proceed to loop
-        self.broadcast_score_update(scoreframe)
+        for p in target_players:
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+
+        self.last_activity = time.time()
 
         while self.in_progress or not self.score_queue.empty():
             try:
@@ -816,18 +836,13 @@ class Match:
             if not scoreframe:
                 continue
 
-            self.broadcast_score_update(scoreframe)
+            for p in target_players:
+                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
 
         self.logger.info('Score processor finished.')
         self.score_thread = None
-        
-    def broadcast_score_update(self, scoreframe: bScoreFrame) -> None:
-        self.last_activity = time.time()
 
-        for p in self.players:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
-
-    def start_finish_timeout(self) -> None:
+    def schedule_finish_timeout(self) -> None:
         if self.completion_timer:
             return
 
@@ -850,19 +865,3 @@ class Match:
         # Force-finish the match
         self.update()
         self.finish()
-
-    def send_referee_message(self, message: str, sender: "Client") -> None:
-        for referee in self.referee_players:
-            if referee_client := app.session.players.by_id_osu(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
-
-            if referee_client := app.session.players.by_id_irc(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
