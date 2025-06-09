@@ -188,6 +188,7 @@ def handle_privmsg_command(
         sender.recent_message_count = 0
 
     if sender.recent_message_count > 30 and not sender.is_bot:
+        sender.recent_message_count = 0
         return sender.silence(60, 'Chat spamming')
 
     target.enqueue_message(message, sender, sender.name)

@@ -83,6 +83,7 @@ def send_message(client: OsuClient, message: Message):
         client.recent_message_count = 0
 
     if client.recent_message_count > 30 and not client.is_bot:
+        client.recent_message_count = 0
         return client.silence(60, 'Chat spamming')
 
     channel.send_message(client, message.content.strip())
