@@ -1,4 +1,4 @@
-rosu-pp-py==3.0.0
+rosu-pp-py==3.1.0
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.41
 python-dotenv==1.1.0
