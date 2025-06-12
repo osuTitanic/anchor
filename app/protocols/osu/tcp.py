@@ -100,7 +100,7 @@ class TcpOsuClient(OsuClient, Protocol):
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
 
-            deferred = app.session.tasks.defer_to_thread(
+            deferred = app.session.tasks.defer_to_reactor_thread(
                 super().on_login_received,
                 username.decode(),
                 password.decode(),
@@ -137,7 +137,7 @@ class TcpOsuClient(OsuClient, Protocol):
                 # Clear the data that was read
                 self.stream.reset()
 
-                deferred = app.session.tasks.defer_to_thread(
+                deferred = app.session.tasks.defer_to_reactor_thread(
                     self.on_packet_received,
                     packet, data
                 )

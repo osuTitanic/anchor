@@ -5,6 +5,7 @@ from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from queue import PriorityQueue
 from app.common import officer
+from threading import Thread
 
 import itertools
 import logging
@@ -63,7 +64,7 @@ class Tasks:
         def on_task_done() -> None:
             self.logger.debug(f'Task "{name}" completed')
 
-            if interval <= 0:
+            if interval <= 0 or self.shutdown:
                 return
 
             # Schedule the next run
@@ -106,6 +107,24 @@ class Tasks:
 
         count = next(self.counter)
         self.do_later_queue.put((priority, count, function, args, kwargs))
+        
+    def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
+        """
+        Internal function used to defer a function call to a separate thread.
+        This utilizes python's regular threading capabilities.
+        """
+        def run(deferred: Deferred, func: Callable, *args, **kwargs) -> None:
+            try:
+                result = func(*args, **kwargs)
+                deferred.callback(result)
+            except Exception as e:
+                deferred.errback(e)
+
+        deferred = Deferred()
+        thread = Thread(target=run, args=(deferred, func) + args, kwargs=kwargs)
+        thread.daemon = True
+        thread.start()
+        return deferred
 
     def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
         """
@@ -123,7 +142,7 @@ class Tasks:
         reactor.callLater(0, run, deferred, func, *args, **kwargs)
         return deferred
 
-    def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
+    def defer_to_reactor_thread(self, func: Callable, *args, **kwargs) -> Deferred:
         """
         Internal function used to defer a function call to a separate
         thread, using the reactor's thread pool.

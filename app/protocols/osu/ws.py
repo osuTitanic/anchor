@@ -62,7 +62,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
 
-        deferred = app.session.tasks.defer_to_thread(
+        deferred = app.session.tasks.defer_to_reactor_thread(
             self.player.on_login_received,
             username.decode(),
             password.decode(),
@@ -88,7 +88,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             # Clear the data that was read
             self.stream.reset()
 
-            deferred = app.session.tasks.defer_to_thread(
+            deferred = app.session.tasks.defer_to_reactor_thread(
                 self.player.on_packet_received,
                 packet, data
             )

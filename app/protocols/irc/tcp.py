@@ -51,7 +51,7 @@ class TcpIrcProtocol(IrcClient, IRC):
             self.close_connection("Invalid data received")
 
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
-        deferred = app.session.tasks.defer_to_thread(
+        deferred = app.session.tasks.defer_to_reactor_thread(
             self.on_command_received,
             command, prefix, params
         )
