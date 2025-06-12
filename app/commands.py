@@ -1809,46 +1809,6 @@ def rtx(ctx: Context) -> List | None:
     target.enqueue_packet(PacketType.BanchoRTX, message)
     return [f"{target.name} was RTX'd."]
 
-@command(['crash'], ['Admins', 'Developers'], hidden=False)
-def crash(ctx: Context) -> List | None:
-    """<username> - We do a little trolling"""
-    if len(ctx.args) <= 0:
-        return [f'Invalid syntax: !{ctx.trigger} <username>']
-    
-    username = " ".join(ctx.args[0:])
-    target = app.session.players.by_name_safe(username)
-
-    if not target:
-        return [f'User "{username}" was not found.']
-
-    if target.is_irc:
-        return ['This player is connected via. IRC.']
-
-    fake_match = bMatch(
-        id=0,
-        in_progress=False,
-        type=MatchType.Standard,
-        mods=Mods.NoMod,
-        name="weeeeee",
-        password="",
-        beatmap_text="",
-        beatmap_id=0,
-        beatmap_checksum="",
-        slots=[
-            bSlot(player_id=2, status=SlotStatus.NotReady),
-            *(bSlot(player_id=-index-1, status=SlotStatus.NoMap) for index in range(7))
-        ],
-        host_id=-1,
-        mode=GameMode.Osu,
-        scoring_type=ScoringType.Combo,
-        team_type=TeamType.HeadToHead,
-        freemod=False,
-        seed=13381
-    )
-    target.enqueue_packet(PacketType.BanchoMatchUpdate, fake_match)
-    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, fake_match)
-    return [f"{target.name} was crashed, hopefully :tf:"]
-
 @command(['faq'], hidden=False)
 def mp_help(ctx: Context):
     """<faq> - Gets information about a frequently asked question"""
