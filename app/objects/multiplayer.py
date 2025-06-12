@@ -175,7 +175,7 @@ class Match:
     @property
     def url(self) -> str:
         """Url, used to join a match"""
-        return f'osump://{self.id}/{self.password}'
+        return f'osump://{self.id}/{self.password.replace(" ", "_") if self.password else ""}'
 
     @property
     def embed(self) -> str:
