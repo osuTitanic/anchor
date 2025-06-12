@@ -1750,7 +1750,7 @@ def kill(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['multi', 'multiaccount', 'hardware'], ['Admins'])
+@command(['multi', 'multiaccount', 'hardware'], ['Admins', 'Global Moderator Team'])
 def multi(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
