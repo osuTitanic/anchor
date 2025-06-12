@@ -4,8 +4,8 @@ from __future__ import annotations
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol
-from twisted.internet import threads, reactor
 from twisted.python.failure import Failure
+from twisted.internet import reactor
 
 from app.protocols.osu.streams import ByteStream
 from app.objects import OsuClientInformation
@@ -13,6 +13,7 @@ from app.common.helpers import location
 from app.clients.osu import OsuClient
 
 import config
+import app
 
 IPAddress = IPv4Address | IPv6Address
 
@@ -99,7 +100,7 @@ class TcpOsuClient(OsuClient, Protocol):
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
 
-            deferred = threads.deferToThread(
+            deferred = app.session.tasks.defer_to_thread(
                 super().on_login_received,
                 username.decode(),
                 password.decode(),
@@ -136,7 +137,7 @@ class TcpOsuClient(OsuClient, Protocol):
                 # Clear the data that was read
                 self.stream.reset()
 
-                deferred = threads.deferToThread(
+                deferred = app.session.tasks.defer_to_thread(
                     self.on_packet_received,
                     packet, data
                 )

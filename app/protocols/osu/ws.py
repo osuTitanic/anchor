@@ -2,7 +2,6 @@
 
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
-from twisted.internet import threads
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
@@ -11,7 +10,7 @@ from app.clients.osu import OsuClient
 from app.common.helpers import ip
 
 import logging
-import gzip
+import app
 
 class WebsocketOsuClient(WebSocketServerProtocol):
     """This class implements the websocket osu connection, mainly used for oldsu! clients."""
@@ -63,7 +62,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
 
-        deferred = threads.deferToThread(
+        deferred = app.session.tasks.defer_to_thread(
             self.player.on_login_received,
             username.decode(),
             password.decode(),
@@ -89,7 +88,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             # Clear the data that was read
             self.stream.reset()
 
-            deferred = threads.deferToThread(
+            deferred = app.session.tasks.defer_to_thread(
                 self.player.on_packet_received,
                 packet, data
             )
