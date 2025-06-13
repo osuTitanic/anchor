@@ -63,7 +63,21 @@ def invite(client: OsuClient, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    # TODO: Check invite spams
+    if target.is_irc or target.is_tourney_client:
+        return
+
+    if target.match is client.match:
+        return
+
+    if not client.invite_limiter.allow():
+        client.logger.warning(f'Tried to invite {target.name}, but was rate-limited.')
+        client.enqueue_message(
+            'You are inviting too fast. Slow down.',
+            session.banchobot,
+            session.banchobot.name
+        )
+        return
+
     target.enqueue_packet(
         PacketType.BanchoInvite,
         Message(
