@@ -373,12 +373,34 @@ class MultiplayerChannel(Channel):
 
         player.channels.add(self)
         self.users.add(player)
-        self.update_osu_clients()
+        self.broadcast_join(player)
 
         if not no_response:
             player.enqueue_channel_join_success(self.resolve_name(player))
 
         self.logger.info(f'{player.name} joined')
+
+    def broadcast_join(self, player: "Client") -> None:
+        self.update_osu_clients()
+
+        for user in self.irc_users:
+            user.enqueue_player(player, self.name)
+
+    def broadcast_part(self, player: "Client") -> None:
+        self.update_osu_clients()
+
+        other_player = next(
+            (p for p in self.users if p.id == player.id),
+            None
+        )
+
+        # If another player is still in the channel,
+        # do not broadcast part to irc users
+        if other_player is not None:
+            return
+
+        for user in self.irc_users:
+            user.enqueue_part(player, self.name)
 
     def update_osu_clients(self) -> None:
         channel_object = self.bancho_channel
