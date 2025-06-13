@@ -20,7 +20,7 @@ def handle_list_command(
     )
 
     for channel in session.channels.values():
-        if channel.public and channel.can_read(client.permissions):
+        if channel.public and channel.can_read(client):
             client.enqueue_command(
                 irc.RPL_LIST,
                 channel.name,
@@ -45,7 +45,7 @@ def handle_topic_command(
         client.enqueue_channel_revoked(channel_name)
         return
 
-    if not channel.can_read(client.permissions):
+    if not channel.can_read(client):
         client.enqueue_channel_revoked(channel_name)
         return
 

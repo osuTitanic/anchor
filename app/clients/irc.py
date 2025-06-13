@@ -133,7 +133,7 @@ class IrcClient(Client):
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if not channel.can_read(self.permissions):
+            if not channel.can_read(self):
                 continue
 
             # Check if channel should be autojoined
@@ -495,7 +495,7 @@ class IrcClient(Client):
             app.session.banchobot.irc_prefix,
             params=[
                 channel.name,
-                channel.mode(self.permissions),
+                channel.mode(self),
                 self.local_prefix
             ]
         )

@@ -75,23 +75,23 @@ class Channel:
             self.user_count
         )
 
-    def can_read(self, perms: Permissions):
-        return perms.value >= self.read_perms
+    def can_read(self, client: "Client") -> bool:
+        return client.permissions.value >= self.read_perms
 
-    def can_write(self, perms: Permissions):
-        return perms.value >= self.write_perms
+    def can_write(self, client: "Client") -> bool:
+        return client.permissions.value >= self.write_perms
 
-    def mode(self, perms: Permissions) -> str:
-        if not self.can_write(perms):
+    def mode(self, client: "Client") -> str:
+        if client.silenced:
             return '-v'
 
-        if Permissions.Peppy in perms:
+        if Permissions.Peppy in client.permissions:
             return '+a'
 
-        if Permissions.Friend in perms:
+        if Permissions.Friend in client.permissions:
             return '+o'
 
-        if Permissions.BAT in perms:
+        if Permissions.BAT in client.permissions:
             return '+h'
 
         return '+v'
@@ -100,7 +100,7 @@ class Channel:
         # Update player's silence duration
         player.silenced
 
-        if not self.can_read(player.permissions):
+        if not self.can_read(player):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.enqueue_channel_revoked(self.display_name)
@@ -171,7 +171,7 @@ class Channel:
             return
 
         for player in app.session.players:
-            if self.can_read(player.permissions):
+            if self.can_read(player):
                 player.enqueue_channel(
                     self,
                     autojoin=False
@@ -270,7 +270,7 @@ class Channel:
             sender.logger.warning('Failed to send message: Sender was silenced.')
             return False
 
-        if not self.can_write(sender.permissions):
+        if not self.can_write(sender):
             sender.logger.warning(f'Failed to send message: "{message}".')
             return False
 
@@ -332,7 +332,7 @@ class SpectatorChannel(Channel):
 
     def update_osu_clients(self) -> None:
         for player in app.session.players:
-            if self.can_read(player.permissions):
+            if self.can_read(player):
                 player.enqueue_channel(
                     self.bancho_channel,
                     autojoin=False
@@ -361,7 +361,7 @@ class MultiplayerChannel(Channel):
         # Update player's silence duration
         player.silenced
 
-        if not self.can_read(player.permissions):
+        if not self.can_read(player):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.enqueue_channel_revoked(self.resolve_name(player))

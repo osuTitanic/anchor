@@ -252,7 +252,7 @@ class OsuClient(Client):
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if not channel.can_read(self.permissions):
+            if not channel.can_read(self):
                 continue
 
             # Check if channel should be autojoined
