@@ -1163,14 +1163,15 @@ def mp_addref(ctx: Context):
     if target.id == ctx.player.id:
         return ["You cannot add yourself as a referee."]
 
-    if not target.is_irc and target.match:
-        return [f'{target.name} is already in a match.']
+    if not target.is_irc and target.match == match:
+        # Target should now join #multi_<match.id> instead of #multiplayer
+        target.enqueue_channel_revoked('#multiplayer')
 
     match.referee_players.append(target.id)
     target.referee_matches.add(match)
 
     channel_object = match.chat.bancho_channel
-    channel_object.name = match.chat.name
+    channel_object.name = match.chat.resolve_name(target)
 
     target.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(target)
