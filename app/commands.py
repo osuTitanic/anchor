@@ -754,7 +754,7 @@ def mp_invite(ctx: Context):
     if target.match is match:
         return ['This player is already here.']
 
-    if not ctx.player.invite_limiter.allow():
+    if not target.invite_limiter.allow():
         ctx.player.logger.warning(f'Tried to invite {target.name}, but was rate-limited.')
         ctx.player.enqueue_message(
             'You are inviting too fast. Slow down.',

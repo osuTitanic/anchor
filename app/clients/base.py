@@ -53,7 +53,7 @@ class Client:
         self.channels: Set[Channel] = set()
         self.last_response = time.time()
         self.message_limiter = RateLimiter(60, 60)
-        self.invite_limiter = RateLimiter(10, 25)
+        self.invite_limiter = RateLimiter(10, 20)
         self.action_lock = Lock()
         self.hidden = False
         self.rankings = {}

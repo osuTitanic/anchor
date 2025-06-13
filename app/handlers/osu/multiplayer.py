@@ -69,7 +69,7 @@ def invite(client: OsuClient, target_id: int):
     if target.match is client.match:
         return
 
-    if not client.invite_limiter.allow():
+    if not target.invite_limiter.allow():
         client.logger.warning(f'Tried to invite {target.name}, but was rate-limited.')
         client.enqueue_message(
             'You are inviting too fast. Slow down.',
