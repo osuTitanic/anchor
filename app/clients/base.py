@@ -11,6 +11,7 @@ from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
 from app.objects.channel import Channel
 from app.common.constants import level
+from app.ratelimits import RateLimiter
 from app.common.database import (
     infringements,
     histories,
@@ -49,9 +50,9 @@ class Client:
         self.away_senders: Set[int] = set()
         self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
-        self.last_minute_stamp = time.time()
         self.last_response = time.time()
-        self.recent_message_count = 0
+        self.message_limiter = RateLimiter(60, 60)
+        self.invite_limiter = RateLimiter(10, 30)
         self.hidden = False
         self.rankings = {}
         self.groups = []

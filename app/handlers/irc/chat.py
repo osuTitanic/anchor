@@ -183,12 +183,7 @@ def handle_privmsg_command(
         sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is in friend-only mode.")
         return
 
-    if (time.time() - sender.last_minute_stamp) > 60:
-        sender.last_minute_stamp = time.time()
-        sender.recent_message_count = 0
-
-    if sender.recent_message_count > 30 and not sender.is_bot:
-        sender.recent_message_count = 0
+    if not sender.is_bot and not sender.message_limiter.allow():
         return sender.silence(60, 'Chat spamming')
 
     target.enqueue_message(message, sender, sender.name)
@@ -209,8 +204,9 @@ def handle_privmsg_command(
     if target.away_message:
         return sender.enqueue_away_message(target)
 
-    sender.recent_message_count += 1
-    sender.logger.info(f'[PM -> {target.name}]: {message}')
+    sender.logger.info(
+        f'[PM -> {target.name}]: {message}'
+    )
 
     session.tasks.do_later(
         messages.create_private,
