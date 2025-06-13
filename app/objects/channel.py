@@ -320,6 +320,30 @@ class SpectatorChannel(Channel):
     def display_name(self) -> str:
         return '#spectator'
 
+    def can_read(self, client: "Client") -> bool:
+        if not super().can_read(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+
+        if client.id == self.player.id:
+            return True
+
+        return client.spectating == self.player
+
+    def can_write(self, client: "Client") -> bool:
+        if not super().can_write(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+        
+        if client.id == self.player.id:
+            return True
+
+        return client.spectating == self.player
+
     def add(self, player: "OsuClient", no_response: bool = False) -> None:
         if player != self.player:
             return super().add(player, no_response)
