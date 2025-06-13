@@ -3,6 +3,7 @@ from chio.types import UserPresence, UserStats, UserStatus, Message, UserQuit
 from chio.constants import Mode, Permissions
 from typing import Iterable, List, Set
 from datetime import datetime
+from threading import Lock
 
 from app.common.helpers import infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
@@ -53,6 +54,7 @@ class Client:
         self.last_response = time.time()
         self.message_limiter = RateLimiter(60, 60)
         self.invite_limiter = RateLimiter(10, 25)
+        self.action_lock = Lock()
         self.hidden = False
         self.rankings = {}
         self.groups = []
@@ -362,21 +364,23 @@ class Client:
         if not self.object:
             return datetime.now()
 
-        infringements_helper.silence_user(
-            self.object,
-            duration,
-            reason
-        )
-        self.on_user_silenced()
-        return self.object.silence_end
+        with self.action_lock:
+            infringements_helper.silence_user(
+                self.object,
+                duration,
+                reason
+            )
+            self.on_user_silenced()
+            return self.object.silence_end
     
     def unsilence(self, expired: bool = False) -> None:
         """Unsilences the user"""
         if not self.object:
             return
 
-        infringements_helper.unsilence_user(self.object, expired)
-        self.on_user_unsilenced()
+        with self.action_lock:
+            infringements_helper.unsilence_user(self.object, expired)
+            self.on_user_unsilenced()
 
     def restrict(
         self,
@@ -388,21 +392,23 @@ class Client:
         if not self.object:
             return
 
-        infringements_helper.restrict_user(
-            self.object,
-            reason=reason,
-            until=until,
-            autoban=autoban
-        )
-        self.on_user_restricted(reason, until)
+        with self.action_lock:
+            infringements_helper.restrict_user(
+                self.object,
+                reason=reason,
+                until=until,
+                autoban=autoban
+            )
+            self.on_user_restricted(reason, until)
 
     def unrestrict(self) -> None:
         """Unrestricts the user"""
         if not self.object:
             return
 
-        infringements_helper.unrestrict_user(self.object)
-        self.on_user_unrestricted()
+        with self.action_lock:
+            infringements_helper.unrestrict_user(self.object)
+            self.on_user_unrestricted()
 
     def on_user_silenced(self) -> None:
         self.reload()
