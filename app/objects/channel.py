@@ -357,6 +357,30 @@ class MultiplayerChannel(Channel):
     def resolve_name(self, player: "Client") -> str:
         return self.name if player.id in self.match.referee_players else self.display_name
 
+    def can_read(self, client: "Client") -> bool:
+        if not super().can_read(client):
+            return False
+
+        if self.match.persistent and client.is_tourney_client:
+            return True
+
+        if client.id in self.match.referee_players:
+            return True
+
+        return client in self.match.players
+
+    def can_write(self, client: "Client") -> bool:
+        if not super().can_write(client):
+            return False
+
+        if client.is_tourney_client:
+            return False
+
+        if client.id in self.match.referee_players:
+            return True
+
+        return client in self.match.players
+
     def add(self, player: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
