@@ -14,6 +14,7 @@ from chio import (
     MatchType,
     SlotTeam,
     TeamType,
+    Message,
     Status,
     Mods
 )
@@ -33,7 +34,6 @@ from .common.database.repositories import (
 
 from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
-from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import Match, MatchTimer
 from .handlers.osu import spectator
 from .clients.base import Client
@@ -756,12 +756,11 @@ def mp_invite(ctx: Context):
 
     target.enqueue_packet(
         PacketType.BanchoInvite,
-        bMessage(
+        Message(
             ctx.player.name,
             f'Come join my multiplayer match: {match.embed}',
             ctx.player.name,
-            ctx.player.id,
-            is_private=True
+            ctx.player.id
         )
     )
 
