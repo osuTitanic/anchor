@@ -243,13 +243,16 @@ class Channel:
         message: str
     ) -> bool:
         if sender not in self.users:
-            # Player did not join this channel
-            sender.enqueue_channel_revoked(self.display_name)
-            sender.logger.warning(
-                f'Failed to send message: "{message}" on {self.name}, '
-                'because player did not join the channel.'
-            )
-            return False
+            # Try to add them to the channel, if
+            # they are not already in it
+            self.add(sender)
+
+            if sender not in self.users:
+                sender.logger.warning(
+                    f'Failed to send message: "{message}" on {self.name}, '
+                    'because player did not join the channel.'
+                )
+                return False
 
         if self.moderated:
             allowed_groups = [
