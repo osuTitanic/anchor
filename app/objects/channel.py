@@ -284,6 +284,10 @@ class Channel:
             officer.call(f'Message: {message}')
             return False
 
+        if not sender.is_bot and not sender.message_limiter.allow():
+            sender.silence(60, 'Chat spamming')
+            return False
+
         return True
 
     def handle_external_message(

@@ -78,9 +78,6 @@ def send_message(client: OsuClient, message: Message):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
-    if not client.is_bot and not client.message_limiter.allow():
-        return client.silence(60, 'Chat spamming')
-
     channel.send_message(client, message.content.strip())
 
 @register(PacketType.OsuPrivateMessage)
@@ -112,7 +109,8 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if not sender.is_bot and not sender.message_limiter.allow():
-        return sender.silence(60, 'Chat spamming')
+        sender.silence(60, 'Chat spamming')
+        return
 
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')

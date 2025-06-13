@@ -184,7 +184,8 @@ def handle_privmsg_command(
         return
 
     if not sender.is_bot and not sender.message_limiter.allow():
-        return sender.silence(60, 'Chat spamming')
+        sender.silence(60, 'Chat spamming')
+        return
 
     target.enqueue_message(message, sender, sender.name)
 
