@@ -330,6 +330,9 @@ class SpectatorChannel(Channel):
         if client.id == self.player.id:
             return True
 
+        if client.is_irc:
+            return False
+
         return client.spectating == self.player
 
     def can_write(self, client: "Client") -> bool:
@@ -341,6 +344,9 @@ class SpectatorChannel(Channel):
         
         if client.id == self.player.id:
             return True
+
+        if client.is_irc:
+            return False
 
         return client.spectating == self.player
 
