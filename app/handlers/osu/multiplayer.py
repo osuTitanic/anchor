@@ -187,10 +187,6 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         channel_object.name = match.chat.name
         client.referee_matches.add(match)
 
-    # Join the chat
-    client.enqueue_channel(channel_object, autojoin=True)
-    match.chat.add(client)
-
     slot = match.slots[slot_id]
 
     if match.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
@@ -208,6 +204,10 @@ def join_match(client: OsuClient, match_join: MatchJoin):
 
     match.logger.info(f'{client.name} joined')
     match.update()
+
+    # Join the chat
+    client.enqueue_channel(channel_object, autojoin=True)
+    match.chat.add(client)
 
     match.send_referee_message(
         f"{client.name} joined in slot {slot_id + 1}.",

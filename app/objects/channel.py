@@ -361,6 +361,9 @@ class MultiplayerChannel(Channel):
         if not super().can_read(client):
             return False
 
+        if Permissions.Peppy in client.permissions:
+            return True
+
         if self.match.persistent and client.is_tourney_client:
             return True
 
@@ -373,8 +376,8 @@ class MultiplayerChannel(Channel):
         if not super().can_write(client):
             return False
 
-        if client.is_tourney_client:
-            return False
+        if Permissions.Peppy in client.permissions:
+            return True
 
         if client.id in self.match.referee_players:
             return True
