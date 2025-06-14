@@ -9,7 +9,6 @@ from app.common.helpers import ip
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
-from twisted.internet import threads
 from twisted.web import server
 from queue import Queue
 
@@ -68,7 +67,7 @@ class HttpOsuHandler(Resource):
     isLeaf = True
 
     def handle_login_request(self, request: Request):
-        d = threads.deferToThread(self.process_login, request)
+        d = app.session.tasks.defer_to_reactor_thread(self.process_login, request)
         d.addCallback(self.on_login_success, request)
         d.addErrback(self.on_login_error, request)
         return server.NOT_DONE_YET
@@ -150,7 +149,7 @@ class HttpOsuHandler(Resource):
         request.finish()
 
     def handle_request(self, player: HttpOsuClient, request: Request):
-        d = threads.deferToThread(self.process_request, player, request)
+        d = app.session.tasks.defer_to_reactor_thread(self.process_request, player, request)
         d.addErrback(self.on_request_error, player, request)
         d.addCallback(self.on_request_success, request)
         return server.NOT_DONE_YET

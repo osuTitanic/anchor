@@ -252,7 +252,7 @@ class OsuClient(Client):
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if not channel.can_read(self.permissions):
+            if not channel.can_read(self):
                 continue
 
             # Check if channel should be autojoined
@@ -270,7 +270,7 @@ class OsuClient(Client):
         for player in app.session.players.osu_in_lobby:
             self.enqueue_packet(PacketType.BanchoLobbyJoin, player.id)
 
-        # Potentially fix player referee state
+        # Re-add matches that this player is a referee for
         self.referee_matches.update([
             match for match in app.session.matches.persistent
             if self.id in match.referee_players
@@ -472,6 +472,7 @@ class OsuClient(Client):
         self.presence.country_index = self.info.ip.country_index
         self.presence.longitude = self.info.ip.longitude
         self.presence.latitude = self.info.ip.latitude
+        self.presence.timezone = self.info.utc_offset
         self.presence.is_irc = False
 
         if self.info.display_city:

@@ -28,8 +28,9 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.connected = True
 
         if not config.IRC_ENABLED:
-            self.enqueue_error("IRC connections have been disabled. Please check back later!")
+            self.enqueue_welcome("IRC connections have been disabled. Please check back later!")
             self.close_connection('IRC is disabled')
+            return
 
         # Ensure client is logged in after 8 seconds, else close connection
         reactor.callLater(8, self.handle_timeout_callback)
@@ -50,7 +51,7 @@ class TcpIrcProtocol(IrcClient, IRC):
             self.close_connection("Invalid data received")
 
     def handleCommand(self, command: str, prefix: str, params: List[str]) -> None:
-        deferred = threads.deferToThread(
+        deferred = app.session.tasks.defer_to_reactor_thread(
             self.on_command_received,
             command, prefix, params
         )
@@ -75,9 +76,26 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.sendCommand(command, params, prefix, tags)
 
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
-        self.logger.debug(f"<- <{target}> '{message}' ({sender})")
-        self.sendMessage("PRIVMSG", target, ":" + message, prefix=sender.irc_prefix)
+        self.logger.debug(
+            f"<- <{target}> '{message}' ({sender})"
+        )
+        self.sendMessage(
+            "PRIVMSG",
+            target.replace(" ", "_"),
+            ":" + message,
+            prefix=sender.irc_prefix
+        )
 
     def enqueue_message_object(self, message: Message) -> None:
-        self.logger.debug(f"<- <{message.target}> '{message.content}' ({message.sender})")
-        self.sendMessage("PRIVMSG", message.target, ":" + message.content, prefix=message.sender)
+        self.logger.debug(
+            f"<- <{message.target}> '{message}' ({message.sender})"
+        )
+        prefix = (
+            f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+        )
+        self.sendMessage(
+            "PRIVMSG",
+            message.target.replace(" ", "_"),
+            ":" + message.content,
+            prefix=prefix
+        )

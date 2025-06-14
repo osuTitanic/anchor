@@ -125,13 +125,15 @@ class BanchoBot(IrcClient):
             context.target.send_message(
                 context.player,
                 context.message,
-                ignore_commands=True
+                ignore_commands=True,
+                do_later=False
             )
 
             for message in response:
                 context.target.send_message(
                     self, message,
-                    ignore_commands=True
+                    ignore_commands=True,
+                    do_later=False
                 )
 
             return

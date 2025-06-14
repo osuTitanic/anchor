@@ -10,6 +10,7 @@ from typing import List, Any, Iterable
 from twisted.words.protocols import irc
 from twisted.internet import reactor
 from functools import cached_property
+from datetime import datetime
 from copy import copy
 
 import logging
@@ -132,7 +133,7 @@ class IrcClient(Client):
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
-            if not channel.can_read(self.permissions):
+            if not channel.can_read(self):
                 continue
 
             # Check if channel should be autojoined
@@ -148,6 +149,19 @@ class IrcClient(Client):
                 channel.name
             )
 
+        # Re-add matches that this player is a referee for
+        self.referee_matches.update([
+            match for match in app.session.matches.persistent
+            if self.id in match.referee_players
+        ])
+
+        for match in self.referee_matches:
+            # Join the match channel automatically
+            channel_object = match.chat.bancho_channel
+            channel_object.name = match.chat.name
+            self.enqueue_channel(channel_object, autojoin=True)
+            match.chat.add(self)
+
     def on_login_failed(self, reason: LoginError) -> None:
         mapping = {
             LoginError.InvalidLogin: self.send_token_error,
@@ -157,6 +171,16 @@ class IrcClient(Client):
         }
         mapping.get(reason, self.send_server_error)()
         self.close_connection("Login failure")
+
+    def on_user_restricted(
+        self,
+        reason: str | None = None,
+        until: datetime | None = None,
+        autoban: bool = False
+    ) -> None:
+        super().on_user_restricted(reason, until, autoban)
+        self.send_restricted_error()
+        self.close_connection("Restricted")
 
     def close_connection(self, reason: Any = None) -> None:
         self.connected = False
@@ -405,6 +429,16 @@ class IrcClient(Client):
             params=[f":{channel}"]
         )
 
+    def enqueue_part(self, player: Client, channel: str = "#osu") -> None:
+        if player.hidden and player != self:
+            return
+
+        self.enqueue_command_raw(
+            "PART",
+            f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
+            params=[channel, ":part"]
+        )
+
     def enqueue_user_quit(self, quit: UserQuit) -> None:
         if quit.state != QuitState.Gone:
             return
@@ -441,6 +475,7 @@ class IrcClient(Client):
 
     def enqueue_channel_revoked(self, channel: str) -> None:
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
+        self.enqueue_command_raw("KICK", params=[channel, self.local_prefix, ":Channel has been revoked"])
 
     def enqueue_away_message(self, target: "Client") -> None:
         if self.id in target.away_senders:
@@ -460,7 +495,7 @@ class IrcClient(Client):
             app.session.banchobot.irc_prefix,
             params=[
                 channel.name,
-                channel.mode(self.permissions),
+                channel.mode(self),
                 self.local_prefix
             ]
         )

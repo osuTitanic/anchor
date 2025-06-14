@@ -33,6 +33,12 @@ def setup():
     app.session.logger.info('Loading bot...')
     app.session.players.add(bot_player := BanchoBot())
     app.session.banchobot = bot_player
+
+    if not bot_player.object:
+        # BanchoBot user object was not found inside the database
+        bot_player.logger.warning("Failed to load BanchoBot!")
+        app.session.players.remove(bot_player)
+
     app.session.logger.info(f'  - {bot_player.name}')
     app.session.logger.info('Loading channels...')
 

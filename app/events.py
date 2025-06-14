@@ -21,8 +21,7 @@ def bot_message(message: str, target: str):
     for message in messages:
         channel.send_message(
             app.session.banchobot,
-            message,
-            ignore_privileges=True
+            message
         )
 
 @app.session.events.register('logout')
@@ -72,6 +71,17 @@ def silence(user_id: int, duration: int, reason: str = ''):
     if (player_irc := app.session.players.by_id_irc(user.id)):
         player_irc.on_user_silenced()
 
+@app.session.events.register('update_user_silence')
+def update_user_silence(user_id: int):
+    if not (user := users.fetch_by_id(user_id)):
+        return
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_silenced()
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_silenced()
+
 @app.session.events.register('unrestrict')
 def unrestrict(user_id: int, restore_scores: bool = True):
     if not (user := users.fetch_by_id(user_id)):
@@ -109,7 +119,7 @@ def user_update(user_id: int, mode: int | None = None):
         return
 
     if player.is_irc and not player.is_osu:
-        # User is not using a 2007 osu! client
+        # User is not using an osu! client
         return
 
     if mode != None:

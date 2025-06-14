@@ -63,7 +63,21 @@ def invite(client: OsuClient, target_id: int):
     if not (target := session.players.by_id(target_id)):
         return
 
-    # TODO: Check invite spams
+    if target.is_irc or target.is_tourney_client:
+        return
+
+    if target.match is client.match:
+        return
+
+    if not target.invite_limiter.allow():
+        client.logger.warning(f'Tried to invite {target.name}, but was rate-limited.')
+        client.enqueue_message(
+            'You are inviting too fast. Slow down.',
+            session.banchobot,
+            session.banchobot.name
+        )
+        return
+
     target.enqueue_packet(
         PacketType.BanchoInvite,
         Message(
@@ -132,8 +146,7 @@ def create_match(client: OsuClient, bancho_match: Match):
 
     match.chat.send_message(
         session.banchobot,
-        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privileges=True
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here]."
     )
 
 @register(PacketType.OsuMatchJoin)
@@ -187,10 +200,6 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         channel_object.name = match.chat.name
         client.referee_matches.add(match)
 
-    # Join the chat
-    client.enqueue_channel(channel_object, autojoin=True)
-    match.chat.add(client)
-
     slot = match.slots[slot_id]
 
     if match.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
@@ -206,17 +215,17 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     client.match = match
     client.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
 
-    events.create(
-        match.db_match.id,
-        type=EventType.Join,
-        data={
-            'user_id': client.id,
-            'name': client.name
-        }
-    )
-
     match.logger.info(f'{client.name} joined')
     match.update()
+
+    # Join the chat
+    client.enqueue_channel(channel_object, autojoin=True)
+    match.chat.add(client)
+
+    match.send_referee_message(
+        f"{client.name} joined in slot {slot_id + 1}.",
+        session.banchobot
+    )
 
     for client in session.players.osu_tournament_clients:
         # Ensure that all tourney clients got the client's presence
@@ -227,9 +236,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    client.match.send_referee_message(
-        f"{client.name} joined in slot {slot_id + 1}.",
-        session.banchobot
+    events.create(
+        match.db_match.id,
+        type=EventType.Join,
+        data={
+            'user_id': client.id,
+            'name': client.name
+        }
     )
 
 @register(PacketType.OsuMatchPart)
@@ -285,17 +298,21 @@ def leave_match(client: OsuClient):
 
         match_id = client.match.db_match.id
 
+        # Fetch last game event
         last_game = events.fetch_last_by_type(
             match_id,
             type=EventType.Result
         )
 
         if not last_game:
-            # No games were played
+            # No games were played -> delete match
             matches.delete(match_id)
         else:
             matches.update(match_id, {'ended_at': datetime.now()})
             events.create(match_id, type=EventType.Disband)
+
+        if not client.match:
+            return
 
         client.match.logger.info('Match was disbanded.')
         client.match = None
@@ -477,10 +494,13 @@ def ready(client: OsuClient):
 
     slot.status = SlotStatus.Ready
     client.match.update()
-    client.match.send_referee_message(
-        f'{client.name} is ready.',
-        session.banchobot
-    )
+
+    if all([slot.status == SlotStatus.Ready for slot in client.match.player_slots]):
+        # Notify match referee's that all players are ready
+        client.match.send_referee_message(
+            'All players are ready.',
+            session.banchobot
+        )
 
 @register(PacketType.OsuMatchHasBeatmap)
 @register(PacketType.OsuMatchNotReady)
@@ -557,6 +577,7 @@ def change_team(client: OsuClient):
         return
 
     slot.team = {
+        SlotTeam.Neutral: SlotTeam.Red,
         SlotTeam.Blue: SlotTeam.Red,
         SlotTeam.Red: SlotTeam.Blue
     }[slot.team]
@@ -709,10 +730,9 @@ def score_update(client: OsuClient, scoreframe: ScoreFrame):
     slot.last_frame = scoreframe
     scoreframe.id = id
 
-    reactor.callFromThread(
-        client.match.process_score_update,
-        scoreframe
-    )
+    # Append to score queue
+    client.match.score_queue.put(scoreframe)
+    client.match.last_activity = time.time()
 
 @register(PacketType.OsuMatchComplete)
 def match_complete(client: OsuClient):
@@ -723,7 +743,7 @@ def match_complete(client: OsuClient):
         return
 
     client.match.last_activity = time.time()
-    client.match.start_finish_timeout()
+    client.match.schedule_finish_timeout()
 
     if not (slot := client.match.get_slot(client)):
         return

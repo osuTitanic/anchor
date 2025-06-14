@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Tuple, List
 from datetime import datetime, timedelta
 from threading import Thread, Timer
 from dataclasses import dataclass
+from queue import Queue
 from copy import copy
 from chio import (
     ScoreFrame as bScoreFrame,
@@ -77,16 +78,16 @@ class Slot:
     def copy_from(self, other) -> None:
         self.player = other.player
         self.status = other.status
-        self.team   = other.team
-        self.mods   = other.mods
+        self.team = other.team
+        self.mods = other.mods
 
     def reset(self, new_status = SlotStatus.Open) -> None:
-        self.player     = None
-        self.status     = new_status
-        self.team       = SlotTeam.Neutral
-        self.mods       = Mods.NoMod
-        self.loaded     = False
-        self.skipped    = False
+        self.player = None
+        self.status = new_status
+        self.team = SlotTeam.Neutral
+        self.mods = Mods.NoMod
+        self.loaded = False
+        self.skipped = False
         self.has_failed = False
 
 @dataclass(slots=True)
@@ -123,7 +124,6 @@ class Match:
         self.beatmap_id = beatmap_id
         self.beatmap_text = beatmap_name
         self.beatmap_checksum = beatmap_hash
-
         self.previous_beatmap_id = beatmap_id
         self.previous_beatmap_name = beatmap_name
         self.previous_beatmap_hash = beatmap_hash
@@ -131,7 +131,6 @@ class Match:
         self.mods = Mods.NoMod
         self.mode = mode
         self.seed = seed
-
         self.type = MatchType.Standard
         self.scoring_type = ScoringType.Score
         self.team_type = TeamType.HeadToHead
@@ -140,12 +139,14 @@ class Match:
         self.freemod = False
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
+        self.score_queue: Queue[bScoreFrame] = Queue()
         self.referee_players: List[int] = []
         self.banned_players: List[int] = []
 
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
         self.completion_timer: Timer | None = None
+        self.score_thread: Thread | None = None
         self.db_match: DBMatch | None = None
         self.chat: "Channel" | None = None
 
@@ -174,7 +175,7 @@ class Match:
     @property
     def url(self) -> str:
         """Url, used to join a match"""
-        return f'osump://{self.id}/{self.password}'
+        return f'osump://{self.id}/{self.password.replace(" ", "_") if self.password else ""}'
 
     @property
     def embed(self) -> str:
@@ -247,8 +248,10 @@ class Match:
         return None
 
     def get_player(self, name: str) -> "OsuClient" | None:
+        safe_name = name.lower().replace(" ", "_")
+
         for player in self.players:
-            if player.name == name:
+            if player.safe_name == safe_name:
                 return player
 
         return None
@@ -265,7 +268,7 @@ class Match:
         match_password = copy(self.password)
 
         if self.password:
-            match_password = " "
+            self.password = " "
 
         # Enqueue to lobby players
         for player in app.session.players.osu_in_lobby:
@@ -407,19 +410,6 @@ class Match:
         if (slot := self.get_slot(player)):
             slot.reset()
 
-        self.logger.info(
-            f'{player.name} was kicked from the match'
-        )
-
-        events.create(
-            self.db_match.id,
-            type=EventType.Kick,
-            data={
-                'user_id': player.id,
-                'name': player.name
-            }
-        )
-
         if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
@@ -436,7 +426,26 @@ class Match:
                 }
             )
 
+        self.logger.info(f'{player.name} was kicked from the match')
         self.update()
+
+        if all(slot.empty for slot in self.slots) and not self.persistent:
+            self.close()
+            self.logger.info('Match was disbanded.')
+            return
+
+        if not matches.exists(self.db_match.id):
+            # Match was already closed
+            return
+
+        events.create(
+            self.db_match.id,
+            type=EventType.Kick,
+            data={
+                'user_id': player.id,
+                'name': player.name
+            }
+        )
 
     def ban_player(self, player: "OsuClient"):
         self.banned_players.append(player.id)
@@ -529,6 +538,9 @@ class Match:
             'The match has started. Good luck, have fun!'
         )
 
+        # Start score update loop
+        self.schedule_score_updates()
+
         events.create(
             self.db_match.id,
             type=EventType.Start,
@@ -584,6 +596,11 @@ class Match:
         self.update()
 
     def finish(self):
+        if self.completion_timer:
+            # Cancel the completion timer
+            self.completion_timer.cancel()
+            self.completion_timer = None
+
         # Get players that have been playing this round
         players = [
             slot.player for slot in self.slots
@@ -675,6 +692,22 @@ class Match:
             }
         )
 
+    def send_referee_message(self, message: str, sender: "Client") -> None:
+        for referee in self.referee_players:
+            if referee_client := app.session.players.by_id_osu(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
+            if referee_client := app.session.players.by_id_irc(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
     def execute_start_timer(self) -> None:
         if not self.starting:
             self.logger.warning('Tried to execute starting timer, but match was not starting.')
@@ -763,20 +796,57 @@ class Match:
             'Countdown finished.'
         )
 
-    def process_score_update(self, scoreframe: bScoreFrame) -> None:
+    def schedule_score_updates(self) -> None:
+        if not self.in_progress:
+            return
+
+        if self.score_thread and self.score_thread.is_alive():
+            # Let's hope this never happens, it *should* never happen
+            self.logger.warning('Score thread is still running, aborting...')
+            return
+
+        self.score_thread = Thread(
+            target=self.process_score_updates,
+            name=f'Match {self.id} Score Processor',
+            daemon=True
+        )
+        self.score_thread.start()
+
+    def process_score_updates(self) -> None:
+        # Wait for first score frame, without timeout
+        scoreframe = self.score_queue.get()
+        target_players = self.players
+
+        if not scoreframe:
+            self.logger.warning('Score processor started without any score frame.')
+            return
+
+        # Broadcast first score frame and proceed to loop
+        for p in target_players:
+            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+
         self.last_activity = time.time()
 
-        for p in self.players:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+        while self.in_progress or not self.score_queue.empty():
+            try:
+                scoreframe = self.score_queue.get(timeout=6)
+            except Exception:
+                continue
 
-        for p in app.session.players.osu_in_lobby:
-            p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+            if not scoreframe:
+                continue
 
-    def start_finish_timeout(self) -> None:
+            for p in target_players:
+                p.enqueue_packet(PacketType.BanchoMatchScoreUpdate, scoreframe)
+
+        self.logger.info('Score processor finished.')
+        self.score_thread = None
+
+    def schedule_finish_timeout(self) -> None:
         if self.completion_timer:
             return
 
-        self.completion_timer = Timer(8, self.finish_timeout)
+        self.completion_timer = Timer(12, self.finish_timeout)
         self.completion_timer.start()
 
     def finish_timeout(self) -> None:
@@ -784,7 +854,7 @@ class Match:
 
         if not self.in_progress:
             return
-        
+
         for slot in self.player_slots:
             if not slot.is_playing:
                 continue
@@ -795,16 +865,3 @@ class Match:
         # Force-finish the match
         self.update()
         self.finish()
-
-    def send_referee_message(self, message: str, sender: "Client") -> None:
-        for referee in self.referee_players:
-            referee_client = app.session.players.by_id(referee)
-
-            if not referee_client:
-                continue
-
-            referee_client.enqueue_message(
-                message,
-                sender,
-                self.chat.name
-            )

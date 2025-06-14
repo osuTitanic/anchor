@@ -78,15 +78,7 @@ def send_message(client: OsuClient, message: Message):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
-    if (time() - client.last_minute_stamp) > 10:
-        client.last_minute_stamp = time()
-        client.recent_message_count = 0
-
-    if client.recent_message_count > 30 and not client.is_bot:
-        return client.silence(60, 'Chat spamming')
-
     channel.send_message(client, message.content.strip())
-    client.recent_message_count += 1
 
 @register(PacketType.OsuPrivateMessage)
 def send_private_message(sender: OsuClient, message: Message):
@@ -113,15 +105,12 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, sender.name)
+        sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, target.name)
         return
 
-    if (time() - sender.last_minute_stamp) > 60:
-        sender.last_minute_stamp = time()
-        sender.recent_message_count = 0
-
-    if sender.recent_message_count > 30 and not sender.is_bot:
-        return sender.silence(60, 'Chat spamming')
+    if not sender.is_bot and not sender.message_limiter.allow():
+        sender.silence(60, 'Chat spamming')
+        return
 
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')
@@ -153,8 +142,9 @@ def send_private_message(sender: OsuClient, message: Message):
         priority=3
     )
 
-    sender.recent_message_count += 1
-    sender.logger.info(f'[PM -> {target.name}]: {message.content}')
+    sender.logger.info(
+        f'[PM -> {target.name}]: {message.content}'
+    )
 
 @register(PacketType.OsuSetIrcAwayMessage)
 def away_message(client: OsuClient, message: Message):

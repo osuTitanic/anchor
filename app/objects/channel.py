@@ -75,23 +75,23 @@ class Channel:
             self.user_count
         )
 
-    def can_read(self, perms: Permissions):
-        return perms.value >= self.read_perms
+    def can_read(self, client: "Client") -> bool:
+        return client.permissions.value >= self.read_perms
 
-    def can_write(self, perms: Permissions):
-        return perms.value >= self.write_perms
+    def can_write(self, client: "Client") -> bool:
+        return client.permissions.value >= self.write_perms
 
-    def mode(self, perms: Permissions) -> str:
-        if not self.can_write(perms):
+    def mode(self, client: "Client") -> str:
+        if client.silenced:
             return '-v'
 
-        if Permissions.Peppy in perms:
+        if Permissions.Peppy in client.permissions:
             return '+a'
 
-        if Permissions.Friend in perms:
+        if Permissions.Friend in client.permissions:
             return '+o'
 
-        if Permissions.BAT in perms:
+        if Permissions.BAT in client.permissions:
             return '+h'
 
         return '+v'
@@ -100,7 +100,7 @@ class Channel:
         # Update player's silence duration
         player.silenced
 
-        if not self.can_read(player.permissions):
+        if not self.can_read(player):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.enqueue_channel_revoked(self.display_name)
@@ -115,12 +115,44 @@ class Channel:
 
         player.channels.add(self)
         self.users.add(player)
-        self.update()
+        self.logger.info(f'{player.name} joined')
+        self.broadcast_join(player)
 
         if not no_response:
             player.enqueue_channel_join_success(self.display_name)
 
-        self.logger.info(f'{player.name} joined')
+    def remove(self, player: "Client") -> None:
+        self.users.remove(player)
+        self.logger.info(f'{player.name} left')
+        self.broadcast_part(player)
+
+        if self in player.channels:
+            player.channels.remove(self)
+
+    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+        self.logger.info(f'[{message.sender}]: {message.content}')
+
+        for user in users:
+            user.enqueue_message_object(message)
+
+    def broadcast_part(self, player: "Client") -> None:
+        self.update_osu_clients()
+
+        other_player = next(
+            (p for p in self.users if p.id == player.id),
+            None
+        )
+
+        # If another player is still in the channel,
+        # do not broadcast part to irc users
+        if other_player is not None:
+            return
+
+        for user in self.irc_users:
+            user.enqueue_part(player, self.name)
+
+    def broadcast_join(self, player: "Client") -> None:
+        self.update_osu_clients()
 
         if self.name == "#osu":
             return
@@ -128,14 +160,7 @@ class Channel:
         for user in self.irc_users:
             user.enqueue_player(player, self.name)
 
-    def remove(self, player: "Client") -> None:
-        self.users.remove(player)
-        self.update()
-
-        if self in player.channels:
-            player.channels.remove(self)
-
-    def update(self) -> None:
+    def update_osu_clients(self) -> None:
         if not self.public:
             # Only enqueue to users in this channel
             for player in self.users:
@@ -146,52 +171,30 @@ class Channel:
             return
 
         for player in app.session.players:
-            if self.can_read(player.permissions):
+            if self.can_read(player):
                 player.enqueue_channel(
                     self,
                     autojoin=False
                 )
 
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
-        self.logger.info(f'[{message.sender}]: {message.content}')
-
-        for user in users:
-            user.enqueue_message_object(message)
-
     def send_message(
         self,
         sender: "Client",
         message: str,
-        ignore_privileges=False,
-        ignore_commands=False
+        ignore_commands: bool = False,
+        do_later: bool = True
     ) -> None:
-        if sender not in self.users and not sender.is_bot:
-            # Player did not join this channel
-            sender.enqueue_channel_revoked(self.display_name)
-            sender.logger.warning(
-                f'Failed to send message: "{message}" on {self.name}, '
-                'because player did not join the channel.'
-            )
-            return
+        is_banchobot = (
+            sender == app.session.banchobot
+        )
 
-        if self.moderated and sender != app.session.banchobot:
-            allowed_groups = [
-                'Admins',
-                'Developers',
-                'Beatmap Approval Team',
-                'Global Moderator Team',
-                'Tournament Manager Team'
-            ]
+        is_valid_message = self.validate_message(
+            sender,
+            message
+        )
 
-            if not any([group in sender.groups for group in allowed_groups]):
-                return
-
-        if sender.silenced:
-            sender.logger.warning('Failed to send message: Sender was silenced.')
-            return
-
-        if not self.can_write(sender.permissions) and not ignore_privileges:
-            sender.logger.warning(f'Failed to send message: "{message}".')
+        if not is_valid_message and not is_banchobot:
+            # Message validation failed
             return
 
         if message.startswith('!') and not ignore_commands:
@@ -201,6 +204,76 @@ class Channel:
                 message, sender, self, priority=1
             )
 
+        if len(message) > 512:
+            # Limit message size to 512 characters
+            message = message[:497] + '... (truncated)'
+
+        # Filter out sender
+        users = [user for user in self.users if user != sender]
+
+        app.session.tasks.do_later(
+            messages.create,
+            sender.name,
+            self.name,
+            message[:512],
+            priority=2
+        )
+
+        message_object = Message(
+            sender.name,
+            message,
+            self.display_name,
+            sender.id
+        )
+
+        if not do_later:
+            self.broadcast_message(message_object, users)
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message,
+            message_object,
+            users=users,
+            priority=1
+        )
+    
+    def validate_message(
+        self,
+        sender: "Client",
+        message: str
+    ) -> bool:
+        if sender not in self.users:
+            # Try to add them to the channel, if
+            # they are not already in it
+            self.add(sender)
+
+            if sender not in self.users:
+                sender.logger.warning(
+                    f'Failed to send message: "{message}" on {self.name}, '
+                    'because player did not join the channel.'
+                )
+                return False
+
+        if self.moderated:
+            allowed_groups = [
+                'Admins',
+                'Developers',
+                'Beatmap Approval Team',
+                'Global Moderator Team',
+                'Tournament Manager Team'
+            ]
+
+            if not any([group in sender.groups for group in allowed_groups]):
+                return False
+
+        if sender.silenced:
+            sender.logger.warning('Failed to send message: Sender was silenced.')
+            return False
+
+        if not self.can_write(sender):
+            sender.logger.warning(f'Failed to send message: "{message}".')
+            return False
+
         has_bad_words = any([
             word in message.lower()
             for word in BAD_WORDS
@@ -209,34 +282,13 @@ class Channel:
         if has_bad_words and not sender.is_bot:
             sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
             officer.call(f'Message: {message}')
-            return
+            return False
 
-        # Limit message size to 512 characters
-        if len(message) > 512:
-            message = message[:497] + '... (truncated)'
+        if not sender.is_bot and not sender.message_limiter.allow():
+            sender.silence(60, 'Chat spamming')
+            return False
 
-        # Filter out sender
-        users = {user for user in self.users if user != sender}
-
-        app.session.tasks.do_later(
-            self.broadcast_message,
-            Message(
-                sender.name,
-                message,
-                self.display_name,
-                sender.id
-            ),
-            users=users,
-            priority=1
-        )
-
-        app.session.tasks.do_later(
-            messages.create,
-            sender.name,
-            self.name,
-            message[:512],
-            priority=3
-        )
+        return True
 
     def handle_external_message(
         self,
@@ -272,6 +324,36 @@ class SpectatorChannel(Channel):
     def display_name(self) -> str:
         return '#spectator'
 
+    def can_read(self, client: "Client") -> bool:
+        if not super().can_read(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+
+        if client.id == self.player.id:
+            return True
+
+        if client.is_irc:
+            return False
+
+        return client.spectating == self.player
+
+    def can_write(self, client: "Client") -> bool:
+        if not super().can_write(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+        
+        if client.id == self.player.id:
+            return True
+
+        if client.is_irc:
+            return False
+
+        return client.spectating == self.player
+
     def add(self, player: "OsuClient", no_response: bool = False) -> None:
         if player != self.player:
             return super().add(player, no_response)
@@ -282,9 +364,9 @@ class SpectatorChannel(Channel):
 
         return super().add(player, no_response)
 
-    def update(self) -> None:
+    def update_osu_clients(self) -> None:
         for player in app.session.players:
-            if self.can_read(player.permissions):
+            if self.can_read(player):
                 player.enqueue_channel(
                     self.bancho_channel,
                     autojoin=False
@@ -309,11 +391,38 @@ class MultiplayerChannel(Channel):
     def resolve_name(self, player: "Client") -> str:
         return self.name if player.id in self.match.referee_players else self.display_name
 
+    def can_read(self, client: "Client") -> bool:
+        if not super().can_read(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+
+        if self.match.persistent and client.is_tourney_client:
+            return True
+
+        if client.id in self.match.referee_players:
+            return True
+
+        return client in self.match.players
+
+    def can_write(self, client: "Client") -> bool:
+        if not super().can_write(client):
+            return False
+
+        if Permissions.Peppy in client.permissions:
+            return True
+
+        if client.id in self.match.referee_players:
+            return True
+
+        return client in self.match.players
+
     def add(self, player: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
         player.silenced
 
-        if not self.can_read(player.permissions):
+        if not self.can_read(player):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.enqueue_channel_revoked(self.resolve_name(player))
@@ -328,14 +437,36 @@ class MultiplayerChannel(Channel):
 
         player.channels.add(self)
         self.users.add(player)
-        self.update()
+        self.broadcast_join(player)
 
         if not no_response:
             player.enqueue_channel_join_success(self.resolve_name(player))
 
         self.logger.info(f'{player.name} joined')
 
-    def update(self) -> None:
+    def broadcast_join(self, player: "Client") -> None:
+        self.update_osu_clients()
+
+        for user in self.irc_users:
+            user.enqueue_player(player, self.name)
+
+    def broadcast_part(self, player: "Client") -> None:
+        self.update_osu_clients()
+
+        other_player = next(
+            (p for p in self.users if p.id == player.id),
+            None
+        )
+
+        # If another player is still in the channel,
+        # do not broadcast part to irc users
+        if other_player is not None:
+            return
+
+        for user in self.irc_users:
+            user.enqueue_part(player, self.name)
+
+    def update_osu_clients(self) -> None:
         channel_object = self.bancho_channel
 
         # Only enqueue to users in this channel

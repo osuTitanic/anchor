@@ -20,7 +20,7 @@ def handle_list_command(
     )
 
     for channel in session.channels.values():
-        if channel.public and channel.can_read(client.permissions):
+        if channel.public and channel.can_read(client):
             client.enqueue_command(
                 irc.RPL_LIST,
                 channel.name,
@@ -45,7 +45,7 @@ def handle_topic_command(
         client.enqueue_channel_revoked(channel_name)
         return
 
-    if not channel.can_read(client.permissions):
+    if not channel.can_read(client):
         client.enqueue_channel_revoked(channel_name)
         return
 
@@ -147,7 +147,8 @@ def handle_privmsg_command(
     sender: IrcClient,
     prefix: str,
     target_name: str,
-    message: str
+    message: str,
+    *args
 ) -> None:
     if not sender.logged_in:
         sender.handle_osu_login_callback(message)
@@ -182,12 +183,9 @@ def handle_privmsg_command(
         sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is in friend-only mode.")
         return
 
-    if (time.time() - sender.last_minute_stamp) > 60:
-        sender.last_minute_stamp = time.time()
-        sender.recent_message_count = 0
-
-    if sender.recent_message_count > 30 and not sender.is_bot:
-        return sender.silence(60, 'Chat spamming')
+    if not sender.is_bot and not sender.message_limiter.allow():
+        sender.silence(60, 'Chat spamming')
+        return
 
     target.enqueue_message(message, sender, sender.name)
 
@@ -207,8 +205,9 @@ def handle_privmsg_command(
     if target.away_message:
         return sender.enqueue_away_message(target)
 
-    sender.recent_message_count += 1
-    sender.logger.info(f'[PM -> {target.name}]: {message}')
+    sender.logger.info(
+        f'[PM -> {target.name}]: {message}'
+    )
 
     session.tasks.do_later(
         messages.create_private,

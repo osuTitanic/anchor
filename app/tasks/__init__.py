@@ -5,6 +5,7 @@ from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from queue import PriorityQueue
 from app.common import officer
+from threading import Thread
 
 import itertools
 import logging
@@ -12,7 +13,8 @@ import config
 
 class Tasks:
     """
-    A task manager that utilizes Twisted's reactor to schedule tasks.
+    A task manager that utilizes Twisted's reactor to schedule tasks, as well
+    as a queue for tasks that can be executed later, to offload work from the main threads.
     """
 
     def __init__(self) -> None:
@@ -38,24 +40,6 @@ class Tasks:
             return func
         return wrapper
 
-    def do_later(
-        self,
-        function: Callable,
-        *args,
-        priority: int = 0,
-        **kwargs
-    ) -> None:
-        """
-        Schedule a function to be called later with a given priority.
-        Lower numbers indicate higher priority.
-        """
-        if self.do_later_queue.empty():
-            # Reset counter if the queue is empty
-            self.counter = itertools.count()
-
-        count = next(self.counter)
-        self.do_later_queue.put((priority, count, function, args, kwargs))
-
     def start(self) -> None:
         """
         Start the task loop by scheduling all registered tasks.
@@ -80,7 +64,7 @@ class Tasks:
         def on_task_done() -> None:
             self.logger.debug(f'Task "{name}" completed')
 
-            if interval <= 0:
+            if interval <= 0 or self.shutdown:
                 return
 
             # Schedule the next run
@@ -106,10 +90,47 @@ class Tasks:
         deferred.addErrback(lambda f: on_task_failed(f.value))
         return deferred
 
+    def do_later(
+        self,
+        function: Callable,
+        *args,
+        priority: int = 0,
+        **kwargs
+    ) -> None:
+        """
+        Schedule a function to be called later with a given priority.
+        Lower numbers indicate higher priority.
+        """
+        if self.do_later_queue.empty():
+            # Reset counter if the queue is empty
+            self.counter = itertools.count()
+
+        count = next(self.counter)
+        self.do_later_queue.put((priority, count, function, args, kwargs))
+        
     def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
-        return threads.deferToThread(func, *args, **kwargs)
+        """
+        Internal function used to defer a function call to a separate thread.
+        This utilizes python's regular threading capabilities.
+        """
+        def run(deferred: Deferred, func: Callable, *args, **kwargs) -> None:
+            try:
+                result = func(*args, **kwargs)
+                deferred.callback(result)
+            except Exception as e:
+                deferred.errback(e)
+
+        deferred = Deferred()
+        thread = Thread(target=run, args=(deferred, func) + args, kwargs=kwargs)
+        thread.daemon = True
+        thread.start()
+        return deferred
 
     def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
+        """
+        Internal function used to defer a function call to the reactor thread.
+        Note that this will block the reactor until the function completes.
+        """
         def run(deferred: Deferred, func: Callable, *args, **kwargs) -> None:
             try:
                 result = func(*args, **kwargs)
@@ -120,3 +141,10 @@ class Tasks:
         deferred = Deferred()
         reactor.callLater(0, run, deferred, func, *args, **kwargs)
         return deferred
+
+    def defer_to_reactor_thread(self, func: Callable, *args, **kwargs) -> Deferred:
+        """
+        Internal function used to defer a function call to a separate
+        thread, using the reactor's thread pool.
+        """
+        return threads.deferToThread(func, *args, **kwargs)

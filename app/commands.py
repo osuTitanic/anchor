@@ -14,6 +14,7 @@ from chio import (
     MatchType,
     SlotTeam,
     TeamType,
+    Message,
     Status,
     Mods
 )
@@ -33,7 +34,6 @@ from .common.database.repositories import (
 
 from .common.constants import Permissions, EventType, GameMode
 from .objects.channel import Channel, MultiplayerChannel
-from .common.objects import bMessage, bMatch, bSlot
 from .objects.multiplayer import Match, MatchTimer
 from .handlers.osu import spectator
 from .clients.base import Client
@@ -296,7 +296,7 @@ def mp_help(ctx: Context):
 
     return response
 
-@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True, groups=['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['create', 'make', 'makeprivate', 'createprivate'], ignore_conditions=True)
 def create_persistant_match(ctx: Context):
     """<name> - Create a new persistant match"""
     if len(ctx.args) < 1:
@@ -373,8 +373,7 @@ def create_persistant_match(ctx: Context):
 
     match.chat.send_message(
         app.session.banchobot,
-        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here].",
-        ignore_privileges=True
+        f"Match history available [http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} here]."
     )
 
     if not ctx.player.is_irc:
@@ -435,7 +434,7 @@ def mp_start(ctx: Context):
 
         return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.starting:
             return ['Match timer is not active!']
@@ -490,7 +489,7 @@ def mp_timer(ctx: Context):
 
         return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
 
-    elif ctx.args[0] in ('cancel', 'c', 'stop'):
+    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
         if not match.countdown:
             return ['Countdown is not active!']
@@ -498,6 +497,18 @@ def mp_timer(ctx: Context):
         # The countdown thread will check if 'starting' is None
         match.countdown = None
         return ['Countdown was cancelled.']
+
+@mp_commands.register(['aborttimer', 'stoptimer', 'canceltimer'])
+def mp_abort_timer(ctx: Context):
+    """- Abort the current match timer"""
+    match: Match = ctx.get_context_object('match')
+
+    if not match.countdown:
+        return ['Countdown is not active!']
+    
+    # The countdown thread will check if 'countdown' is None
+    match.countdown = None
+    return ['Countdown was cancelled.']
 
 @mp_commands.register(['close', 'terminate', 'disband'])
 def mp_close(ctx: Context):
@@ -551,9 +562,7 @@ def mp_mods(ctx: Context):
 
     # TODO: Filter out invalid mods
     mods, freemod = parse_mods_from_args(ctx.args)
-
-    if mods is None:
-        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <mods>']
+    mods = mods if mods is not None else Mods.NoMod
 
     if mods.value >= 4294967295:
         # This would hit the integer limit
@@ -565,15 +574,29 @@ def mp_mods(ctx: Context):
         return [f'Mods are already set to {match.mods.short}{"FM" if freemod else ""}.']
 
     match.freemod = freemod
+    match.mods = mods
 
     if match.freemod:
-        # Set match mods
-        match.mods = mods & ~Mods.FreeModAllowed
+        for slot in match.slots:
+            if not (slot.status.value & SlotStatus.HasPlayer.value):
+                continue
 
-        # Set host mods
-        match.host_slot.mods = mods & ~Mods.SpeedMods
+            # Set current mods to every player inside the match, if they are not speed mods
+            slot.mods = mods & ~Mods.SpeedMods
+            
+            # TODO: Fix for older clients without freemod support
+            # slot.mods = []
+
+        # The speedmods are kept in the match mods
+        match.mods = mods & ~Mods.FreeModAllowed
     else:
-        match.mods = mods
+        # Keep mods from host, if the host exists
+        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
+        match.mods |= host_mods
+
+        # Reset any mod from players
+        for slot in match.slots:
+            slot.mods = Mods.NoMod
 
     match.logger.info(f'Updated match mods to {match.mods.short}.')
     match.update()
@@ -581,7 +604,10 @@ def mp_mods(ctx: Context):
 
 def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
     try:
-        freemod = any(arg.lower() in ('freemod', 'fm') for arg in args)
+        freemod = any(
+            arg.lower() in ('freemod', 'fm')
+            for arg in args
+        )
 
         if args[0].isdecimal():
             # Parse mods as an integer
@@ -591,13 +617,13 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
         mods_string = "".join(args[0:]).replace(',', '').replace("freemod", "")
         freemod = "fm" in mods_string.lower() or freemod
 
-        if len(args[0]) % 2 != 0:
+        if len(mods_string) % 2 != 0:
             # Mod string must be a multiple of 2
-            return
+            return None, freemod
 
         return Mods.from_string(mods_string), freemod
     except (ValueError, TypeError):
-        pass
+        return None, False
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
@@ -663,8 +689,14 @@ def mp_host(ctx: Context):
         match.db_match.id,
         type=EventType.Host,
         data={
-            'previous': {'id': target.id, 'name': target.name},
-            'new': {'id': match.host_id, 'name': match.host.name}
+            'new': {
+                'id': target.id,
+                'name': target.name
+            },
+            'previous': {
+                'id': match.host_id,
+                'name': match.host.name if match.host else 'Unknown'
+            }
         },
         priority=2
     )
@@ -722,9 +754,18 @@ def mp_invite(ctx: Context):
     if target.match is match:
         return ['This player is already here.']
 
+    if not target.invite_limiter.allow():
+        ctx.player.logger.warning(f'Tried to invite {target.name}, but was rate-limited.')
+        ctx.player.enqueue_message(
+            'You are inviting too fast. Slow down.',
+            app.session.banchobot,
+            app.session.banchobot.name
+        )
+        return
+
     target.enqueue_packet(
         PacketType.BanchoInvite,
-        bMessage(
+        Message(
             ctx.player.name,
             f'Come join my multiplayer match: {match.embed}',
             ctx.player.name,
@@ -828,11 +869,6 @@ def mp_kick(ctx: Context):
             continue
 
         match.kick_player(player)
-
-        if all(slot.empty for slot in match.slots):
-            match.close()
-            match.logger.info('Match was disbanded.')
-
         return ["Player was kicked from the match."]
 
     return [f'Could not find the player "{name}".']
@@ -857,9 +893,10 @@ def mp_ban(ctx: Context):
 
     match.ban_player(player)
 
-    if all(slot.empty for slot in match.slots):
+    if all(slot.empty for slot in match.slots) and not match.persistent:
         match.close()
         match.logger.info('Match was disbanded.')
+        return
 
     return ["Player was banned from the match."]
 
@@ -1106,7 +1143,7 @@ def mp_listrefs(ctx: Context):
         if referees else "There are no referees in this match."
     ]
 
-@mp_commands.register(['addref', 'addreferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['addref', 'addreferee'])
 def mp_addref(ctx: Context):
     """<username> - Add a referee to this match"""
     match: Match = ctx.get_context_object('match')
@@ -1134,21 +1171,22 @@ def mp_addref(ctx: Context):
     if target.id == ctx.player.id:
         return ["You cannot add yourself as a referee."]
 
-    if target.match:
-        return [f'{target.name} is already in a match.']
+    if not target.is_irc and target.match == match:
+        # Target should now join #multi_<match.id> instead of #multiplayer
+        target.enqueue_channel_revoked('#multiplayer')
 
     match.referee_players.append(target.id)
     target.referee_matches.add(match)
 
     channel_object = match.chat.bancho_channel
-    channel_object.name = match.chat.name
+    channel_object.name = match.chat.resolve_name(target)
 
     target.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(target)
 
     return [f'Added "{target.name}" as a match referee.']
 
-@mp_commands.register(['removeref', 'remref', 'removereferee'], ['Admins', 'Tournament Manager Team', 'Global Moderator Team'])
+@mp_commands.register(['removeref', 'remref', 'removereferee'])
 def mp_removeref(ctx: Context):
     """<username> - Remove a referee from this match"""
     match: Match = ctx.get_context_object('match')
@@ -1561,13 +1599,16 @@ def silence(ctx: Context) -> List | None:
     if not (user := users.fetch_by_name(name)):
         return [f'Player "{name}" was not found.']
 
-    silence_end = infringements.silence_user(
+    if not duration:
+        return [f'Invalid duration "{ctx.args[1]}". Please use a valid time format.']
+
+    record = infringements.silence_user(
         user,
         duration,
         reason
     )
 
-    if not silence_end:
+    if not record:
         return [f'Failed to silence {user.name}.']
 
     if (player_osu := app.session.players.by_name_osu(name)):
@@ -1576,7 +1617,7 @@ def silence(ctx: Context) -> List | None:
     if (player_irc := app.session.players.by_name_irc(name)):
         player_irc.on_user_silenced()
 
-    time_string = timeago.format(silence_end)
+    time_string = timeago.format(user.silence_end)
     time_string = time_string.replace('in ', '')
 
     return [f'{user.name} was silenced for {time_string}']
@@ -1614,7 +1655,11 @@ def restrict(ctx: Context) -> List | None:
     until = None
 
     if not length.startswith('perma'):
-        until = datetime.now() + timedelta(seconds=timeparse(length))
+        duration = timeparse(length)
+        until = datetime.now() + timedelta(seconds=duration or 0)
+        
+        if duration is None:
+            return [f'Invalid duration "{length}". Please use a valid time format.']
 
     user = users.fetch_by_name(username)
 
@@ -1714,7 +1759,7 @@ def kill(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['multi', 'multiaccount', 'hardware'], ['Admins'])
+@command(['multi', 'multiaccount', 'hardware'], ['Admins', 'Global Moderator Team'])
 def multi(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1772,46 +1817,6 @@ def rtx(ctx: Context) -> List | None:
 
     target.enqueue_packet(PacketType.BanchoRTX, message)
     return [f"{target.name} was RTX'd."]
-
-@command(['crash'], ['Admins', 'Developers'], hidden=False)
-def crash(ctx: Context) -> List | None:
-    """<username> - We do a little trolling"""
-    if len(ctx.args) <= 0:
-        return [f'Invalid syntax: !{ctx.trigger} <username>']
-    
-    username = " ".join(ctx.args[0:])
-    target = app.session.players.by_name_safe(username)
-
-    if not target:
-        return [f'User "{username}" was not found.']
-
-    if target.is_irc:
-        return ['This player is connected via. IRC.']
-
-    fake_match = bMatch(
-        id=0,
-        in_progress=False,
-        type=MatchType.Standard,
-        mods=Mods.NoMod,
-        name="weeeeee",
-        password="",
-        beatmap_text="",
-        beatmap_id=0,
-        beatmap_checksum="",
-        slots=[
-            bSlot(player_id=2, status=SlotStatus.NotReady),
-            *(bSlot(player_id=-index-1, status=SlotStatus.NoMap) for index in range(7))
-        ],
-        host_id=-1,
-        mode=GameMode.Osu,
-        scoring_type=ScoringType.Combo,
-        team_type=TeamType.HeadToHead,
-        freemod=False,
-        seed=13381
-    )
-    target.enqueue_packet(PacketType.BanchoMatchUpdate, fake_match)
-    target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, fake_match)
-    return [f"{target.name} was crashed, hopefully :tf:"]
 
 @command(['faq'], hidden=False)
 def mp_help(ctx: Context):
