@@ -1485,7 +1485,7 @@ def get_client_version(ctx: Context):
 
     return [f"{target.name} is playing on {target.info.version.string}"]
 
-@command(['setranking', 'setrank'])
+@command(['ranking', 'setranking', 'setrank'])
 def set_preferred_ranking(ctx: Context):
     """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
     if len(ctx.args) < 1:
