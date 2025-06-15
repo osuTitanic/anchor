@@ -6,9 +6,16 @@ import app
 
 class LoginManager:
     def __init__(self) -> None:
-        self.queue_threshold = 400 * (config.BANCHO_WORKERS // 8)
-        self.queue_enabled = False
+        self.packet_threshold = 5000 * (config.BANCHO_WORKERS // 8)
+        self.login_threshold = 100 * (config.BANCHO_WORKERS // 8)
         self.login_priority = 1
+        
+    @property
+    def queue_enabled(self) -> bool:
+        return (
+            app.session.logins_per_minute.rate > self.login_threshold or
+            app.session.packets_per_minute.rate > self.packet_threshold
+        )
 
     def submit(
         self,
@@ -37,12 +44,5 @@ class LoginManager:
             password,
             client_data
         )
-
-    def update_queue_status(self, user_count: int) -> None:
-        """
-        Enable the login queue if the current user
-        count meets or exceeds the threshold.
-        """
-        self.queue_enabled = user_count >= self.queue_threshold
 
 manager = LoginManager()
