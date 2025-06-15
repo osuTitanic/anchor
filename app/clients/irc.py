@@ -146,7 +146,8 @@ class IrcClient(Client):
             app.session.tasks.do_later(
                 self.enqueue_players,
                 channel.users,
-                channel.name
+                channel.name,
+                priority=1
             )
 
         # Re-add matches that this player is a referee for
