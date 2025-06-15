@@ -77,6 +77,7 @@ class OsuClient(Client):
             self.close_connection()
             return
 
+        app.session.logins_per_minute.record()
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {info.version}.')
         self.last_response = time.time()
@@ -254,7 +255,6 @@ class OsuClient(Client):
         # Update usercount & login queue status
         user_count = len(app.session.players)
         usercount.set(user_count)
-        login_helper.manager.update_queue_status(user_count)
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -307,9 +307,8 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
-        self.logger.debug(
-            f'-> "{packet.name}": {data}'
-        )
+        app.session.packets_per_minute.record()
+        self.logger.debug(f'-> "{packet.name}": {data}')
 
         if not (handler_function := app.session.osu_handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')

@@ -37,6 +37,7 @@ class IrcClient(Client):
     def on_command_received(self, command: str, prefix: str, params: List[str]) -> None:
         self.logger.debug(f"-> <{command}> {prefix} ({', '.join(params)})")
         self.last_response = time.time()
+        app.session.packets_per_minute.record()
 
         if not (handler := app.session.irc_handlers.get(command)):
             return
@@ -49,6 +50,7 @@ class IrcClient(Client):
 
         self.logger = logging.getLogger(f'IRC "{self.name}"')
         self.logger.info(f'Login attempt as "{self.name}" with IRC.')
+        app.session.logins_per_minute.record()
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_safe_name(self.name, session)):
