@@ -5,9 +5,9 @@ from autobahn.websocket.protocol import ConnectionRequest
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
-from app.objects import OsuClientInformation
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
+from app.tasks import logins
 
 import logging
 import app
@@ -52,7 +52,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
 
-        deferred = app.session.tasks.defer_to_reactor_thread(
+        deferred = logins.submit(
             self.player.on_login_received,
             username.decode(),
             password.decode(),

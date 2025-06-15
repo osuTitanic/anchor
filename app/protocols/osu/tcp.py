@@ -8,9 +8,9 @@ from twisted.python.failure import Failure
 from twisted.internet import reactor
 
 from app.protocols.osu.streams import ByteStream
-from app.objects import OsuClientInformation
 from app.common.helpers import location
 from app.clients.osu import OsuClient
+from app.tasks import logins
 
 import config
 import app
@@ -90,7 +90,7 @@ class TcpOsuClient(OsuClient, Protocol):
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
 
-            deferred = app.session.tasks.defer_to_reactor_thread(
+            deferred = logins.submit(
                 super().on_login_received,
                 username.decode(),
                 password.decode(),

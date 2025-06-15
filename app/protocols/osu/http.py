@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
-from app.objects.client import OsuClientInformation
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
+from app.tasks import logins
 
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
@@ -63,7 +63,7 @@ class HttpOsuHandler(Resource):
     isLeaf = True
 
     def handle_login_request(self, request: Request):
-        d = app.session.tasks.defer_to_reactor_thread(self.process_login, request)
+        d = logins.submit(self.process_login, request)
         d.addCallback(self.on_login_success, request)
         d.addErrback(self.on_login_error, request)
         return server.NOT_DONE_YET
