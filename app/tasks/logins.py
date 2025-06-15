@@ -9,7 +9,7 @@ class LoginManager:
         self.packet_threshold = 5000 * (config.BANCHO_WORKERS // 8)
         self.login_threshold = 100 * (config.BANCHO_WORKERS // 8)
         self.login_priority = 1
-        
+
     @property
     def queue_enabled(self) -> bool:
         return (

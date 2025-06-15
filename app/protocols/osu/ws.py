@@ -33,7 +33,10 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.logger.info(f'-> <{self.address}>')
 
     def onClose(self, wasClean: bool, code: int, reason: str):
-        self.player.on_connection_lost(reason, wasClean)
+        app.session.tasks.defer_to_queue(
+            self.player.on_connection_lost,
+            reason, wasClean
+        )
 
     def onMessage(self, payload: bytes, isBinary: bool):
         # Client may send \r\n or just \n, as well as trailing newlines

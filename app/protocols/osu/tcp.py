@@ -34,7 +34,8 @@ class TcpOsuClient(OsuClient, Protocol):
             )
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
-        self.on_connection_lost(
+        app.session.tasks.defer_to_queue(
+            self.on_connection_lost,
             reason.getErrorMessage(),
             was_clean=(reason.type == ConnectionDone)
         )
