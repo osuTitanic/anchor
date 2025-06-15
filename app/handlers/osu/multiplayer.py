@@ -226,14 +226,14 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         session.banchobot
     )
 
+    if client.id in match.referee_players:
+        # Force-revoke #multiplayer
+        client.enqueue_channel_revoked('#multiplayer')
+
     for client in session.players.osu_tournament_clients:
         # Ensure that all tourney clients got the client's presence
         client.enqueue_presence(client)
         client.enqueue_stats(client)
-
-    if client.id in match.referee_players:
-        # Force-revoke #multiplayer
-        client.enqueue_channel_revoked('#multiplayer')
 
     events.create(
         match.db_match.id,
