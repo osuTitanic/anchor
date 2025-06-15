@@ -61,6 +61,10 @@ class Channel:
     @property
     def display_name(self) -> str:
         return self.name
+    
+    @property
+    def osu_users(self) -> List["OsuClient"]:
+        return [user for user in self.users if user.is_osu]
 
     @property
     def irc_users(self) -> List["IrcClient"]:
@@ -157,7 +161,7 @@ class Channel:
 
     def broadcast_join(self, player: "Client") -> None:
         self.update_osu_clients()
-        
+
         if player.is_tourney_client:
             # Do not broadcast join to irc users
             return
@@ -171,14 +175,14 @@ class Channel:
     def update_osu_clients(self) -> None:
         if not self.public:
             # Only enqueue to users in this channel
-            for player in self.users:
+            for player in self.osu_users:
                 player.enqueue_channel(
                     self,
                     autojoin=False
                 )
             return
 
-        for player in app.session.players:
+        for player in app.session.players.osu_clients:
             if self.can_read(player):
                 player.enqueue_channel(
                     self,
