@@ -34,6 +34,7 @@ class OsuClient(Client):
         super().__init__(address, port)
         self.match: Match | None = None
         self.spectating: OsuClient | None = None
+        self.spectating_match: Match | None = None
         self.spectator_chat: SpectatorChannel | None = None
         self.spectators: LockedSet[OsuClient] = LockedSet()
         self.info: OsuClientInformation = OsuClientInformation.empty()

@@ -786,6 +786,7 @@ def tourney_match_info(client: OsuClient, match_id: int):
     if match.password:
         match.password = " "
 
+    client.spectating_match = match
     client.logger.debug(f'Got tournament match info request for "{match.name}".')
     client.enqueue_packet(PacketType.BanchoMatchUpdate, match)
 
