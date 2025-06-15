@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 
 def setup():
-    app.session.logger.info(f'{ANCHOR_ASCII_ART.removesuffix("\n")}')
+    app.session.logger.info(ANCHOR_ASCII_ART.removesuffix("\n"))
     app.session.logger.info(f'Running anchor-{config.VERSION}')
     os.makedirs(config.DATA_PATH, exist_ok=True)
 
