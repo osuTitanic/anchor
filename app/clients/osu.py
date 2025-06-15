@@ -17,6 +17,7 @@ from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
 from app.objects.client import OsuClientInformation
+from app.tasks import logins as login_helper
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
 from app.clients import Client
@@ -250,8 +251,10 @@ class OsuClient(Client):
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount
-        usercount.set(len(app.session.players))
+        # Update usercount & login queue status
+        user_count = len(app.session.players)
+        usercount.set(user_count)
+        login_helper.update_queue_status(user_count)
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
