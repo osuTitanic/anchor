@@ -137,6 +137,10 @@ class Channel:
 
     def broadcast_part(self, player: "Client") -> None:
         self.update_osu_clients()
+        
+        if player.is_tourney_client:
+            # Do not broadcast part to irc users
+            return
 
         other_player = next(
             (p for p in self.users if p.id == player.id),
@@ -153,6 +157,10 @@ class Channel:
 
     def broadcast_join(self, player: "Client") -> None:
         self.update_osu_clients()
+        
+        if player.is_tourney_client:
+            # Do not broadcast join to irc users
+            return
 
         if self.name == "#osu":
             return
