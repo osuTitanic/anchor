@@ -31,6 +31,9 @@ class IrcClient(Client):
     def local_prefix(self) -> str:
         return self.resolve_username(self)
 
+    def __repr__(self) -> str:
+        return f'<IrcClient "{self.name}" ({self.id})>'
+
     def on_command_received(self, command: str, prefix: str, params: List[str]) -> None:
         self.logger.debug(f"-> <{command}> {prefix} ({', '.join(params)})")
         self.last_response = time.time()

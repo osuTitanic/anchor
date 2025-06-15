@@ -58,18 +58,7 @@ class OsuClient(Client):
         return self.info.friendonly_dms
 
     def __repr__(self) -> str:
-        return f'<OsuClient "{self.name}" ({self.id})>'
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, OsuClient):
-            return (
-                self.id == other.id and
-                self.port == other.port
-            )
-        return False
+        return f'<{self.protocol.capitalize()}OsuClient "{self.name}" ({self.id})>'
 
     def on_login_received(
         self,
