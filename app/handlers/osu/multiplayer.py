@@ -194,12 +194,6 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         slot_id = 0
 
     channel_object = match.chat.bancho_channel
-
-    if client.id in match.referee_players:
-        # Make sure referee client joined the channel
-        channel_object.name = match.chat.name
-        client.referee_matches.add(match)
-
     slot = match.slots[slot_id]
 
     if match.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
@@ -208,7 +202,12 @@ def join_match(client: OsuClient, match_join: MatchJoin):
     slot.status = SlotStatus.NotReady
     slot.player = client
 
-    if match.host is None and client.id in match.referee_players:
+    if client.id in match.referee_players:
+        # Make sure referee client joined the channel
+        channel_object.name = match.chat.name
+        client.referee_matches.add(match)
+
+    if not match.host and client.id in match.referee_players:
         # This client has referee privileges, so we can make them the host
         match.host = client
 
