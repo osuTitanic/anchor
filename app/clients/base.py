@@ -12,7 +12,7 @@ from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
 from app.objects.channel import Channel
 from app.common.constants import level
-from app.ratelimits import RateLimiter
+from app.monitoring import RateLimiter
 from app.common.database import (
     infringements,
     histories,
