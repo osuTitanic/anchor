@@ -566,8 +566,9 @@ class Match:
             and slot.has_player
         ]
 
-        self.unready_players(SlotStatus.Playing)
         self.in_progress = False
+        self.unready_players(SlotStatus.Playing)
+        self.update()
 
         # The join success packet will reset the players to the setup screen
         for player in players:
@@ -592,8 +593,6 @@ class Match:
                 )
             }
         )
-
-        self.update()
 
     def finish(self):
         if self.completion_timer:
