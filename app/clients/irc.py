@@ -422,6 +422,10 @@ class IrcClient(Client):
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
             return
+        
+        if player.is_tourney_client:
+            # Don't send tourney clients to irc players
+            return
 
         self.enqueue_command_raw(
             "JOIN",

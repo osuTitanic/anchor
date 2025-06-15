@@ -162,11 +162,9 @@ class Channel:
     def broadcast_join(self, player: "Client") -> None:
         self.update_osu_clients()
 
-        if player.is_tourney_client:
-            # Do not broadcast join to irc users
-            return
-
         if self.name == "#osu":
+            # Broadcast will already be done by
+            # app.session.players.send_player
             return
 
         for user in self.irc_users:
