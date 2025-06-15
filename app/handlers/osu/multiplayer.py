@@ -792,3 +792,39 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
     # Re-apply password
     match.password = match_password
+
+@register(PacketType.OsuTournamentJoinMatchChannel)
+def tourney_join_match_channel(client: OsuClient, match_id: int):
+    if not client.is_supporter:
+        client.logger.warning('Tried to join tourney match channel, but was not supporter.')
+        return
+
+    if not client.is_tourney_client:
+        client.logger.warning('Tried to join tourney match channel, but was not in tourney client.')
+        return
+
+    if not session.matches.exists(match_id):
+        client.logger.warning('Tried to join tourney match channel, but match was not found in active matches.')
+        return
+
+    match = session.matches[match_id]
+    match.chat.add(client)
+    client.enqueue_channel(match.chat.bancho_channel, autojoin=True)
+
+@register(PacketType.OsuTournamentLeaveMatchChannel)
+def tourney_leave_match_channel(client: OsuClient, match_id: int):
+    if not client.is_supporter:
+        client.logger.warning('Tried to leave tourney match channel, but was not supporter.')
+        return
+
+    if not client.is_tourney_client:
+        client.logger.warning('Tried to leave tourney match channel, but was not in tourney client.')
+        return
+
+    if not session.matches.exists(match_id):
+        client.logger.warning('Tried to leave tourney match channel, but match was not found in active matches.')
+        return
+
+    match = session.matches[match_id]
+    match.chat.remove(client)
+    client.enqueue_channel_revoked(match.chat.display_name)
