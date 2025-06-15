@@ -47,7 +47,10 @@ class OsuClient(Client):
 
     @property
     def is_tourney_client(self) -> bool:
-        return self.info.version.stream == 'tourney'
+        return (
+            self.info.version.stream == 'tourney' or
+            self.info.version.name == 'tourney'
+        )
 
     @property
     def friendonly_dms(self) -> bool:
