@@ -51,10 +51,10 @@ class HttpOsuClient(OsuClient):
         self,
         username: str,
         password: str,
-        client: OsuClientInformation
+        client_data: str
     ) -> None:
         self.token = str(uuid.uuid4())
-        super().on_login_received(username, password, client)
+        super().on_login_received(username, password, client_data)
 
         if not self.logged_in:
             self.token = ""
@@ -84,33 +84,20 @@ class HttpOsuHandler(Resource):
             f'-> Received login: {login_data}'
         )
 
-        username, password, client_data = (
-            login_data.decode().splitlines()
-        )
-
-        ip_address = ip.resolve_ip_address_twisted(request)
-
-        player = HttpOsuClient(
-            ip_address,
-            request.getClientAddress().port
-        )
-
-        client = OsuClientInformation.from_string(
-            client_data,
-            ip_address
-        )
-
-        if not client:
-            player.logger.warning(f'Failed to parse client: "{client_data}"')
-            request.setHeader('connection', 'close')
-            request.setResponseCode(400)
-            return b''
-
         try:
+            username, password, client_data = (
+                login_data.decode().splitlines()
+            )
+
+            player = HttpOsuClient(
+                ip.resolve_ip_address_twisted(request),
+                request.getClientAddress().port
+            )
+
             player.on_login_received(
                 username,
                 password,
-                client
+                client_data
             )
         except Exception as e:
             player.logger.error(f'Failed to process login: {e}', exc_info=e)
@@ -122,6 +109,11 @@ class HttpOsuHandler(Resource):
             'cho-token',
             player.token
         )
+
+        if not player.logged_in:
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
 
         return player.dequeue()
 

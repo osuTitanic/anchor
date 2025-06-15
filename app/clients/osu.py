@@ -64,8 +64,18 @@ class OsuClient(Client):
         self,
         username: str,
         password: str,
-        info: OsuClientInformation
+        client_data: str
     ) -> None:
+        info = OsuClientInformation.from_string(
+            client_data,
+            self.address
+        )
+
+        if not self.info:
+            self.logger.warning(f'Failed to parse client: "{client_data}"')
+            self.close_connection()
+            return
+
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {info.version}.')
         self.last_response = time.time()

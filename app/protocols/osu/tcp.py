@@ -86,16 +86,6 @@ class TcpOsuClient(OsuClient, Protocol):
                 self.stream.split(b'\n', 3)
             )
 
-            self.info = OsuClientInformation.from_string(
-                client.decode(),
-                self.address
-            )
-
-            if not self.info:
-                self.logger.warning(f'Failed to parse client: "{client.decode()}"')
-                self.close_connection()
-                return
-
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
@@ -104,7 +94,7 @@ class TcpOsuClient(OsuClient, Protocol):
                 super().on_login_received,
                 username.decode(),
                 password.decode(),
-                self.info
+                client.decode()
             )
 
             deferred.addErrback(

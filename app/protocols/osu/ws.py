@@ -46,16 +46,6 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.stream.split(b'\n', 3)
         )
 
-        self.player.info = OsuClientInformation.from_string(
-            client.decode(),
-            self.address
-        )
-
-        if not self.player.info:
-            self.logger.warning(f'Failed to parse client: "{client.decode()}"')
-            self.close_connection()
-            return
-
         # Clear the login data
         self.stream.clear()
 
@@ -66,7 +56,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.player.on_login_received,
             username.decode(),
             password.decode(),
-            self.player.info
+            client.decode()
         )
 
         deferred.addErrback(
