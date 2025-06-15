@@ -144,6 +144,12 @@ class Players(MutableMapping[int | str, Client]):
         self.irc_id_mapping[player.id] = player
         self.irc_name_mapping[player.name] = player
         self.irc_safe_name_mapping[player.safe_name] = player
+
+        # Ensure player is not already in the osu! collection
+        if player.id in self.osu_id_mapping:
+            player.enqueue_player(player)
+            return
+
         self.send_player(player)
 
     def remove_irc(self, player: IrcClient) -> None:
