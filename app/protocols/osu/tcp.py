@@ -90,7 +90,7 @@ class TcpOsuClient(OsuClient, Protocol):
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
 
-            deferred = logins.submit(
+            deferred = logins.manager.submit(
                 super().on_login_received,
                 username.decode(),
                 password.decode(),

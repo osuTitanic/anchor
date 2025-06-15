@@ -63,7 +63,7 @@ class HttpOsuHandler(Resource):
     isLeaf = True
 
     def handle_login_request(self, request: Request):
-        d = logins.submit(self.process_login, request)
+        d = logins.manager.submit(self.process_login, request)
         d.addCallback(self.on_login_success, request)
         d.addErrback(self.on_login_error, request)
         return server.NOT_DONE_YET

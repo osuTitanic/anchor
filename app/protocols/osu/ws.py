@@ -52,7 +52,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
 
-        deferred = logins.submit(
+        deferred = logins.manager.submit(
             self.player.on_login_received,
             username.decode(),
             password.decode(),

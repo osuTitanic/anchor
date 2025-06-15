@@ -254,7 +254,7 @@ class OsuClient(Client):
         # Update usercount & login queue status
         user_count = len(app.session.players)
         usercount.set(user_count)
-        login_helper.update_queue_status(user_count)
+        login_helper.manager.update_queue_status(user_count)
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
