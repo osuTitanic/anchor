@@ -2,7 +2,7 @@ rosu-pp-py==3.1.0
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.41
 python-dotenv==1.1.0
-twisted==24.11.0
+twisted==25.5.0
 redis==6.2.0
 requests==2.32.4
 boto3-type-annotations-with-docs==0.3.1
