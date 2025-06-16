@@ -20,9 +20,8 @@ class LoginManager:
     def submit(
         self,
         function: Callable,
-        username: str,
-        password: str,
-        client_data: str
+        *args,
+        **kwargs
     ) -> Deferred:
         """
         Wrapper function for submitting login tasks. This is required to
@@ -31,18 +30,14 @@ class LoginManager:
         """
         if self.queue_enabled:
             return app.session.tasks.defer_to_queue(
-                function,
-                username,
-                password,
-                client_data,
+                function, *args, **kwargs,
                 priority=self.login_priority
             )
 
         return app.session.tasks.defer_to_reactor_thread(
             function,
-            username,
-            password,
-            client_data
+            *args,
+            **kwargs
         )
 
 manager = LoginManager()
