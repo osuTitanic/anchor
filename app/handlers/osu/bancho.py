@@ -30,20 +30,23 @@ def exit(client: OsuClient, updating: bool):
     client.close_connection()
 
 @register(PacketType.OsuBeatmapInfoRequest)
-def beatmap_info(client: OsuClient, info: BeatmapInfoRequest, ignore_limit: bool = False):
+def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
     maps: List[Tuple[int, DBBeatmap]] = []
-
-    # Limit request filenames/ids
-    if not ignore_limit:
-        info.ids = info.ids[:100]
-        info.filenames = info.filenames[:100]
-
     total_maps = len(info.ids) + len(info.filenames)
 
     if total_maps <= 0:
         return
 
     client.logger.info(f'Got {total_maps} beatmap requests')
+
+    # Use a different limit if client is older than ~b830.
+    # They seem to always request all maps at once, which
+    # can cause the request size to be larger than usual.
+    limit = 5000 if client.info.version.date <= 830 else 250
+
+    # Limit request filenames/ids
+    info.ids = info.ids[:limit]
+    info.filenames = info.filenames[:limit]
 
     # Fetch all matching beatmaps from database
     with session.database.managed_session() as s:
