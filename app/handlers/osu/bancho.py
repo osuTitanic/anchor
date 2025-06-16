@@ -42,7 +42,7 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
     # Use a different limit if client is older than ~b830.
     # They seem to always request all maps at once, which
     # can cause the request size to be larger than usual.
-    limit = 5000 if client.info.version.date <= 830 else 250
+    limit = 4500 if client.info.version.date <= 830 else 250
 
     # Limit request filenames/ids
     info.ids = info.ids[:limit]
