@@ -11,7 +11,7 @@ pytz==2025.2
 pytimeparse==1.1.8
 geoip2==5.1.0
 bcrypt==4.3.0
-sendgrid==6.12.3
+sendgrid==6.12.4
 timeago==1.0.16
 autobahn==24.4.2
 chio==1.1.15
