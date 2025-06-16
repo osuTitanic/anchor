@@ -1,6 +1,6 @@
 
-from typing import Callable, List, Tuple
-from sqlalchemy.orm import selectinload
+from typing import Callable, List, Tuple, Iterator
+from sqlalchemy.orm import selectinload, Session
 from chio import (
     BeatmapInfoRequest,
     BeatmapInfoReply,
@@ -29,9 +29,16 @@ def exit(client: OsuClient, updating: bool):
     client.update_activity()
     client.close_connection()
 
+@register(PacketType.OsuErrorReport)
+def bancho_error(client: OsuClient, error: str):
+    session.logger.warning(f'Bancho Error Report:\n{error}')
+
+@register(PacketType.OsuChangeFriendOnlyDms)
+def change_friendonly_dms(client: OsuClient, enabled: bool):
+    client.info.friendonly_dms = enabled
+
 @register(PacketType.OsuBeatmapInfoRequest)
 def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
-    maps: List[Tuple[int, DBBeatmap]] = []
     total_maps = len(info.ids) + len(info.filenames)
 
     if total_maps <= 0:
@@ -39,20 +46,63 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
 
     client.logger.info(f'Got {total_maps} beatmap requests')
 
-    # Use a different limit if client is older than ~b830.
-    # They seem to always request all maps at once, which
-    # can cause the request size to be larger than usual.
-    limit = 4500 if client.info.version.date <= 830 else 250
-
     # Limit request filenames/ids
-    info.ids = info.ids[:limit]
-    info.filenames = info.filenames[:limit]
+    info.ids = info.ids[:4500]
+    info.filenames = info.filenames[:4500]
+
+    filenames_chunks = [
+        info.filenames[i:i + 100]
+        for i in range(0, len(info.filenames), 100)
+    ]
+    ids_chunks = [
+        info.ids[i:i + 100]
+        for i in range(0, len(info.ids), 100)
+    ]
+
+    session.tasks.do_later(
+        process_beatmap_info_request,
+        client,
+        filenames_chunks,
+        ids_chunks,
+        priority=3
+    )
+
+def process_beatmap_info_request(
+    client: OsuClient,
+    filenames_chunks: List[List[str]],
+    ids_chunks: List[List[int]]
+) -> None:
+    reply = BeatmapInfoReply()
+
+    for index, filenames in enumerate(filenames_chunks):
+        maps = process_filename_chunk(
+            client, filenames,
+            index * len(filenames)
+        )
+        reply.beatmaps.extend(maps)
+
+    for index, ids in enumerate(ids_chunks):
+        maps = process_id_chunk(
+            client,
+            ids
+        )
+        reply.beatmaps.extend(maps)
+
+    client.logger.info(f'Sending reply with {len(reply.beatmaps)} beatmaps')
+    client.enqueue_packet(PacketType.BanchoBeatmapInfoReply, reply)
+
+def process_filename_chunk(
+    client: OsuClient,
+    filenames: List[str],
+    index_offset: int = 0
+) -> Iterator[BeatmapInfo]:
+    maps: List[Tuple[int, DBBeatmap]] = []
 
     # Fetch all matching beatmaps from database
-    with session.database.managed_session() as s:
-        filename_beatmaps = s.query(DBBeatmap) \
+    with session.database.managed_session() as database_session:
+        filename_beatmaps = database_session.query(DBBeatmap) \
             .options(selectinload(DBBeatmap.beatmapset)) \
-            .filter(DBBeatmap.filename.in_(info.filenames)) \
+            .filter(DBBeatmap.filename.in_(filenames)) \
             .all()
 
         found_beatmaps = {
@@ -60,20 +110,28 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
             for beatmap in filename_beatmaps
         }
 
-        for index, filename in enumerate(info.filenames):
+        for index, filename in enumerate(filenames):
             if filename not in found_beatmaps:
                 continue
 
             # The client will identify the beatmaps by their index
             # in the "beatmapInfoSendList" array for the filenames
             maps.append((
-                index,
+                index_offset + index,
                 found_beatmaps[filename]
             ))
 
-        id_beatmaps = s.query(DBBeatmap) \
+        # Create the beatmap info response
+        return create_beatmap_info_response(client, maps, database_session)
+
+def process_id_chunk(client: OsuClient, ids: List[int]) -> Iterator[BeatmapInfo]:
+    maps: List[Tuple[int, DBBeatmap]] = []
+
+    # Fetch all matching beatmaps from database
+    with session.database.managed_session() as database_session:
+        id_beatmaps = database_session.query(DBBeatmap) \
             .options(selectinload(DBBeatmap.beatmapset)) \
-            .filter(DBBeatmap.id.in_(info.ids)) \
+            .filter(DBBeatmap.id.in_(ids)) \
             .all()
 
         for beatmap in id_beatmaps:
@@ -85,73 +143,59 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
                 beatmap
             ))
 
-        # Create beatmap response
-        map_infos: List[BeatmapInfo] = []
+        # Create the beatmap info response
+        return create_beatmap_info_response(client, maps, database_session)
 
-        for index, beatmap in maps:
-            if beatmap.status <= -3:
-                # Not submitted
-                continue
+def create_beatmap_info_response(
+    client: OsuClient,
+    maps: List[Tuple[int, DBBeatmap]],
+    database_session: Session
+) -> Iterator[BeatmapInfo]:
+    for index, beatmap in maps:
+        if beatmap.status <= -3:
+            # Not submitted
+            continue
 
-            status_mapping = {
-                -3: RankedStatus.NotSubmitted,
-                -2: RankedStatus.Pending,
-                -1: RankedStatus.Pending,
-                 0: RankedStatus.Pending,
-                 1: RankedStatus.Ranked,
-                 2: RankedStatus.Approved,
-                 3: RankedStatus.Qualified,
-                 4: RankedStatus.Loved,
-            }
+        status_mapping = {
+            -3: RankedStatus.NotSubmitted,
+            -2: RankedStatus.Pending,
+            -1: RankedStatus.Pending,
+             0: RankedStatus.Pending,
+             1: RankedStatus.Ranked,
+             2: RankedStatus.Approved,
+             3: RankedStatus.Qualified,
+             4: RankedStatus.Loved,
+        }
 
-            # Get personal best in every mode for this beatmap
-            grades = {
-                0: Rank.N,
-                1: Rank.N,
-                2: Rank.N,
-                3: Rank.N
-            }
+        # Get personal best in every mode for this beatmap
+        grades = {
+            0: Rank.N,
+            1: Rank.N,
+            2: Rank.N,
+            3: Rank.N
+        }
 
-            for mode in range(4):
-                grade = s.query(DBScore.grade) \
-                    .filter(DBScore.beatmap_id == beatmap.id) \
-                    .filter(DBScore.user_id == client.id) \
-                    .filter(DBScore.mode == mode) \
-                    .filter(DBScore.status_score == 3) \
-                    .filter(DBScore.hidden == False) \
-                    .scalar()
+        for mode in range(4):
+            grade = database_session.query(DBScore.grade) \
+                .filter(DBScore.beatmap_id == beatmap.id) \
+                .filter(DBScore.user_id == client.id) \
+                .filter(DBScore.mode == mode) \
+                .filter(DBScore.status_score == 3) \
+                .filter(DBScore.hidden == False) \
+                .scalar()
 
-                if grade:
-                    grades[mode] = Rank[grade]
+            if grade:
+                grades[mode] = Rank[grade]
 
-            map_infos.append(
-                BeatmapInfo(
-                    index,
-                    beatmap.id,
-                    beatmap.set_id,
-                    beatmap.beatmapset.topic_id or 0,
-                    status_mapping.get(beatmap.status, RankedStatus.NotSubmitted),
-                    beatmap.md5,
-                    grades[0], # Standard
-                    grades[2], # Fruits
-                    grades[1], # Taiko
-                    grades[3], # Mania
-                )
-            )
-
-        client.logger.info(
-            f'Sending reply with {len(map_infos)} beatmaps'
+        yield BeatmapInfo(
+            index,
+            beatmap.id,
+            beatmap.set_id,
+            beatmap.beatmapset.topic_id or 0,
+            status_mapping.get(beatmap.status, RankedStatus.NotSubmitted),
+            beatmap.md5,
+            grades[0], # Standard
+            grades[2], # Fruits
+            grades[1], # Taiko
+            grades[3], # Mania
         )
-
-        client.enqueue_packet(
-            PacketType.BanchoBeatmapInfoReply,
-            BeatmapInfoReply(map_infos)
-        )
-
-@register(PacketType.OsuErrorReport)
-def bancho_error(client: OsuClient, error: str):
-    session.logger.warning(f'Bancho Error Report:\n{error}')
-
-@register(PacketType.OsuChangeFriendOnlyDms)
-def change_friendonly_dms(client: OsuClient, enabled: bool):
-    client.info.friendonly_dms = enabled
