@@ -213,10 +213,6 @@ class Players(MutableMapping[int | str, Client]):
         """Get an irc player by name"""
         return self.irc_name_mapping.get(name, None)
 
-    def by_rank(self, rank: int, mode: int) -> List[Client]:
-        """Get all players with the specified rank"""
-        return [p for p in self.osu_clients if p.stats.rank == rank and p.status.mode == mode]
-
     def tournament_clients(self, id: int) -> List[OsuClient]:
         """Get all connected tournament clients for a player"""
         return [p for p in self.osu_tournament_clients if p.id == id]
@@ -225,6 +221,14 @@ class Players(MutableMapping[int | str, Client]):
         """Clear all tourney clients by player id"""
         for p in self.tournament_clients(id):
             self.remove(p)
+
+    def by_rank(self, rank: int, mode: int) -> List[Client]:
+        """Get all players with the specified rank & mode"""
+        return [
+            p for p in self.osu_clients
+            if mode == p.status.mode
+            and rank == p.rankings.get('global')
+        ]
 
     def send_packet(self, packet: Enum, *args) -> None:
         for p in self.osu_clients:

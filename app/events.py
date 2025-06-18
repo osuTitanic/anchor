@@ -54,6 +54,25 @@ def restrict(
     if (player_irc := app.session.players.by_id_irc(user.id)):
         player_irc.on_user_restricted(reason, until, autoban)
 
+@app.session.events.register('unrestrict')
+def unrestrict(user_id: int, restore_scores: bool = True):
+    if not (user := users.fetch_by_id(user_id)):
+        return
+
+    if not user.restricted:
+        return
+
+    infringements.unrestrict_user(
+        user,
+        restore_scores
+    )
+
+    if (player_osu := app.session.players.by_id_osu(user.id)):
+        player_osu.on_user_unrestricted()
+
+    if (player_irc := app.session.players.by_id_irc(user.id)):
+        player_irc.on_user_unrestricted()
+
 @app.session.events.register('silence')
 def silence(user_id: int, duration: int, reason: str = ''):
     if not (user := users.fetch_by_id(user_id)):
@@ -82,25 +101,6 @@ def update_user_silence(user_id: int):
     if (player_irc := app.session.players.by_id_irc(user.id)):
         player_irc.on_user_silenced()
 
-@app.session.events.register('unrestrict')
-def unrestrict(user_id: int, restore_scores: bool = True):
-    if not (user := users.fetch_by_id(user_id)):
-        return
-
-    if not user.restricted:
-        return
-
-    infringements.unrestrict_user(
-        user,
-        restore_scores
-    )
-
-    if (player_osu := app.session.players.by_id_osu(user.id)):
-        player_osu.on_user_unrestricted()
-
-    if (player_irc := app.session.players.by_id_irc(user.id)):
-        player_irc.on_user_unrestricted()
-
 @app.session.events.register('announcement')
 def announcement(message: str):
     app.session.logger.info(f'Announcement: "{message}"')
@@ -126,12 +126,10 @@ def user_update(user_id: int, mode: int | None = None):
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
+    # Reload player data & distribute stats
     player.reload(player.status.mode.value)
     player.enqueue_stats(player)
     enqueue_stats(player)
-
-    # Apply default ranking
-    app.session.players.apply_ranking('global')
 
     duplicates = app.session.players.by_rank(
         player.stats.rank,
@@ -150,11 +148,11 @@ def user_update(user_id: int, mode: int | None = None):
 @app.session.events.register('link')
 def link_discord_user(user_id: int, code: str):
     if not (player := app.session.players.by_id(user_id)):
-        app.session.logger.warning('Failed to link user to discord: Not Online!')
+        app.session.logger.warning('Failed to link user to discord: Not online!')
         return
 
     if player.object.discord_id:
-        app.session.logger.warning('Failed to link user to discord: Already Linked!')
+        app.session.logger.warning('Failed to link user to discord: Already linked!')
         return
 
     player.enqueue_message(
