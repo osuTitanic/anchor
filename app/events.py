@@ -1,8 +1,9 @@
 
 from __future__ import annotations
 
+from app.common.helpers import infringements, activity
 from app.common.database.repositories import users
-from app.common.helpers import infringements
+from app.common.database.objects import DBActivity
 from app.common.constants import GameMode
 from app.clients.base import Client
 from datetime import datetime
@@ -23,6 +24,25 @@ def bot_message(message: str, target: str):
             app.session.banchobot,
             message
         )
+
+@app.session.events.register('bancho_event')
+def bancho_event(user_id: int, mode: int, type: int, data: dict):
+    # Create entry object for formatting
+    entry = DBActivity(
+        user_id=user_id,
+        mode=mode,
+        type=type,
+        data=data
+    )
+
+    formatter = activity.formatters.get(type)
+
+    if not formatter:
+        app.session.logger.warning(f'No formatter found for activity type {type}')
+        return
+
+    # Send message in #announce channel
+    bot_message(formatter(entry), "#announce")
 
 @app.session.events.register('logout')
 def logout(user_id: int):
