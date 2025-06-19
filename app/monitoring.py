@@ -1,4 +1,5 @@
 
+import collections
 import threading
 import time
 
@@ -52,3 +53,25 @@ class RateLimiter:
 
             self.allowance -= 1
             return True
+
+class RequestCounter:
+    """Class to count requests made over a certain time period."""
+
+    def __init__(self, window: int = 60) -> None:
+        self.requests = collections.deque()
+        self.window = window
+
+    @property
+    def rate(self) -> float:
+        now = time.time()
+        self.cleanup(now)
+        return len(self.requests)
+
+    def record(self) -> None:
+        now = time.time()
+        self.requests.append(now)
+        self.cleanup(now)
+
+    def cleanup(self, now: float) -> None:
+        while self.requests and now - self.requests[0] > self.window:
+            self.requests.popleft()

@@ -171,6 +171,14 @@ class Match:
     def players(self) -> List["OsuClient"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
+    
+    @property
+    def tourney_clients(self) -> List["OsuClient"]:
+        """Return all tournament clients"""
+        return [
+            client for client in app.session.players.osu_tournament_clients
+            if client.spectating_match is self
+        ]
 
     @property
     def url(self) -> str:
@@ -566,12 +574,17 @@ class Match:
             and slot.has_player
         ]
 
-        self.unready_players(SlotStatus.Playing)
         self.in_progress = False
+        self.unready_players(SlotStatus.Playing)
+        self.update()
 
         # The join success packet will reset the players to the setup screen
         for player in players:
             player.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self)
+
+        # Send abort to tourney clients
+        for client in self.tourney_clients:
+            client.enqueue_packet(PacketType.BanchoMatchAbort)
 
         start_event = events.fetch_last_by_type(
             player.match.db_match.id,
@@ -592,8 +605,6 @@ class Match:
                 )
             }
         )
-
-        self.update()
 
     def finish(self):
         if self.completion_timer:

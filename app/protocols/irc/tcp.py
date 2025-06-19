@@ -41,7 +41,7 @@ class TcpIrcProtocol(IrcClient, IRC):
             if reason.type is ConnectionDone else
             f'<{self.address}> -> Lost connection: {reason.getErrorMessage()}'
         )
-        self.close_connection()
+        app.session.tasks.defer_to_queue(self.close_connection)
 
     def dataReceived(self, data: Any) -> None:
         try:

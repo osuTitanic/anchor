@@ -148,3 +148,25 @@ class Tasks:
         thread, using the reactor's thread pool.
         """
         return threads.deferToThread(func, *args, **kwargs)
+    
+    def defer_to_queue(
+        self,
+        function: Callable,
+        *args,
+        priority: int = 0,
+        **kwargs
+    ) -> Deferred:
+        """
+        Internal function used to defer a function call to the do_later queue.
+        """
+        deferred = Deferred()
+
+        def execute():
+            try:
+                result = function(*args, **kwargs)
+                deferred.callback(result)
+            except Exception as e:
+                deferred.errback(e)
+
+        self.do_later(execute, priority=priority)
+        return deferred

@@ -348,6 +348,7 @@ def create_persistant_match(ctx: Context):
 
     ctx.player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(ctx.player)
+    match.host = None
 
     if not ctx.player.is_irc:
         slot = match.slots[0]
@@ -355,6 +356,7 @@ def create_persistant_match(ctx: Context):
         slot.player = ctx.player
 
         match.logger.info(f'{ctx.player.name} joined')
+        match.host = ctx.player
         match.update()
 
         ctx.player.match = match
@@ -1485,7 +1487,7 @@ def get_client_version(ctx: Context):
 
     return [f"{target.name} is playing on {target.info.version.string}"]
 
-@command(['setranking', 'setrank'])
+@command(['ranking', 'setranking', 'setrank'])
 def set_preferred_ranking(ctx: Context):
     """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
     if len(ctx.args) < 1:

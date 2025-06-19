@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from app.common.constants import ANCHOR_WEB_RESPONSE
-from app.objects.client import OsuClientInformation
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
+from app.tasks import logins
 
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
@@ -35,15 +35,11 @@ class HttpOsuClient(OsuClient):
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
-    def dequeue(self, max: int = 4096) -> bytes:
+    def dequeue(self) -> bytes:
         data = b""
 
         while not self.queue.empty():
             data += self.queue.get()
-
-            if len(data) > max:
-                # Let client perform fast-read
-                break
 
         return data
 
@@ -51,10 +47,10 @@ class HttpOsuClient(OsuClient):
         self,
         username: str,
         password: str,
-        client: OsuClientInformation
+        client_data: str
     ) -> None:
         self.token = str(uuid.uuid4())
-        super().on_login_received(username, password, client)
+        super().on_login_received(username, password, client_data)
 
         if not self.logged_in:
             self.token = ""
@@ -67,7 +63,7 @@ class HttpOsuHandler(Resource):
     isLeaf = True
 
     def handle_login_request(self, request: Request):
-        d = app.session.tasks.defer_to_reactor_thread(self.process_login, request)
+        d = logins.manager.submit(self.process_login, request)
         d.addCallback(self.on_login_success, request)
         d.addErrback(self.on_login_error, request)
         return server.NOT_DONE_YET
@@ -84,33 +80,20 @@ class HttpOsuHandler(Resource):
             f'-> Received login: {login_data}'
         )
 
-        username, password, client_data = (
-            login_data.decode().splitlines()
-        )
-
-        ip_address = ip.resolve_ip_address_twisted(request)
-
-        player = HttpOsuClient(
-            ip_address,
-            request.getClientAddress().port
-        )
-
-        client = OsuClientInformation.from_string(
-            client_data,
-            ip_address
-        )
-
-        if not client:
-            player.logger.warning(f'Failed to parse client: "{client_data}"')
-            request.setHeader('connection', 'close')
-            request.setResponseCode(400)
-            return b''
-
         try:
+            username, password, client_data = (
+                login_data.decode().splitlines()
+            )
+
+            player = HttpOsuClient(
+                ip.resolve_ip_address_twisted(request),
+                request.getClientAddress().port
+            )
+
             player.on_login_received(
                 username,
                 password,
-                client
+                client_data
             )
         except Exception as e:
             player.logger.error(f'Failed to process login: {e}', exc_info=e)
@@ -122,6 +105,11 @@ class HttpOsuHandler(Resource):
             'cho-token',
             player.token
         )
+
+        if not player.logged_in:
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
 
         return player.dequeue()
 

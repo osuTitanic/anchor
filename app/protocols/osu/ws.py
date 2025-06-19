@@ -5,9 +5,9 @@ from autobahn.websocket.protocol import ConnectionRequest
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
-from app.objects import OsuClientInformation
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
+from app.tasks import logins
 
 import logging
 import app
@@ -33,7 +33,10 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.logger.info(f'-> <{self.address}>')
 
     def onClose(self, wasClean: bool, code: int, reason: str):
-        self.player.on_connection_lost(reason, wasClean)
+        app.session.tasks.defer_to_queue(
+            self.player.on_connection_lost,
+            reason, wasClean
+        )
 
     def onMessage(self, payload: bytes, isBinary: bool):
         # Client may send \r\n or just \n, as well as trailing newlines
@@ -46,27 +49,17 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.stream.split(b'\n', 3)
         )
 
-        self.player.info = OsuClientInformation.from_string(
-            client.decode(),
-            self.address
-        )
-
-        if not self.player.info:
-            self.logger.warning(f'Failed to parse client: "{client.decode()}"')
-            self.close_connection()
-            return
-
         # Clear the login data
         self.stream.clear()
 
         # We now expect bancho packets from the client
         self.onMessage = self.onPacketMessage
 
-        deferred = app.session.tasks.defer_to_reactor_thread(
+        deferred = logins.manager.submit(
             self.player.on_login_received,
             username.decode(),
             password.decode(),
-            self.player.info
+            client.decode()
         )
 
         deferred.addErrback(

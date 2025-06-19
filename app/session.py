@@ -1,6 +1,7 @@
 
 from .objects.collections import Players, Channels, Matches
 from .common.cache.events import EventQueue
+from .monitoring import RequestCounter
 from .common.database import Postgres
 from .common.storage import Storage
 from .tasks import Tasks
@@ -37,6 +38,9 @@ requests = Session()
 requests.headers = {
     'User-Agent': f'osuTitanic/anchor ({config.DOMAIN_NAME})'
 }
+
+packets_per_minute = RequestCounter(window=60)
+logins_per_minute = RequestCounter(window=60)
 
 osu_handlers: Dict[PacketType, Callable] = {}
 irc_handlers: Dict[str, Callable] = {}

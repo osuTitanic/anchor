@@ -12,7 +12,7 @@ from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
 from app.objects.channel import Channel
 from app.common.constants import level
-from app.ratelimits import RateLimiter
+from app.monitoring import RateLimiter
 from app.common.database import (
     infringements,
     histories,
@@ -60,11 +60,12 @@ class Client:
         self.groups = []
 
     @property
-    def is_bot(self) -> bool:
-        return (
-            self.object.is_bot
-            if self.object else False
-        )
+    def url(self) -> str:
+        return f'http://osu.{config.DOMAIN_NAME}/u/{self.id}'
+
+    @property
+    def link(self) -> str:
+        return f'[{self.url} {self.name}]'
 
     @property
     def silenced(self) -> bool:
@@ -119,14 +120,13 @@ class Client:
             return False
 
         return True
-    
-    @property
-    def url(self) -> str:
-        return f'http://osu.{config.DOMAIN_NAME}/u/{self.id}'
 
     @property
-    def link(self) -> str:
-        return f'[{self.url} {self.name}]'
+    def is_bot(self) -> bool:
+        return (
+            self.object.is_bot
+            if self.object else False
+        )
 
     @property
     def current_stats(self) -> DBStats | None:
@@ -171,12 +171,12 @@ class Client:
         return self.presence.is_irc
 
     @property
-    def irc_prefix(self) -> str:
-        return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
-
-    @property
     def underscored_name(self) -> str:
         return self.name.replace(" ", "_")
+
+    @property
+    def irc_prefix(self) -> str:
+        return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
 
     @property
     def safe_name(self) -> str:
@@ -227,18 +227,19 @@ class Client:
         return self.object.is_verified
 
     def __repr__(self) -> str:
-        return f'<Client "{self.name}" ({self.id})>'
+        return f'<{self.protocol.capitalize()}Client "{self.name}" ({self.id})>'
 
     def __hash__(self) -> int:
-        return self.id
+        return hash((self.id, self.port))
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, Client):
-            return (
-                self.id == other.id and
-                self.port == other.port
-            )
-        return False
+        if not isinstance(other, Client):
+            return NotImplemented
+
+        return (
+            self.id == other.id and
+            self.port == other.port
+        )
 
     def reload(self, mode: int = 0) -> DBUser:
         """Re-fetch database information and apply it to the client"""

@@ -17,6 +17,7 @@ from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
 from app.objects.client import OsuClientInformation
+from app.tasks import logins as login_helper
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
 from app.clients import Client
@@ -34,6 +35,7 @@ class OsuClient(Client):
         super().__init__(address, port)
         self.match: Match | None = None
         self.spectating: OsuClient | None = None
+        self.spectating_match: Match | None = None
         self.spectator_chat: SpectatorChannel | None = None
         self.spectators: LockedSet[OsuClient] = LockedSet()
         self.info: OsuClientInformation = OsuClientInformation.empty()
@@ -47,32 +49,35 @@ class OsuClient(Client):
 
     @property
     def is_tourney_client(self) -> bool:
-        return self.info.version.stream == 'tourney'
+        return (
+            self.info.version.stream == 'tourney' or
+            self.info.version.name == 'tourney'
+        )
 
     @property
     def friendonly_dms(self) -> bool:
         return self.info.friendonly_dms
 
     def __repr__(self) -> str:
-        return f'<OsuClient "{self.name}" ({self.id})>'
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, OsuClient):
-            return (
-                self.id == other.id and
-                self.port == other.port
-            )
-        return False
+        return f'<{self.protocol.capitalize()}OsuClient "{self.name}" ({self.id})>'
 
     def on_login_received(
         self,
         username: str,
         password: str,
-        info: OsuClientInformation
+        client_data: str
     ) -> None:
+        info = OsuClientInformation.from_string(
+            client_data,
+            self.address
+        )
+
+        if not self.info:
+            self.logger.warning(f'Failed to parse client: "{client_data}"')
+            self.close_connection()
+            return
+
+        app.session.logins_per_minute.record()
         self.logger = logging.getLogger(f'Player "{username}"')
         self.logger.info(f'Login attempt as "{username}" with {info.version}.')
         self.last_response = time.time()
@@ -247,8 +252,9 @@ class OsuClient(Client):
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount
-        usercount.set(len(app.session.players))
+        # Update usercount & login queue status
+        user_count = len(app.session.players)
+        usercount.set(user_count)
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -301,9 +307,8 @@ class OsuClient(Client):
         if not self.logged_in:
             return
 
-        self.logger.debug(
-            f'-> "{packet.name}": {data}'
-        )
+        app.session.packets_per_minute.record()
+        self.logger.debug(f'-> "{packet.name}": {data}')
 
         if not (handler_function := app.session.osu_handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')

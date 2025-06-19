@@ -10,7 +10,7 @@ PING_TIMEOUT_IRC = 360
 PING_INTERVAL_OSU = 15
 PING_TIMEOUT_OSU = 180
 
-@app.session.tasks.submit(interval=PING_INTERVAL_OSU)
+@app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
 def osu_tcp_pings() -> None:
     """
     This task will handle client pings and timeouts for tcp clients.
@@ -23,7 +23,7 @@ def osu_tcp_pings() -> None:
         if last_response >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
 
-@app.session.tasks.submit(interval=PING_TIMEOUT_OSU)
+@app.session.tasks.submit(interval=PING_TIMEOUT_OSU, threaded=True)
 def osu_http_pings() -> None:
     """
     This task will handle client timeouts for http clients.
@@ -42,7 +42,7 @@ def osu_http_pings() -> None:
         if last_response >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
 
-@app.session.tasks.submit(interval=PING_INTERVAL_IRC)
+@app.session.tasks.submit(interval=PING_INTERVAL_IRC, threaded=True)
 def irc_pings() -> None:
     """
     This task will handle client pings and timeouts for irc clients.

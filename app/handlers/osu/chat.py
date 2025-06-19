@@ -1,13 +1,12 @@
 
 from app.common.database.repositories import wrapper, messages
-from app.objects.channel import Channel
+from app.objects.channel import Channel, MultiplayerChannel
 from app.clients.osu import OsuClient
 from app.common import officer
 from app import session
 
 from chio import PacketType, Message
 from typing import Callable
-from time import time
 
 def register(packet: PacketType) -> Callable:
     def wrapper(func) -> Callable:
@@ -30,8 +29,26 @@ def resolve_channel(channel_name: str, client: OsuClient) -> Channel | None:
         return client.match.chat
 
     # Resolve channel by name
-    if channel := session.channels.by_name(channel_name):
+    if not (channel := session.channels.by_name(channel_name)):
+        return
+
+    is_multiplayer = type(channel) is MultiplayerChannel
+
+    if not is_multiplayer:
         return channel
+
+    if not channel_name.startswith('#multi_'):
+        return channel
+
+    if client.id in channel.match.referee_players:
+        # Only referee players should ever be able
+        # to use #multi_<id> channels
+        # Otherwise force them to use #multiplayer
+        return channel
+
+    # Force player to join #multiplayer
+    client.enqueue_channel_revoked(channel_name)
+    client.enqueue_channel_join_success('#multiplayer')
 
 @register(PacketType.OsuChannelJoin)
 def handle_channel_join(client: OsuClient, channel_name: str):

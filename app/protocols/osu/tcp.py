@@ -8,9 +8,9 @@ from twisted.python.failure import Failure
 from twisted.internet import reactor
 
 from app.protocols.osu.streams import ByteStream
-from app.objects import OsuClientInformation
 from app.common.helpers import location
 from app.clients.osu import OsuClient
+from app.tasks import logins
 
 import config
 import app
@@ -34,7 +34,8 @@ class TcpOsuClient(OsuClient, Protocol):
             )
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
-        self.on_connection_lost(
+        app.session.tasks.defer_to_queue(
+            self.on_connection_lost,
             reason.getErrorMessage(),
             was_clean=(reason.type == ConnectionDone)
         )
@@ -86,25 +87,15 @@ class TcpOsuClient(OsuClient, Protocol):
                 self.stream.split(b'\n', 3)
             )
 
-            self.info = OsuClientInformation.from_string(
-                client.decode(),
-                self.address
-            )
-
-            if not self.info:
-                self.logger.warning(f'Failed to parse client: "{client.decode()}"')
-                self.close_connection()
-                return
-
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
 
-            deferred = app.session.tasks.defer_to_reactor_thread(
+            deferred = logins.manager.submit(
                 super().on_login_received,
                 username.decode(),
                 password.decode(),
-                self.info
+                client.decode()
             )
 
             deferred.addErrback(

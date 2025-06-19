@@ -31,9 +31,13 @@ class IrcClient(Client):
     def local_prefix(self) -> str:
         return self.resolve_username(self)
 
+    def __repr__(self) -> str:
+        return f'<IrcClient "{self.name}" ({self.id})>'
+
     def on_command_received(self, command: str, prefix: str, params: List[str]) -> None:
         self.logger.debug(f"-> <{command}> {prefix} ({', '.join(params)})")
         self.last_response = time.time()
+        app.session.packets_per_minute.record()
 
         if not (handler := app.session.irc_handlers.get(command)):
             return
@@ -46,6 +50,7 @@ class IrcClient(Client):
 
         self.logger = logging.getLogger(f'IRC "{self.name}"')
         self.logger.info(f'Login attempt as "{self.name}" with IRC.')
+        app.session.logins_per_minute.record()
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_safe_name(self.name, session)):
@@ -146,7 +151,8 @@ class IrcClient(Client):
             app.session.tasks.do_later(
                 self.enqueue_players,
                 channel.users,
-                channel.name
+                channel.name,
+                priority=1
             )
 
         # Re-add matches that this player is a referee for
@@ -421,6 +427,10 @@ class IrcClient(Client):
 
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
+            return
+        
+        if player.is_tourney_client:
+            # Don't send tourney clients to irc players
             return
 
         self.enqueue_command_raw(
