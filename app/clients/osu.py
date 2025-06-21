@@ -83,6 +83,10 @@ class OsuClient(Client):
         self.last_response = time.time()
         self.info = info
 
+        # Ensure adapters hash has a value
+        adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()
+        info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
+
         # Select the correct client/io object
         self.io = chio.select_client(info.version.date)
 
@@ -91,15 +95,6 @@ class OsuClient(Client):
             PacketType.BanchoProtocolNegotiation,
             self.io.protocol_version
         )
-
-        if info.hash.adapters != 'runningunderwine':
-            # Validate adapters md5
-            adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()
-
-            if adapters_hash != info.hash.adapters_md5:
-                officer.call(f'Player tried to log in with spoofed adapters: {adapters_hash}')
-                self.close_connection()
-                return
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_name_case_insensitive(username, session)):
