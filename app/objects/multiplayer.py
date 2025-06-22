@@ -474,9 +474,9 @@ class Match:
         for player in self.players:
             self.kick_player(player)
 
-            if player.id in self.referee_players and self in player.referee_matches:
-                # Remove referee player from this match
-                player.referee_matches.remove(self)
+            # If player was a referee, remove
+            # match from their collection
+            player.referee_matches.discard(self)
 
         for player in app.session.players.osu_in_lobby:
             player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
