@@ -46,8 +46,13 @@ def resolve_channel(channel_name: str, client: OsuClient) -> Channel | None:
         # Otherwise force them to use #multiplayer
         return channel
 
-    # Force player to join #multiplayer
     client.enqueue_channel_revoked(channel_name)
+
+    # Check if client is in match
+    if client.match is not channel.match:
+        return
+
+    # Force player to join #multiplayer instead
     client.enqueue_channel_join_success('#multiplayer')
 
 @register(PacketType.OsuChannelJoin)
