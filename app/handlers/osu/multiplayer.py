@@ -46,7 +46,7 @@ def join_lobby(client: OsuClient):
 
 @register(PacketType.OsuLobbyPart)
 def part_lobby(client: OsuClient):
-    session.players.osu_in_lobby.remove(client)
+    session.players.osu_in_lobby.discard(client)
     client.in_lobby = False
 
     for p in session.players.osu_clients:

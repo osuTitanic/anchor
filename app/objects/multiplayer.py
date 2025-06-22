@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Tuple, List
+from typing import TYPE_CHECKING, Tuple, List, Set
 from datetime import datetime, timedelta
 from threading import Thread, Timer
 from dataclasses import dataclass
@@ -140,8 +140,8 @@ class Match:
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.score_queue: Queue[bScoreFrame] = Queue()
-        self.referee_players: List[int] = []
-        self.banned_players: List[int] = []
+        self.referee_players: Set[int] = set()
+        self.banned_players: Set[int] = set()
 
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
@@ -171,7 +171,7 @@ class Match:
     def players(self) -> List["OsuClient"]:
         """Return all players"""
         return [slot.player for slot in self.player_slots]
-    
+
     @property
     def tourney_clients(self) -> List["OsuClient"]:
         """Return all tournament clients"""
@@ -189,7 +189,7 @@ class Match:
     def embed(self) -> str:
         """Embed that will be sent on invite"""
         return f'[{self.url} {self.name}]'
-    
+
     @property
     def host_id(self) -> int:
         return self.host.id if self.host else 0
@@ -216,12 +216,11 @@ class Match:
 
     @property
     def loaded_players(self) -> List[bool]:
-        # NOTE: Clients in version b323 and below don't have the
-        #       MATCH_LOAD_COMPLETE packet so we can just ignore them
         return [
-            slot.loaded
-            for slot in self.slots
+            slot.loaded for slot in self.slots
             if (
+                # NOTE: Clients in version b323 and below don't have the
+                #       MATCH_LOAD_COMPLETE packet so we can just ignore them
                 slot.status == SlotStatus.Playing and
                 slot.player.info.version.date > 323
             )
@@ -456,14 +455,13 @@ class Match:
         )
 
     def ban_player(self, player: "OsuClient"):
-        self.banned_players.append(player.id)
+        self.banned_players.add(player.id)
 
         if player in self.players:
             self.kick_player(player)
 
     def unban_player(self, player: "OsuClient"):
-        if player.id in self.banned_players:
-            self.banned_players.remove(player.id)
+        self.banned_players.discard(player.id)
 
     def close(self):
         # Shutdown pending match timer

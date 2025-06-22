@@ -59,9 +59,8 @@ def stop_spectating(client: OsuClient):
         client.logger.warning('Failed to stop spectating: Player is not spectating!')
         return
 
-    if client in client.spectating.spectators:
-        # Remove from target
-        client.spectating.spectators.remove(client)
+    # Remove from target spectators
+    client.spectating.spectators.discard(client)
 
     # Leave spectator channel
     client.spectating.spectator_chat.remove(client)

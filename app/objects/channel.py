@@ -126,12 +126,10 @@ class Channel:
             player.enqueue_channel_join_success(self.display_name)
 
     def remove(self, player: "Client") -> None:
-        self.users.remove(player)
+        player.channels.discard(self)
+        self.users.discard(player)
         self.logger.info(f'{player.name} left')
         self.broadcast_part(player)
-
-        if self in player.channels:
-            player.channels.remove(self)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')

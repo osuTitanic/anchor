@@ -487,7 +487,7 @@ class OsuClient(Client):
             self.spectating.spectator_chat.remove(self)
 
             # Remove from target
-            self.spectating.spectators.remove(self)
+            self.spectating.spectators.discard(self)
 
             # Enqueue to target
             self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)

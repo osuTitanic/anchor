@@ -328,7 +328,7 @@ def create_persistant_match(ctx: Context):
         return ['Could not create match.']
 
     ctx.player.referee_matches.add(match.id)
-    match.referee_players.append(ctx.player.id)
+    match.referee_players.add(ctx.player.id)
     match.chat = MultiplayerChannel(match)
     match.logger = logging.getLogger(f'multi_{match.id}')
     app.session.channels.add(match.chat)
@@ -1177,7 +1177,7 @@ def mp_addref(ctx: Context):
         # Target should now join #multi_<match.id> instead of #multiplayer
         target.enqueue_channel_revoked('#multiplayer')
 
-    match.referee_players.append(target.id)
+    match.referee_players.add(target.id)
     target.referee_matches.add(match)
 
     channel_object = match.chat.bancho_channel
@@ -1217,8 +1217,8 @@ def mp_removeref(ctx: Context):
         return ["You cannot remove yourself as a referee."]
 
     match.chat.remove(target)
-    match.referee_players.remove(target.id)
-    target.referee_matches.remove(match)
+    match.referee_players.discard(target.id)
+    target.referee_matches.discard(match)
     target.enqueue_channel_revoked(match.chat.bancho_channel.name)
 
     return [f'Removed "{target.name}" from match referee status.']
