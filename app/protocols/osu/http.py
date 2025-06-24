@@ -106,10 +106,6 @@ class HttpOsuHandler(Resource):
             player.token
         )
 
-        if not player.logged_in:
-            request.setHeader('connection', 'close')
-            request.setResponseCode(400)
-
         return player.dequeue()
 
     def on_login_success(self, result: bytes, request: Request) -> None:
