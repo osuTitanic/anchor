@@ -80,26 +80,20 @@ class HttpOsuHandler(Resource):
             f'-> Received login: {login_data}'
         )
 
-        try:
-            username, password, client_data = (
-                login_data.decode().splitlines()
-            )
+        username, password, client_data = (
+            login_data.decode().splitlines()
+        )
 
-            player = HttpOsuClient(
-                ip.resolve_ip_address_twisted(request),
-                request.getClientAddress().port
-            )
+        player = HttpOsuClient(
+            ip.resolve_ip_address_twisted(request),
+            request.getClientAddress().port
+        )
 
-            player.on_login_received(
-                username,
-                password,
-                client_data
-            )
-        except Exception as e:
-            player.logger.error(f'Failed to process login: {e}', exc_info=e)
-            player.close_connection('Login failure')
-            request.setHeader('connection', 'close')
-            request.setResponseCode(500)
+        player.on_login_received(
+            username,
+            password,
+            client_data
+        )
 
         request.setHeader(
             'cho-token',
@@ -125,10 +119,9 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        response_data = self.server_error_packet()
+        server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.setResponseCode(500)
-        request.write(response_data)
+        request.write(server_error)
         request.finish()
 
     def handle_request(self, player: HttpOsuClient, request: Request):
@@ -160,9 +153,9 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
+        server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.setResponseCode(500)
-        request.write(player.dequeue())
+        request.write(server_error)
         request.finish()
 
     def force_reconnect(self) -> bytes:
