@@ -155,7 +155,7 @@ def handle_privmsg_command(
         return
 
     if sender.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target, ":You are silenced.")
+        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":You are silenced.")
         return
 
     if target_name.startswith("#"):
