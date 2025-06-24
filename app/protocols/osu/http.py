@@ -109,7 +109,6 @@ class HttpOsuHandler(Resource):
         if not player.logged_in:
             request.setHeader('connection', 'close')
             request.setResponseCode(400)
-            return b''
 
         return player.dequeue()
 
