@@ -30,7 +30,7 @@ class BanchoBot(IrcClient):
         message: str,
         sender: Client,
         target: Channel | Client
-    ) -> Tuple[Context, Command, List[str]]:
+    ) -> Tuple[Context | None, Command | None, List[str]]:
         trigger, *args = self.parse_command(message)
 
         if not trigger:
@@ -178,6 +178,8 @@ class BanchoBot(IrcClient):
             '\n'.join(response),
             priority=3
         )
+
+    """Method stubs for 'IrcClient' default class behavior"""
 
     def apply_ranking(self, ranking: str = 'global') -> None:
         pass

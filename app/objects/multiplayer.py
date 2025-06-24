@@ -650,7 +650,7 @@ class Match:
         match_results = [
             (rank, slot)
             for rank, slot in enumerate(slots)
-            if (slot != None) and (slot.player != None)
+            if (slot is not None) and (slot.player is not None)
         ]
 
         if not match_results:

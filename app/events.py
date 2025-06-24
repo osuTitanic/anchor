@@ -142,7 +142,7 @@ def user_update(user_id: int, mode: int | None = None):
         # User is not using an osu! client
         return
 
-    if mode != None:
+    if mode is not None:
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
