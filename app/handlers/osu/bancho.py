@@ -106,7 +106,7 @@ def process_filename_chunk(
             .all()
 
         found_beatmaps = {
-            beatmap.filename:beatmap
+            beatmap.filename: beatmap
             for beatmap in filename_beatmaps
         }
 

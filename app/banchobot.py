@@ -4,7 +4,8 @@ from app.commands import Context, Command, commands, sets
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
-from typing import Tuple, List
+
+from typing import Tuple, List, Iterable
 from chio import Message
 
 import shlex
@@ -13,7 +14,12 @@ import app
 class BanchoBot(IrcClient):
     def __init__(self):
         super().__init__('127.0.0.1', 13381)
-        self.initialize()
+        self.id = 1
+        self.name = "BanchoBot"
+        self.presence.country_index = 1
+        self.presence.city = "w00t p00t!"
+        self.presence.is_irc = True
+        self.reload()
         
     def process_and_send_response(
         self,
@@ -50,7 +56,7 @@ class BanchoBot(IrcClient):
 
         return ctx, command, response
 
-    def parse_command(self, message: str) -> List[str]:
+    def parse_command(self, message: str) -> Iterable[str]:
         if not message.startswith('!'):
             message = f'!{message}'
 
@@ -181,23 +187,15 @@ class BanchoBot(IrcClient):
 
     """Method stubs for 'IrcClient' default class behavior"""
 
+    def update_object(self, mode: int = 0) -> None:
+        super().update_object(mode)
+        self.stats.rank = 0
+
+    def reload_rankings(self) -> None:
+        self.rankings = {"global": 0}
+
     def apply_ranking(self, ranking: str = 'global') -> None:
         pass
 
     def reload_rank(self) -> None:
         pass
-
-    def reload_rankings(self) -> None:
-        self.rankings = {"global": 0}
-
-    def update_object(self, mode: int = 0) -> None:
-        super().update_object(mode)
-        self.stats.rank = 0
-
-    def initialize(self) -> None:
-        self.id = 1
-        self.name = "BanchoBot"
-        self.presence.country_index = 1
-        self.presence.city = "w00t p00t!"
-        self.presence.is_irc = True
-        self.reload()

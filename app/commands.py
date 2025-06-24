@@ -604,7 +604,7 @@ def mp_mods(ctx: Context):
     match.update()
     return [f'Updated match mods to {match.mods.short}{"FM" if freemod else ""}.']
 
-def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
+def parse_mods_from_args(args: List[str]) -> Tuple[Mods | None, bool]:
     try:
         freemod = any(
             arg.lower() in ('freemod', 'fm')
