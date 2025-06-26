@@ -25,7 +25,7 @@ class Tasks:
 
         # Initialize "do later" queue which offloads tasks
         # that don't need to be executed immediately
-        self.do_later_workers = config.BANCHO_WORKERS // 4
+        self.do_later_workers = max(1, config.BANCHO_WORKERS // 2)
         self.do_later_executor = ThreadPoolExecutor(max_workers=self.do_later_workers)
         self.do_later_futures: List[Future] = []
         self.do_later_queue = PriorityQueue()
@@ -107,7 +107,7 @@ class Tasks:
 
         count = next(self.counter)
         self.do_later_queue.put((priority, count, function, args, kwargs))
-        
+
     def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
         """
         Internal function used to defer a function call to a separate thread.
