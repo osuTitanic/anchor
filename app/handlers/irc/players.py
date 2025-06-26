@@ -22,7 +22,7 @@ def handle_names_command(
             client.enqueue_players,
             channel.users,
             channel.name,
-            priority=2
+            priority=3
         )
 
 @register("WHO")

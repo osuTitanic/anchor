@@ -209,7 +209,7 @@ class Channel:
             # A command was executed
             return app.session.tasks.do_later(
                 app.session.banchobot.process_and_send_response,
-                message, sender, self, priority=1
+                message, sender, self, priority=2
             )
 
         if len(message) > 512:
@@ -224,7 +224,7 @@ class Channel:
             sender.name,
             self.name,
             message[:512],
-            priority=2
+            priority=4
         )
 
         message_object = Message(
@@ -242,7 +242,7 @@ class Channel:
             self.broadcast_message,
             message_object,
             users=users,
-            priority=1
+            priority=2
         )
     
     def validate_message(
@@ -313,7 +313,7 @@ class Channel:
                 sender_id
             ),
             users=self.users,
-            priority=1
+            priority=2
         )
 
 class SpectatorChannel(Channel):

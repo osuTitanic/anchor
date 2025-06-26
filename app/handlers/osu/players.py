@@ -71,7 +71,7 @@ def receive_updates(client: OsuClient, filter: PresenceFilter):
     session.tasks.do_later(
         client.enqueue_players,
         players,
-        priority=2
+        priority=3
     )
 
 @register(PacketType.OsuPresenceRequest)

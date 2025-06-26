@@ -195,7 +195,7 @@ class OsuClient(Client):
                 self.id,
                 self.address,
                 self.info.version.string,
-                priority=3
+                priority=4
             )
 
             # Check for new hardware
@@ -414,7 +414,7 @@ class OsuClient(Client):
                 self.info.hash.adapters_md5,
                 self.info.hash.uninstall_id,
                 self.info.hash.diskdrive_signature,
-                priority=3
+                priority=4
             )
 
             user_matches = [match for match in matches if match.user_id == self.id]

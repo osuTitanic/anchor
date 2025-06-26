@@ -64,7 +64,7 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
         client,
         filenames_chunks,
         ids_chunks,
-        priority=3
+        priority=4
     )
 
 def process_beatmap_info_request(

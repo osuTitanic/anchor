@@ -93,7 +93,7 @@ def handle_join_command(
             client.enqueue_players,
             channel.users,
             channel.name,
-            priority=1
+            priority=2
         )
 
 @register("PART")
@@ -195,7 +195,7 @@ def handle_privmsg_command(
     if has_command_prefix or target is session.banchobot:
         return session.tasks.do_later(
             session.banchobot.process_and_send_response,
-            parsed_message, sender, target, priority=1
+            parsed_message, sender, target, priority=2
         )
 
     if len(message) > 512:
@@ -214,5 +214,5 @@ def handle_privmsg_command(
         sender.id,
         target.id,
         message,
-        priority=3
+        priority=4
     )

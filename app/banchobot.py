@@ -174,7 +174,7 @@ class BanchoBot(IrcClient):
             context.player.id,
             self.object.id,
             context.message,
-            priority=3
+            priority=4
         )
 
         app.session.tasks.do_later(
@@ -182,7 +182,7 @@ class BanchoBot(IrcClient):
             self.object.id,
             context.player.id,
             '\n'.join(response),
-            priority=3
+            priority=4
         )
 
     """Method stubs for 'IrcClient' default class behavior"""
