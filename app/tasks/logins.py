@@ -6,7 +6,7 @@ import app
 
 class LoginManager:
     def __init__(self) -> None:
-        self.packet_threshold = 5000 * (config.BANCHO_WORKERS // 8)
+        self.packet_threshold = 10000 * (config.BANCHO_WORKERS // 6)
         self.login_threshold = 100 * (config.BANCHO_WORKERS // 8)
         self.login_priority = 1
 
