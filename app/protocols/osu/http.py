@@ -10,7 +10,7 @@ from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
 from twisted.web import server
-from queue import Queue
+from queue import Queue, Empty
 
 import config
 import uuid
@@ -35,11 +35,14 @@ class HttpOsuClient(OsuClient):
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
-    def dequeue(self) -> bytes:
+    def dequeue(self, max=2**15) -> bytes:
         data = b""
 
-        while not self.queue.empty():
-            data += self.queue.get()
+        while len(data) < max:
+            try:
+                data += self.queue.get_nowait()
+            except Empty:
+                break
 
         return data
 
