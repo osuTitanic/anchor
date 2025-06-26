@@ -64,12 +64,12 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
 
     def close_connection(self, reason: Any = None) -> None:
+        reactor.callLater(0, self.transport.loseConnection)
         super().close_connection(reason)
-        reactor.callFromThread(self.transport.loseConnection)
 
     def enqueue_line(self, line: str) -> None:
         self.logger.debug(f"-> {line}")
-        self.sendLine(line)
+        reactor.callLater(0, self.sendLine, line)
 
     def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")

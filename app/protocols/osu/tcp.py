@@ -41,20 +41,14 @@ class TcpOsuClient(OsuClient, Protocol):
         )
 
     def enqueue(self, data: bytes) -> None:
-        try:
-            reactor.callFromThread(self.transport.write, data)
-        except Exception as e:
-            self.logger.error(
-                f'Could not write to transport layer: {e}',
-                exc_info=e
-            )
+        reactor.callLater(0, self.transport.write, data)
 
     def enqueue_packet(self, packet, *args):
         self.io.write_packet(self.stream, packet, *args)
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
 
     def close_connection(self, reason: str = "") -> None:
-        reactor.callFromThread(self.transport.loseConnection)
+        reactor.callLater(0, self.transport.loseConnection)
         super().close_connection(reason)
 
     def dataReceived(self, data: bytes):
