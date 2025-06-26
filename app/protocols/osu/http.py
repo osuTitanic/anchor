@@ -9,6 +9,7 @@ from app.tasks import logins
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
+from twisted.internet import reactor
 from twisted.web import server
 from queue import Queue, Empty
 
@@ -109,9 +110,12 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        request.setHeader('connection', 'keep-alive')
-        request.write(result)
-        request.finish()
+        def do_response():
+            request.setHeader('connection', 'keep-alive')
+            request.write(result)
+            request.finish()
+
+        reactor.callLater(0, do_response)
 
     def on_login_error(self, failure: Failure, request: Request) -> None:
         app.session.logger.error(
@@ -122,10 +126,13 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        server_error = self.server_error_packet()
-        request.setHeader('connection', 'close')
-        request.write(server_error)
-        request.finish()
+        def do_error_response():
+            server_error = self.server_error_packet()
+            request.setHeader('connection', 'close')
+            request.write(server_error)
+            request.finish()
+
+        reactor.callLater(0, do_error_response)
 
     def handle_request(self, player: HttpOsuClient, request: Request):
         d = app.session.tasks.defer_to_reactor_thread(self.process_request, player, request)
@@ -145,9 +152,12 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        request.setHeader('connection', 'keep-alive')
-        request.write(result)
-        request.finish()
+        def do_response():
+            request.setHeader('connection', 'keep-alive')
+            request.write(result)
+            request.finish()
+
+        reactor.callLater(0, do_response)
 
     def on_request_error(self, failure: Failure, player: HttpOsuClient, request: Request) -> None:
         player.logger.error(f'Failed to process request: {failure.getErrorMessage()}', exc_info=failure.value)
@@ -156,10 +166,13 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        server_error = self.server_error_packet()
-        request.setHeader('connection', 'close')
-        request.write(server_error)
-        request.finish()
+        def do_error_response():
+            server_error = self.server_error_packet()
+            request.setHeader('connection', 'close')
+            request.write(server_error)
+            request.finish()
+
+        reactor.callLater(0, do_error_response)
 
     def force_reconnect(self) -> bytes:
         """Force a client to reconnect, using the Restart packet."""
