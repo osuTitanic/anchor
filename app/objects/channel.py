@@ -219,14 +219,6 @@ class Channel:
         # Filter out sender
         users = [user for user in self.users if user != sender]
 
-        app.session.tasks.do_later(
-            messages.create,
-            sender.name,
-            self.name,
-            message[:512],
-            priority=4
-        )
-
         message_object = Message(
             sender.name,
             message,
@@ -244,7 +236,15 @@ class Channel:
             users=users,
             priority=2
         )
-    
+
+        app.session.tasks.do_later(
+            messages.create,
+            sender.name,
+            self.name,
+            message[:512],
+            priority=4
+        )
+
     def validate_message(
         self,
         sender: "Client",
