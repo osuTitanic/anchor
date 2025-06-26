@@ -6,10 +6,10 @@ from typing import (
     Iterator,
     Tuple,
     Dict,
-    List
+    List,
+    Set
 )
 
-from app.objects.locks import LockedDict, LockedSet
 from app.protocols.osu.http import HttpOsuClient
 from app.clients.base import Client
 from app.clients.osu import OsuClient
@@ -19,17 +19,17 @@ from chio import UserQuit
 class Players(MutableMapping[int | str, Client]):
     def __init__(self) -> None:
         # Lookup by id & name for osu! and irc clients
-        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
-        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
-        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
-        self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
-        self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
-        self.osu_safe_name_mapping: LockedDict[str, OsuClient] = LockedDict()
+        self.irc_id_mapping: Dict[int, IrcClient] = dict()
+        self.irc_name_mapping: Dict[str, IrcClient] = dict()
+        self.irc_safe_name_mapping: Dict[str, IrcClient] = dict()
+        self.osu_id_mapping: Dict[int, OsuClient] = dict()
+        self.osu_name_mapping: Dict[str, OsuClient] = dict()
+        self.osu_safe_name_mapping: Dict[str, OsuClient] = dict()
 
         # osu! specific
-        self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
-        self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
-        self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
+        self.osu_token_mapping: Dict[str, HttpOsuClient] = dict()
+        self.osu_tournament_clients: Set[OsuClient] = set()
+        self.osu_in_lobby: Set[OsuClient] = set()
 
     @property
     def osu_clients(self) -> Tuple[OsuClient]:
