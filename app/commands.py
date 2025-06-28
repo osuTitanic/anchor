@@ -1052,6 +1052,7 @@ def mp_settings(ctx: Context):
             f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
             f"{f' Team {slot.team.name}' if match.ffa else ''}"
             f"{f' +{slot.mods.short}' if slot.mods > 0 else ''} [{f'Host' if match.host == slot.player else ''}]"
+            f"{f' ({slot.player.info.version.string})'}"
             for slot in match.slots
             if slot.has_player
         ]
