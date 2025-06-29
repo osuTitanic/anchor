@@ -13,6 +13,7 @@ import importlib
 import logging
 import config
 import signal
+import ssl
 import app
 import os
 
@@ -122,6 +123,8 @@ def setup_servers():
         config.SSL_KEYFILE,
         config.SSL_CERTFILE
     )
+    context: ssl.SSLContext = ssl_options._context
+    context.minimum_version = ssl.TLSVersion.MINIMUM_SUPPORTED
 
     reactor.listenSSL(
         config.IRC_PORT_SSL,
