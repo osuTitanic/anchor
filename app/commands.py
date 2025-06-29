@@ -154,6 +154,19 @@ def execute_console(ctx: Context):
     input = ' '.join(ctx.args)
     return [str(eval(input))]
 
+@system_commands.register(['restart', 'enqueuerestart'], ['Admins'])
+def enqueue_restart(ctx: Context):
+    """<retry_time> - Enqueue a server restart to all clients"""
+    if len(ctx.args) != 1 or not ctx.args[0].isdecimal():
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <retry_time>']
+
+    retry_time = int(ctx.args[0])
+
+    for player in app.session.players:
+        player.enqueue_server_restart(retry_time * 1000)
+
+    return [f'Sent server restart packet to {len(app.session.players)} players.']
+
 @system_commands.register(['spectateuser', 'spectate'], ['Admins'])
 def spectate_user(ctx: Context):
     """<name> - Force all online players to spectate a user"""
