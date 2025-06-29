@@ -136,7 +136,7 @@ def maintenance_mode(ctx: Context) -> List[str]:
 
     if config.MAINTENANCE:
         for player in app.session.players:
-            if player.is_admin:
+            if player.is_staff:
                 continue
 
             player.close_connection("Server maintenance")
