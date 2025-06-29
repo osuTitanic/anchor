@@ -145,56 +145,6 @@ def maintenance_mode(ctx: Context) -> List[str]:
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
     ]
 
-@system_commands.register(['setenv', 'setcfg'], ['Admins'])
-def set_config_value(ctx: Context) -> List[str]:
-    """<env> <value> - Update a config value"""
-    if len(ctx.args) < 2:
-        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env> <value>']
-
-    env_name = ctx.args[0]
-    value = ' '.join(ctx.args[1:])
-
-    config.dotenv.set_key('.env', env_name, value)
-    setattr(config, env_name, value)
-
-    if env_name.startswith('MENUICON'):
-        # Enqueue menu icon to all players
-        for player in app.session.players.osu_clients:
-            player.enqueue_packet(
-                PacketType.BanchoTitleUpdate,
-                TitleUpdate(
-                    config.MENUICON_IMAGE,
-                    config.MENUICON_URL
-                )
-            )
-
-    return ['Config was updated.']
-
-@system_commands.register(['getenv', 'getcfg', 'env', 'config', 'cfg'], ['Admins'])
-def get_config_value(ctx: Context) -> List[str]:
-    """<env> - Get a config value"""
-    if len(ctx.args) < 1:
-        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env>']
-
-    return [getattr(config, ctx.args[0])]
-
-@system_commands.register(['reloadcfg', 'reloadenv'], ['Admins'])
-def reload_config(ctx: Context) -> List[str]:
-    """- Reload the config"""
-
-    config.dotenv.load_dotenv(override=True)
-
-    for key in dir(config):
-        if not key.isupper():
-            continue
-
-        if key not in os.environ:
-            continue
-
-        setattr(config, key, os.environ[key])
-
-    return ['Config was reloaded.']
-
 @system_commands.register(['exec', 'python'], ['Admins'])
 def execute_console(ctx: Context):
     """<input> - Execute any python code"""
