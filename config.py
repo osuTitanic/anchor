@@ -23,13 +23,14 @@ AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announc
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
 TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
 HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
+IRC_PORT = int(os.environ.get('BANCHO_IRC_PORT', 6667))
 WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 
-IRC_PORT = int(os.environ.get('BANCHO_IRC_PORT', 6667))
+TCP_PORTS_SSL = eval(os.environ.get('BANCHO_TCP_PORTS_SSL', '[13391, 13392, 13393]'))
 IRC_PORT_SSL = int(os.environ.get('BANCHO_IRC_PORT_SSL', 6697))
-IRC_SSL_KEYFILE = os.environ.get('IRC_SSL_KEYFILE')
-IRC_SSL_CERTFILE = os.environ.get('IRC_SSL_CERTFILE')
-IRC_SSL_ENABLED = IRC_SSL_KEYFILE and IRC_SSL_CERTFILE
+SSL_KEYFILE = os.environ.get('BANCHO_SSL_KEYFILE')
+SSL_CERTFILE = os.environ.get('BANCHO_SSL_CERTFILE')
+SSL_ENABLED = SSL_KEYFILE and SSL_CERTFILE
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 

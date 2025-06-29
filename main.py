@@ -112,21 +112,31 @@ def setup_servers():
     for port in config.TCP_PORTS:
         reactor.listenTCP(port, osu_tcp_factory)
 
-    if not config.IRC_SSL_ENABLED:
+    if not config.SSL_ENABLED:
         return
 
-    # Import twisted ssl module
     TwistedSSL = importlib.import_module('twisted.internet.ssl')
     ContextFactory = TwistedSSL.DefaultOpenSSLContextFactory
 
-    # Create ssl context for irc connections
     ssl_options = ContextFactory(
-        config.IRC_SSL_KEYFILE,
-        config.IRC_SSL_CERTFILE
+        config.SSL_KEYFILE,
+        config.SSL_CERTFILE
     )
 
-    reactor.listenSSL(config.IRC_PORT_SSL, irc_tcp_factory, ssl_options)
-    app.session.logger.info(f'SSL connections enabled for IRC ({config.IRC_PORT_SSL})')
+    reactor.listenSSL(
+        config.IRC_PORT_SSL,
+        irc_tcp_factory,
+        ssl_options
+    )
+
+    for port in config.TCP_PORTS_SSL:
+        reactor.listenSSL(
+            port,
+            osu_tcp_factory,
+            ssl_options
+        )
+
+    app.session.logger.info(f'SSL connections enabled')
 
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)
