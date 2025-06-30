@@ -116,15 +116,14 @@ def setup_servers():
     if not config.SSL_ENABLED:
         return
 
-    TwistedSSL = importlib.import_module('twisted.internet.ssl')
-    ContextFactory = TwistedSSL.DefaultOpenSSLContextFactory
+    from twisted.internet import ssl as TwistedSSL
 
-    ssl_options = ContextFactory(
+    ssl_options = TwistedSSL.DefaultOpenSSLContextFactory(
         config.SSL_KEYFILE,
         config.SSL_CERTFILE
     )
-    context: ssl.SSLContext = ssl_options._context
-    context.minimum_version = ssl.TLSVersion.MINIMUM_SUPPORTED
+    context: TwistedSSL.SSL.Context = ssl_options._context
+    context.set_min_proto_version(0)
 
     reactor.listenSSL(
         config.IRC_PORT_SSL,
