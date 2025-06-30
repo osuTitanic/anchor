@@ -26,7 +26,16 @@ def bot_message(message: str, target: str):
         )
 
 @app.session.events.register('bancho_event')
-def bancho_event(user_id: int, mode: int, type: int, data: dict):
+def bancho_event(
+    user_id: int,
+    mode: int,
+    type: int,
+    data: dict,
+    is_announcement: bool = False
+) -> None:
+    if not is_announcement:
+        return
+
     # Create entry object for formatting
     entry = DBActivity(
         user_id=user_id,
