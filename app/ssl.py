@@ -18,6 +18,11 @@ def setup(min_protocol: int):
     context: TwistedSSL.SSL.Context = context_factory._context
     context.set_min_proto_version(min_protocol)
 
+    # Make tls writes thread-safe
+    tls.TLSMemoryBIOProtocol.write = lambda self, data: (
+        reactor.callFromThread(tls.TLSMemoryBIOProtocol._write, self, data)
+    )
+
     # Usually the protocol is set to `BufferingTLSTransport`, however
     # this protocol has proven to be very unreliable to use, especially
     # with sending smaller data. Sent packets would often just stay in
