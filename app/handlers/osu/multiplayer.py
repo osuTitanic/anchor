@@ -1,6 +1,4 @@
 
-
-from twisted.internet import reactor
 from datetime import datetime
 from typing import Callable
 from copy import copy
@@ -16,10 +14,11 @@ from chio import (
 )
 
 from app.handlers.osu.chat import channel_leave
+from app.common.constants import GameMode, EventType, UserActivity
 from app.common.database import beatmaps, matches, events
-from app.common.constants import GameMode, EventType
 from app.objects.channel import MultiplayerChannel
 from app.objects.multiplayer import Match
+from app.common.helpers import activity
 from app.clients.osu import OsuClient
 from app import session
 
@@ -134,7 +133,21 @@ def create_match(client: OsuClient, bancho_match: Match):
         match.host_id
     )
 
-    session.logger.info(f'Created match: "{match.name}"')
+    session.logger.info(
+        f'Created match: "{match.name}"'
+    )
+
+    activity.submit(
+        client.id, match.mode.value,
+        UserActivity.UserMatchCreated,
+        {
+            'username': client.name,
+            'match_id': match.db_match.id,
+            'match_name': match.name
+        },
+        is_hidden=True,
+        session=None
+    )
 
     join_match(
         client,
@@ -244,6 +257,18 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         }
     )
 
+    activity.submit(
+        client.id, match.mode.value,
+        UserActivity.UserMatchJoined,
+        {
+            'username': client.name,
+            'match_id': match.db_match.id,
+            'match_name': match.name
+        },
+        is_hidden=True,
+        session=None
+    )
+
 @register(PacketType.OsuMatchPart)
 def leave_match(client: OsuClient):
     if not client.match:
@@ -276,6 +301,18 @@ def leave_match(client: OsuClient):
             'user_id': client.id,
             'name': client.name
         }
+    )
+
+    activity.submit(
+        client.id, client.match.mode.value,
+        UserActivity.UserMatchLeft,
+        {
+            'username': client.name,
+            'match_id': client.match.db_match.id,
+            'match_name': client.match.name
+        },
+        is_hidden=True,
+        session=None
     )
 
     if (client is client.match.host and client.match.beatmap_id == -1):
