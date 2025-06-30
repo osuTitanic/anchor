@@ -26,7 +26,6 @@ HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
 IRC_PORT = int(os.environ.get('BANCHO_IRC_PORT', 6667))
 WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 
-TCP_PORTS_SSL = eval(os.environ.get('BANCHO_TCP_PORTS_SSL', '[13391, 13392, 13393]'))
 IRC_PORT_SSL = int(os.environ.get('BANCHO_IRC_PORT_SSL', 6697))
 SSL_KEYFILE = os.environ.get('BANCHO_SSL_KEYFILE')
 SSL_CERTFILE = os.environ.get('BANCHO_SSL_CERTFILE')

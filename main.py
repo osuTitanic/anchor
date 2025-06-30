@@ -121,17 +121,7 @@ def setup_servers():
         app.session.logger.warning('SSL support is not available, please install OpenSSL and try again.')
         return
 
-    app.ssl.listen(
-        config.IRC_PORT_SSL,
-        irc_tcp_factory, context
-    )
-
-    for port in config.TCP_PORTS_SSL:
-        app.ssl.listen(
-            port, osu_tcp_factory,
-            context_factory=context
-        )
-
+    app.ssl.listen(config.IRC_PORT_SSL, irc_tcp_factory, context)
     app.session.logger.info(f'SSL connections enabled')
 
 def main():
