@@ -52,7 +52,7 @@ class TcpOsuClient(OsuClient, Protocol):
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
 
     def close_connection(self, reason: str = "") -> None:
-        self.transport.loseConnection()
+        reactor.callFromThread(self.transport.loseConnection)
         super().close_connection(reason)
 
     def dataReceived(self, data: bytes):
