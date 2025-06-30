@@ -60,7 +60,7 @@ def setup():
     importlib.import_module('app.tasks.queue')
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
-    importlib.import_module('app.tasks.activities')
+    importlib.import_module('app.tasks.multiplayer')
 
     # Reset usercount
     usercount.set(1)
