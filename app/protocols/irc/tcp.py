@@ -69,7 +69,7 @@ class TcpIrcProtocol(IrcClient, IRC):
 
     def enqueue_line(self, line: str) -> None:
         self.logger.debug(f"-> {line}")
-        reactor.callLater(0, self.sendLine, line)
+        self.sendLine(line)
 
     def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")
