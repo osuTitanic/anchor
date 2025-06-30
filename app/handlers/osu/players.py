@@ -3,7 +3,9 @@
 from chio import PresenceFilter, PacketType, UserStatus
 from typing import Callable, List
 
+from app.common.constants import UserActivity
 from app.common.database import relationships
+from app.common.helpers import activity
 from app.clients.osu import OsuClient
 from app import session
 
@@ -24,13 +26,26 @@ def add_friend(client: OsuClient, target_id: int):
     if target.id == client.id:
         return
 
-    relationships.create(
-        client.id,
-        target_id
-    )
+    with session.database.managed_session() as db:
+        relationships.create(
+            client.id,
+            target_id,
+            session=db
+        )
 
-    session.logger.info(f'{client.name} is now friends with {target.name}.')
+        activity.submit(
+            client.id, None,
+            UserActivity.FriendAdded,
+            {
+                'username': client.name,
+                'target_username': target.name,
+                'target_id': target.id
+            },
+            is_hidden=True,
+            session=db
+        )
 
+    client.logger.info(f'{client.name} is now friends with {target.name}.')
     client.reload(client.status.mode.value)
     client.enqueue_packet(PacketType.BanchoFriendsList, client.friends)
 
@@ -42,13 +57,25 @@ def remove_friend(client: OsuClient, target_id: int):
     if target.id not in client.friends:
         return
 
-    relationships.delete(
-        client.id,
-        target_id
-    )
+    with session.database.managed_session() as db:
+        relationships.delete(
+            client.id,
+            target_id
+        )
 
-    session.logger.info(f'{client.name} is no longer friends with {target.name}.')
+        activity.submit(
+            client.id, None,
+            UserActivity.FriendRemoved,
+            {
+                'username': client.name,
+                'target_username': target.name,
+                'target_id': target.id
+            },
+            is_hidden=True,
+            session=db
+        )
 
+    client.logger.info(f'{client.name} is no longer friends with {target.name}.')
     client.reload(client.status.mode.value)
     client.enqueue_packet(PacketType.BanchoFriendsList, client.friends)
 
