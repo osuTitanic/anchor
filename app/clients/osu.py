@@ -9,9 +9,9 @@ from datetime import datetime
 from copy import copy
 
 from app.common.database import users, groups, stats, logins, clients
+from app.common.helpers import activity, clients as client_utils
 from app.common.cache import status, usercount, leaderboards
-from app.common.helpers import clients as client_utils
-from app.common.constants import GameMode
+from app.common.constants import GameMode, UserActivity
 from app.common.constants import strings
 from app.common import officer, mail
 
@@ -207,12 +207,25 @@ class OsuClient(Client):
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
+            activity.submit(
+                self.id, None,
+                UserActivity.UserLogin,
+                {
+                    'username': self.name,
+                    'location': 'bancho',
+                    'client': 'osu',
+                    'version': self.info.version.string
+                },
+                is_hidden=True,
+                session=session
+            )
+
             # Update cache
             self.update_leaderboard_stats()
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
-
+        
         self.logged_in = True
         self.on_login_success()
 

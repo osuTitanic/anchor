@@ -1,7 +1,8 @@
 
 from app.common.database import users, groups, stats, logins
+from app.common.constants import UserActivity, strings
 from app.common.cache import usercount, status
-from app.common.constants import strings
+from app.common.helpers import activity
 from app.objects.channel import Channel
 from app.clients.base import Client
 
@@ -114,6 +115,18 @@ class IrcClient(Client):
                 self.address,
                 "irc",
                 priority=4
+            )
+
+            activity.submit(
+                self.id, None,
+                UserActivity.UserLogin,
+                {
+                    'username': self.name,
+                    'location': 'bancho',
+                    'client': 'irc'
+                },
+                is_hidden=True,
+                session=session
             )
 
             # Update cache
