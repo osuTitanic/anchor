@@ -64,7 +64,7 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
 
     def close_connection(self, reason: Any = None) -> None:
-        reactor.callLater(0, self.transport.loseConnection)
+        self.transport.loseConnection()
         super().close_connection(reason)
 
     def enqueue_line(self, line: str) -> None:
