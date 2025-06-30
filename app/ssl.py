@@ -19,7 +19,7 @@ def setup(min_protocol: int):
     context.set_min_proto_version(min_protocol)
 
     # Usually the protocol is set to `BufferingTLSTransport`, however
-    # this protocol has prooven to be very unreliable to use, especially
+    # this protocol has proven to be very unreliable to use, especially
     # with sending smaller data. Sent packets would often just stay in
     # the buffer and not be dequeued until the next packet is sent.
     tls.TLSMemoryBIOFactory.protocol = tls.TLSMemoryBIOProtocol
