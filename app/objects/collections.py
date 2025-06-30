@@ -45,6 +45,11 @@ class Players(MutableMapping[int | str, Client]):
         return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'tcp')
 
     @property
+    def ws_osu_clients(self) -> Tuple[OsuClient]:
+        """Get all websocket osu! clients"""
+        return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'ws')
+
+    @property
     def http_osu_clients(self) -> Tuple[HttpOsuClient]:
         """Get all http osu! clients"""
         return tuple(p for p in self.osu_token_mapping.values())
