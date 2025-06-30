@@ -13,7 +13,6 @@ import importlib
 import logging
 import config
 import signal
-import ssl
 import app
 import os
 
@@ -116,26 +115,21 @@ def setup_servers():
     if not config.SSL_ENABLED:
         return
 
-    from twisted.internet import ssl as TwistedSSL
+    context = app.ssl.setup(min_protocol=0)
 
-    ssl_options = TwistedSSL.DefaultOpenSSLContextFactory(
-        config.SSL_KEYFILE,
-        config.SSL_CERTFILE
-    )
-    context: TwistedSSL.SSL.Context = ssl_options._context
-    context.set_min_proto_version(0)
+    if not context:
+        app.session.logger.warning('SSL support is not available, please install OpenSSL and try again.')
+        return
 
-    reactor.listenSSL(
+    app.ssl.listen(
         config.IRC_PORT_SSL,
-        irc_tcp_factory,
-        ssl_options
+        irc_tcp_factory, context
     )
 
     for port in config.TCP_PORTS_SSL:
-        reactor.listenSSL(
-            port,
-            osu_tcp_factory,
-            ssl_options
+        app.ssl.listen(
+            port, osu_tcp_factory,
+            context_factory=context
         )
 
     app.session.logger.info(f'SSL connections enabled')
