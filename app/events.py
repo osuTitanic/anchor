@@ -44,7 +44,7 @@ def bancho_event(
         data=data
     )
 
-    formatter = activity.formatters.get(type)
+    formatter = activity.text_formatters.get(type)
 
     if not formatter:
         app.session.logger.warning(f'No formatter found for activity type {type}')
