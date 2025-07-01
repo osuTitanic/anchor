@@ -22,7 +22,8 @@ def bot_message(message: str, target: str):
     for message in messages:
         channel.send_message(
             app.session.banchobot,
-            message
+            message,
+            ignore_commands=True
         )
 
 @app.session.events.register('bancho_event')
