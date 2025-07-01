@@ -6,6 +6,7 @@ from app.common.database.repositories import users
 from app.common.database.objects import DBActivity
 from app.common.constants import GameMode
 from app.clients.base import Client
+from app.common import officer
 from datetime import datetime
 from typing import Optional
 
@@ -45,14 +46,8 @@ def bancho_event(
         data=data
     )
 
-    formatter = activity.text_formatters.get(type)
-
-    if not formatter:
-        app.session.logger.warning(f'No formatter found for activity type {type}')
-        return
-
-    # Send message in #announce channel
-    bot_message(formatter(entry), "#announce")
+    send_activity_announcement(entry)
+    send_activity_webhook(entry)
 
 @app.session.events.register('logout')
 def logout(user_id: int):
@@ -236,6 +231,33 @@ def external_dm(
 @app.session.events.register('shutdown')
 def shutdown() -> None:
     exit(0)
+
+def send_activity_announcement(entry: DBActivity) -> None:
+    formatter = activity.text_formatters.get(entry.type)
+
+    if not formatter:
+        app.session.logger.warning(f'No text formatter found for activity type {entry.type}')
+        return
+
+    if not (message := formatter(entry)):
+        app.session.logger.warning(f'Text formatter returned "{message}" for type {entry.type}')
+
+    # Send message in #announce channel
+    bot_message(message, "#announce")
+
+def send_activity_webhook(entry: DBActivity) -> None:
+    formatter = activity.discord_formatters.get(entry.type)
+
+    if not formatter:
+        app.session.logger.warning(f'No webhook formatter found for activity type {entry.type}')
+        return
+
+    if not (embed := formatter(entry)):
+        app.session.logger.warning(f'Webhook formatter returned "{embed}" for type {entry.type}')
+        return
+
+    # Send webhook message
+    officer.event(embeds=[embed])
 
 def enqueue_stats(player: Client):
     try:
