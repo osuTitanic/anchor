@@ -459,10 +459,6 @@ class IrcClient(Client):
             f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
             params=[f":{channel}"]
         )
-        
-        if player.object.is_moderator or player.object.is_bat:
-            # Enqueue player mode for staff players
-            self.enqueue_mode(player, channel)
 
     def enqueue_part(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
