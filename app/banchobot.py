@@ -186,10 +186,7 @@ class BanchoBot(IrcClient):
             priority=5
         )
 
-        app.session.tasks.do_later(
-            self.update_activity,
-            priority=6
-        )
+        self.update_activity()
 
     """Method stubs for 'IrcClient' default class behavior"""
 
