@@ -512,14 +512,14 @@ class IrcClient(Client):
         )
         target.away_senders.add(self.id)
 
-    def enqueue_mode(self, channel: Channel) -> None:
+    def enqueue_mode(self, client: "Client", channel_name: str = "#osu") -> None:
         self.enqueue_command_raw(
             "MODE",
             app.session.banchobot.irc_prefix,
             params=[
-                channel.name,
-                channel.mode(self),
-                self.local_prefix
+                channel_name,
+                client.irc_mode,
+                client.underscored_name
             ]
         )
 

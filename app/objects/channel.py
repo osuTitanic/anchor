@@ -85,51 +85,37 @@ class Channel:
     def can_write(self, client: "Client") -> bool:
         return client.permissions.value >= self.write_perms
 
-    def mode(self, client: "Client") -> str:
-        if client.silenced:
-            return '-v'
-
-        if Permissions.Peppy in client.permissions:
-            return '+a'
-
-        if Permissions.Friend in client.permissions:
-            return '+o'
-
-        if Permissions.BAT in client.permissions:
-            return '+h'
-
-        return '+v'
-
-    def add(self, player: "Client", no_response: bool = False) -> None:
+    def add(self, client: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
-        player.silenced
+        client.silenced
 
-        if not self.can_read(player):
+        if not self.can_read(client):
             # Player does not have read access
-            self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.enqueue_channel_revoked(self.display_name)
+            self.logger.warning(f'{client} tried to join channel but does not have read access.')
+            client.enqueue_channel_revoked(self.display_name)
 
-        if player in self.users and not player.is_tourney_client:
+        if client in self.users and not client.is_tourney_client:
             # Player has already joined the channel
             if no_response:
                 return
 
-            player.enqueue_channel_join_success(self.display_name)
+            client.enqueue_channel_join_success(self.display_name)
             return
 
-        player.channels.add(self)
-        self.users.add(player)
-        self.logger.info(f'{player.name} joined')
-        self.broadcast_join(player)
+        client.channels.add(self)
+        self.users.add(client)
+        self.logger.info(f'{client.name} joined')
+        self.broadcast_join(client)
+        self.broadcast_mode(client)
 
         if not no_response:
-            player.enqueue_channel_join_success(self.display_name)
+            client.enqueue_channel_join_success(self.display_name)
 
-    def remove(self, player: "Client") -> None:
-        player.channels.discard(self)
-        self.users.discard(player)
-        self.logger.info(f'{player.name} left')
-        self.broadcast_part(player)
+    def remove(self, client: "Client") -> None:
+        client.channels.discard(self)
+        self.users.discard(client)
+        self.logger.info(f'{client.name} left')
+        self.broadcast_part(client)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
@@ -137,15 +123,15 @@ class Channel:
         for user in users:
             user.enqueue_message_object(message)
 
-    def broadcast_part(self, player: "Client") -> None:
+    def broadcast_part(self, client: "Client") -> None:
         self.update_osu_clients()
         
-        if player.is_tourney_client:
+        if client.is_tourney_client:
             # Do not broadcast part to irc users
             return
 
         other_player = next(
-            (p for p in self.users if p.id == player.id),
+            (p for p in self.users if p.id == client.id),
             None
         )
 
@@ -155,9 +141,9 @@ class Channel:
             return
 
         for user in self.irc_users:
-            user.enqueue_part(player, self.name)
+            user.enqueue_part(client, self.name)
 
-    def broadcast_join(self, player: "Client") -> None:
+    def broadcast_join(self, client: "Client") -> None:
         self.update_osu_clients()
 
         if self.name == "#osu":
@@ -166,7 +152,11 @@ class Channel:
             return
 
         for user in self.irc_users:
-            user.enqueue_player(player, self.name)
+            user.enqueue_player(client, self.name)
+
+    def broadcast_mode(self, client: "Client") -> None:
+        for irc_client in self.irc_users:
+            irc_client.enqueue_mode(client, self.name)
 
     def update_osu_clients(self) -> None:
         if not self.public:

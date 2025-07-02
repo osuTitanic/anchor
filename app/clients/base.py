@@ -162,24 +162,40 @@ class Client:
         )
 
     @property
-    def permissions(self) -> Permissions:
-        return self.presence.permissions
+    def underscored_name(self) -> str:
+        return self.name.replace(" ", "_")
+
+    @property
+    def safe_name(self) -> str:
+        return self.underscored_name.lower()
 
     @property
     def is_irc(self) -> bool:
         return self.presence.is_irc
 
     @property
-    def underscored_name(self) -> str:
-        return self.name.replace(" ", "_")
-
-    @property
     def irc_prefix(self) -> str:
         return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
 
     @property
-    def safe_name(self) -> str:
-        return self.underscored_name.lower()
+    def irc_mode(self) -> str:
+        if self.silenced:
+            return '-v'
+
+        if self.object.is_admin:
+            return '+a'
+
+        if self.object.is_moderator:
+            return '+o'
+
+        if self.object.is_bat:
+            return '+h'
+
+        return '+v'
+
+    @property
+    def permissions(self) -> Permissions:
+        return self.presence.permissions
 
     @property
     def avatar_filename(self) -> str:
