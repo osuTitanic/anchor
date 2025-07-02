@@ -4,6 +4,7 @@ from app.commands import Context, Command, commands, sets
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
+from app.common.cache import status
 
 from typing import Tuple, List, Iterable
 from chio import Message
@@ -182,7 +183,12 @@ class BanchoBot(IrcClient):
             self.object.id,
             context.player.id,
             '\n'.join(response),
-            priority=4
+            priority=5
+        )
+
+        app.session.tasks.do_later(
+            self.update_activity,
+            priority=6
         )
 
     """Method stubs for 'IrcClient' default class behavior"""

@@ -33,6 +33,7 @@ def setup():
     app.session.logger.info('Loading bot...')
     app.session.players.add(bot_player := BanchoBot())
     app.session.banchobot = bot_player
+    app.session.banchobot.update_activity()
 
     if not bot_player.object:
         # BanchoBot user object was not found inside the database
