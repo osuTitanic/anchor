@@ -174,24 +174,18 @@ class Client:
         return self.presence.is_irc
 
     @property
-    def irc_prefix(self) -> str:
+    def irc_formatted(self) -> str:
         return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
-
+    
     @property
-    def irc_mode(self) -> str:
-        if self.silenced:
-            return '-v'
+    def irc_prefix(self) -> str:
+        if self.is_staff:
+            return "@"
 
-        if self.object.is_admin:
-            return '+a'
+        if self.is_irc:
+            return "+"
 
-        if self.object.is_moderator:
-            return '+o'
-
-        if self.object.is_bat:
-            return '+h'
-
-        return '+v'
+        return ""
 
     @property
     def permissions(self) -> Permissions:

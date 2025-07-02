@@ -83,7 +83,7 @@ class TcpIrcProtocol(IrcClient, IRC):
             "PRIVMSG",
             target.replace(" ", "_"),
             ":" + message,
-            prefix=sender.irc_prefix
+            prefix=sender.irc_formatted
         )
 
     def enqueue_message_object(self, message: Message) -> None:

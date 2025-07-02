@@ -106,7 +106,6 @@ class Channel:
         self.users.add(client)
         self.logger.info(f'{client.name} joined')
         self.broadcast_join(client)
-        self.broadcast_mode(client)
 
         if not no_response:
             client.enqueue_channel_join_success(self.display_name)
@@ -153,10 +152,6 @@ class Channel:
 
         for user in self.irc_users:
             user.enqueue_player(client, self.name)
-
-    def broadcast_mode(self, client: "Client") -> None:
-        for irc_client in self.irc_users:
-            irc_client.enqueue_mode(client, self.name)
 
     def update_osu_clients(self) -> None:
         if not self.public:
