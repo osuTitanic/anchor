@@ -67,13 +67,15 @@ class IrcClient(Client):
             self.token = ""
             self.object = user
             self.name = user.name
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.update_object(user.preferred_mode)
 
             # Preload relationships
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+            
+            # Reload permissions
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')

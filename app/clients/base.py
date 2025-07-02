@@ -186,6 +186,18 @@ class Client:
         return f"{self.id}_000.png"
 
     @property
+    def is_staff(self) -> bool:
+        return any([self.object.is_admin, self.object.is_moderator])
+
+    @property
+    def is_verified(self) -> bool:
+        return self.object.is_verified
+
+    @property
+    def has_preview_access(self) -> bool:
+        return permissions.has_permission('clients.validation.bypass', self.id)
+
+    @property
     def is_channel(self) -> bool:
         return False
 
@@ -196,18 +208,6 @@ class Client:
     @property
     def friendonly_dms(self) -> bool:
         return False
-
-    @property
-    def has_preview_access(self) -> bool:
-        return permissions.has_permission('clients.validation.bypass', self.id)
-
-    @property
-    def is_staff(self) -> bool:
-        return any([self.object.is_admin, self.object.is_moderator])
-
-    @property
-    def is_verified(self) -> bool:
-        return self.object.is_verified
 
     def __repr__(self) -> str:
         return f'<{self.protocol.capitalize()}Client "{self.name}" ({self.id})>'
@@ -235,11 +235,12 @@ class Client:
                 DBUser.stats,
                 session=session
             )
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.update_object(mode)
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
+            bancho_permissions = groups.get_player_permissions(self.id, session)
+            self.presence.permissions = Permissions(bancho_permissions)
             return self.object
 
     def reload_rank(self) -> int:

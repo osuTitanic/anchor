@@ -107,13 +107,15 @@ class OsuClient(Client):
                 return
 
             self.object = user
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
             self.update_object(user.preferred_mode)
 
             # Preload relationships
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+
+            # Reload permissions
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
@@ -129,10 +131,8 @@ class OsuClient(Client):
                 if not self.is_staff:
                     # Bancho is in maintenance mode
                     self.logger.warning('Login Failed: Maintenance')
-                    return self.on_login_failed(
-                        LoginError.ServerError,
-                        strings.MAINTENANCE_MODE
-                    )
+                    self.on_login_failed(LoginError.ServerError, strings.MAINTENANCE_MODE)
+                    return
 
                 # Inform staff about maintenance mode
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
@@ -222,7 +222,7 @@ class OsuClient(Client):
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
-        
+
         self.logged_in = True
         self.on_login_success()
 
