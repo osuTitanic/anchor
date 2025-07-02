@@ -3,8 +3,8 @@ from chio.constants import LoginError, QuitState, Permissions, PresenceFilter
 from chio.types import UserQuit, Message, TitleUpdate
 from chio import PacketType, BanchoIO
 
-from typing import Set, Any, Iterable
 from sqlalchemy.orm import Session
+from typing import Any, Iterable
 from datetime import datetime
 from copy import copy
 
@@ -17,7 +17,6 @@ from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
 from app.objects.client import OsuClientInformation
-from app.tasks import logins as login_helper
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
 from app.clients import Client
@@ -108,10 +107,8 @@ class OsuClient(Client):
                 return
 
             self.object = user
-            self.update_object(user.preferred_mode)
-
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+            self.update_object(user.preferred_mode)
 
             # Preload relationships
             self.object.target_relationships
@@ -168,7 +165,7 @@ class OsuClient(Client):
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
 
-            elif not self.is_supporter:
+            elif not self.object.is_supporter:
                 # Trying to use tournament client without supporter
                 self.on_login_failed(LoginError.UnauthorizedTestBuild)
                 return

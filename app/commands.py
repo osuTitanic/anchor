@@ -120,17 +120,17 @@ sets = [
 
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
-    return ctx.player.is_admin
+    return ctx.player.object.is_admin
 
 @system_commands.register(['maintenance', 'panic'], "admin")
 def maintenance_mode(ctx: Context) -> List[str]:
     """<on/off>"""
+    # Toggle maintenance value
+    config.MAINTENANCE = not config.MAINTENANCE
+
     if ctx.args:
         # Change maintenance value based on input
         config.MAINTENANCE = ctx.args[0].lower() == 'on'
-    else:
-        # Toggle maintenance value
-        config.MAINTENANCE = not config.MAINTENANCE
 
     if config.MAINTENANCE:
         for player in app.session.players:

@@ -800,7 +800,7 @@ def match_complete(client: OsuClient):
 
 @register(PacketType.OsuTournamentMatchInfo)
 def tourney_match_info(client: OsuClient, match_id: int):
-    if not client.is_supporter:
+    if not client.object.is_supporter:
         client.logger.warning('Tried to request tourney match info, but was not supporter.')
         return
 
@@ -832,7 +832,7 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
 @register(PacketType.OsuTournamentJoinMatchChannel)
 def tourney_join_match_channel(client: OsuClient, match_id: int):
-    if not client.is_supporter:
+    if not client.object.is_supporter:
         client.logger.warning('Tried to join tourney match channel, but was not supporter.')
         return
 
@@ -850,7 +850,7 @@ def tourney_join_match_channel(client: OsuClient, match_id: int):
 
 @register(PacketType.OsuTournamentLeaveMatchChannel)
 def tourney_leave_match_channel(client: OsuClient, match_id: int):
-    if not client.is_supporter:
+    if not client.object.is_supporter:
         client.logger.warning('Tried to leave tourney match channel, but was not supporter.')
         return
 

@@ -263,15 +263,12 @@ class Channel:
                 return False
 
         if self.moderated:
-            allowed_groups = [
-                'Admins',
-                'Developers',
-                'Beatmap Approval Team',
-                'Global Moderation Team',
-                'Tournament Manager Team'
+            is_allowed = [
+                sender.object.is_moderator,
+                sender.object.is_bat
             ]
 
-            if not any([group in sender.groups for group in allowed_groups]):
+            if not any(is_allowed):
                 return False
 
         if sender.silenced:

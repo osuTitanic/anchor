@@ -5,7 +5,7 @@ from typing import Iterable, List, Set
 from datetime import datetime
 from threading import Lock
 
-from app.common.helpers import infringements as infringements_helper
+from app.common.helpers import permissions, infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
@@ -57,7 +57,6 @@ class Client:
         self.action_lock = Lock()
         self.hidden = False
         self.rankings = {}
-        self.groups = []
 
     @property
     def url(self) -> str:
@@ -161,7 +160,7 @@ class Client:
         return round(
             (index + 1) + (score - added_score) / level.NEXT_LEVEL[index]
         )
-    
+
     @property
     def permissions(self) -> Permissions:
         return self.presence.permissions
@@ -199,28 +198,12 @@ class Client:
         return False
 
     @property
-    def is_supporter(self) -> bool:
-        return 'Supporter' in self.groups
-
-    @property
-    def is_admin(self) -> bool:
-        return 'Admins' in self.groups
-
-    @property
-    def is_dev(self) -> bool:
-        return 'Developers' in self.groups
-
-    @property
-    def is_moderator(self) -> bool:
-        return 'Global Moderation Team' in self.groups
-
-    @property
     def has_preview_access(self) -> bool:
-        return 'Preview' in self.groups
+        return permissions.has_permission('clients.validation.bypass', self.id)
 
     @property
     def is_staff(self) -> bool:
-        return any([self.is_admin, self.is_dev, self.is_moderator])
+        return any([self.object.is_admin, self.object.is_moderator])
 
     @property
     def is_verified(self) -> bool:
@@ -253,7 +236,6 @@ class Client:
                 session=session
             )
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
             self.update_object(mode)
             self.update_status_cache()
             self.reload_rankings()

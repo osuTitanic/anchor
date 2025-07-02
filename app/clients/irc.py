@@ -64,13 +64,11 @@ class IrcClient(Client):
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
 
-            self.name = user.name
             self.token = ""
             self.object = user
-            self.update_object(user.preferred_mode)
-
+            self.name = user.name
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+            self.update_object(user.preferred_mode)
 
             # Preload relationships
             self.object.target_relationships
