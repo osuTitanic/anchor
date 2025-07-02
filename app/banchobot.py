@@ -1,10 +1,10 @@
 
 from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
+from app.common.helpers import permissions
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
-from app.common.cache import status
 
 from typing import Tuple, List, Iterable
 from chio import Message
@@ -74,12 +74,12 @@ class BanchoBot(IrcClient):
             if ctx.trigger not in command.triggers:
                 continue
 
-            has_permissions = any(
-                group in command.groups
-                for group in ctx.player.groups
+            has_permission = permissions.has_permission(
+                permission=command.permission,
+                user_id=ctx.player.id
             )
 
-            if not has_permissions:
+            if not has_permission:
                 return
 
             return command
@@ -98,12 +98,12 @@ class BanchoBot(IrcClient):
                 if trigger not in command.triggers:
                     continue
 
-                has_permissions = any(
-                    group in command.groups
-                    for group in ctx.player.groups
+                has_permission = permissions.has_permission(
+                    permission=command.permission,
+                    user_id=ctx.player.id
                 )
 
-                if not has_permissions:
+                if not has_permission:
                     continue
 
                 ctx.trigger = trigger
