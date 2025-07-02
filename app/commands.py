@@ -1552,7 +1552,7 @@ def alertuser(ctx: Context) -> List | None:
 
     return [f'Alert was sent to {player.name}.']
 
-@command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def silence(ctx: Context) -> List | None:
     """<username> <duration> (<reason>)"""
     if len(ctx.args) < 2:
@@ -1588,7 +1588,7 @@ def silence(ctx: Context) -> List | None:
 
     return [f'{user.name} was silenced for {time_string}']
 
-@command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def unsilence(ctx: Context):
     """<username>"""
     if len(ctx.args) < 1:
@@ -1609,7 +1609,7 @@ def unsilence(ctx: Context):
 
     return [f'{user.name} was unsilenced.']
 
-@command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def restrict(ctx: Context) -> List | None:
     """<name> <length/permanent> (<reason>)"""
     if len(ctx.args) < 2:
@@ -1646,7 +1646,7 @@ def restrict(ctx: Context) -> List | None:
 
     return [f'{user.name} was restricted.']
 
-@command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def unrestrict(ctx: Context) -> List | None:
     """<name> <restore scores (true/false)>"""
     if len(ctx.args) < 1:
@@ -1677,7 +1677,7 @@ def unrestrict(ctx: Context) -> List | None:
 
     return [f'Player "{user.name}" was unrestricted.']
 
-@command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['moderated'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def moderated(ctx: Context) -> List | None:
     """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
@@ -1690,7 +1690,7 @@ def moderated(ctx: Context) -> List | None:
 
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
-@command(['kick', 'disconnect'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['kick', 'disconnect'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def kick(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1705,7 +1705,7 @@ def kick(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['kill', 'close'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['kill', 'close'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def kill(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1725,7 +1725,7 @@ def kill(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['multi', 'multiaccount', 'hardware'], ['Admins', 'Global Moderator Team'])
+@command(['multi', 'multiaccount', 'hardware'], ['Admins', 'Global Moderation Team'])
 def multi(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1762,7 +1762,7 @@ def multi(ctx: Context) -> List | None:
         ]
     ]
 
-@command(['rtx', 'jumpscare'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['rtx', 'jumpscare'], ['Admins', 'Developers', 'Global Moderation Team'], hidden=False)
 def rtx(ctx: Context) -> List | None:
     """<username> (<message>) - Zallius' eyes have awoken"""
     if len(ctx.args) <= 0:

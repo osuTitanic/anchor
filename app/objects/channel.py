@@ -267,7 +267,7 @@ class Channel:
                 'Admins',
                 'Developers',
                 'Beatmap Approval Team',
-                'Global Moderator Team',
+                'Global Moderation Team',
                 'Tournament Manager Team'
             ]
 

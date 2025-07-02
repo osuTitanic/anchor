@@ -212,7 +212,7 @@ class Client:
 
     @property
     def is_moderator(self) -> bool:
-        return 'Global Moderator Team' in self.groups
+        return 'Global Moderation Team' in self.groups
 
     @property
     def has_preview_access(self) -> bool:
