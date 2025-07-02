@@ -408,12 +408,16 @@ class IrcClient(Client):
         self.enqueue_player(self, channel.name)
 
     def enqueue_players(self, players: Iterable[Client], channel: str = "#osu") -> None:
+        staff_players = []
         chunk_size = 15
         chunk = []
 
         for player in players:
             if player.hidden and player != self:
                 continue
+
+            if player.object.is_moderator or player.object.is_bat:
+                staff_players.append(player)
 
             chunk.append(self.resolve_username(player))
 
@@ -438,6 +442,10 @@ class IrcClient(Client):
             channel, ":End of /NAMES list."
         )
 
+        # Enqueue player mode, if player is staff
+        for player in staff_players:
+            self.enqueue_mode(player, channel)
+
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
             return
@@ -451,6 +459,10 @@ class IrcClient(Client):
             f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
             params=[f":{channel}"]
         )
+        
+        if player.object.is_moderator or player.object.is_bat:
+            # Enqueue player mode for staff players
+            self.enqueue_mode(player, channel)
 
     def enqueue_part(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
@@ -513,13 +525,17 @@ class IrcClient(Client):
         target.away_senders.add(self.id)
 
     def enqueue_mode(self, client: "Client", channel_name: str = "#osu") -> None:
+        if not app.session.banchobot:
+            # banchobot died :(
+            return
+
         self.enqueue_command_raw(
             "MODE",
             app.session.banchobot.irc_prefix,
             params=[
                 channel_name,
                 client.irc_mode,
-                client.underscored_name
+                self.resolve_username(client)
             ]
         )
 
