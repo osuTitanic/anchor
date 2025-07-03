@@ -134,10 +134,15 @@ class Channel:
             None
         )
         
+        # If another player is already in
+        # the channel, no need to broadcast
         if other_player is not None:
-            # If another player is already in
-            # the channel, no need to broadcast
-            return
+            if not client.is_irc:
+                return
+
+            # We still want to make sure the IRC
+            # client joined the channel
+            return client.enqueue_player(client, self.name)
 
         for user in self.irc_users:
             user.enqueue_player(client, self.name)
