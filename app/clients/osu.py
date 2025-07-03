@@ -71,7 +71,7 @@ class OsuClient(Client):
             self.address
         )
 
-        if not self.info:
+        if not info:
             self.logger.warning(f'Failed to parse client: "{client_data}"')
             self.close_connection()
             return
@@ -108,6 +108,7 @@ class OsuClient(Client):
 
             self.object = user
             self.update_object(user.preferred_mode)
+            self.update_geolocation()
 
             # Preload relationships
             self.object.target_relationships
@@ -195,15 +196,6 @@ class OsuClient(Client):
                 priority=4
             )
 
-            # Check for new hardware
-            self.check_client(session)
-
-            if self.object.country.upper() == 'XX':
-                # We failed to get the users country on registration
-                self.object.country = self.info.ip.country_code.upper()
-                leaderboards.remove_country(self.id, self.object.country)
-                users.update(self.id, {'country': self.object.country}, session)
-
             activity.submit(
                 self.id, None,
                 UserActivity.UserLogin,
@@ -216,6 +208,15 @@ class OsuClient(Client):
                 is_hidden=True,
                 session=session
             )
+
+            # Check for new hardware
+            self.check_client(session)
+
+            if self.object.country.upper() == 'XX':
+                # We failed to get the users country on registration
+                self.object.country = self.location.country_code.upper()
+                leaderboards.remove_country(self.id, self.object.country)
+                users.update(self.id, {'country': self.object.country}, session)
 
             # Update cache
             self.update_leaderboard_stats()
@@ -433,7 +434,7 @@ class OsuClient(Client):
                 app.session.tasks.do_later(
                     mail.send_new_location_email,
                     self.object,
-                    self.info.ip.country_name,
+                    self.location.country_name,
                     priority=4
                 )
 
@@ -479,14 +480,13 @@ class OsuClient(Client):
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
         self.preferred_ranking = self.object.preferred_ranking
-        self.presence.country_index = self.info.ip.country_index
-        self.presence.longitude = self.info.ip.longitude
-        self.presence.latitude = self.info.ip.latitude
-        self.presence.timezone = self.info.utc_offset
         self.presence.is_irc = False
 
+    def update_geolocation(self):
+        super().update_geolocation()
+
         if self.info.display_city:
-            self.presence.city = self.info.ip.city
+            self.presence.city = self.location.city
 
     def ensure_not_spectating(self) -> None:
         try:

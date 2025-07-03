@@ -17,11 +17,10 @@ class BanchoBot(IrcClient):
         super().__init__('127.0.0.1', 13381)
         self.id = 1
         self.name = "BanchoBot"
-        self.presence.country_index = 1
-        self.presence.city = "w00t p00t!"
-        self.presence.is_irc = True
         self.reload()
-        
+        self.presence.city = "w00t p00t!"
+        self.presence.country_index = 1
+
     def process_and_send_response(
         self,
         message: str,

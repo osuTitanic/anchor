@@ -133,7 +133,6 @@ class ClientHash:
 class OsuClientInformation:
     def __init__(
         self,
-        ip: location.Geolocation,
         version: ClientVersion,
         client_hash: ClientHash,
         utc_offset: int,
@@ -145,21 +144,20 @@ class OsuClientInformation:
         self.utc_offset = utc_offset
         self.version = version
         self.hash = client_hash
-        self.ip = ip
 
     @property
     def is_wine(self) -> bool:
         return self.hash.adapters == 'runningunderwine'
 
     @classmethod
-    def from_string(cls, line: str, ip: str) -> "OsuClientInformation":
+    def from_string(cls, line: str, ip: str) -> "OsuClientInformation" | None:
         if len(args := line.split('|')) < 2:
-            return OsuClientInformation.empty()
+            return None
 
         try:
             # Sent in every client version
             build_version = args[0]
-            utc_offset = args[1]
+            utc_offset = int(args[1])
 
             # Not sent in every client version
             client_hash = ClientHash.empty(build_version).string
@@ -172,17 +170,8 @@ class OsuClientInformation:
         except (ValueError, IndexError):
             pass
 
-        geolocation = location.fetch_geolocation(ip)
-
-        utc_offset = int(
-            datetime.now(
-                pytz.timezone(geolocation.timezone)
-            ).utcoffset().total_seconds() / 60 / 60
-        )
-
         try:
             return OsuClientInformation(
-                geolocation,
                 ClientVersion.from_string(build_version),
                 ClientHash.from_string(client_hash),
                 utc_offset,
@@ -195,8 +184,7 @@ class OsuClientInformation:
     @classmethod
     def empty(cls) -> "OsuClientInformation":
         return OsuClientInformation(
-            location.fetch_geolocation('127.0.0.1'),
-            ClientVersion(OSU_VERSION.match('b20136969'), 20136969),
-            ClientHash.empty('b20136969'),
-            0, True, False
+            ClientVersion(OSU_VERSION.match('b0'), 0),
+            ClientHash.empty('b0'),
+            0, False, False
         )

@@ -68,6 +68,7 @@ class IrcClient(Client):
             self.object = user
             self.name = user.name
             self.update_object(user.preferred_mode)
+            self.update_geolocation()
 
             # Preload relationships
             self.object.target_relationships

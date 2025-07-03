@@ -5,7 +5,7 @@ from typing import Iterable, List, Set
 from datetime import datetime
 from threading import Lock
 
-from app.common.helpers import permissions, infringements as infringements_helper
+from app.common.helpers import location, permissions, infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
@@ -24,6 +24,7 @@ from app.common.database import (
 import timeago
 import logging
 import config
+import pytz
 import time
 import app
 
@@ -41,7 +42,8 @@ class Client:
         self.port = port
         self.address = address
         self.logger = logging.getLogger(address)
-        
+        self.location: location.Geolocation | None = None
+
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
@@ -246,6 +248,7 @@ class Client:
                 session=session
             )
             self.update_object(mode)
+            self.update_geolocation()
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
@@ -318,6 +321,18 @@ class Client:
         self.stats.tscore = stats.tscore
         self.stats.playcount = stats.playcount
         self.stats.pp = round(stats.pp)
+        
+    def update_geolocation(self) -> None:
+        """Updates the player's geolocation"""
+        self.location = location.fetch_geolocation(self.address)
+        self.presence.country_index = self.location.country_index
+        self.presence.longitude = self.location.longitude
+        self.presence.latitude = self.location.latitude
+        self.presence.timezone = int(
+            datetime.now(
+                pytz.timezone(self.location.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
 
     def update_leaderboard_stats(self) -> None:
         """Updates the player's stats inside the redis leaderboard"""

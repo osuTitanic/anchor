@@ -139,6 +139,13 @@ class HttpOsuHandler(Resource):
 
         for packet, data in packets:
             player.on_packet_received(packet, data)
+            
+        ip_address = ip.resolve_ip_address_twisted(request)
+
+        # Update player's geolocation info if ip has changed
+        if player.address != ip_address:
+            player.address = ip_address
+            player.update_geolocation()
 
         return player.dequeue()
 
