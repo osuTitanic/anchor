@@ -71,6 +71,10 @@ class Channel:
         return [user for user in self.users if user.is_irc]
 
     @property
+    def user_ids(self) -> Set[int]:
+        return {user.id for user in self.users}
+
+    @property
     def bancho_channel(self) -> bChannel:
         return bChannel(
             self.display_name,
@@ -122,11 +126,27 @@ class Channel:
         for user in users:
             user.enqueue_message_object(message)
 
+    def broadcast_join(self, client: "Client") -> None:
+        self.update_osu_clients()
+
+        other_player = next(
+            (p for p in self.users if p.id == client.id and p != client),
+            None
+        )
+        
+        if other_player is not None:
+            # If another player is already in
+            # the channel, no need to broadcast
+            return
+
+        for user in self.irc_users:
+            user.enqueue_player(client, self.name)
+
     def broadcast_part(self, client: "Client") -> None:
         self.update_osu_clients()
         
         if client.is_tourney_client:
-            # Do not broadcast part to irc users
+            # Do not broadcast tourney part to irc users
             return
 
         other_player = next(
@@ -141,17 +161,6 @@ class Channel:
 
         for user in self.irc_users:
             user.enqueue_part(client, self.name)
-
-    def broadcast_join(self, client: "Client") -> None:
-        self.update_osu_clients()
-
-        if self.name == "#osu":
-            # Broadcast will already be done by
-            # app.session.players.send_player
-            return
-
-        for user in self.irc_users:
-            user.enqueue_player(client, self.name)
 
     def update_osu_clients(self) -> None:
         if not self.public:

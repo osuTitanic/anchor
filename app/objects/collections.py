@@ -127,7 +127,7 @@ class Players(MutableMapping[int | str, Client]):
         if player.is_tourney_client:
             self.osu_tournament_clients.add(player)
 
-        self.send_player(player)
+        self.send_player_to_osu(player)
 
     def remove_osu(self, player: OsuClient | HttpOsuClient) -> None:
         """Remove a player from the collection"""
@@ -149,13 +149,7 @@ class Players(MutableMapping[int | str, Client]):
         self.irc_id_mapping[player.id] = player
         self.irc_name_mapping[player.name] = player
         self.irc_safe_name_mapping[player.safe_name] = player
-
-        # Ensure player is not already in the osu! collection
-        if player.id in self.osu_id_mapping:
-            player.enqueue_player(player)
-            return
-
-        self.send_player(player)
+        self.send_player_to_osu(player)
 
     def remove_irc(self, player: IrcClient) -> None:
         """Remove a player from the collection"""
@@ -239,8 +233,8 @@ class Players(MutableMapping[int | str, Client]):
         for p in self.osu_clients:
             p.enqueue_packet(packet, *args)
 
-    def send_player(self, player: Client) -> None:
-        for p in self:
+    def send_player_to_osu(self, player: Client) -> None:
+        for p in self.osu_clients:
             p.enqueue_player(player)
 
     def send_player_bundle(self, players: List[Client]) -> None:
