@@ -500,6 +500,24 @@ class PythonInterpreterChannel(Channel):
         )
         self.console = InteractiveConsole()
         assert config.DEBUG
+        
+    def broadcast_join(self, client: "Client") -> None:
+        super().broadcast_join(client)
+
+        # Send "Python 3.X.X (default, YYYY-MM-DD, HH:MM:SS) [GCC X.X.X]" message
+        python_version = sys.version.splitlines()
+        platform_info = sys.platform
+
+        client.enqueue_message(
+            f"Python {python_version[0]} on {platform_info}",
+            app.session.banchobot,
+            self.display_name,
+        )
+        client.enqueue_message(
+            'Type "help", "copyright", "credits" or "license" for more information.',
+            app.session.banchobot,
+            self.display_name
+        )
 
     def send_message(
         self,
