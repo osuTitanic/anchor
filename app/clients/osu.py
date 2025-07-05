@@ -66,10 +66,7 @@ class OsuClient(Client):
         password: str,
         client_data: str
     ) -> None:
-        info = OsuClientInformation.from_string(
-            client_data,
-            self.address
-        )
+        info = OsuClientInformation.from_string(client_data)
 
         if not info:
             self.logger.warning(f'Failed to parse client: "{client_data}"')

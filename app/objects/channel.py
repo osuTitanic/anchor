@@ -1,6 +1,7 @@
 
 from chio import Message, Channel as bChannel, Permissions
 from typing import TYPE_CHECKING, List, Set
+from code import InteractiveConsole
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
@@ -14,8 +15,11 @@ from app.objects.locks import LockedSet
 from app.common import officer
 
 import logging
+import config
 import time
 import app
+import sys
+import io
 
 class Channel:
     def __init__(
@@ -484,3 +488,58 @@ class MultiplayerChannel(Channel):
         for user in users:
             message.target = self.resolve_name(user)
             user.enqueue_message_object(message)
+
+class PythonInterpreterChannel(Channel):
+    def __init__(self):
+        super().__init__(
+            "#python",
+            "Debugging python interpreter channel",
+            "BanchoBot",
+            read_perms=Permissions.Peppy,
+            write_perms=Permissions.Peppy
+        )
+        self.console = InteractiveConsole()
+        assert config.DEBUG
+
+    def send_message(
+        self,
+        sender: "Client",
+        message: str
+    ) -> None:
+        if not sender.object.is_admin:
+            sender.enqueue_channel_revoked(self.display_name)
+            return
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        # Save original stdout/stderr
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = stdout, stderr
+
+        try:
+            self.console.push(message)
+        except Exception as e:
+            stderr.write(f'{e.__class__.__name__}: {e}\n')
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout, sys.stderr = old_stdout, old_stderr
+
+        output = stdout.getvalue() + stderr.getvalue()
+        output = output.strip()
+        
+        if not output:
+            return
+
+        for line in output.splitlines():
+            return_message = Message(
+                app.session.banchobot.name,
+                line,
+                self.display_name,
+                sender.id
+            )
+
+            self.broadcast_message(
+                return_message,
+                self.users
+            )

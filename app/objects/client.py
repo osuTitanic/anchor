@@ -149,7 +149,7 @@ class OsuClientInformation:
         return self.hash.adapters == 'runningunderwine'
 
     @classmethod
-    def from_string(cls, line: str, ip: str) -> "OsuClientInformation" | None:
+    def from_string(cls, line: str) -> "OsuClientInformation":
         if len(args := line.split('|')) < 2:
             return None
 

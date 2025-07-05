@@ -245,14 +245,14 @@ class Match:
 
         return None, None
 
-    def get_free(self) -> int | None:
+    def get_free(self) -> int:
         for index, slot in enumerate(self.slots):
             if slot.status == SlotStatus.Open:
                 return index
 
         return None
 
-    def get_player(self, name: str) -> "OsuClient" | None:
+    def get_player(self, name: str) -> "OsuClient":
         safe_name = name.lower().replace(" ", "_")
 
         for player in self.players:

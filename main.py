@@ -5,7 +5,7 @@ from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
 
-from app.objects.channel import Channel
+from app.objects.channel import Channel, PythonInterpreterChannel
 from app.banchobot import BanchoBot
 from app.servers import *
 
@@ -55,6 +55,11 @@ def setup():
                 public=True
             )
         )
+        app.session.banchobot.channels.add(channel)
+
+    if config.DEBUG:
+        app.session.logger.info('  - #python')
+        app.session.channels.add(channel := PythonInterpreterChannel())
         app.session.banchobot.channels.add(channel)
 
     app.session.logger.info('Loading tasks...')
