@@ -43,30 +43,6 @@ import random
 import string
 import time
 import app
-import os
-
-@dataclass
-class Context:
-    player: Client
-    trigger: str
-    target: Channel | Client
-    args: List[str]
-    set: CommandSet | None = None
-    objects: Dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def full_trigger(self) -> str:
-        return f'{self.set.trigger} {self.trigger}' if self.set else self.trigger
-
-    @property
-    def message(self) -> str:
-        return f'!{self.full_trigger} {" ".join(self.args)}'
-    
-    def set_context_object(self, key: str, value: Any) -> None:
-        self.objects[key] = value
-
-    def get_context_object(self, key: str) -> Any:
-        return self.objects.get(key)
 
 class Command(NamedTuple):
     triggers: List[str]
@@ -109,6 +85,29 @@ class CommandSet:
     def condition(self, f: Callable) -> Callable:
         self.conditions.append(f)
         return f
+
+@dataclass
+class Context:
+    player: Client
+    trigger: str
+    target: Channel | Client
+    args: List[str]
+    set: CommandSet | None = None
+    objects: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def full_trigger(self) -> str:
+        return f'{self.set.trigger} {self.trigger}' if self.set else self.trigger
+
+    @property
+    def message(self) -> str:
+        return f'!{self.full_trigger} {" ".join(self.args)}'
+    
+    def set_context_object(self, key: str, value: Any) -> None:
+        self.objects[key] = value
+
+    def get_context_object(self, key: str) -> Any:
+        return self.objects.get(key)
 
 commands: List[Command] = []
 sets = [
