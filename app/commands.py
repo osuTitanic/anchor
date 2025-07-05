@@ -1,6 +1,4 @@
 
-from __future__ import annotations
-
 from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field

@@ -1,6 +1,4 @@
 
-from __future__ import annotations
-
 from app.common.helpers import infringements, activity
 from app.common.database.repositories import users
 from app.common.database.objects import DBActivity

@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 from app.common.constants import OSU_VERSION
 from app.common.helpers import location
 from datetime import datetime
