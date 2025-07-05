@@ -13,6 +13,7 @@ from redis import Redis
 
 import logging
 import config
+import time
 
 database = Postgres(
     config.POSTGRES_USER,
@@ -32,6 +33,7 @@ events = EventQueue(
 )
 
 logger = logging.getLogger('bancho')
+startup_time = time.time()
 banchobot = None
 
 requests = Session()

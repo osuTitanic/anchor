@@ -35,13 +35,16 @@ from app.handlers.osu import spectator
 from app.clients.base import Client
 from app.faq import faq
 
+import cpuinfo
 import logging
 import timeago
 import config
 import random
 import string
+import psutil
 import time
 import app
+import os
 
 class Command(NamedTuple):
     triggers: List[str]
@@ -117,6 +120,31 @@ sets = [
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
     return ctx.player.object.is_admin
+
+@system_commands.register(['status', 'info'], "admin")
+def status(ctx: Context) -> List[str]:
+    """- Retrieve general server data"""
+    process = psutil.Process(os.getpid())
+    uptime = round(time.time() - app.session.startup_time)
+
+    cpu_info = cpuinfo.get_cpu_info()
+    thread_count = cpu_info["count"]
+    cpu_name = cpu_info["brand_raw"]
+
+    system_ram = psutil.virtual_memory()
+    bancho_ram = process.memory_info()[0]
+    ram_values = (bancho_ram, system_ram.used, system_ram.total)
+
+    # Thanks bancho.py for the inspiration ;)
+    return [
+        f"Running anchor ({config.VERSION if not config.DEBUG else 'dev'})",
+        f"  Uptime: {timedelta(seconds=uptime)}",
+        f"  Domain: {config.DOMAIN_NAME}",
+        f"  CPU: {cpu_name} ({thread_count} threads)",
+        f"  RAM: " + " / ".join([f"{v // 1024 ** 2}MB" for v in ram_values]),
+        f"  Logins: {app.session.logins_per_minute.rate} / min",
+        f"  Packets: {app.session.packets_per_minute.rate} / min",
+    ]
 
 @system_commands.register(['maintenance', 'panic'], "admin")
 def maintenance_mode(ctx: Context) -> List[str]:
