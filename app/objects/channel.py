@@ -140,6 +140,7 @@ class Channel:
 
         # Replace \x01ACTION with username
         message.content = message.content.replace('\x01ACTION ', f'*{message.sender}')
+        message.content = message.content.removesuffix('\x01')
 
         webhook = Webhook(
             config.CHAT_WEBHOOK_URL,
