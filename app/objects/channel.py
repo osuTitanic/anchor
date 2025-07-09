@@ -250,6 +250,7 @@ class Channel:
 
         if not do_later:
             self.broadcast_message(message_object, users)
+            self.broadcast_message_to_webhook(message_object)
             return
 
         app.session.tasks.do_later(
