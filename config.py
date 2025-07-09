@@ -63,6 +63,9 @@ DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 OFFICER_WEBHOOK_URL = os.environ.get('OFFICER_WEBHOOK_URL')
 EVENT_WEBHOOK_URL = os.environ.get('EVENT_WEBHOOK_URL')
 
+CHAT_WEBHOOK_CHANNELS = os.environ.get('ALLOWED_WEBHOOK_CHANNELS', '#osu').split(',')
+CHAT_WEBHOOK_URL = os.environ.get('CHAT_WEBHOOK_URL')
+
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from app.common.database.repositories import messages
 from app.common.constants.strings import BAD_WORDS
 from app.objects.locks import LockedSet
+from app.common.webhooks import Webhook
 from app.common import officer
 
 import logging
@@ -130,6 +131,18 @@ class Channel:
         for user in users:
             user.enqueue_message_object(message)
 
+    def broadcast_message_to_webhook(self, message: Message) -> None:
+        if not config.CHAT_WEBHOOK_URL:
+            return
+
+        webhook = Webhook(
+            config.CHAT_WEBHOOK_URL,
+            message.content,
+            message.sender,
+            f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
+        )
+        webhook.post()
+
     def broadcast_join(self, client: "Client") -> None:
         self.update_osu_clients()
 
@@ -246,6 +259,18 @@ class Channel:
             self.name,
             message[:512],
             priority=4
+        )
+
+        if not config.CHAT_WEBHOOK_URL:
+            return
+
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message_to_webhook,
+            message_object,
+            priority=5
         )
 
     def validate_message(
