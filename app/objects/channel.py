@@ -138,6 +138,9 @@ class Channel:
         # Prevent @ mentions from being parsed as mentions
         message.content = message.content.replace('@', '@\u200b')
 
+        # Replace \x01ACTION with username
+        message.content = message.content.replace('\x01ACTION ', f'*{message.sender}')
+
         webhook = Webhook(
             config.CHAT_WEBHOOK_URL,
             message.content,
