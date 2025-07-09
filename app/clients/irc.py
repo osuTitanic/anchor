@@ -341,22 +341,8 @@ class IrcClient(Client):
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
         self.logger.debug(f"<- <{target}> '{message}' ({sender})")
 
-        # Handle action messages (e.g. /me)
-        if message.startswith("\x01ACTION"):
-            message = (
-                f"*{sender.name} " +
-                message.removeprefix("\x01ACTION ").strip()
-            )
-
     def enqueue_message_object(self, message: Message) -> None:
         self.logger.debug(f"<- <{message.target}> '{message.content}' ({message.sender})")
-
-        # Handle action messages (e.g. /me)
-        if message.content.startswith("\x01ACTION"):
-            message.content = (
-                f"*{message.sender} " +
-                message.content.removeprefix("\x01ACTION ").strip()
-            )
 
     def enqueue_banchobot_message(self, message: str) -> None:
         self.enqueue_message(message, app.session.banchobot, "#osu")

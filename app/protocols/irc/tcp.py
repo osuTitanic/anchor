@@ -76,9 +76,15 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.sendCommand(command, params, prefix, tags)
 
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
-        super().enqueue_message(
-            message, sender, target
-        )
+        super().enqueue_message(message, sender, target)
+        
+        # Handle action messages (e.g. /me)
+        if message.startswith("\x01ACTION"):
+            message = (
+                f"*{sender.name} " +
+                message.removeprefix("\x01ACTION ").strip()
+            )
+
         self.sendMessage(
             "PRIVMSG",
             target.replace(" ", "_"),
@@ -88,12 +94,20 @@ class TcpIrcProtocol(IrcClient, IRC):
 
     def enqueue_message_object(self, message: Message) -> None:
         super().enqueue_message_object(message)
-        prefix = (
-            f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
-        )
+        message_content = message.content
+
+        # Handle action messages (e.g. /me)
+        if message_content.startswith("\x01ACTION"):
+            message_content = (
+                f"*{message.sender} " +
+                message_content.removeprefix("\x01ACTION ").strip()
+            )
+
         self.sendMessage(
             "PRIVMSG",
             message.target.replace(" ", "_"),
-            ":" + message.content,
-            prefix=prefix
+            ":" + message_content,
+            prefix=(
+                f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+            )
         )
