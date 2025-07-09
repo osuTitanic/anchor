@@ -327,18 +327,33 @@ class Channel:
         self,
         message: str,
         sender: str,
-        sender_id: int
+        sender_id: int,
+        submit_to_webhook: bool = False
     ) -> None:
+        message_object = Message(
+            sender,
+            message,
+            self.display_name,
+            sender_id
+        )
+
         app.session.tasks.do_later(
             self.broadcast_message,
-            Message(
-                sender,
-                message,
-                self.display_name,
-                sender_id
-            ),
+            message_object,
             users=self.users,
             priority=2
+        )
+
+        if not config.CHAT_WEBHOOK_URL or not submit_to_webhook:
+            return
+
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message_to_webhook,
+            message_object,
+            priority=5
         )
 
 class SpectatorChannel(Channel):
