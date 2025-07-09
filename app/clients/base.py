@@ -360,7 +360,7 @@ class Client:
             users.update,
             user_id=self.id,
             updates={'latest_activity': datetime.now()},
-            priority=4
+            priority=5
         )
 
     def close_connection(self, reason: str = "") -> None:

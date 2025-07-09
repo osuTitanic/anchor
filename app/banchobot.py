@@ -170,22 +170,29 @@ class BanchoBot(IrcClient):
 
         # Store request/responses in database
         app.session.tasks.do_later(
-            messages.create_private,
-            context.player.id,
-            self.object.id,
-            context.message,
+            self.store_to_database,
+            context,
+            response,
             priority=4
         )
 
-        app.session.tasks.do_later(
-            messages.create_private,
-            self.object.id,
-            context.player.id,
-            '\n'.join(response),
-            priority=5
-        )
-
         self.update_activity()
+
+    def store_to_database(self, context: Context, response: List[str]) -> None:
+        with app.session.database.managed_session() as session:
+            messages.create_private(
+                context.player.id,
+                self.object.id,
+                context.message,
+                session=session
+            )
+
+            messages.create_private(
+                self.object.id,
+                context.player.id,
+                '\n'.join(response),
+                session=session
+            )
 
     """Method stubs for 'IrcClient' default class behavior"""
 
