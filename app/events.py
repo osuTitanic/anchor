@@ -189,7 +189,8 @@ def external_message(
     sender_id: int,
     sender: str,
     target: str,
-    message: str
+    message: str,
+    submit_to_webhook: bool = True
 ) -> None:
     if not (channel := app.session.channels.by_name(target)):
         return
@@ -200,7 +201,8 @@ def external_message(
         channel.handle_external_message(
             message,
             sender,
-            sender_id
+            sender_id,
+            submit_to_webhook
         )
 
 @app.session.events.register('external_dm')
