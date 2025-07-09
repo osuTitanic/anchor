@@ -136,15 +136,15 @@ class Channel:
             return
 
         # Prevent @ mentions from being parsed as mentions
-        message.content = message.content.replace('@', '@\u200b')
+        message_content = message.content.replace('@', '@\u200b')
 
         # Replace \x01ACTION with username
-        message.content = message.content.replace('\x01ACTION ', f'*{message.sender}')
-        message.content = message.content.removesuffix('\x01')
+        message_content = message_content.replace('\x01ACTION ', f'*{message.sender}')
+        message_content = message_content.removesuffix('\x01')
 
         webhook = Webhook(
             config.CHAT_WEBHOOK_URL,
-            message.content,
+            message_content,
             message.sender,
             f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
         )
