@@ -135,6 +135,9 @@ class Channel:
         if not config.CHAT_WEBHOOK_URL:
             return
 
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
         # Prevent @ mentions from being parsed as mentions
         message_content = message.content.replace('@', '@\u200b')
 
