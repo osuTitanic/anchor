@@ -117,9 +117,7 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if sender.silenced:
-        sender.logger.warning(
-            'Failed to send private message: Sender was silenced'
-        )
+        sender.logger.warning('Failed to send private message: Sender was silenced')
         return
 
     if target.silenced:
@@ -133,6 +131,13 @@ def send_private_message(sender: OsuClient, message: Message):
     if not sender.is_bot and not sender.message_limiter.allow():
         sender.silence(60, 'Chat spamming')
         return
+
+    # Apply chat filters to the message
+    message.content, timeout = session.filters.apply(message.content)
+
+    if timeout is not None:
+        sender.silence(timeout, 'Inappropriate discussion in pms')
+        return False
 
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')

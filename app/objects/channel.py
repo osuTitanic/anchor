@@ -238,12 +238,18 @@ class Channel:
                 message, sender, self, priority=2
             )
 
+        # Filter out sender from the target users
+        users = [user for user in self.users if user != sender]
+
+        # Apply chat filters to the message
+        message, timeout = app.session.filters.apply(message)
+
+        if timeout is not None:
+            return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+
         if len(message) > 512:
             # Limit message size to 512 characters
             message = message[:497] + '... (truncated)'
-
-        # Filter out sender
-        users = [user for user in self.users if user != sender]
 
         message_object = Message(
             sender.name,
@@ -316,16 +322,6 @@ class Channel:
 
         if not self.can_write(sender):
             sender.logger.warning(f'Failed to send message: "{message}".')
-            return False
-
-        has_bad_words = any([
-            word in message.lower()
-            for word in BAD_WORDS
-        ])
-
-        if has_bad_words and not sender.is_bot:
-            sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
-            officer.call(f'Message: {message}')
             return False
 
         if not sender.is_bot and not sender.message_limiter.allow():

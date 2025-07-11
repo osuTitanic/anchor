@@ -187,7 +187,12 @@ def handle_privmsg_command(
         sender.silence(60, 'Chat spamming')
         return
 
-    target.enqueue_message(message, sender, sender.name)
+    # Apply chat filters to the message
+    message, timeout = session.filters.apply(message)
+
+    if timeout is not None:
+        sender.silence(timeout, 'Inappropriate discussion in pms')
+        return False
 
     parsed_message = message.strip()
     has_command_prefix = parsed_message.startswith('!')
@@ -202,8 +207,11 @@ def handle_privmsg_command(
         # Limit message size
         message = message[:497] + '... (truncated)'
 
-    if target.away_message:
-        return sender.enqueue_away_message(target)
+    target.enqueue_message(
+        message,
+        sender,
+        sender.name
+    )
 
     sender.logger.info(
         f'[PM -> {target.name}]: {message}'
@@ -216,3 +224,6 @@ def handle_privmsg_command(
         message,
         priority=4
     )
+
+    if target.away_message:
+        return sender.enqueue_away_message(target)
