@@ -5,7 +5,7 @@ from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
 
-from app.objects.channel import Channel
+from app.objects.channel import Channel, PythonInterpreterChannel
 from app.banchobot import BanchoBot
 from app.servers import *
 
@@ -33,6 +33,7 @@ def setup():
     app.session.logger.info('Loading bot...')
     app.session.players.add(bot_player := BanchoBot())
     app.session.banchobot = bot_player
+    app.session.banchobot.update_activity()
 
     if not bot_player.object:
         # BanchoBot user object was not found inside the database
@@ -56,11 +57,20 @@ def setup():
         )
         app.session.banchobot.channels.add(channel)
 
+    if config.DEBUG:
+        app.session.logger.info('  - #python')
+        app.session.channels.add(channel := PythonInterpreterChannel())
+        app.session.banchobot.channels.add(channel)
+
     app.session.logger.info('Loading tasks...')
     importlib.import_module('app.tasks.queue')
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
-    importlib.import_module('app.tasks.activities')
+    importlib.import_module('app.tasks.multiplayer')
+    
+    app.session.logger.info('Loading filters...')
+    app.session.filters.populate()
+    app.session.logger.info(f'  - {len(app.session.filters)} filters loaded')
 
     # Reset usercount
     usercount.set(1)
@@ -111,6 +121,18 @@ def setup_servers():
 
     for port in config.TCP_PORTS:
         reactor.listenTCP(port, osu_tcp_factory)
+
+    if not config.SSL_ENABLED:
+        return
+
+    context = app.ssl.setup(min_protocol=0)
+
+    if not context:
+        app.session.logger.warning('SSL support is not available, please install OpenSSL and try again.')
+        return
+
+    app.ssl.listen(config.IRC_PORT_SSL, irc_tcp_factory, context)
+    app.session.logger.info(f'SSL connections enabled')
 
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)

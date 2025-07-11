@@ -1,6 +1,4 @@
 
-from __future__ import annotations
-
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import Protocol
@@ -42,12 +40,10 @@ class TcpOsuClient(OsuClient, Protocol):
 
     def enqueue(self, data: bytes) -> None:
         try:
-            reactor.callFromThread(self.transport.write, data)
+            self.transport.write(data)
         except Exception as e:
-            self.logger.error(
-                f'Could not write to transport layer: {e}',
-                exc_info=e
-            )
+            self.logger.critical(f'Failed to write to transport layer: {e}', exc_info=e)
+            self.close_connection('Transport write error')
 
     def enqueue_packet(self, packet, *args):
         self.io.write_packet(self.stream, packet, *args)

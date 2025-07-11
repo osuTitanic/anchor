@@ -1,6 +1,4 @@
 
-from __future__ import annotations
-
 from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
@@ -9,8 +7,9 @@ from app.tasks import logins
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
+from twisted.internet import reactor
 from twisted.web import server
-from queue import Queue
+from queue import Queue, Empty
 
 import config
 import uuid
@@ -35,11 +34,14 @@ class HttpOsuClient(OsuClient):
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
-    def dequeue(self) -> bytes:
+    def dequeue(self, max=2**15) -> bytes:
         data = b""
 
-        while not self.queue.empty():
-            data += self.queue.get()
+        while len(data) < max:
+            try:
+                data += self.queue.get_nowait()
+            except Empty:
+                break
 
         return data
 
@@ -80,36 +82,25 @@ class HttpOsuHandler(Resource):
             f'-> Received login: {login_data}'
         )
 
-        try:
-            username, password, client_data = (
-                login_data.decode().splitlines()
-            )
+        username, password, client_data = (
+            login_data.decode().splitlines()
+        )
 
-            player = HttpOsuClient(
-                ip.resolve_ip_address_twisted(request),
-                request.getClientAddress().port
-            )
+        player = HttpOsuClient(
+            ip.resolve_ip_address_twisted(request),
+            request.getClientAddress().port
+        )
 
-            player.on_login_received(
-                username,
-                password,
-                client_data
-            )
-        except Exception as e:
-            player.logger.error(f'Failed to process login: {e}', exc_info=e)
-            player.close_connection('Login failure')
-            request.setHeader('connection', 'close')
-            request.setResponseCode(500)
+        player.on_login_received(
+            username,
+            password,
+            client_data
+        )
 
         request.setHeader(
             'cho-token',
             player.token
         )
-
-        if not player.logged_in:
-            request.setHeader('connection', 'close')
-            request.setResponseCode(400)
-            return b''
 
         return player.dequeue()
 
@@ -130,10 +121,9 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
-        response_data = self.server_error_packet()
+        server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.setResponseCode(500)
-        request.write(response_data)
+        request.write(server_error)
         request.finish()
 
     def handle_request(self, player: HttpOsuClient, request: Request):
@@ -147,6 +137,13 @@ class HttpOsuHandler(Resource):
 
         for packet, data in packets:
             player.on_packet_received(packet, data)
+            
+        ip_address = ip.resolve_ip_address_twisted(request)
+
+        # Update player's geolocation info if ip has changed
+        if player.address != ip_address:
+            player.address = ip_address
+            player.update_geolocation()
 
         return player.dequeue()
 
@@ -165,9 +162,9 @@ class HttpOsuHandler(Resource):
         if request.finished or request._disconnected:
             return
 
+        server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.setResponseCode(500)
-        request.write(player.dequeue())
+        request.write(server_error)
         request.finish()
 
     def force_reconnect(self) -> bytes:

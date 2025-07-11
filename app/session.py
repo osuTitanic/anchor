@@ -1,5 +1,6 @@
 
 from .objects.collections import Players, Channels, Matches
+from .common.helpers.filter import ChatFilter
 from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
 from .common.database import Postgres
@@ -13,6 +14,7 @@ from redis import Redis
 
 import logging
 import config
+import time
 
 database = Postgres(
     config.POSTGRES_USER,
@@ -32,6 +34,7 @@ events = EventQueue(
 )
 
 logger = logging.getLogger('bancho')
+startup_time = time.time()
 banchobot = None
 
 requests = Session()
@@ -44,6 +47,7 @@ logins_per_minute = RequestCounter(window=60)
 
 osu_handlers: Dict[PacketType, Callable] = {}
 irc_handlers: Dict[str, Callable] = {}
+filters = ChatFilter()
 channels = Channels()
 storage = Storage()
 players = Players()

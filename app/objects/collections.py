@@ -1,15 +1,14 @@
 
-from __future__ import annotations
 from enum import Enum
 from typing import (
     MutableMapping,
     Iterator,
     Tuple,
     Dict,
-    List
+    List,
+    Set
 )
 
-from app.objects.locks import LockedDict, LockedSet
 from app.protocols.osu.http import HttpOsuClient
 from app.clients.base import Client
 from app.clients.osu import OsuClient
@@ -19,17 +18,17 @@ from chio import UserQuit
 class Players(MutableMapping[int | str, Client]):
     def __init__(self) -> None:
         # Lookup by id & name for osu! and irc clients
-        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
-        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
-        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
-        self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
-        self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
-        self.osu_safe_name_mapping: LockedDict[str, OsuClient] = LockedDict()
+        self.irc_id_mapping: Dict[int, IrcClient] = dict()
+        self.irc_name_mapping: Dict[str, IrcClient] = dict()
+        self.irc_safe_name_mapping: Dict[str, IrcClient] = dict()
+        self.osu_id_mapping: Dict[int, OsuClient] = dict()
+        self.osu_name_mapping: Dict[str, OsuClient] = dict()
+        self.osu_safe_name_mapping: Dict[str, OsuClient] = dict()
 
         # osu! specific
-        self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
-        self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
-        self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
+        self.osu_token_mapping: Dict[str, HttpOsuClient] = dict()
+        self.osu_tournament_clients: Set[OsuClient] = set()
+        self.osu_in_lobby: Set[OsuClient] = set()
 
     @property
     def osu_clients(self) -> Tuple[OsuClient]:
@@ -43,6 +42,11 @@ class Players(MutableMapping[int | str, Client]):
     def tcp_osu_clients(self) -> Tuple[OsuClient]:
         """Get all tcp osu! clients"""
         return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'tcp')
+
+    @property
+    def ws_osu_clients(self) -> Tuple[OsuClient]:
+        """Get all websocket osu! clients"""
+        return tuple(p for p in self.osu_id_mapping.values() if p.protocol == 'ws')
 
     @property
     def http_osu_clients(self) -> Tuple[HttpOsuClient]:
@@ -122,7 +126,7 @@ class Players(MutableMapping[int | str, Client]):
         if player.is_tourney_client:
             self.osu_tournament_clients.add(player)
 
-        self.send_player(player)
+        self.send_player_to_osu(player)
 
     def remove_osu(self, player: OsuClient | HttpOsuClient) -> None:
         """Remove a player from the collection"""
@@ -144,13 +148,7 @@ class Players(MutableMapping[int | str, Client]):
         self.irc_id_mapping[player.id] = player
         self.irc_name_mapping[player.name] = player
         self.irc_safe_name_mapping[player.safe_name] = player
-
-        # Ensure player is not already in the osu! collection
-        if player.id in self.osu_id_mapping:
-            player.enqueue_player(player)
-            return
-
-        self.send_player(player)
+        self.send_player_to_osu(player)
 
     def remove_irc(self, player: IrcClient) -> None:
         """Remove a player from the collection"""
@@ -234,8 +232,8 @@ class Players(MutableMapping[int | str, Client]):
         for p in self.osu_clients:
             p.enqueue_packet(packet, *args)
 
-    def send_player(self, player: Client) -> None:
-        for p in self:
+    def send_player_to_osu(self, player: Client) -> None:
+        for p in self.osu_clients:
             p.enqueue_player(player)
 
     def send_player_bundle(self, players: List[Client]) -> None:

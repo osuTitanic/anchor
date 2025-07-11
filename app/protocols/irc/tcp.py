@@ -64,8 +64,8 @@ class TcpIrcProtocol(IrcClient, IRC):
         )
 
     def close_connection(self, reason: Any = None) -> None:
-        super().close_connection(reason)
         reactor.callFromThread(self.transport.loseConnection)
+        super().close_connection(reason)
 
     def enqueue_line(self, line: str) -> None:
         self.logger.debug(f"-> {line}")
@@ -76,26 +76,38 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.sendCommand(command, params, prefix, tags)
 
     def enqueue_message(self, message: str, sender: "Client", target: str) -> None:
-        self.logger.debug(
-            f"<- <{target}> '{message}' ({sender})"
-        )
+        super().enqueue_message(message, sender, target)
+        
+        # Handle action messages (e.g. /me)
+        if message.startswith("\x01ACTION"):
+            message = (
+                f"*{sender.name} " +
+                message.removeprefix("\x01ACTION ").strip()
+            )
+
         self.sendMessage(
             "PRIVMSG",
             target.replace(" ", "_"),
             ":" + message,
-            prefix=sender.irc_prefix
+            prefix=sender.irc_formatted
         )
 
     def enqueue_message_object(self, message: Message) -> None:
-        self.logger.debug(
-            f"<- <{message.target}> '{message}' ({message.sender})"
-        )
-        prefix = (
-            f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
-        )
+        super().enqueue_message_object(message)
+        message_content = message.content
+
+        # Handle action messages (e.g. /me)
+        if message_content.startswith("\x01ACTION"):
+            message_content = (
+                f"*{message.sender} " +
+                message_content.removeprefix("\x01ACTION ").strip()
+            )
+
         self.sendMessage(
             "PRIVMSG",
             message.target.replace(" ", "_"),
-            ":" + message.content,
-            prefix=prefix
+            ":" + message_content,
+            prefix=(
+                f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+            )
         )

@@ -20,6 +20,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.logger = logging.getLogger('websockets')
         self.player = OsuClient(None, None)
         self.stream = ByteStream(self)
+        self.player.protocol = 'ws'
 
     @property
     def address(self):

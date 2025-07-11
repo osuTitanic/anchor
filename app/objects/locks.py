@@ -99,10 +99,11 @@ class LockedSet(Set[T]):
 
     def remove(self, item: T) -> None:
         with self.lock.write_context():
-            try:
-                self.set.remove(item)
-            except KeyError:
-                pass
+            self.set.remove(item)
+
+    def discard(self, item: T) -> None:
+        with self.lock.write_context():
+            self.set.discard(item)
 
 class LockedList(List[T]):
     """A list that is thread-safe for concurrent read and write operations."""
@@ -144,6 +145,11 @@ class LockedList(List[T]):
             super().extend(iterable)
 
     def remove(self, item: T) -> None:
+        with self.lock.write_context():
+            super().remove(item)
+
+    def discard(self, item: T) -> None:
+        """Remove an item if it exists, without raising an error."""
         with self.lock.write_context():
             try:
                 super().remove(item)

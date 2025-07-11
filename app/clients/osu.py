@@ -3,21 +3,20 @@ from chio.constants import LoginError, QuitState, Permissions, PresenceFilter
 from chio.types import UserQuit, Message, TitleUpdate
 from chio import PacketType, BanchoIO
 
-from typing import Set, Any, Iterable
 from sqlalchemy.orm import Session
+from typing import Any, Iterable
 from datetime import datetime
 from copy import copy
 
 from app.common.database import users, groups, stats, logins, clients
+from app.common.helpers import activity, clients as client_utils
 from app.common.cache import status, usercount, leaderboards
-from app.common.helpers import clients as client_utils
-from app.common.constants import GameMode
+from app.common.constants import GameMode, UserActivity
 from app.common.constants import strings
 from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
 from app.objects.client import OsuClientInformation
-from app.tasks import logins as login_helper
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
 from app.clients import Client
@@ -67,12 +66,9 @@ class OsuClient(Client):
         password: str,
         client_data: str
     ) -> None:
-        info = OsuClientInformation.from_string(
-            client_data,
-            self.address
-        )
+        info = OsuClientInformation.from_string(client_data)
 
-        if not self.info:
+        if not info:
             self.logger.warning(f'Failed to parse client: "{client_data}"')
             self.close_connection()
             return
@@ -83,6 +79,10 @@ class OsuClient(Client):
         self.last_response = time.time()
         self.info = info
 
+        # Ensure adapters hash has a value
+        adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()
+        info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
+
         # Select the correct client/io object
         self.io = chio.select_client(info.version.date)
 
@@ -91,15 +91,6 @@ class OsuClient(Client):
             PacketType.BanchoProtocolNegotiation,
             self.io.protocol_version
         )
-
-        if info.hash.adapters != 'runningunderwine':
-            # Validate adapters md5
-            adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()
-
-            if adapters_hash != info.hash.adapters_md5:
-                officer.call(f'Player tried to log in with spoofed adapters: {adapters_hash}')
-                self.close_connection()
-                return
 
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_name_case_insensitive(username, session)):
@@ -114,14 +105,15 @@ class OsuClient(Client):
 
             self.object = user
             self.update_object(user.preferred_mode)
-
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+            self.update_geolocation()
 
             # Preload relationships
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+
+            # Reload permissions
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
@@ -137,10 +129,8 @@ class OsuClient(Client):
                 if not self.is_staff:
                     # Bancho is in maintenance mode
                     self.logger.warning('Login Failed: Maintenance')
-                    return self.on_login_failed(
-                        LoginError.ServerError,
-                        strings.MAINTENANCE_MODE
-                    )
+                    self.on_login_failed(LoginError.ServerError, strings.MAINTENANCE_MODE)
+                    return
 
                 # Inform staff about maintenance mode
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
@@ -173,7 +163,7 @@ class OsuClient(Client):
                         strings.LOGGED_IN_FROM_ANOTHER_LOCATION
                     )
 
-            elif not self.is_supporter:
+            elif not self.object.is_supporter:
                 # Trying to use tournament client without supporter
                 self.on_login_failed(LoginError.UnauthorizedTestBuild)
                 return
@@ -200,7 +190,20 @@ class OsuClient(Client):
                 self.id,
                 self.address,
                 self.info.version.string,
-                priority=3
+                priority=4
+            )
+
+            activity.submit(
+                self.id, None,
+                UserActivity.UserLogin,
+                {
+                    'username': self.name,
+                    'location': 'bancho',
+                    'client': 'osu',
+                    'version': self.info.version.string
+                },
+                is_hidden=True,
+                session=session
             )
 
             # Check for new hardware
@@ -208,7 +211,7 @@ class OsuClient(Client):
 
             if self.object.country.upper() == 'XX':
                 # We failed to get the users country on registration
-                self.object.country = self.info.ip.country_code.upper()
+                self.object.country = self.location.country_code.upper()
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
@@ -419,7 +422,7 @@ class OsuClient(Client):
                 self.info.hash.adapters_md5,
                 self.info.hash.uninstall_id,
                 self.info.hash.diskdrive_signature,
-                priority=3
+                priority=4
             )
 
             user_matches = [match for match in matches if match.user_id == self.id]
@@ -428,7 +431,7 @@ class OsuClient(Client):
                 app.session.tasks.do_later(
                     mail.send_new_location_email,
                     self.object,
-                    self.info.ip.country_name,
+                    self.location.country_name,
                     priority=4
                 )
 
@@ -474,14 +477,13 @@ class OsuClient(Client):
     def update_object(self, mode: int = 0) -> None:
         super().update_object(mode)
         self.preferred_ranking = self.object.preferred_ranking
-        self.presence.country_index = self.info.ip.country_index
-        self.presence.longitude = self.info.ip.longitude
-        self.presence.latitude = self.info.ip.latitude
-        self.presence.timezone = self.info.utc_offset
         self.presence.is_irc = False
 
+    def update_geolocation(self):
+        super().update_geolocation()
+
         if self.info.display_city:
-            self.presence.city = self.info.ip.city
+            self.presence.city = self.location.city
 
     def ensure_not_spectating(self) -> None:
         try:
@@ -492,7 +494,7 @@ class OsuClient(Client):
             self.spectating.spectator_chat.remove(self)
 
             # Remove from target
-            self.spectating.spectators.remove(self)
+            self.spectating.spectators.discard(self)
 
             # Enqueue to target
             self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)

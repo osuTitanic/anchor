@@ -1,11 +1,10 @@
 
-from __future__ import annotations
-
 from app.common.helpers import infringements, activity
 from app.common.database.repositories import users
 from app.common.database.objects import DBActivity
 from app.common.constants import GameMode
 from app.clients.base import Client
+from app.common import officer
 from datetime import datetime
 from typing import Optional
 
@@ -22,11 +21,21 @@ def bot_message(message: str, target: str):
     for message in messages:
         channel.send_message(
             app.session.banchobot,
-            message
+            message,
+            ignore_commands=True
         )
 
 @app.session.events.register('bancho_event')
-def bancho_event(user_id: int, mode: int, type: int, data: dict):
+def bancho_event(
+    user_id: int,
+    mode: int,
+    type: int,
+    data: dict,
+    is_announcement: bool = False
+) -> None:
+    if not is_announcement:
+        return
+
     # Create entry object for formatting
     entry = DBActivity(
         user_id=user_id,
@@ -35,14 +44,8 @@ def bancho_event(user_id: int, mode: int, type: int, data: dict):
         data=data
     )
 
-    formatter = activity.formatters.get(type)
-
-    if not formatter:
-        app.session.logger.warning(f'No formatter found for activity type {type}')
-        return
-
-    # Send message in #announce channel
-    bot_message(formatter(entry), "#announce")
+    send_activity_announcement(entry)
+    send_activity_webhook(entry)
 
 @app.session.events.register('logout')
 def logout(user_id: int):
@@ -142,7 +145,7 @@ def user_update(user_id: int, mode: int | None = None):
         # User is not using an osu! client
         return
 
-    if mode != None:
+    if mode is not None:
         # Assign new mode to the player
         player.status.mode = GameMode(mode)
 
@@ -186,7 +189,8 @@ def external_message(
     sender_id: int,
     sender: str,
     target: str,
-    message: str
+    message: str,
+    submit_to_webhook: bool = True
 ) -> None:
     if not (channel := app.session.channels.by_name(target)):
         return
@@ -197,7 +201,8 @@ def external_message(
         channel.handle_external_message(
             message,
             sender,
-            sender_id
+            sender_id,
+            submit_to_webhook
         )
 
 @app.session.events.register('external_dm')
@@ -226,6 +231,33 @@ def external_dm(
 @app.session.events.register('shutdown')
 def shutdown() -> None:
     exit(0)
+
+def send_activity_announcement(entry: DBActivity) -> None:
+    formatter = activity.text_formatters.get(entry.type)
+
+    if not formatter:
+        app.session.logger.warning(f'No text formatter found for activity type {entry.type}')
+        return
+
+    if not (message := formatter(entry)):
+        app.session.logger.warning(f'Text formatter returned "{message}" for type {entry.type}')
+
+    # Send message in #announce channel
+    bot_message(message, "#announce")
+
+def send_activity_webhook(entry: DBActivity) -> None:
+    formatter = activity.discord_formatters.get(entry.type)
+
+    if not formatter:
+        app.session.logger.warning(f'No webhook formatter found for activity type {entry.type}')
+        return
+
+    if not (embed := formatter(entry)):
+        app.session.logger.warning(f'Webhook formatter returned "{embed}" for type {entry.type}')
+        return
+
+    # Send webhook message
+    officer.event(embeds=[embed])
 
 def enqueue_stats(player: Client):
     try:

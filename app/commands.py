@@ -1,17 +1,13 @@
 
-from __future__ import annotations
-
 from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 from threading import Thread
 from chio import (
-    TitleUpdate,
     ScoringType,
     SlotStatus,
     PacketType,
-    MatchType,
     SlotTeam,
     TeamType,
     Message,
@@ -19,9 +15,9 @@ from chio import (
     Mods
 )
 
-from .common.cache import leaderboards
-from .common.helpers import infringements
-from .common.database.repositories import (
+from app.common.cache import leaderboards
+from app.common.helpers import infringements, permissions
+from app.common.database.repositories import (
     beatmapsets,
     beatmaps,
     matches,
@@ -32,22 +28,65 @@ from .common.database.repositories import (
     users
 )
 
-from .common.constants import Permissions, EventType, GameMode
-from .objects.channel import Channel, MultiplayerChannel
-from .objects.multiplayer import Match, MatchTimer
-from .handlers.osu import spectator
-from .clients.base import Client
-from .faq import faq
+from app.objects.channel import Channel, MultiplayerChannel, PythonInterpreterChannel
+from app.common.constants import Permissions, EventType, GameMode
+from app.objects.multiplayer import Match, MatchTimer
+from app.handlers.osu import spectator
+from app.clients.base import Client
+from app.faq import faq
 
+import cpuinfo
 import logging
-import timeago
 import timeago
 import config
 import random
 import string
+import psutil
 import time
 import app
 import os
+
+class Command(NamedTuple):
+    triggers: List[str]
+    callback: Callable
+    group: str = "standard"
+    hidden: bool = False
+    doc: str | None = None
+    ignore_conditions: bool = False
+
+    @property
+    def permission(self) -> str:
+        return f"commands.{self.group}.{self.triggers[0]}"
+
+class CommandSet:
+    def __init__(self, trigger: str, doc: str) -> None:
+        self.doc = doc
+        self.trigger = trigger
+        self.conditions: List[Callable] = []
+        self.commands: List[Command] = []
+
+    def register(
+        self,
+        aliases: List[str],
+        group: str = "standard",
+        hidden: bool = False,
+        ignore_conditions: bool = False
+    ) -> Callable:
+        def wrapper(f: Callable):
+            self.commands.append(
+                Command(
+                    aliases, f,
+                    group, hidden,
+                    f.__doc__,
+                    ignore_conditions
+                )
+            )
+            return f
+        return wrapper
+
+    def condition(self, f: Callable) -> Callable:
+        self.conditions.append(f)
+        return f
 
 @dataclass
 class Context:
@@ -72,48 +111,6 @@ class Context:
     def get_context_object(self, key: str) -> Any:
         return self.objects.get(key)
 
-class Command(NamedTuple):
-    triggers: List[str]
-    callback: Callable
-    groups: List[str]
-    hidden: bool
-    doc: str | None = None
-    ignore_conditions: bool = False
-
-class CommandSet:
-    def __init__(self, trigger: str, doc: str) -> None:
-        self.trigger = trigger
-        self.doc = doc
-
-        self.conditions: List[Callable] = []
-        self.commands: List[Command] = []
-
-    def register(
-        self,
-        aliases:
-        List[str],
-        groups: List[str] = ['Players'],
-        hidden: bool = False,
-        ignore_conditions: bool = False
-    ) -> Callable:
-        def wrapper(f: Callable):
-            self.commands.append(
-                Command(
-                    aliases,
-                    f,
-                    groups,
-                    hidden,
-                    f.__doc__,
-                    ignore_conditions
-                )
-            )
-            return f
-        return wrapper
-
-    def condition(self, f: Callable) -> Callable:
-        self.conditions.append(f)
-        return f
-
 commands: List[Command] = []
 sets = [
     mp_commands := CommandSet('mp', 'Multiplayer Commands'),
@@ -122,21 +119,46 @@ sets = [
 
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
-    return ctx.player.is_admin
+    return ctx.player.object.is_admin
 
-@system_commands.register(['maintenance', 'panic'], ['Admins'])
+@system_commands.register(['status', 'info'], "admin")
+def status(ctx: Context) -> List[str]:
+    """- Retrieve general server data"""
+    process = psutil.Process(os.getpid())
+    uptime = round(time.time() - app.session.startup_time)
+
+    cpu_info = cpuinfo.get_cpu_info()
+    thread_count = cpu_info["count"]
+    cpu_name = cpu_info["brand_raw"]
+
+    system_ram = psutil.virtual_memory()
+    bancho_ram = process.memory_info()[0]
+    ram_values = (bancho_ram, system_ram.used, system_ram.total)
+
+    # Thanks bancho.py for the inspiration ;)
+    return [
+        f"Running anchor ({config.VERSION if not config.DEBUG else 'dev'})",
+        f"  Uptime: {timedelta(seconds=uptime)}",
+        f"  Domain: {config.DOMAIN_NAME}",
+        f"  CPU: {cpu_name} ({thread_count} threads)",
+        f"  RAM: " + " / ".join([f"{v // 1024 ** 2}MB" for v in ram_values]),
+        f"  Logins: {app.session.logins_per_minute.rate} / min",
+        f"  Packets: {app.session.packets_per_minute.rate} / min",
+    ]
+
+@system_commands.register(['maintenance', 'panic'], "admin")
 def maintenance_mode(ctx: Context) -> List[str]:
     """<on/off>"""
+    # Toggle maintenance value
+    config.MAINTENANCE = not config.MAINTENANCE
+
     if ctx.args:
         # Change maintenance value based on input
         config.MAINTENANCE = ctx.args[0].lower() == 'on'
-    else:
-        # Toggle maintenance value
-        config.MAINTENANCE = not config.MAINTENANCE
 
     if config.MAINTENANCE:
         for player in app.session.players:
-            if player.is_admin:
+            if player.is_staff:
                 continue
 
             player.close_connection("Server maintenance")
@@ -145,57 +167,7 @@ def maintenance_mode(ctx: Context) -> List[str]:
         f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
     ]
 
-@system_commands.register(['setenv', 'setcfg'], ['Admins'])
-def set_config_value(ctx: Context) -> List[str]:
-    """<env> <value> - Update a config value"""
-    if len(ctx.args) < 2:
-        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env> <value>']
-
-    env_name = ctx.args[0]
-    value = ' '.join(ctx.args[1:])
-
-    config.dotenv.set_key('.env', env_name, value)
-    setattr(config, env_name, value)
-
-    if env_name.startswith('MENUICON'):
-        # Enqueue menu icon to all players
-        for player in app.session.players.osu_clients:
-            player.enqueue_packet(
-                PacketType.BanchoTitleUpdate,
-                TitleUpdate(
-                    config.MENUICON_IMAGE,
-                    config.MENUICON_URL
-                )
-            )
-
-    return ['Config was updated.']
-
-@system_commands.register(['getenv', 'getcfg', 'env', 'config', 'cfg'], ['Admins'])
-def get_config_value(ctx: Context) -> List[str]:
-    """<env> - Get a config value"""
-    if len(ctx.args) < 1:
-        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <env>']
-
-    return [getattr(config, ctx.args[0])]
-
-@system_commands.register(['reloadcfg', 'reloadenv'], ['Admins'])
-def reload_config(ctx: Context) -> List[str]:
-    """- Reload the config"""
-
-    config.dotenv.load_dotenv(override=True)
-
-    for key in dir(config):
-        if not key.isupper():
-            continue
-
-        if key not in os.environ:
-            continue
-
-        setattr(config, key, os.environ[key])
-
-    return ['Config was reloaded.']
-
-@system_commands.register(['exec', 'python'], ['Admins'])
+@system_commands.register(['exec', 'python'], "admin")
 def execute_console(ctx: Context):
     """<input> - Execute any python code"""
     if not ctx.args:
@@ -204,7 +176,26 @@ def execute_console(ctx: Context):
     input = ' '.join(ctx.args)
     return [str(eval(input))]
 
-@system_commands.register(['spectateuser', 'spectate'], ['Admins'])
+@system_commands.register(['restart', 'enqueuerestart'], "admin")
+def enqueue_restart(ctx: Context):
+    """<retry_time> - Enqueue a server restart to all clients"""
+    if len(ctx.args) != 1 or not ctx.args[0].isdecimal():
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <retry_time>']
+
+    retry_time = int(ctx.args[0])
+
+    for player in app.session.players:
+        player.enqueue_server_restart(retry_time * 1000)
+
+    return [f'Sent server restart packet to {len(app.session.players)} players.']
+
+@system_commands.register(['reloadfilter'], "admin")
+def reload_filter(ctx: Context) -> List[str]:
+    """- Reload the chat filter"""
+    app.session.filters.populate()
+    return [f'Reloaded chat filter with {len(app.session.filters)} filters.']
+
+@system_commands.register(['spectateuser', 'spectate'], "admin")
 def spectate_user(ctx: Context):
     """<name> - Force all online players to spectate a user"""
     if len(ctx.args) < 1:
@@ -281,12 +272,12 @@ def mp_help(ctx: Context):
     response = []
 
     for command in mp_commands.commands:
-        has_permissions = any(
-            group in command.groups
-            for group in ctx.player.groups
+        has_permission = permissions.has_permission(
+            permission=command.permission,
+            user_id=ctx.player.id
         )
 
-        if not has_permissions:
+        if not has_permission:
             continue
 
         if not command.doc:
@@ -328,7 +319,7 @@ def create_persistant_match(ctx: Context):
         return ['Could not create match.']
 
     ctx.player.referee_matches.add(match.id)
-    match.referee_players.append(ctx.player.id)
+    match.referee_players.add(ctx.player.id)
     match.chat = MultiplayerChannel(match)
     match.logger = logging.getLogger(f'multi_{match.id}')
     app.session.channels.add(match.chat)
@@ -507,7 +498,7 @@ def mp_abort_timer(ctx: Context):
 
     if not match.countdown:
         return ['Countdown is not active!']
-    
+
     # The countdown thread will check if 'countdown' is None
     match.countdown = None
     return ['Countdown was cancelled.']
@@ -604,7 +595,7 @@ def mp_mods(ctx: Context):
     match.update()
     return [f'Updated match mods to {match.mods.short}{"FM" if freemod else ""}.']
 
-def parse_mods_from_args(args: List[str]) -> Tuple[Mods, bool]:
+def parse_mods_from_args(args: List[str]) -> Tuple[Mods | None, bool]:
     try:
         freemod = any(
             arg.lower() in ('freemod', 'fm')
@@ -777,7 +768,7 @@ def mp_invite(ctx: Context):
 
     return [f'Invited {target.name} to this match.']
 
-@mp_commands.register(['force', 'forceinvite'], ['Admins', 'Tournament Manager Team'])
+@mp_commands.register(['force', 'forceinvite'], "tournaments")
 def mp_force_invite(ctx: Context):
     """<name> - Force a player to join this match"""
     if len(ctx.args) <= 0:
@@ -1052,6 +1043,7 @@ def mp_settings(ctx: Context):
             f"[http://osu.{config.DOMAIN_NAME}/u/{slot.player.id} {slot.player.name}]"
             f"{f' Team {slot.team.name}' if match.ffa else ''}"
             f"{f' +{slot.mods.short}' if slot.mods > 0 else ''} [{f'Host' if match.host == slot.player else ''}]"
+            f"{f' ({slot.player.info.version.string})'}"
             for slot in match.slots
             if slot.has_player
         ]
@@ -1177,7 +1169,7 @@ def mp_addref(ctx: Context):
         # Target should now join #multi_<match.id> instead of #multiplayer
         target.enqueue_channel_revoked('#multiplayer')
 
-    match.referee_players.append(target.id)
+    match.referee_players.add(target.id)
     target.referee_matches.add(match)
 
     channel_object = match.chat.bancho_channel
@@ -1217,31 +1209,31 @@ def mp_removeref(ctx: Context):
         return ["You cannot remove yourself as a referee."]
 
     match.chat.remove(target)
-    match.referee_players.remove(target.id)
-    target.referee_matches.remove(match)
+    match.referee_players.discard(target.id)
+    target.referee_matches.discard(match)
     target.enqueue_channel_revoked(match.chat.bancho_channel.name)
 
     return [f'Removed "{target.name}" from match referee status.']
 
 def command(
     aliases: List[str],
-    groups: List[str] = ['Players'],
-    hidden: bool = True,
+    group: str = "standard",
+    hidden: bool = False
 ) -> Callable:
     def wrapper(f: Callable) -> Callable:
         commands.append(
             Command(
                 aliases,
                 f,
-                groups,
+                group,
                 hidden,
                 f.__doc__
-            ),
+            )
         )
         return f
     return wrapper
 
-@command(['help', 'h', ''])
+@command(['help', 'h', ''], hidden=True)
 def help(ctx: Context) -> List | None:
     """- Shows this message"""
     response = []
@@ -1249,12 +1241,12 @@ def help(ctx: Context) -> List | None:
     # Standard commands
     response.append('Standard Commands:')
     for command in commands:
-        has_permissions = any(
-            group in command.groups
-            for group in ctx.player.groups
+        has_permission = permissions.has_permission(
+            permission=command.permission,
+            user_id=ctx.player.id
         )
 
-        if not has_permissions:
+        if not has_permission:
             continue
 
         response.append(
@@ -1274,12 +1266,12 @@ def help(ctx: Context) -> List | None:
             response.append(f'{set.doc} (!{set.trigger}):')
 
             for command in set.commands:
-                has_permissions = any(
-                    group in command.groups
-                    for group in ctx.player.groups
+                has_permission = permissions.has_permission(
+                    permission=command.permission,
+                    user_id=ctx.player.id
                 )
 
-                if not has_permissions:
+                if not has_permission:
                     continue
 
                 if not command.doc:
@@ -1291,7 +1283,7 @@ def help(ctx: Context) -> List | None:
 
     return response
 
-@command(['roll'], hidden=False)
+@command(['roll'])
 def roll(ctx: Context) -> List | None:
     """<number> - Roll a dice and get random result from 1 to <number> (default 100)"""
     max_roll = 100
@@ -1307,7 +1299,7 @@ def roll(ctx: Context) -> List | None:
 
     return [f'{ctx.player.name} rolls {random.randrange(0, max_roll+1)}!']
 
-@command(['report'])
+@command(['report'], hidden=True)
 def report(ctx: Context) -> List | None:
     """<username> <reason>"""
     if len(ctx.args) < 1:
@@ -1354,7 +1346,7 @@ def report(ctx: Context) -> List | None:
 
     return ['Chat moderators have been alerted. Thanks for your help.']
 
-@command(['search'], ['Supporter'], hidden=False)
+@command(['search'])
 def search(ctx: Context):
     """<query> - Search a beatmap"""
     query = ' '.join(ctx.args[0:])
@@ -1378,7 +1370,7 @@ def search(ctx: Context):
 
     return [f'{result.link} [{status}]']
 
-@command(['where', 'location'], hidden=False)
+@command(['where', 'location'])
 def where(ctx: Context):
     """<name> - Get a player's current location"""
     if len(ctx.args) < 1:
@@ -1388,19 +1380,19 @@ def where(ctx: Context):
 
     if not (target := app.session.players.by_name_safe(name)):
         return ['Player is not online']
-    
-    if target.is_irc:
-        return ['This player is connected via. IRC']
 
-    if not target.info.ip:
+    if not target.location:
         return ['The players location data could not be resolved']
 
-    city_string = f"({target.info.ip.city})" if target.info.display_city else ""
-    location_string = target.info.ip.country_name
+    location_string = target.location.country_name
+    city_string = f"({target.location.city})"
+
+    if not hasattr(target, 'info') or not target.info.display_city:
+        city_string = ""
 
     return [f'{target.name} is in {location_string} {city_string}']
 
-@command(['stats'], hidden=False)
+@command(['stats'])
 def get_stats(ctx: Context):
     """<username> - Get the stats of a player"""
     if len(ctx.args) < 1:
@@ -1422,7 +1414,7 @@ def get_stats(ctx: Context):
         f'  PP:       {round(target.current_stats.pp, 2)}pp (#{global_rank})'
     ]
 
-@command(['recent', 'r', 'last', 'rs'], hidden=False)
+@command(['recent', 'r', 'last', 'rs'])
 def recent(ctx: Context):
     """- Get information about your last score"""
     target_player = ctx.player
@@ -1470,7 +1462,7 @@ def recent(ctx: Context):
 
         return [" | ".join(response)]
 
-@command(['client', 'version'], hidden=False)
+@command(['client', 'version'])
 def get_client_version(ctx: Context):
     """<username> - Get the version of the client that a player is currently using"""
     target = ctx.player
@@ -1487,7 +1479,7 @@ def get_client_version(ctx: Context):
 
     return [f"{target.name} is playing on {target.info.version.string}"]
 
-@command(['ranking', 'setranking', 'setrank'])
+@command(['ranking', 'setranking', 'setrank'], hidden=True)
 def set_preferred_ranking(ctx: Context):
     """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
     if len(ctx.args) < 1:
@@ -1529,7 +1521,7 @@ def set_preferred_ranking(ctx: Context):
 
     return [f'Your ranking was set to "{ranking}".']
 
-@command(['asklevi', 'doyoureallywanttoaskpeppy'])
+@command(['asklevi', 'doyoureallywanttoaskpeppy'], hidden=True)
 def asklevi(ctx: Context):
     """- Makes you able to message Levi, if he's online"""
     if not (levi := app.session.players.by_id(2)):
@@ -1545,7 +1537,7 @@ def asklevi(ctx: Context):
 
     return [f'You can now message {levi.name}.']
 
-@command(['monitor'], ['Admins'])
+@command(['monitor'], "admin", hidden=True)
 def monitor(ctx: Context) -> List | None:
     """<name> - Monitor a player"""
     if len(ctx.args) < 1:
@@ -1563,7 +1555,7 @@ def monitor(ctx: Context) -> List | None:
 
     return ['Player has been monitored']
 
-@command(['alert', 'announce', 'broadcast'], ['Admins', 'Developers'])
+@command(['alert', 'announce', 'broadcast'], "admin")
 def alert(ctx: Context) -> List | None:
     """<message> - Send a message to all players"""
     if not ctx.args:
@@ -1573,7 +1565,7 @@ def alert(ctx: Context) -> List | None:
 
     return [f'Alert was sent to {len(app.session.players)} players.']
 
-@command(['alertuser'], ['Admins', 'Developers'])
+@command(['alertuser'], "admin")
 def alertuser(ctx: Context) -> List | None:
     """<username> <message> - Send a notification to a player"""
     if len(ctx.args) < 2:
@@ -1588,7 +1580,7 @@ def alertuser(ctx: Context) -> List | None:
 
     return [f'Alert was sent to {player.name}.']
 
-@command(['silence', 'mute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['silence', 'mute'], "moderation")
 def silence(ctx: Context) -> List | None:
     """<username> <duration> (<reason>)"""
     if len(ctx.args) < 2:
@@ -1624,7 +1616,7 @@ def silence(ctx: Context) -> List | None:
 
     return [f'{user.name} was silenced for {time_string}']
 
-@command(['unsilence', 'unmute'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['unsilence', 'unmute'], "moderation")
 def unsilence(ctx: Context):
     """<username>"""
     if len(ctx.args) < 1:
@@ -1645,7 +1637,7 @@ def unsilence(ctx: Context):
 
     return [f'{user.name} was unsilenced.']
 
-@command(['restrict', 'ban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['restrict', 'ban'], "moderation")
 def restrict(ctx: Context) -> List | None:
     """<name> <length/permanent> (<reason>)"""
     if len(ctx.args) < 2:
@@ -1682,7 +1674,7 @@ def restrict(ctx: Context) -> List | None:
 
     return [f'{user.name} was restricted.']
 
-@command(['unrestrict', 'unban'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['unrestrict', 'unban'], "moderation")
 def unrestrict(ctx: Context) -> List | None:
     """<name> <restore scores (true/false)>"""
     if len(ctx.args) < 1:
@@ -1713,7 +1705,7 @@ def unrestrict(ctx: Context) -> List | None:
 
     return [f'Player "{user.name}" was unrestricted.']
 
-@command(['moderated'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['moderated'], "moderation")
 def moderated(ctx: Context) -> List | None:
     """<on/off>"""
     if len(ctx.args) != 1 and ctx.args[0] not in ('on', 'off'):
@@ -1726,7 +1718,7 @@ def moderated(ctx: Context) -> List | None:
 
     return [f'Moderated mode is now {"enabled" if ctx.target.moderated else "disabled"}.']
 
-@command(['kick', 'disconnect'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['kick', 'disconnect'], "moderation")
 def kick(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1741,7 +1733,7 @@ def kick(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['kill', 'close'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['kill', 'close'], "moderation")
 def kill(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1761,7 +1753,7 @@ def kill(ctx: Context) -> List | None:
 
     return [f'{player.name} was disconnected from bancho.']
 
-@command(['multi', 'multiaccount', 'hardware'], ['Admins', 'Global Moderator Team'])
+@command(['multi', 'multiaccount', 'hardware'], "moderation", hidden=True)
 def multi(ctx: Context) -> List | None:
     """<username>"""
     if len(ctx.args) <= 0:
@@ -1798,7 +1790,7 @@ def multi(ctx: Context) -> List | None:
         ]
     ]
 
-@command(['rtx', 'jumpscare'], ['Admins', 'Developers', 'Global Moderator Team'], hidden=False)
+@command(['rtx', 'jumpscare'], "moderation")
 def rtx(ctx: Context) -> List | None:
     """<username> (<message>) - Zallius' eyes have awoken"""
     if len(ctx.args) <= 0:
@@ -1820,7 +1812,7 @@ def rtx(ctx: Context) -> List | None:
     target.enqueue_packet(PacketType.BanchoRTX, message)
     return [f"{target.name} was RTX'd."]
 
-@command(['faq'], hidden=False)
+@command(['faq'])
 def mp_help(ctx: Context):
     """<faq> - Gets information about a frequently asked question"""
     if len(ctx.args) <= 0:

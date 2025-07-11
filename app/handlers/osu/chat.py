@@ -46,8 +46,13 @@ def resolve_channel(channel_name: str, client: OsuClient) -> Channel | None:
         # Otherwise force them to use #multiplayer
         return channel
 
-    # Force player to join #multiplayer
     client.enqueue_channel_revoked(channel_name)
+
+    # Check if client is in match
+    if client.match is not channel.match:
+        return
+
+    # Force player to join #multiplayer instead
     client.enqueue_channel_join_success('#multiplayer')
 
 @register(PacketType.OsuChannelJoin)
@@ -112,9 +117,7 @@ def send_private_message(sender: OsuClient, message: Message):
         return
 
     if sender.silenced:
-        sender.logger.warning(
-            'Failed to send private message: Sender was silenced'
-        )
+        sender.logger.warning('Failed to send private message: Sender was silenced')
         return
 
     if target.silenced:
@@ -129,13 +132,20 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.silence(60, 'Chat spamming')
         return
 
+    # Apply chat filters to the message
+    message.content, timeout = session.filters.apply(message.content)
+
+    if timeout is not None:
+        sender.silence(timeout, 'Inappropriate discussion in pms')
+        return False
+
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')
 
     if has_command_prefix or target is session.banchobot:
         return session.tasks.do_later(
             session.banchobot.process_and_send_response,
-            parsed_message, sender, target, priority=1
+            parsed_message, sender, target, priority=2
         )
 
     if len(message.content) > 512:
@@ -156,7 +166,7 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.id,
         target.id,
         message.content[:512],
-        priority=3
+        priority=4
     )
 
     sender.logger.info(

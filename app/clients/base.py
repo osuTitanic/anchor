@@ -5,7 +5,7 @@ from typing import Iterable, List, Set
 from datetime import datetime
 from threading import Lock
 
-from app.common.helpers import infringements as infringements_helper
+from app.common.helpers import location, permissions, infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
@@ -24,6 +24,7 @@ from app.common.database import (
 import timeago
 import logging
 import config
+import pytz
 import time
 import app
 
@@ -41,7 +42,8 @@ class Client:
         self.port = port
         self.address = address
         self.logger = logging.getLogger(address)
-        
+        self.location: location.Geolocation | None = None
+
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
@@ -57,7 +59,6 @@ class Client:
         self.action_lock = Lock()
         self.hidden = False
         self.rankings = {}
-        self.groups = []
 
     @property
     def url(self) -> str:
@@ -161,30 +162,55 @@ class Client:
         return round(
             (index + 1) + (score - added_score) / level.NEXT_LEVEL[index]
         )
-    
-    @property
-    def permissions(self) -> Permissions:
-        return self.presence.permissions
-
-    @property
-    def is_irc(self) -> bool:
-        return self.presence.is_irc
 
     @property
     def underscored_name(self) -> str:
         return self.name.replace(" ", "_")
 
     @property
-    def irc_prefix(self) -> str:
-        return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
-
-    @property
     def safe_name(self) -> str:
         return self.underscored_name.lower()
 
     @property
+    def is_irc(self) -> bool:
+        return self.presence.is_irc
+
+    @property
+    def irc_formatted(self) -> str:
+        return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
+    
+    @property
+    def irc_prefix(self) -> str:
+        if self.is_staff:
+            return "@"
+
+        if self.silenced:
+            return ""
+
+        if self.is_irc:
+            return "+"
+
+        return ""
+
+    @property
+    def permissions(self) -> Permissions:
+        return self.presence.permissions
+
+    @property
     def avatar_filename(self) -> str:
         return f"{self.id}_000.png"
+
+    @property
+    def is_staff(self) -> bool:
+        return any([self.object.is_admin, self.object.is_moderator])
+
+    @property
+    def is_verified(self) -> bool:
+        return self.object.is_verified
+
+    @property
+    def has_preview_access(self) -> bool:
+        return permissions.has_permission('clients.validation.bypass', self.id)
 
     @property
     def is_channel(self) -> bool:
@@ -197,34 +223,6 @@ class Client:
     @property
     def friendonly_dms(self) -> bool:
         return False
-
-    @property
-    def is_supporter(self) -> bool:
-        return 'Supporter' in self.groups
-
-    @property
-    def is_admin(self) -> bool:
-        return 'Admins' in self.groups
-
-    @property
-    def is_dev(self) -> bool:
-        return 'Developers' in self.groups
-
-    @property
-    def is_moderator(self) -> bool:
-        return 'Global Moderator Team' in self.groups
-
-    @property
-    def has_preview_access(self) -> bool:
-        return 'Preview' in self.groups
-
-    @property
-    def is_staff(self) -> bool:
-        return any([self.is_admin, self.is_dev, self.is_moderator])
-
-    @property
-    def is_verified(self) -> bool:
-        return self.object.is_verified
 
     def __repr__(self) -> str:
         return f'<{self.protocol.capitalize()}Client "{self.name}" ({self.id})>'
@@ -252,12 +250,13 @@ class Client:
                 DBUser.stats,
                 session=session
             )
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
             self.update_object(mode)
+            self.update_geolocation()
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
+            bancho_permissions = groups.get_player_permissions(self.id, session)
+            self.presence.permissions = Permissions(bancho_permissions)
             return self.object
 
     def reload_rank(self) -> int:
@@ -325,6 +324,18 @@ class Client:
         self.stats.tscore = stats.tscore
         self.stats.playcount = stats.playcount
         self.stats.pp = round(stats.pp)
+        
+    def update_geolocation(self) -> None:
+        """Updates the player's geolocation"""
+        self.location = location.fetch_geolocation(self.address)
+        self.presence.country_index = self.location.country_index
+        self.presence.longitude = self.location.longitude
+        self.presence.latitude = self.location.latitude
+        self.presence.timezone = int(
+            datetime.now(
+                pytz.timezone(self.location.timezone)
+            ).utcoffset().total_seconds() / 60 / 60
+        )
 
     def update_leaderboard_stats(self) -> None:
         """Updates the player's stats inside the redis leaderboard"""
@@ -352,7 +363,7 @@ class Client:
             users.update,
             user_id=self.id,
             updates={'latest_activity': datetime.now()},
-            priority=3
+            priority=5
         )
 
     def close_connection(self, reason: str = "") -> None:

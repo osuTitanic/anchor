@@ -23,8 +23,13 @@ AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announc
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
 TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
 HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
-WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 IRC_PORT = int(os.environ.get('BANCHO_IRC_PORT', 6667))
+WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
+
+IRC_PORT_SSL = int(os.environ.get('BANCHO_IRC_PORT_SSL', 6697))
+SSL_KEYFILE = os.environ.get('BANCHO_SSL_KEYFILE')
+SSL_CERTFILE = os.environ.get('BANCHO_SSL_CERTFILE')
+SSL_ENABLED = SSL_KEYFILE and SSL_CERTFILE
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
 
@@ -58,7 +63,10 @@ DEBUG = eval(os.environ.get('DEBUG', 'False').capitalize())
 OFFICER_WEBHOOK_URL = os.environ.get('OFFICER_WEBHOOK_URL')
 EVENT_WEBHOOK_URL = os.environ.get('EVENT_WEBHOOK_URL')
 
+CHAT_WEBHOOK_CHANNELS = os.environ.get('ALLOWED_WEBHOOK_CHANNELS', '#osu').split(',')
+CHAT_WEBHOOK_URL = os.environ.get('CHAT_WEBHOOK_URL')
+
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18
-VERSION = '1.7.4'
+VERSION = '1.7.5'

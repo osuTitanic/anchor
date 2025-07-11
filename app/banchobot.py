@@ -1,10 +1,12 @@
 
 from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
+from app.common.helpers import permissions
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
-from typing import Tuple, List
+
+from typing import Tuple, List, Iterable
 from chio import Message
 
 import shlex
@@ -13,8 +15,12 @@ import app
 class BanchoBot(IrcClient):
     def __init__(self):
         super().__init__('127.0.0.1', 13381)
-        self.initialize()
-        
+        self.id = 1
+        self.name = "BanchoBot"
+        self.reload()
+        self.presence.city = "w00t p00t!"
+        self.presence.country_index = 1
+
     def process_and_send_response(
         self,
         message: str,
@@ -30,7 +36,7 @@ class BanchoBot(IrcClient):
         message: str,
         sender: Client,
         target: Channel | Client
-    ) -> Tuple[Context, Command, List[str]]:
+    ) -> Tuple[Context | None, Command | None, List[str]]:
         trigger, *args = self.parse_command(message)
 
         if not trigger:
@@ -50,7 +56,7 @@ class BanchoBot(IrcClient):
 
         return ctx, command, response
 
-    def parse_command(self, message: str) -> List[str]:
+    def parse_command(self, message: str) -> Iterable[str]:
         if not message.startswith('!'):
             message = f'!{message}'
 
@@ -67,12 +73,12 @@ class BanchoBot(IrcClient):
             if ctx.trigger not in command.triggers:
                 continue
 
-            has_permissions = any(
-                group in command.groups
-                for group in ctx.player.groups
+            has_permission = permissions.has_permission(
+                permission=command.permission,
+                user_id=ctx.player.id
             )
 
-            if not has_permissions:
+            if not has_permission:
                 return
 
             return command
@@ -91,12 +97,12 @@ class BanchoBot(IrcClient):
                 if trigger not in command.triggers:
                     continue
 
-                has_permissions = any(
-                    group in command.groups
-                    for group in ctx.player.groups
+                has_permission = permissions.has_permission(
+                    permission=command.permission,
+                    user_id=ctx.player.id
                 )
 
-                if not has_permissions:
+                if not has_permission:
                     continue
 
                 ctx.trigger = trigger
@@ -164,38 +170,41 @@ class BanchoBot(IrcClient):
 
         # Store request/responses in database
         app.session.tasks.do_later(
-            messages.create_private,
-            context.player.id,
-            self.object.id,
-            context.message,
-            priority=3
+            self.store_to_database,
+            context,
+            response,
+            priority=4
         )
 
-        app.session.tasks.do_later(
-            messages.create_private,
-            self.object.id,
-            context.player.id,
-            '\n'.join(response),
-            priority=3
-        )
+        self.update_activity()
+
+    def store_to_database(self, context: Context, response: List[str]) -> None:
+        with app.session.database.managed_session() as session:
+            messages.create_private(
+                context.player.id,
+                self.object.id,
+                context.message,
+                session=session
+            )
+
+            messages.create_private(
+                self.object.id,
+                context.player.id,
+                '\n'.join(response),
+                session=session
+            )
+
+    """Method stubs for 'IrcClient' default class behavior"""
+
+    def update_object(self, mode: int = 0) -> None:
+        super().update_object(mode)
+        self.stats.rank = 0
+
+    def reload_rankings(self) -> None:
+        self.rankings = {"global": 0}
 
     def apply_ranking(self, ranking: str = 'global') -> None:
         pass
 
     def reload_rank(self) -> None:
         pass
-
-    def reload_rankings(self) -> None:
-        self.rankings = {"global": 0}
-
-    def update_object(self, mode: int = 0) -> None:
-        super().update_object(mode)
-        self.stats.rank = 0
-
-    def initialize(self) -> None:
-        self.id = 1
-        self.name = "BanchoBot"
-        self.presence.country_index = 1
-        self.presence.city = "w00t p00t!"
-        self.presence.is_irc = True
-        self.reload()

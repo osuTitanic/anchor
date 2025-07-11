@@ -1,6 +1,7 @@
 
 from chio import Message, Channel as bChannel, Permissions
 from typing import TYPE_CHECKING, List, Set
+from code import InteractiveConsole
 
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
@@ -9,13 +10,16 @@ if TYPE_CHECKING:
     from app.clients import Client
 
 from app.common.database.repositories import messages
-from app.common.constants.strings import BAD_WORDS
 from app.objects.locks import LockedSet
+from app.common.webhooks import Webhook
 from app.common import officer
 
 import logging
+import config
 import time
 import app
+import sys
+import io
 
 class Channel:
     def __init__(
@@ -71,6 +75,10 @@ class Channel:
         return [user for user in self.users if user.is_irc]
 
     @property
+    def user_ids(self) -> Set[int]:
+        return {user.id for user in self.users}
+
+    @property
     def bancho_channel(self) -> bChannel:
         return bChannel(
             self.display_name,
@@ -85,53 +93,36 @@ class Channel:
     def can_write(self, client: "Client") -> bool:
         return client.permissions.value >= self.write_perms
 
-    def mode(self, client: "Client") -> str:
-        if client.silenced:
-            return '-v'
-
-        if Permissions.Peppy in client.permissions:
-            return '+a'
-
-        if Permissions.Friend in client.permissions:
-            return '+o'
-
-        if Permissions.BAT in client.permissions:
-            return '+h'
-
-        return '+v'
-
-    def add(self, player: "Client", no_response: bool = False) -> None:
+    def add(self, client: "Client", no_response: bool = False) -> None:
         # Update player's silence duration
-        player.silenced
+        client.silenced
 
-        if not self.can_read(player):
+        if not self.can_read(client):
             # Player does not have read access
-            self.logger.warning(f'{player} tried to join channel but does not have read access.')
-            player.enqueue_channel_revoked(self.display_name)
+            self.logger.warning(f'{client} tried to join channel but does not have read access.')
+            client.enqueue_channel_revoked(self.display_name)
 
-        if player in self.users and not player.is_tourney_client:
+        if client in self.users and not client.is_tourney_client:
             # Player has already joined the channel
             if no_response:
                 return
 
-            player.enqueue_channel_join_success(self.display_name)
+            client.enqueue_channel_join_success(self.display_name)
             return
 
-        player.channels.add(self)
-        self.users.add(player)
-        self.logger.info(f'{player.name} joined')
-        self.broadcast_join(player)
+        client.channels.add(self)
+        self.users.add(client)
+        self.logger.info(f'{client.name} joined')
+        self.broadcast_join(client)
 
         if not no_response:
-            player.enqueue_channel_join_success(self.display_name)
+            client.enqueue_channel_join_success(self.display_name)
 
-    def remove(self, player: "Client") -> None:
-        self.users.remove(player)
-        self.logger.info(f'{player.name} left')
-        self.broadcast_part(player)
-
-        if self in player.channels:
-            player.channels.remove(self)
+    def remove(self, client: "Client") -> None:
+        client.channels.discard(self)
+        self.users.discard(client)
+        self.logger.info(f'{client.name} left')
+        self.broadcast_part(client)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
@@ -139,15 +130,58 @@ class Channel:
         for user in users:
             user.enqueue_message_object(message)
 
-    def broadcast_part(self, player: "Client") -> None:
+    def broadcast_message_to_webhook(self, message: Message) -> None:
+        if not config.CHAT_WEBHOOK_URL:
+            return
+
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
+        # Prevent @ mentions from being parsed as mentions
+        message_content = message.content.replace('@', '@\u200b')
+
+        # Replace \x01ACTION with username
+        message_content = message_content.replace('\x01ACTION ', f'*{message.sender}')
+        message_content = message_content.removesuffix('\x01')
+
+        webhook = Webhook(
+            config.CHAT_WEBHOOK_URL,
+            message_content,
+            message.sender,
+            f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
+        )
+        webhook.post()
+
+    def broadcast_join(self, client: "Client") -> None:
+        self.update_osu_clients()
+
+        other_player = next(
+            (p for p in self.users if p.id == client.id and p != client),
+            None
+        )
+        
+        # If another player is already in
+        # the channel, no need to broadcast
+        if other_player is not None:
+            if not client.is_irc:
+                return
+
+            # We still want to make sure the IRC
+            # client joined the channel
+            return client.enqueue_player(client, self.name)
+
+        for user in self.irc_users:
+            user.enqueue_player(client, self.name)
+
+    def broadcast_part(self, client: "Client") -> None:
         self.update_osu_clients()
         
-        if player.is_tourney_client:
-            # Do not broadcast part to irc users
+        if client.is_tourney_client:
+            # Do not broadcast tourney part to irc users
             return
 
         other_player = next(
-            (p for p in self.users if p.id == player.id),
+            (p for p in self.users if p.id == client.id),
             None
         )
 
@@ -157,18 +191,7 @@ class Channel:
             return
 
         for user in self.irc_users:
-            user.enqueue_part(player, self.name)
-
-    def broadcast_join(self, player: "Client") -> None:
-        self.update_osu_clients()
-
-        if self.name == "#osu":
-            # Broadcast will already be done by
-            # app.session.players.send_player
-            return
-
-        for user in self.irc_users:
-            user.enqueue_player(player, self.name)
+            user.enqueue_part(client, self.name)
 
     def update_osu_clients(self) -> None:
         if not self.public:
@@ -211,23 +234,21 @@ class Channel:
             # A command was executed
             return app.session.tasks.do_later(
                 app.session.banchobot.process_and_send_response,
-                message, sender, self, priority=1
+                message, sender, self, priority=2
             )
 
         if len(message) > 512:
             # Limit message size to 512 characters
             message = message[:497] + '... (truncated)'
 
-        # Filter out sender
-        users = [user for user in self.users if user != sender]
+        # Apply chat filters to the message
+        message, timeout = app.session.filters.apply(message)
 
-        app.session.tasks.do_later(
-            messages.create,
-            sender.name,
-            self.name,
-            message[:512],
-            priority=2
-        )
+        if timeout is not None:
+            return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+
+        # Filter out sender from the target users
+        users = [user for user in self.users if user != sender]
 
         message_object = Message(
             sender.name,
@@ -238,15 +259,36 @@ class Channel:
 
         if not do_later:
             self.broadcast_message(message_object, users)
+            self.broadcast_message_to_webhook(message_object)
             return
 
         app.session.tasks.do_later(
             self.broadcast_message,
             message_object,
             users=users,
-            priority=1
+            priority=2
         )
-    
+
+        app.session.tasks.do_later(
+            messages.create,
+            sender.name,
+            self.name,
+            message[:512],
+            priority=4
+        )
+
+        if not config.CHAT_WEBHOOK_URL:
+            return
+
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message_to_webhook,
+            message_object,
+            priority=5
+        )
+
     def validate_message(
         self,
         sender: "Client",
@@ -265,15 +307,12 @@ class Channel:
                 return False
 
         if self.moderated:
-            allowed_groups = [
-                'Admins',
-                'Developers',
-                'Beatmap Approval Team',
-                'Global Moderator Team',
-                'Tournament Manager Team'
+            is_allowed = [
+                sender.object.is_moderator,
+                sender.object.is_bat
             ]
 
-            if not any([group in sender.groups for group in allowed_groups]):
+            if not any(is_allowed):
                 return False
 
         if sender.silenced:
@@ -282,16 +321,6 @@ class Channel:
 
         if not self.can_write(sender):
             sender.logger.warning(f'Failed to send message: "{message}".')
-            return False
-
-        has_bad_words = any([
-            word in message.lower()
-            for word in BAD_WORDS
-        ])
-
-        if has_bad_words and not sender.is_bot:
-            sender.silence(60 * 5, "Auto-silenced for using bad words in chat.")
-            officer.call(f'Message: {message}')
             return False
 
         if not sender.is_bot and not sender.message_limiter.allow():
@@ -304,18 +333,33 @@ class Channel:
         self,
         message: str,
         sender: str,
-        sender_id: int
+        sender_id: int,
+        submit_to_webhook: bool = False
     ) -> None:
+        message_object = Message(
+            sender,
+            message,
+            self.display_name,
+            sender_id
+        )
+
         app.session.tasks.do_later(
             self.broadcast_message,
-            Message(
-                sender,
-                message,
-                self.display_name,
-                sender_id
-            ),
+            message_object,
             users=self.users,
-            priority=1
+            priority=2
+        )
+
+        if not config.CHAT_WEBHOOK_URL or not submit_to_webhook:
+            return
+
+        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+            return
+
+        app.session.tasks.do_later(
+            self.broadcast_message_to_webhook,
+            message_object,
+            priority=5
         )
 
 class SpectatorChannel(Channel):
@@ -490,3 +534,76 @@ class MultiplayerChannel(Channel):
         for user in users:
             message.target = self.resolve_name(user)
             user.enqueue_message_object(message)
+
+class PythonInterpreterChannel(Channel):
+    def __init__(self):
+        super().__init__(
+            "#python",
+            "Debugging python interpreter channel",
+            "BanchoBot",
+            read_perms=Permissions.Peppy,
+            write_perms=Permissions.Peppy
+        )
+        self.console = InteractiveConsole()
+        assert config.DEBUG
+        
+    def broadcast_join(self, client: "Client") -> None:
+        super().broadcast_join(client)
+
+        # Send "Python 3.X.X (default, YYYY-MM-DD, HH:MM:SS) [GCC X.X.X]" message
+        python_version = sys.version.splitlines()
+        platform_info = sys.platform
+
+        client.enqueue_message(
+            f"Python {python_version[0]} on {platform_info}",
+            app.session.banchobot,
+            self.display_name,
+        )
+        client.enqueue_message(
+            'Type "help", "copyright", "credits" or "license" for more information.',
+            app.session.banchobot,
+            self.display_name
+        )
+
+    def send_message(
+        self,
+        sender: "Client",
+        message: str
+    ) -> None:
+        if not sender.object.is_admin:
+            sender.enqueue_channel_revoked(self.display_name)
+            return
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        # Save original stdout/stderr
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = stdout, stderr
+
+        try:
+            self.console.push(message)
+        except Exception as e:
+            stderr.write(f'{e.__class__.__name__}: {e}\n')
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout, sys.stderr = old_stdout, old_stderr
+
+        output = stdout.getvalue() + stderr.getvalue()
+        output = output.strip()
+        
+        if not output:
+            return
+
+        for line in output.splitlines():
+            return_message = Message(
+                app.session.banchobot.name,
+                line,
+                self.display_name,
+                sender.id
+            )
+
+            self.broadcast_message(
+                return_message,
+                self.users
+            )

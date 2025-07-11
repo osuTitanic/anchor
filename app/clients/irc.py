@@ -1,7 +1,8 @@
 
 from app.common.database import users, groups, stats, logins
+from app.common.constants import UserActivity, strings
 from app.common.cache import usercount, status
-from app.common.constants import strings
+from app.common.helpers import activity
 from app.objects.channel import Channel
 from app.clients.base import Client
 
@@ -63,18 +64,19 @@ class IrcClient(Client):
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
 
-            self.name = user.name
             self.token = ""
             self.object = user
+            self.name = user.name
             self.update_object(user.preferred_mode)
-
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
-            self.groups = [group.name for group in groups.fetch_user_groups(self.id, True, session)]
+            self.update_geolocation()
 
             # Preload relationships
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+            
+            # Reload permissions
+            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
@@ -116,6 +118,18 @@ class IrcClient(Client):
                 priority=4
             )
 
+            activity.submit(
+                self.id, None,
+                UserActivity.UserLogin,
+                {
+                    'username': self.name,
+                    'location': 'bancho',
+                    'client': 'irc'
+                },
+                is_hidden=True,
+                session=session
+            )
+
             # Update cache
             self.update_leaderboard_stats()
             self.update_status_cache()
@@ -152,7 +166,7 @@ class IrcClient(Client):
                 self.enqueue_players,
                 channel.users,
                 channel.name,
-                priority=1
+                priority=2
             )
 
         # Re-add matches that this player is a referee for
@@ -402,7 +416,7 @@ class IrcClient(Client):
             if player.hidden and player != self:
                 continue
 
-            chunk.append(self.resolve_username(player))
+            chunk.append(player.irc_prefix + self.resolve_username(player))
 
             if len(chunk) < chunk_size:
                 continue
@@ -437,6 +451,26 @@ class IrcClient(Client):
             "JOIN",
             f"{self.resolve_username(player)}!cho@{config.DOMAIN_NAME}",
             params=[f":{channel}"]
+        )
+
+        if not player.irc_prefix:
+            return
+
+        if not app.session.banchobot:
+            return
+
+        modes = {
+            '+': '+v',
+            '@': '+o'
+        }
+        
+        self.enqueue_command_raw(
+            "MODE",
+            app.session.banchobot.irc_formatted,
+            params=[
+                channel, modes.get(player.irc_prefix, ''),
+                self.resolve_username(player)
+            ]
         )
 
     def enqueue_part(self, player: Client, channel: str = "#osu") -> None:
@@ -499,17 +533,10 @@ class IrcClient(Client):
         )
         target.away_senders.add(self.id)
 
-    def enqueue_mode(self, channel: Channel) -> None:
-        self.enqueue_command_raw(
-            "MODE",
-            app.session.banchobot.irc_prefix,
-            params=[
-                channel.name,
-                channel.mode(self),
-                self.local_prefix
-            ]
-        )
-
     def enqueue_infringement_length(self, duration_seconds: int) -> None:
         for channel in self.channels:
-            self.enqueue_mode(channel)
+            self.enqueue_command(
+                "MODE",
+                channel.name,
+                f"+q {self.resolve_username(self)}"
+            )
