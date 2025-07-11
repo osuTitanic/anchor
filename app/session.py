@@ -4,6 +4,7 @@ from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
 from .common.database import Postgres
 from .common.storage import Storage
+from .filter import ChatFilter
 from .tasks import Tasks
 
 from typing import Callable, Dict
@@ -46,6 +47,7 @@ logins_per_minute = RequestCounter(window=60)
 
 osu_handlers: Dict[PacketType, Callable] = {}
 irc_handlers: Dict[str, Callable] = {}
+filters = ChatFilter()
 channels = Channels()
 storage = Storage()
 players = Players()
