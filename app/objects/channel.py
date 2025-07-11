@@ -237,8 +237,9 @@ class Channel:
                 message, sender, self, priority=2
             )
 
-        # Filter out sender from the target users
-        users = [user for user in self.users if user != sender]
+        if len(message) > 512:
+            # Limit message size to 512 characters
+            message = message[:497] + '... (truncated)'
 
         # Apply chat filters to the message
         message, timeout = app.session.filters.apply(message)
@@ -246,9 +247,8 @@ class Channel:
         if timeout is not None:
             return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
 
-        if len(message) > 512:
-            # Limit message size to 512 characters
-            message = message[:497] + '... (truncated)'
+        # Filter out sender from the target users
+        users = [user for user in self.users if user != sender]
 
         message_object = Message(
             sender.name,
