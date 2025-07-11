@@ -67,6 +67,10 @@ def setup():
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
     importlib.import_module('app.tasks.multiplayer')
+    
+    app.session.logger.info('Loading filters...')
+    app.session.filters.populate()
+    app.session.logger.info(f'  - {len(app.session.filters)} filters loaded')
 
     # Reset usercount
     usercount.set(1)
