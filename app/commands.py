@@ -189,6 +189,12 @@ def enqueue_restart(ctx: Context):
 
     return [f'Sent server restart packet to {len(app.session.players)} players.']
 
+@system_commands.register(['reloadfilter'], "admin")
+def reload_filter(ctx: Context) -> List[str]:
+    """- Reload the chat filter"""
+    app.session.filters.populate()
+    return [f'Reloaded chat filter with {len(app.session.filters)} filters.']
+
 @system_commands.register(['spectateuser', 'spectate'], "admin")
 def spectate_user(ctx: Context):
     """<name> - Force all online players to spectate a user"""
