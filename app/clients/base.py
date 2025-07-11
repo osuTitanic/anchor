@@ -184,6 +184,9 @@ class Client:
         if self.is_staff:
             return "@"
 
+        if self.silenced:
+            return ""
+
         if self.is_irc:
             return "+"
 
