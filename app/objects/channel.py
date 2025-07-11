@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from app.clients import Client
 
 from app.common.database.repositories import messages
-from app.common.constants.strings import BAD_WORDS
 from app.objects.locks import LockedSet
 from app.common.webhooks import Webhook
 from app.common import officer

@@ -1,10 +1,10 @@
 
 from .objects.collections import Players, Channels, Matches
+from .common.helpers.filter import ChatFilter
 from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
 from .common.database import Postgres
 from .common.storage import Storage
-from .filter import ChatFilter
 from .tasks import Tasks
 
 from typing import Callable, Dict
