@@ -535,4 +535,8 @@ class IrcClient(Client):
 
     def enqueue_infringement_length(self, duration_seconds: int) -> None:
         for channel in self.channels:
-            self.enqueue_mode(channel)
+            self.enqueue_command(
+                "MODE",
+                channel.name,
+                f"+q {self.resolve_username(self)}"
+            )
