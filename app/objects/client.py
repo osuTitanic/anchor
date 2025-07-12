@@ -136,8 +136,10 @@ class OsuClientInformation:
         client_hash: ClientHash,
         utc_offset: int,
         display_city: bool,
-        friendonly_dms: bool
+        friendonly_dms: bool,
+        protocol_version: int | None = None
     ) -> None:
+        self.protocol_version = protocol_version or version.date
         self.friendonly_dms = friendonly_dms
         self.display_city = display_city
         self.utc_offset = utc_offset
@@ -153,29 +155,37 @@ class OsuClientInformation:
         if len(args := line.split('|')) < 2:
             return None
 
+        # Sent in every client version
+        build_version = args[0]
+        utc_offset = int(args[1])
+        custom_protocol_version = None
+
+        # Not sent in every client version
+        client_hash = ClientHash.empty(build_version).string
+        friendonly_dms = '0'
+        display_city = '0'
+
         try:
-            # Sent in every client version
-            build_version = args[0]
-            utc_offset = int(args[1])
-
-            # Not sent in every client version
-            client_hash = ClientHash.empty(build_version).string
-            friendonly_dms = '0'
-            display_city = '0'
-
             display_city = args[2]
             client_hash = args[3]
             friendonly_dms = args[4]
         except (ValueError, IndexError):
             pass
 
+        if len(args) > 5 and args[5].isdigit():
+            # Modded clients can specify a custom protocol
+            # version to make use of newer features - this
+            # is not a feature on the official clients
+            custom_protocol_version = int(args[5])
+
         try:
             return OsuClientInformation(
                 ClientVersion.from_string(build_version),
                 ClientHash.from_string(client_hash),
                 utc_offset,
-                display_city = display_city == "1",
-                friendonly_dms = friendonly_dms == "1"
+                display_city=display_city == "1",
+                friendonly_dms=friendonly_dms == "1",
+                protocol_version=custom_protocol_version
             )
         except (ValueError, TypeError, IndexError):
             pass

@@ -84,7 +84,7 @@ class OsuClient(Client):
         info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
 
         # Select the correct client/io object
-        self.io = chio.select_client(info.version.date)
+        self.io = chio.select_client(info.protocol_version)
 
         # Send protocol version
         self.enqueue_packet(

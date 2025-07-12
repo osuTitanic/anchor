@@ -220,7 +220,7 @@ class Match:
                 # NOTE: Clients in version b323 and below don't have the
                 #       MATCH_LOAD_COMPLETE packet so we can just ignore them
                 slot.status == SlotStatus.Playing and
-                slot.player.info.version.date > 323
+                slot.player.info.protocol_version > 323
             )
         ]
 
