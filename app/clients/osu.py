@@ -16,6 +16,7 @@ from app.common.constants import strings
 from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
+from app.tasks.logins import manager as login_manager
 from app.objects.client import OsuClientInformation
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
@@ -98,7 +99,7 @@ class OsuClient(Client):
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
 
-            if not bcrypt.checkpw(password.encode(), user.bcrypt.encode()):
+            if not login_manager.check_password(password, user.bcrypt):
                 self.logger.warning('Login Failed: Authentication error')
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
@@ -111,6 +112,7 @@ class OsuClient(Client):
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+            self.object.stats
 
             # Reload permissions
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
