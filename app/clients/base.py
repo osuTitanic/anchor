@@ -133,7 +133,7 @@ class Client:
     def current_stats(self) -> DBStats | None:
         return (
             self.object.stats[self.status.mode.value]
-            if self.object else None
+            if self.object and self.object.stats else None
         )
 
     @property
