@@ -44,6 +44,10 @@ class Channel:
         self.users: LockedSet["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
         self.created_at = time.time()
+        self.webhook_enabled = (
+            config.CHAT_WEBHOOK_URL and
+            name in config.CHAT_WEBHOOK_CHANNELS
+        )
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -131,10 +135,7 @@ class Channel:
             user.enqueue_message_object(message)
 
     def broadcast_message_to_webhook(self, message: Message) -> None:
-        if not config.CHAT_WEBHOOK_URL:
-            return
-
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        if not self.webhook_enabled:
             return
 
         # Prevent @ mentions from being parsed as mentions
@@ -234,7 +235,7 @@ class Channel:
             # A command was executed
             return app.session.tasks.do_later(
                 app.session.banchobot.process_and_send_response,
-                message, sender, self, priority=2
+                message, sender, self, priority=3
             )
 
         if len(message) > 512:
@@ -277,10 +278,7 @@ class Channel:
             priority=4
         )
 
-        if not config.CHAT_WEBHOOK_URL:
-            return
-
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        if not self.webhook_enabled:
             return
 
         app.session.tasks.do_later(
@@ -350,10 +348,7 @@ class Channel:
             priority=2
         )
 
-        if not config.CHAT_WEBHOOK_URL or not submit_to_webhook:
-            return
-
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        if not self.webhook_enabled or not submit_to_webhook:
             return
 
         app.session.tasks.do_later(

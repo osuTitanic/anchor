@@ -145,7 +145,7 @@ def send_private_message(sender: OsuClient, message: Message):
     if has_command_prefix or target is session.banchobot:
         return session.tasks.do_later(
             session.banchobot.process_and_send_response,
-            parsed_message, sender, target, priority=2
+            parsed_message, sender, target, priority=3
         )
 
     if len(message.content) > 512:

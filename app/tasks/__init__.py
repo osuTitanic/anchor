@@ -25,7 +25,7 @@ class Tasks:
 
         # Initialize "do later" queue which offloads tasks
         # that don't need to be executed immediately
-        self.do_later_workers = max(1, config.BANCHO_WORKERS // 2)
+        self.do_later_workers = max(1, config.BANCHO_WORKERS // 3)
         self.do_later_executor = ThreadPoolExecutor(max_workers=self.do_later_workers)
         self.do_later_futures: List[Future] = []
         self.do_later_queue = PriorityQueue()

@@ -1341,7 +1341,7 @@ def report(ctx: Context) -> List | None:
         target.id,
         ctx.player.id,
         reason,
-        priority=3
+        priority=4
     )
 
     return ['Chat moderators have been alerted. Thanks for your help.']
@@ -1516,7 +1516,7 @@ def set_preferred_ranking(ctx: Context):
         users.update,
         ctx.player.id,
         {"preferred_ranking": ranking},
-        priority=1
+        priority=4
     )
 
     return [f'Your ranking was set to "{ranking}".']
