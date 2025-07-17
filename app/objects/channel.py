@@ -131,8 +131,26 @@ class Channel:
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
+        if "\n" in message.content:
+            return self.handle_multiline_broadcast(message, users)
+
         for user in users:
             user.enqueue_message_object(message)
+
+    def handle_multiline_broadcast(self, message: Message, users: List["Client"]) -> None:
+        message_objects = [
+            Message(
+                message.sender,
+                line,
+                message.target,
+                message.sender_id
+            )
+            for line in message.content.splitlines()
+        ]
+
+        for user in users:
+            for object in message_objects:
+                user.enqueue_message_object(object)
 
     def broadcast_message_to_webhook(self, message: Message) -> None:
         if not self.webhook_enabled:
@@ -160,7 +178,7 @@ class Channel:
             (p for p in self.users if p.id == client.id and p != client),
             None
         )
-        
+
         # If another player is already in
         # the channel, no need to broadcast
         if other_player is not None:

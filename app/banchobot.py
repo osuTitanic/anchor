@@ -126,7 +126,10 @@ class BanchoBot(IrcClient):
         if not response:
             return
 
-        # Send to others, if command is not hidden
+        # Update BanchoBot's activity timestamp
+        self.update_activity()
+
+        # Send to all users in the channel, if command is not hidden
         if not command.hidden and context.target.is_channel:
             context.target.send_message(
                 context.player,
@@ -134,18 +137,16 @@ class BanchoBot(IrcClient):
                 ignore_commands=True,
                 do_later=False
             )
-
-            for message in response:
-                context.target.send_message(
-                    self, message,
-                    ignore_commands=True,
-                    do_later=False
-                )
-
+            context.target.send_message(
+                self, "\n".join(response),
+                ignore_commands=True,
+                do_later=False
+            )
             return
 
+        # The command is hidden, so we send it only to the player
         context.player.logger.info(f'[{context.player.name}]: {context.message}')
-        context.player.logger.info(f'[{self.name}]: {", ".join(response)}')
+        context.player.logger.info(f'[{self.name}]: {"\n".join(response)}')
 
         target_name = (
             context.target.name
@@ -156,7 +157,6 @@ class BanchoBot(IrcClient):
         if type(context.target) is MultiplayerChannel:
             target_name = context.target.resolve_name(context.player)
 
-        # Send to sender only
         for message in response:
             context.player.enqueue_message_object(
                 Message(
@@ -165,18 +165,17 @@ class BanchoBot(IrcClient):
                 )
             )
 
+        # Check if we are in DMs
         if context.target is not self:
             return
 
-        # Store request/responses in database
+        # Store DM request/responses in database
         app.session.tasks.do_later(
             self.store_to_database,
             context,
             response,
             priority=4
         )
-
-        self.update_activity()
 
     def store_to_database(self, context: Context, response: List[str]) -> None:
         with app.session.database.managed_session() as session:
