@@ -10,6 +10,7 @@ from typing import (
 )
 
 from app.protocols.osu.http import HttpOsuClient
+from app.common.cache import usercount
 from app.clients.base import Client
 from app.clients.osu import OsuClient
 from app.clients.irc import IrcClient
@@ -227,6 +228,9 @@ class Players(MutableMapping[int | str, Client]):
             if mode == p.status.mode
             and rank == p.rankings.get('global')
         ]
+
+    def update_usercount(self) -> None:
+        return usercount.set(len(self))
 
     def send_packet(self, packet: Enum, *args) -> None:
         for p in self.osu_clients:

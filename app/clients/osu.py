@@ -258,8 +258,10 @@ class OsuClient(Client):
         app.session.players.add(self)
 
         # Update usercount & login queue status
-        user_count = len(app.session.players)
-        usercount.set(user_count)
+        app.session.tasks.do_later(
+            app.session.players.update_usercount,
+            priority=4
+        )
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -354,9 +356,15 @@ class OsuClient(Client):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        usercount.set(len(app.session.players))
-        status.delete(self.id)
-        self.update_activity()
+        def update_cache():
+            usercount.set(len(app.session.players))
+            status.delete(self.id)
+            users.update(self.id, {'latest_activity': datetime.now()})
+
+        app.session.tasks.do_later(
+            update_cache,
+            priority=4
+        )
 
         if self.is_tourney_client:
             # Clear any remaining tourney clients, if there are any
@@ -372,8 +380,11 @@ class OsuClient(Client):
                 QuitState.OsuRemaining
             )
 
-        user_quit = UserQuit(self, quit_state)
-        app.session.players.send_user_quit(user_quit)
+        app.session.tasks.do_later(
+            app.session.players.send_user_quit,
+            UserQuit(self, quit_state),
+            priority=2
+        )
 
     def is_valid_client(self, session: Session | None = None) -> bool:
         valid_identifiers = (
