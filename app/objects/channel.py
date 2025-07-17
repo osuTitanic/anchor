@@ -41,7 +41,7 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-        self.users: LockedSet["Client"] = LockedSet()
+        self.users: Set["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
         self.created_at = time.time()
         self.webhook_enabled = (
@@ -117,7 +117,7 @@ class Channel:
         client.channels.add(self)
         self.users.add(client)
         self.logger.info(f'{client.name} joined')
-        self.broadcast_join(client)
+        app.session.tasks.do_later(self.broadcast_join, client)
 
         if not no_response:
             client.enqueue_channel_join_success(self.display_name)
@@ -126,7 +126,7 @@ class Channel:
         client.channels.discard(self)
         self.users.discard(client)
         self.logger.info(f'{client.name} left')
-        self.broadcast_part(client)
+        app.session.tasks.do_later(self.broadcast_part, client)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
