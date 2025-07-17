@@ -25,6 +25,22 @@ class HttpOsuClient(OsuClient):
     def connected(self) -> bool:
         return self.token != ""
 
+    def on_login_received(
+        self,
+        username: str,
+        password: str,
+        client_data: str
+    ) -> None:
+        self.token = str(uuid.uuid4())
+        super().on_login_received(username, password, client_data)
+
+        if not self.logged_in:
+            self.token = ""
+
+    def close_connection(self, reason: str = "") -> None:
+        super().close_connection(reason)
+        self.token = ""
+
     def enqueue_packet(self, packet, *args):
         data = self.io.write_packet_to_bytes(packet, *args)
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
@@ -43,22 +59,6 @@ class HttpOsuClient(OsuClient):
                 break
 
         return data
-
-    def on_login_received(
-        self,
-        username: str,
-        password: str,
-        client_data: str
-    ) -> None:
-        self.token = str(uuid.uuid4())
-        super().on_login_received(username, password, client_data)
-
-        if not self.logged_in:
-            self.token = ""
-
-    def close_connection(self, reason: str = "") -> None:
-        super().close_connection(reason)
-        self.token = ""
 
 class HttpOsuHandler(Resource):
     isLeaf = True

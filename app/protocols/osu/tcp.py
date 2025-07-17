@@ -58,7 +58,6 @@ class TcpOsuClient(OsuClient, Protocol):
         Will handle the initial login request and then switch to
         packetDataReceived to handle bancho packets.
         """
-
         if data.startswith(b'GET /'):
             self.handleHttpRequest(data)
             return

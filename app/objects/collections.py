@@ -300,6 +300,7 @@ class Channels(Dict[str, Channel]):
 
         for p in c.users:
             p.enqueue_channel_revoked(c.display_name)
+            p.channels.discard(c)
 
         if c.name in self:
             del self[c.name]
