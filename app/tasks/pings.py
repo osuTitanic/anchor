@@ -7,8 +7,8 @@ import app
 
 PING_INTERVAL_IRC = 60
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 15
-PING_TIMEOUT_OSU = 180
+PING_INTERVAL_OSU = 10
+PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
 def osu_tcp_pings() -> None:
@@ -16,12 +16,12 @@ def osu_tcp_pings() -> None:
     This task will handle client pings and timeouts for tcp & ws clients.
     Pings are required for tcp clients, to keep them connected.
     """
-    targets = (
-        app.session.players.tcp_osu_clients +
-        app.session.players.ws_osu_clients
-    )
+    targets = {'tcp', 'ws'}
 
-    for player in targets:
+    for player in app.session.players.osu_clients:
+        if player.protocol not in targets:
+            continue
+
         player.enqueue_packet(PacketType.BanchoPing)
         last_response = (time.time() - player.last_response)
 
