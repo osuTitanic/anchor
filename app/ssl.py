@@ -1,5 +1,5 @@
 
-from config import SSL_CERTFILE, SSL_KEYFILE
+from config import SSL_CERTFILE, SSL_KEYFILE, SSL_VERIFY_FILE
 from twisted.internet import reactor
 
 def setup(min_protocol: int):
@@ -17,6 +17,10 @@ def setup(min_protocol: int):
     # Set minimum protocol version thats allowed
     context: TwistedSSL.SSL.Context = context_factory._context
     context.set_min_proto_version(min_protocol)
+
+    # Load verify file(s) if provided
+    if SSL_VERIFY_FILE:
+        context.load_verify_locations(SSL_VERIFY_FILE)
 
     # Make tls writes thread-safe
     tls.TLSMemoryBIOProtocol.write = lambda self, data: (

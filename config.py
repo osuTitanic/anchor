@@ -29,6 +29,7 @@ WS_PORT = int(os.environ.get('BANCHO_WS_PORT', 5001))
 IRC_PORT_SSL = int(os.environ.get('BANCHO_IRC_PORT_SSL', 6697))
 SSL_KEYFILE = os.environ.get('BANCHO_SSL_KEYFILE')
 SSL_CERTFILE = os.environ.get('BANCHO_SSL_CERTFILE')
+SSL_VERIFY_FILE = os.environ.get('BANCHO_SSL_VERIFY_FILE')
 SSL_ENABLED = SSL_KEYFILE and SSL_CERTFILE
 
 DOMAIN_NAME = os.environ.get('DOMAIN_NAME')
