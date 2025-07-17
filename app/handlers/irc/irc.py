@@ -16,11 +16,7 @@ def handle_ping_command(
 ) -> None:
     client.enqueue_command_raw(
         "PONG",
-        prefix,
-        params=[
-            f"cho.{DOMAIN_NAME}",
-            *args
-        ]
+        params=args
     )
 
 @register("AWAY")
