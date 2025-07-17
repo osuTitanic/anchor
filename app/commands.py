@@ -211,7 +211,7 @@ def spectate_user(ctx: Context):
         return ['This player is connected via. IRC.']
 
     for player in app.session.players.osu_clients:
-        if player.is_admin or player.is_tourney_client:
+        if player.is_staff or player.is_tourney_client:
             continue
 
         if player is target:
@@ -260,7 +260,7 @@ def is_host(ctx: Context) -> bool:
 
     return (ctx.player is match.host) or \
            (ctx.player.id in match.referee_players) or \
-           (ctx.player.is_admin)
+           (ctx.player.object.is_admin)
 
 @mp_commands.condition
 def inside_chat(ctx: Context) -> bool:
@@ -777,7 +777,7 @@ def mp_force_invite(ctx: Context):
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:])
 
-    if not ctx.player.is_admin and not match.persistent:
+    if not ctx.player.object.is_admin and not match.persistent:
         return ['You are not allowed to force invite players.']
 
     if not (target := app.session.players.by_name_safe(name)):
