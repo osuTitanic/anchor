@@ -7,7 +7,6 @@ from app.tasks import logins
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
-from twisted.internet import reactor
 from twisted.web import server
 from queue import Queue, Empty
 
@@ -137,13 +136,6 @@ class HttpOsuHandler(Resource):
 
         for packet, data in packets:
             player.on_packet_received(packet, data)
-            
-        ip_address = ip.resolve_ip_address_twisted(request)
-
-        # Update player's geolocation info if ip has changed
-        if player.address != ip_address:
-            player.address = ip_address
-            player.update_geolocation()
 
         return player.dequeue()
 
