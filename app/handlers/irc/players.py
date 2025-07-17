@@ -68,24 +68,24 @@ def handle_whois_command(
 
     client.enqueue_command(
         irc.RPL_WHOISUSER,
-        target.irc_prefix + target.underscored_name,
+        target.underscored_name,
         target.url,
         '*',
         f':{target.url}'
     )
     client.enqueue_command(
         irc.RPL_WHOISCHANNELS,
-        target.irc_prefix + target.underscored_name,
+        target.underscored_name,
         f":{' '.join(channel_names)}"
     )
     client.enqueue_command(
         irc.RPL_WHOISSERVER,
-        target.irc_prefix + target.underscored_name,
+        target.underscored_name,
         f'cho.{config.DOMAIN_NAME}',
         f':anchor',
     )
     client.enqueue_command(
         irc.RPL_ENDOFWHOIS,
-        target.irc_prefix + target.underscored_name,
+        target.underscored_name,
         f":End of /WHOIS list."
     )
