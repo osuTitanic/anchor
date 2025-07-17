@@ -248,8 +248,13 @@ class Channel:
         if timeout is not None:
             return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
 
-        # Filter out sender from the target users
-        users = [user for user in self.users if user != sender]
+        app.session.tasks.do_later(
+            messages.create,
+            sender.name,
+            self.name,
+            message[:512],
+            priority=4
+        )
 
         message_object = Message(
             sender.name,
@@ -257,6 +262,9 @@ class Channel:
             self.display_name,
             sender.id
         )
+
+        # Filter out sender from the target users
+        users = [user for user in self.users if user != sender]
 
         if not do_later:
             self.broadcast_message(message_object, users)
@@ -268,14 +276,6 @@ class Channel:
             message_object,
             users=users,
             priority=2
-        )
-
-        app.session.tasks.do_later(
-            messages.create,
-            sender.name,
-            self.name,
-            message[:512],
-            priority=4
         )
 
         if not self.webhook_enabled:
