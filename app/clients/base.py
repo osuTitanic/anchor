@@ -259,10 +259,13 @@ class Client:
             self.presence.permissions = Permissions(bancho_permissions)
             return self.object
 
-    def reload_rank(self) -> int:
+    def reload_rank(self) -> None:
         """Check if redis rank desynced from database and update it, if needed"""
         cached_rank = leaderboards.global_rank(self.id, self.status.mode.value)
         self.rankings['global'] = cached_rank
+        
+        if not self.current_stats:
+            return
 
         if cached_rank != self.current_stats.rank:
             self.current_stats.rank = cached_rank
