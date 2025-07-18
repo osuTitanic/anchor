@@ -126,7 +126,7 @@ class Tasks:
         thread.start()
         return deferred
 
-    def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
+    def defer_to_reactor(self, func: Callable, *args, delay: int = 0, **kwargs) -> Deferred:
         """
         Internal function used to defer a function call to the reactor thread.
         Note that this will block the reactor until the function completes.
@@ -139,7 +139,7 @@ class Tasks:
                 deferred.errback(e)
 
         deferred = Deferred()
-        reactor.callLater(0, run, deferred, func, *args, **kwargs)
+        reactor.callLater(delay, run, deferred, func, *args, **kwargs)
         return deferred
 
     def defer_to_reactor_thread(self, func: Callable, *args, **kwargs) -> Deferred:
