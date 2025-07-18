@@ -359,12 +359,23 @@ class Client:
 
     def update_activity(self) -> None:
         """Updates the player's latest activity inside the database"""
-        app.session.tasks.do_later(
-            users.update,
+        users.update(
             user_id=self.id,
-            updates={'latest_activity': datetime.now()},
+            updates={'latest_activity': datetime.now()}
+        )
+
+    def update_activity_later(self) -> None:
+        """Schedules the player's last activity update"""
+        app.session.tasks.do_later(
+            self.update_activity,
             priority=5
         )
+        
+    def update_cache(self) -> None:
+        self.update_leaderboard_stats()
+        self.update_status_cache()
+        self.reload_rankings()
+        self.reload_rank()
 
     def close_connection(self, reason: str = "") -> None:
         """Closes the connection to the client"""

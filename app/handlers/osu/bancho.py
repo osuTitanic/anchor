@@ -26,7 +26,7 @@ def pong(client: OsuClient):
 
 @register(PacketType.OsuExit)
 def exit(client: OsuClient, updating: bool):
-    client.update_activity()
+    client.update_activity_later()
     client.close_connection()
 
 @register(PacketType.OsuErrorReport)

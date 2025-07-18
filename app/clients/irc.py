@@ -130,24 +130,21 @@ class IrcClient(Client):
                 session=session
             )
 
-            # Update cache
-            self.update_leaderboard_stats()
-            self.update_status_cache()
-            self.reload_rankings()
-            self.reload_rank()
+            # Update rank, status & rankings
+            self.update_cache()
 
         self.logged_in = True
         self.on_login_success()
 
     def on_login_success(self) -> None:
-        self.update_activity()
+        self.update_activity_later()
         self.send_welcome_sequence()
         self.enqueue_infringement_length(self.remaining_silence)
 
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount
+        # Update cached usercount
         app.session.tasks.do_later(
             app.session.players.update_usercount,
             priority=4

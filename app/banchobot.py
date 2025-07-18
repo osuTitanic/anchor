@@ -127,7 +127,7 @@ class BanchoBot(IrcClient):
             return
 
         # Update BanchoBot's activity timestamp
-        self.update_activity()
+        self.update_activity_later()
 
         # Send to all users in the channel, if command is not hidden
         if not command.hidden and context.target.is_channel:

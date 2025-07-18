@@ -217,11 +217,8 @@ class OsuClient(Client):
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
-            # Update cache
-            self.update_leaderboard_stats()
-            self.update_status_cache()
-            self.reload_rankings()
-            self.reload_rank()
+            # Update rank, status & rankings
+            self.update_cache()
 
         self.logged_in = True
         self.on_login_success()
@@ -230,7 +227,7 @@ class OsuClient(Client):
         self.spectator_chat = SpectatorChannel(self)
         app.session.channels.add(self.spectator_chat)
 
-        self.update_activity()
+        self.update_activity_later()
         self.enqueue_packet(PacketType.BanchoLoginReply, self.id)
         self.enqueue_packet(PacketType.BanchoLoginPermissions, self.permissions)
         self.enqueue_packet(PacketType.BanchoFriendsList, self.friends)
@@ -257,7 +254,7 @@ class OsuClient(Client):
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount & login queue status
+        # Update cached usercount
         app.session.tasks.do_later(
             app.session.players.update_usercount,
             priority=4
