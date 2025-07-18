@@ -274,13 +274,12 @@ class Players(MutableMapping[int | str, Client]):
 from .channel import Channel
 
 class Channels(Dict[str, Channel]):
+    def __init__(self) -> None:
+        self.public: Set[Channel] = set()
+        super().__init__()
+
     def __repr__(self) -> str:
         return '<Channels>'
-
-    @property
-    def public(self) -> List[Channel]:
-        """All publicly available channels"""
-        return [c for c in self.values() if c.public]
 
     def by_name(self, name: str) -> Channel | None:
         """Get a channel by name"""
@@ -290,6 +289,9 @@ class Channels(Dict[str, Channel]):
         """Append a channel to the collection"""
         if not c:
             return
+
+        if c.public:
+            self.public.add(c)
 
         self[c.name] = c
 
@@ -301,6 +303,9 @@ class Channels(Dict[str, Channel]):
         for p in c.users:
             p.enqueue_channel_revoked(c.display_name)
             p.channels.discard(c)
+
+        if c.public:
+            self.public.discard(c)
 
         if c.name in self:
             del self[c.name]
