@@ -263,8 +263,10 @@ class Channel:
         # Apply chat filters to the message
         message, timeout = app.session.filters.apply(message)
 
-        if timeout is not None:
-            return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+        if timeout is not None and not is_banchobot:
+            sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+            officer.call(f"Message: {message}")
+            return
 
         app.session.tasks.do_later(
             messages.create,

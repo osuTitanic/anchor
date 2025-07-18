@@ -137,6 +137,7 @@ def send_private_message(sender: OsuClient, message: Message):
 
     if timeout is not None:
         sender.silence(timeout, 'Inappropriate discussion in pms')
+        officer.call(f"Message: {message.content}")
         return False
 
     parsed_message = message.content.strip()
