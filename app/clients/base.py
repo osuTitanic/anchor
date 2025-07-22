@@ -198,7 +198,14 @@ class Client:
 
     @property
     def avatar_filename(self) -> str:
-        return f"{self.id}_000.png"
+        return f"{self.id}_{self.avatar_hash}.png"
+
+    @property
+    def avatar_hash(self) -> str:
+        return (
+            self.object.avatar_hash or "unknown"
+            if self.object else "unknown"
+        )
 
     @property
     def is_staff(self) -> bool:
