@@ -105,6 +105,7 @@ class Channel:
             # Player does not have read access
             self.logger.warning(f'{client} tried to join channel but does not have read access.')
             client.enqueue_channel_revoked(self.display_name)
+            return
 
         if client in self.users and not client.is_tourney_client:
             # Player has already joined the channel
