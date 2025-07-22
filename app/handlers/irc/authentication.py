@@ -1,6 +1,4 @@
 
-from config import OSU_IRC_ENABLED
-from typing import List, Optional, Callable
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
 from app import session
@@ -22,11 +20,6 @@ def handle_user_command(
         username == "OSU" and
         prefix == ""
     )
-
-    if client.is_osu and not OSU_IRC_ENABLED:
-        client.enqueue_banchobot_message("osu! IRC connections have been disabled. Please check back later!")
-        client.close_connection("osu! IRC is disabled")
-        return
 
 @register("PASS")
 @ensure_unauthenticated

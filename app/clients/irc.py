@@ -88,6 +88,11 @@ class IrcClient(Client):
                 self.on_login_failed(LoginError.UserInactive)
                 return
 
+            if self.is_osu and not config.OSU_IRC_ENABLED and not self.has_preview_access:
+                self.enqueue_banchobot_message("osu! IRC connections have been disabled. Please check back later!")
+                self.close_connection("osu! IRC is disabled")
+                return
+
             if config.MAINTENANCE:
                 if not self.is_staff:
                     # Bancho is in maintenance mode
