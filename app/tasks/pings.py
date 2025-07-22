@@ -71,7 +71,7 @@ def irc_pings() -> None:
         if player.protocol == 'internal':
             continue
 
-        player.enqueue_command_raw('PING', params=[f'cho.{config.DOMAIN_NAME}'])
+        player.enqueue_command_raw("PING", "", [f"cho.{config.DOMAIN_NAME}"])
         last_response = (time.time() - player.last_response)
 
         if last_response >= PING_TIMEOUT_IRC:
