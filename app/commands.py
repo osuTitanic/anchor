@@ -735,7 +735,7 @@ def mp_invite(ctx: Context):
     if name == app.session.banchobot.name:
         return [bot_invites[random.randrange(0, len(bot_invites))]]
 
-    if not (target := app.session.players.by_name_safe(name)):
+    if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find the player "{name}".']
 
     if target.is_irc:
@@ -780,7 +780,7 @@ def mp_force_invite(ctx: Context):
     if not ctx.player.object.is_admin and not match.persistent:
         return ['You are not allowed to force invite players.']
 
-    if not (target := app.session.players.by_name_safe(name)):
+    if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find the player "{name}".']
 
     if target.is_irc:
@@ -881,7 +881,7 @@ def mp_ban(ctx: Context):
     if name == ctx.player.name:
         return ["no."]
 
-    if not (player := app.session.players.by_name_safe(name)):
+    if not (player := app.session.players.by_name_or_id(name)):
         return [f'Could not find the player "{name}".']
 
     match.ban_player(player)
@@ -902,7 +902,7 @@ def mp_unban(ctx: Context):
     match: Match = ctx.get_context_object('match')
     name = ' '.join(ctx.args[0:]).strip()
 
-    if not (player := app.session.players.by_name_safe(name)):
+    if not (player := app.session.players.by_name_or_id(name)):
         return [f'Could not find the player "{name}".']
 
     if player.id not in match.banned_players:
@@ -1156,7 +1156,7 @@ def mp_addref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name_safe(name)):
+    if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
     if target.id in match.referee_players:
@@ -1199,7 +1199,7 @@ def mp_removeref(ctx: Context):
 
     name = ' '.join(ctx.args[0:])
 
-    if not (target := app.session.players.by_name_safe(name)):
+    if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
     if target.id not in match.referee_players:

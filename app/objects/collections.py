@@ -190,6 +190,18 @@ class Players(MutableMapping[int | str, Client]):
             self.irc_safe_name_mapping.get(safe_name, None)
         )
 
+    def by_name_or_id(self, input: str) -> Client | None:
+        """Get a player by name or id"""
+        if client := self.by_name_safe(input):
+            return client
+
+        id_string = input.removeprefix('#')
+
+        if not id_string.isdigit():
+            return None
+
+        return self.by_id(int(id_string))            
+
     def by_token(self, token: str) -> Client | None:
         """Get an osu! player by token"""
         return self.osu_token_mapping.get(token, None)
