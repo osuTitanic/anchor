@@ -7,10 +7,10 @@ import app
 
 PING_INTERVAL_IRC = 60
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 10
+PING_INTERVAL_OSU = 8
 PING_TIMEOUT_OSU = 260
 
-@app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
+@app.session.tasks.submit(interval=PING_INTERVAL_OSU // 2, threaded=True)
 def osu_tcp_pings() -> None:
     """
     This task will handle client pings and timeouts for tcp & ws clients.
