@@ -7,7 +7,7 @@ import app
 
 PING_INTERVAL_IRC = 60
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 8
+PING_INTERVAL_OSU = 10
 PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU // 2, threaded=True)
@@ -30,7 +30,7 @@ def osu_tcp_pings() -> None:
 
         last_response = (time.time() - player.last_response)
 
-        if last_response < PING_TIMEOUT_OSU:
+        if last_response < PING_INTERVAL_OSU:
             continue
 
         player.enqueue_packet(PacketType.BanchoPing)
