@@ -16,18 +16,24 @@ def osu_tcp_pings() -> None:
     This task will handle client pings and timeouts for tcp & ws clients.
     Pings are required for tcp clients, to keep them connected.
     """
-    timeouts_enabled = app.session.packets_per_minute.rate < 100000
     targets = {'tcp', 'ws'}
 
     for player in app.session.players.osu_clients:
         if player.protocol not in targets:
             continue
 
-        player.enqueue_packet(PacketType.BanchoPing)
+        if not player.connected:
+            # juuuust to make sure we don't have any dangling players
+            player.logger.warning('Tried to ping player, but was not connected?')
+            player.close_connection()
+            continue
+
         last_response = (time.time() - player.last_response)
 
-        if not timeouts_enabled:
+        if last_response < PING_TIMEOUT_OSU:
             continue
+
+        player.enqueue_packet(PacketType.BanchoPing)
 
         if last_response >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
@@ -39,11 +45,6 @@ def osu_http_pings() -> None:
     Http clients do not require pings, but we still want to
     check if they are still connected.
     """
-    timeouts_enabled = app.session.packets_per_minute.rate < 100000
-    
-    if not timeouts_enabled:
-        return
-
     for player in app.session.players.http_osu_clients:
         last_response = (time.time() - player.last_response)
 
@@ -62,11 +63,6 @@ def irc_pings() -> None:
     This task will handle client pings and timeouts for irc clients.
     Pings are required for irc clients, to keep them connected.
     """
-    timeouts_enabled = app.session.packets_per_minute.rate < 100000
-
-    if not timeouts_enabled:
-        return
-
     for player in app.session.players.irc_clients:
         if player.protocol == 'internal':
             continue
