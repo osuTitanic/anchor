@@ -138,25 +138,18 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mods = status.mods
     client.status.mode = status.mode
     client.status.text = status.text
-
     session.tasks.do_later(
         on_status_change,
-        client, mode_changed,
-        priority=3
+        client, mode_changed
     )
-
-    if mode_changed:
-        # We need to wait for the "on_status_change"
-        # to update the client object with the new mode
-        return
-    
-    distribute_stats(client)
 
 def on_status_change(client: OsuClient, mode_changed: bool):
     if mode_changed:
         client.update_object(client.status.mode.value)
         client.reload_rankings()
-        distribute_stats(client)
+
+    # Enqueue stats to relevant clients
+    distribute_stats(client)
 
     # Update cache & check if rank changed
     client.update_status_cache()
