@@ -124,6 +124,11 @@ def stats_request(client: OsuClient, players: List[int]):
 
         client.enqueue_stats(target)
 
+@register(PacketType.OsuStatusUpdateRequest)
+def request_status(client: OsuClient):
+    client.reload_rank()
+    client.enqueue_stats(client)
+
 @register(PacketType.OsuUserStatus)
 def change_status(client: OsuClient, status: UserStatus):
     mode_changed = status.mode != client.status.mode
@@ -133,17 +138,31 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mods = status.mods
     client.status.mode = status.mode
     client.status.text = status.text
-    session.tasks.do_later(process_update, client, mode_changed)
 
-def process_update(client: OsuClient, mode_changed: bool = False):
+    session.tasks.do_later(
+        on_status_change,
+        client, mode_changed,
+        priority=3
+    )
+
+    if mode_changed:
+        # We need to wait for the "on_status_change"
+        # to update the client object with the new mode
+        return
+    
+    distribute_stats(client)
+
+def on_status_change(client: OsuClient, mode_changed: bool):
+    if mode_changed:
+        client.update_object(client.status.mode.value)
+        client.reload_rankings()
+        distribute_stats(client)
+
     # Update cache & check if rank changed
     client.update_status_cache()
     client.reload_rank()
 
-    if mode_changed:
-        client.update_object(client.status.mode.value)
-        client.reload_rankings()
-
+def distribute_stats(client: OsuClient):
     # Enqueue stats to themselves
     client.enqueue_stats(client)
 
@@ -153,8 +172,3 @@ def process_update(client: OsuClient, mode_changed: bool = False):
 
     # Enqueue stats to clients that don't request them automatically
     session.players.send_stats(client)
-
-@register(PacketType.OsuStatusUpdateRequest)
-def request_status(client: OsuClient):
-    client.reload_rank()
-    client.enqueue_stats(client)
