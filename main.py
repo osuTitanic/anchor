@@ -80,6 +80,19 @@ def setup():
         player_id = key.split(':')[-1]
         status.delete(player_id)
 
+def setup_tracy():
+    if not config.DEBUG:
+        return
+    
+    try:
+        import pytracy
+    except ImportError:
+        app.session.logger.warning('"pytracy" module is not installed, tracy will not be available')
+        return
+    
+    pytracy.enable_tracing(True)
+    app.session.logger.info('Tracy profiler enabled')
+
 def before_shutdown(*args):
     for player in app.session.players.tcp_osu_clients:
         # Enqueue server restart packet to all players
@@ -137,6 +150,7 @@ def setup_servers():
 def main():
     reactor.addSystemEventTrigger('before', 'startup', setup)
     reactor.addSystemEventTrigger('before', 'startup', setup_servers)
+    reactor.addSystemEventTrigger('after', 'startup', setup_tracy)
     reactor.addSystemEventTrigger('after', 'startup', app.session.tasks.start)
     reactor.addSystemEventTrigger('after', 'shutdown', shutdown)
     reactor.run()
