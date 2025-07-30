@@ -155,6 +155,10 @@ def on_status_change(client: OsuClient, mode_changed: bool):
     client.update_status_cache()
     client.reload_rank()
 
+    if client.status.beatmap_id:
+        # Cache beatmap to make score submission faster
+        session.storage.cache_beatmap(client.status.beatmap_id)
+
 def distribute_stats(client: OsuClient):
     # Enqueue stats to themselves
     client.enqueue_stats(client)
