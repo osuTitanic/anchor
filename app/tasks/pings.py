@@ -22,6 +22,9 @@ def osu_tcp_pings() -> None:
         if player.protocol not in targets:
             continue
 
+        if not player.logged_in:
+            continue
+
         if not player.connected:
             # juuuust to make sure we don't have any dangling players
             player.logger.warning('Tried to ping player, but was not connected?')
