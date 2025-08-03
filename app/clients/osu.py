@@ -452,8 +452,9 @@ class OsuClient(Client):
             return
 
         multiaccounting_lock = app.session.redis.get(f'multiaccounting:{self.id}')
+        was_notified = int(multiaccounting_lock or b'0') == 1
 
-        if multiaccounting_lock:
+        if was_notified:
             # User has already received a notification about multiaccounting
             # This "lock" will reset after 24 hours, giving them the notification again
             self.logger.warning('Multiaccounting lock found, skipping check.')
