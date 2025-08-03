@@ -452,19 +452,28 @@ class OsuClient(Client):
             return
 
         multiaccounting_lock = app.session.redis.get(f'multiaccounting:{self.id}')
-        was_notified = int(multiaccounting_lock or b'0') == 1
+        was_notified = multiaccounting_lock == b'1'
 
         if was_notified:
             # User has already received a notification about multiaccounting
-            # This "lock" will reset after 24 hours, giving them the notification again
+            # This "lock" will reset after 6 hours, giving them the notification again
             self.logger.warning('Multiaccounting lock found, skipping check.')
             return
 
         # Filter out current user
         other_matches = [match for match in matches if match.user_id != self.id]
         banned_matches = [match for match in other_matches if match.banned]
-        
+
         if not other_matches:
+            return
+
+        # Find all matched users
+        matched_user_ids = {match.user_id for match in other_matches}
+        oldest_user_id = min(matched_user_ids | {self.id})
+
+        if self.id == oldest_user_id:
+            # Allow user to use their oldest account
+            self.logger.warning('User is using their oldest account, skipping multiaccounting check.')
             return
 
         if banned_matches and not self.is_verified:
@@ -482,6 +491,7 @@ class OsuClient(Client):
             ]
 
             if matching_adapters or matching_registry_keys:
+                # buh bye, have fun with support tickets
                 self.restrict('Multiaccounting', autoban=True)
                 return
 
@@ -490,11 +500,11 @@ class OsuClient(Client):
         registry_key_verified = clients.is_verified(self.info.hash.uninstall_id, 1, session)
         disk_signature_verified = clients.is_verified(self.info.hash.diskdrive_signature, 2, session)
 
-        # Find all matched users
-        matched_users = {
-            f"https://osu.{config.DOMAIN_NAME}/u/{match.user_id}"
-            for match in other_matches
-        }
+        # Get profile urls of matched users
+        matched_users = (
+            f"https://osu.{config.DOMAIN_NAME}/u/{user_id}"
+            for user_id in matched_user_ids
+        )
 
         report_message = (
             f'Potential multiaccounting for [{self.name}]({self.url}) found:\n'
@@ -529,7 +539,7 @@ class OsuClient(Client):
             )
 
         officer.call(report_message)
-        app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*24)
+        app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*6)
 
         if self.is_verified:
             return
