@@ -435,7 +435,10 @@ class OsuClient(Client):
                 priority=4
             )
 
-            user_matches = [match for match in matches if match.user_id == self.id]
+            user_matches = [
+                match for match in matches
+                if match.user_id == self.id
+            ]
 
             if self.current_stats.playcount > 0 and not user_matches:
                 app.session.tasks.do_later(
@@ -448,8 +451,13 @@ class OsuClient(Client):
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:
             return
 
-        # Reset multiaccounting lock
-        app.session.redis.set(f'multiaccounting:{self.id}', 0)
+        multiaccounting_lock = app.session.redis.get(f'multiaccounting:{self.id}')
+
+        if multiaccounting_lock:
+            # User has already received a notification about multiaccounting
+            # This "lock" will reset after 24 hours, giving them the notification again
+            self.logger.warning('Multiaccounting lock found, skipping check.')
+            return
 
         # Filter out current user
         other_matches = [match for match in matches if match.user_id != self.id]
@@ -457,23 +465,78 @@ class OsuClient(Client):
 
         if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
-            self.restrict('Multiaccounting', autoban=True)
-            return
+            # Check if the user is eligable to be autobanned
+            # A matching disk signature could be a false-positive here, so
+            # we only check adapters and registry keys
+            matching_adapters = [
+                match for match in banned_matches
+                if match.adapters == self.info.hash.adapters_md5
+            ]
+            matching_registry_keys = [
+                match for match in banned_matches
+                if match.unique_id == self.info.hash.uninstall_id
+            ]
+            total_matches = len(matching_adapters) + len(matching_registry_keys)
+
+            if total_matches > 0:
+                self.restrict('Multiaccounting', autoban=True)
+                return
 
         if other_matches:
             # User was detected to be multiaccounting
-            # If user tries to submit a score, they will be restricted
-            # Users who are verified will not be restricted
-            officer.call(
-                f'Multiaccounting detected for "{self.name}": '
-                f'{self.info.hash.string} ({len(other_matches)} matches)'
+            adapters_verified = clients.is_verified(self.info.hash.adapters_md5, 0, session)
+            registry_key_verified = clients.is_verified(self.info.hash.uninstall_id, 1, session)
+            disk_signature_verified = clients.is_verified(self.info.hash.diskdrive_signature, 2, session)
+
+            # Find all matched users
+            matched_users = {
+                f"https://osu.{config.DOMAIN_NAME}/u/{match.user_id}"
+                for match in other_matches
+            }
+
+            report_message = (
+                f'Potential multiaccounting for [{self.name}]({self.url}) found:\n'
+                f'Matched User(s): {" ".join(matched_users)}\n'
             )
+
+            if not adapters_verified:
+                matching_adapters = [
+                    match for match in other_matches
+                    if match.adapters == self.info.hash.adapters_md5
+                ]
+                report_message += (
+                    f'- Adapters: `{self.info.hash.adapters_md5}` ({len(matching_adapters)} matching)\n'
+                )
+                
+            if not registry_key_verified:
+                matching_registry_keys = [
+                    match for match in other_matches
+                    if match.unique_id == self.info.hash.uninstall_id
+                ]
+                report_message += (
+                    f'- Registry Key: `{self.info.hash.uninstall_id}` ({len(matching_registry_keys)} matching)\n'
+                )
+                
+            if not disk_signature_verified:
+                matching_disk_signatures = [
+                    match for match in other_matches
+                    if match.diskdrive_signature == self.info.hash.diskdrive_signature
+                ]
+                report_message += (
+                    f'- Disk Drive Signature: `{self.info.hash.diskdrive_signature}` ({len(matching_disk_signatures)} matching)\n'
+                )
+
+            officer.call(report_message)
+            app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*24)
 
             if self.is_verified:
                 return
 
-            app.session.redis.set(f'multiaccounting:{self.id}', 1)
-            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+            self.enqueue_message(
+                strings.MULTIACCOUNTING_WARNING,
+                app.session.banchobot,
+                app.session.banchobot.name
+            )
 
     def update_status_cache(self) -> None:
         status.update(
