@@ -522,7 +522,7 @@ class OsuClient(Client):
         if not disk_signature_verified:
             matching_disk_signatures = [
                 match for match in other_matches
-                if match.diskdrive_signature == self.info.hash.diskdrive_signature
+                if match.disk_signature == self.info.hash.diskdrive_signature
             ]
             report_message += (
                 f'- Disk Drive Signature: `{self.info.hash.diskdrive_signature}` ({len(matching_disk_signatures)} matching)\n'
