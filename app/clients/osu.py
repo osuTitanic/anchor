@@ -462,6 +462,9 @@ class OsuClient(Client):
         # Filter out current user
         other_matches = [match for match in matches if match.user_id != self.id]
         banned_matches = [match for match in other_matches if match.banned]
+        
+        if not other_matches:
+            return
 
         if banned_matches and not self.is_verified:
             # User tries to log into an account with banned hardware matches
@@ -476,67 +479,65 @@ class OsuClient(Client):
                 match for match in banned_matches
                 if match.unique_id == self.info.hash.uninstall_id
             ]
-            total_matches = len(matching_adapters) + len(matching_registry_keys)
 
-            if total_matches > 0:
+            if matching_adapters or matching_registry_keys:
                 self.restrict('Multiaccounting', autoban=True)
                 return
 
-        if other_matches:
-            # User was detected to be multiaccounting
-            adapters_verified = clients.is_verified(self.info.hash.adapters_md5, 0, session)
-            registry_key_verified = clients.is_verified(self.info.hash.uninstall_id, 1, session)
-            disk_signature_verified = clients.is_verified(self.info.hash.diskdrive_signature, 2, session)
+        # User was found to be multiaccounting (potentially)
+        adapters_verified = clients.is_verified(self.info.hash.adapters_md5, 0, session)
+        registry_key_verified = clients.is_verified(self.info.hash.uninstall_id, 1, session)
+        disk_signature_verified = clients.is_verified(self.info.hash.diskdrive_signature, 2, session)
 
-            # Find all matched users
-            matched_users = {
-                f"https://osu.{config.DOMAIN_NAME}/u/{match.user_id}"
-                for match in other_matches
-            }
+        # Find all matched users
+        matched_users = {
+            f"https://osu.{config.DOMAIN_NAME}/u/{match.user_id}"
+            for match in other_matches
+        }
 
-            report_message = (
-                f'Potential multiaccounting for [{self.name}]({self.url}) found:\n'
-                f'Matched User(s): {" ".join(matched_users)}\n'
+        report_message = (
+            f'Potential multiaccounting for [{self.name}]({self.url}) found:\n'
+            f'Matched User(s): {" ".join(matched_users)}\n'
+        )
+
+        if not adapters_verified:
+            matching_adapters = [
+                match for match in other_matches
+                if match.adapters == self.info.hash.adapters_md5
+            ]
+            report_message += (
+                f'- Adapters: `{self.info.hash.adapters_md5}` ({len(matching_adapters)} matching)\n'
+            )
+            
+        if not registry_key_verified:
+            matching_registry_keys = [
+                match for match in other_matches
+                if match.unique_id == self.info.hash.uninstall_id
+            ]
+            report_message += (
+                f'- Registry Key: `{self.info.hash.uninstall_id}` ({len(matching_registry_keys)} matching)\n'
+            )
+            
+        if not disk_signature_verified:
+            matching_disk_signatures = [
+                match for match in other_matches
+                if match.diskdrive_signature == self.info.hash.diskdrive_signature
+            ]
+            report_message += (
+                f'- Disk Drive Signature: `{self.info.hash.diskdrive_signature}` ({len(matching_disk_signatures)} matching)\n'
             )
 
-            if not adapters_verified:
-                matching_adapters = [
-                    match for match in other_matches
-                    if match.adapters == self.info.hash.adapters_md5
-                ]
-                report_message += (
-                    f'- Adapters: `{self.info.hash.adapters_md5}` ({len(matching_adapters)} matching)\n'
-                )
-                
-            if not registry_key_verified:
-                matching_registry_keys = [
-                    match for match in other_matches
-                    if match.unique_id == self.info.hash.uninstall_id
-                ]
-                report_message += (
-                    f'- Registry Key: `{self.info.hash.uninstall_id}` ({len(matching_registry_keys)} matching)\n'
-                )
-                
-            if not disk_signature_verified:
-                matching_disk_signatures = [
-                    match for match in other_matches
-                    if match.diskdrive_signature == self.info.hash.diskdrive_signature
-                ]
-                report_message += (
-                    f'- Disk Drive Signature: `{self.info.hash.diskdrive_signature}` ({len(matching_disk_signatures)} matching)\n'
-                )
+        officer.call(report_message)
+        app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*24)
 
-            officer.call(report_message)
-            app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*24)
+        if self.is_verified:
+            return
 
-            if self.is_verified:
-                return
-
-            self.enqueue_message(
-                strings.MULTIACCOUNTING_WARNING,
-                app.session.banchobot,
-                app.session.banchobot.name
-            )
+        self.enqueue_message(
+            strings.MULTIACCOUNTING_WARNING,
+            app.session.banchobot,
+            app.session.banchobot.name
+        )
 
     def update_status_cache(self) -> None:
         status.update(
