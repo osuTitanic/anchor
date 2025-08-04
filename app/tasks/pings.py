@@ -7,7 +7,7 @@ import app
 
 PING_INTERVAL_IRC = 60
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 10
+PING_INTERVAL_OSU = 5
 PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
@@ -32,6 +32,7 @@ def osu_tcp_pings() -> None:
             continue
 
         player.enqueue_packet(PacketType.BanchoPing)
+        player.last_ping = time.time()
 
         if last_response >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
