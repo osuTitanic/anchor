@@ -108,6 +108,7 @@ strings = {
     "language-specific": "Please use the appropriate language of the channel you are visiting.\nUsing Romanized words or phrases are not an exception for non-Roman languages such as Japanese.",
     "lazer": "[https://www.youtube.com/watch?v=ut_SOreClcc what is lazer?] It is the codename given to the next major update of osu!.\nGitHub: [https://github.com/ppy/osu ppy/osu] | Download: [https://github.com/ppy/osu/releases ppy/osu/releases]",
     "level": "Your level is based on your total accumulated score. This includes any ranked score, be it a pass or fail. You will gradually increase your level just by playing osu!",
+    "levi": "Levi is the project lead of osu!Titanic private server.",
     "lines": "Please try to keep your sentences on a single line to avoid getting silenced.",
     "link": "To make text link to something, use the following format: [address text], where 'address' is the address you want to link, and 'text' is the text you want to show. [https://osu.ppy.sh/ Just like this!] Don't forget the http:// though.",
     "lobby": "Please use #lobby only for the advertising of osu! multiplayer games. Also, #lobby is a multiple-language channel.\nUse your room's #multiplayer channel for any other discussions.",
