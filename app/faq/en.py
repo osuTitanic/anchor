@@ -216,7 +216,7 @@ strings = {
     "vietnamese": "Đừng sử dụng Tiếng Việt ở bất kì kênh nào khác. Hãy tham gia kênh #vietnamese để có thể nói chuyện bằng Tiếng Việt nhé.",
     "welcome": "Welcome to Titanic! If you have a problem or question that needs answering, ask the nice people in #osu! Keep the chat friendly and have fun! :D",
     "when": "When it is ready.",
-    "wiki": "The [https://osu.titanic.sh/wiki/en osu!Titanic wiki] - Make it awesome!\nContributions are now done through GitHub: [https://github.com/osuTitanic/wiki/ osu!Titanic/wiki]",
+    "wiki": "The [https://osu.titanic.sh/wiki/en Titanic wiki] - Make it awesome!\nContributions are now done through GitHub: [https://github.com/osuTitanic/wiki/ osu!Titanic/wiki]",
     "wiki-link": "You can link to wiki pages by enclosing the wiki entry's name in double brackets like this: [[...]]\nFor example, [[Kudosu]] is created by typing Kudosu in between double [[ and ]‌].",
     "zallius": "His eyes have awakened.",
     "countfaq": "There are 217 active FAQs (out of a possible 217) in the English (English) language.",
