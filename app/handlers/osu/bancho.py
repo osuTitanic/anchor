@@ -1,6 +1,7 @@
 
 from typing import Callable, List, Tuple, Iterator
 from sqlalchemy.orm import selectinload, Session
+from time import time
 from chio import (
     BeatmapInfoRequest,
     BeatmapInfoReply,
@@ -22,7 +23,7 @@ def register(packet: PacketType) -> Callable:
 
 @register(PacketType.OsuPong)
 def pong(client: OsuClient):
-    pass # lol
+    client.last_pong = time()
 
 @register(PacketType.OsuExit)
 def exit(client: OsuClient, updating: bool):
@@ -83,8 +84,7 @@ def process_beatmap_info_request(
 
     for index, ids in enumerate(ids_chunks):
         maps = process_id_chunk(
-            client,
-            ids
+            client, ids
         )
         reply.beatmaps.extend(maps)
 

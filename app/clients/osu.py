@@ -44,6 +44,7 @@ class OsuClient(Client):
         self.preferred_ranking = 'global'
         self.filter = PresenceFilter.All
         self.last_ping = time.time()
+        self.last_pong = time.time() + 1
         self.ping_interval = 5
         self.logged_in = False
         self.in_lobby = False
@@ -55,6 +56,10 @@ class OsuClient(Client):
             self.info.version.stream == 'tourney' or
             self.info.version.name == 'tourney'
         )
+
+    @property
+    def is_waiting_for_pong(self) -> bool:
+        return self.last_ping > self.last_pong
 
     @property
     def friendonly_dms(self) -> bool:

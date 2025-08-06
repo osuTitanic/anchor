@@ -69,6 +69,10 @@ class Client:
         return f'[{self.url} {self.name}]'
 
     @property
+    def last_response_delta(self) -> float:
+        return time.time() - self.last_response
+
+    @property
     def silenced(self) -> bool:
         if not self.object:
             return False
