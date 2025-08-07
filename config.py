@@ -70,4 +70,4 @@ CHAT_WEBHOOK_URL = os.environ.get('CHAT_WEBHOOK_URL')
 DATA_PATH = os.path.abspath('.data')
 MULTIPLAYER_MAX_SLOTS = 8
 PROTOCOL_VERSION = 18
-VERSION = '1.7.5'
+VERSION = '1.7.6'
