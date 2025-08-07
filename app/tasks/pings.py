@@ -6,8 +6,8 @@ import time
 import app
 
 PING_INTERVAL_IRC = 30
+PING_INTERVAL_OSU = 12
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 5
 PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)

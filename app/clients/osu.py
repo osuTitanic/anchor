@@ -45,7 +45,6 @@ class OsuClient(Client):
         self.filter = PresenceFilter.All
         self.last_ping = time.time()
         self.last_pong = time.time() + 1
-        self.ping_interval = 5
         self.logged_in = False
         self.in_lobby = False
         self.is_osu = True
