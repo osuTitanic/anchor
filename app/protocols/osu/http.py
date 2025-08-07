@@ -7,7 +7,6 @@ from app.tasks import logins
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.http import Request
-from twisted.internet import reactor
 from twisted.web import server
 from queue import Queue, Empty
 
@@ -25,6 +24,22 @@ class HttpOsuClient(OsuClient):
     @property
     def connected(self) -> bool:
         return self.token != ""
+
+    def on_login_received(
+        self,
+        username: str,
+        password: str,
+        client_data: str
+    ) -> None:
+        self.token = str(uuid.uuid4())
+        super().on_login_received(username, password, client_data)
+
+        if not self.logged_in:
+            self.token = ""
+
+    def close_connection(self, reason: str = "") -> None:
+        super().close_connection(reason)
+        self.token = ""
 
     def enqueue_packet(self, packet, *args):
         data = self.io.write_packet_to_bytes(packet, *args)
@@ -44,22 +59,6 @@ class HttpOsuClient(OsuClient):
                 break
 
         return data
-
-    def on_login_received(
-        self,
-        username: str,
-        password: str,
-        client_data: str
-    ) -> None:
-        self.token = str(uuid.uuid4())
-        super().on_login_received(username, password, client_data)
-
-        if not self.logged_in:
-            self.token = ""
-
-    def close_connection(self, reason: str = "") -> None:
-        super().close_connection(reason)
-        self.token = ""
 
 class HttpOsuHandler(Resource):
     isLeaf = True
@@ -137,13 +136,6 @@ class HttpOsuHandler(Resource):
 
         for packet, data in packets:
             player.on_packet_received(packet, data)
-            
-        ip_address = ip.resolve_ip_address_twisted(request)
-
-        # Update player's geolocation info if ip has changed
-        if player.address != ip_address:
-            player.address = ip_address
-            player.update_geolocation()
 
         return player.dequeue()
 

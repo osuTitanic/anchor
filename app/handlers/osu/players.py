@@ -124,6 +124,11 @@ def stats_request(client: OsuClient, players: List[int]):
 
         client.enqueue_stats(target)
 
+@register(PacketType.OsuStatusUpdateRequest)
+def request_status(client: OsuClient):
+    client.reload_rank()
+    client.enqueue_stats(client)
+
 @register(PacketType.OsuUserStatus)
 def change_status(client: OsuClient, status: UserStatus):
     mode_changed = status.mode != client.status.mode
@@ -133,29 +138,34 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mods = status.mods
     client.status.mode = status.mode
     client.status.text = status.text
+    session.tasks.do_later(
+        on_status_change,
+        client, mode_changed
+    )
 
-    def process_update():
-        # Update cache & check if rank changed
-        client.update_status_cache()
-        client.reload_rank()
+def on_status_change(client: OsuClient, mode_changed: bool):
+    if mode_changed:
+        client.update_object(client.status.mode.value)
+        client.reload_rankings()
 
-        if mode_changed:
-            client.update_object(status.mode.value)
-            client.reload_rankings()
+    # Enqueue stats to relevant clients
+    distribute_stats(client)
 
-        # Enqueue stats to themselves
-        client.enqueue_stats(client)
-
-        for p in client.spectators:
-            # Ensure that all spectators get the latest status
-            p.enqueue_stats(client)
-
-        # Enqueue stats to clients that don't request them automatically
-        session.players.send_stats(client)
-
-    session.tasks.do_later(process_update)
-
-@register(PacketType.OsuStatusUpdateRequest)
-def request_status(client: OsuClient):
+    # Update cache & check if rank changed
+    client.update_status_cache()
     client.reload_rank()
+
+    if client.status.beatmap_id:
+        # Cache beatmap to make score submission faster
+        session.storage.cache_beatmap(client.status.beatmap_id)
+
+def distribute_stats(client: OsuClient):
+    # Enqueue stats to themselves
     client.enqueue_stats(client)
+
+    for p in client.spectators:
+        # Ensure that all spectators get the latest status
+        p.enqueue_stats(client)
+
+    # Enqueue stats to clients that don't request them automatically
+    session.players.send_stats(client)

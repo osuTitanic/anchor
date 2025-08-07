@@ -132,21 +132,22 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.silence(60, 'Chat spamming')
         return
 
-    # Apply chat filters to the message
-    message.content, timeout = session.filters.apply(message.content)
-
-    if timeout is not None:
-        sender.silence(timeout, 'Inappropriate discussion in pms')
-        return False
-
     parsed_message = message.content.strip()
     has_command_prefix = parsed_message.startswith('!')
 
     if has_command_prefix or target is session.banchobot:
         return session.tasks.do_later(
             session.banchobot.process_and_send_response,
-            parsed_message, sender, target, priority=2
+            parsed_message, sender, target, priority=3
         )
+
+    # Apply chat filters to the message
+    message.content, timeout = session.filters.apply(message.content)
+
+    if timeout is not None:
+        sender.silence(timeout, 'Inappropriate discussion in pms')
+        officer.call(f"Message: {message.content}")
+        return False
 
     if len(message.content) > 512:
         # Limit message size

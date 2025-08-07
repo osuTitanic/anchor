@@ -16,6 +16,7 @@ from app.common.constants import strings
 from app.common import officer, mail
 
 from app.objects.channel import Channel, SpectatorChannel
+from app.tasks.logins import manager as login_manager
 from app.objects.client import OsuClientInformation
 from app.objects.multiplayer import Match
 from app.objects.locks import LockedSet
@@ -42,6 +43,9 @@ class OsuClient(Client):
 
         self.preferred_ranking = 'global'
         self.filter = PresenceFilter.All
+        self.last_ping = time.time()
+        self.last_pong = time.time() + 1
+        self.ping_interval = 5
         self.logged_in = False
         self.in_lobby = False
         self.is_osu = True
@@ -52,6 +56,10 @@ class OsuClient(Client):
             self.info.version.stream == 'tourney' or
             self.info.version.name == 'tourney'
         )
+
+    @property
+    def is_waiting_for_pong(self) -> bool:
+        return self.last_ping > self.last_pong
 
     @property
     def friendonly_dms(self) -> bool:
@@ -84,7 +92,7 @@ class OsuClient(Client):
         info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
 
         # Select the correct client/io object
-        self.io = chio.select_client(info.version.date)
+        self.io = chio.select_client(info.protocol_version)
 
         # Send protocol version
         self.enqueue_packet(
@@ -98,7 +106,7 @@ class OsuClient(Client):
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
 
-            if not bcrypt.checkpw(password.encode(), user.bcrypt.encode()):
+            if not login_manager.check_password(password, user.bcrypt):
                 self.logger.warning('Login Failed: Authentication error')
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
@@ -111,6 +119,7 @@ class OsuClient(Client):
             self.object.target_relationships
             self.object.relationships
             self.object.groups
+            self.object.stats
 
             # Reload permissions
             self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
@@ -215,11 +224,8 @@ class OsuClient(Client):
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
-            # Update cache
-            self.update_leaderboard_stats()
-            self.update_status_cache()
-            self.reload_rankings()
-            self.reload_rank()
+            # Update rank, status & rankings
+            self.update_cache()
 
         self.logged_in = True
         self.on_login_success()
@@ -228,7 +234,7 @@ class OsuClient(Client):
         self.spectator_chat = SpectatorChannel(self)
         app.session.channels.add(self.spectator_chat)
 
-        self.update_activity()
+        self.update_activity_later()
         self.enqueue_packet(PacketType.BanchoLoginReply, self.id)
         self.enqueue_packet(PacketType.BanchoLoginPermissions, self.permissions)
         self.enqueue_packet(PacketType.BanchoFriendsList, self.friends)
@@ -255,9 +261,11 @@ class OsuClient(Client):
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount & login queue status
-        user_count = len(app.session.players)
-        usercount.set(user_count)
+        # Update cached usercount
+        app.session.tasks.do_later(
+            app.session.players.update_usercount,
+            priority=4
+        )
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -352,9 +360,15 @@ class OsuClient(Client):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        usercount.set(len(app.session.players))
-        status.delete(self.id)
-        self.update_activity()
+        def update_cache():
+            usercount.set(len(app.session.players))
+            status.delete(self.id)
+            users.update(self.id, {'latest_activity': datetime.now()})
+
+        app.session.tasks.do_later(
+            update_cache,
+            priority=4
+        )
 
         if self.is_tourney_client:
             # Clear any remaining tourney clients, if there are any
@@ -370,8 +384,11 @@ class OsuClient(Client):
                 QuitState.OsuRemaining
             )
 
-        user_quit = UserQuit(self, quit_state)
-        app.session.players.send_user_quit(user_quit)
+        app.session.tasks.do_later(
+            app.session.players.send_user_quit,
+            UserQuit(self, quit_state),
+            priority=2
+        )
 
     def is_valid_client(self, session: Session | None = None) -> bool:
         valid_identifiers = (
@@ -425,7 +442,10 @@ class OsuClient(Client):
                 priority=4
             )
 
-            user_matches = [match for match in matches if match.user_id == self.id]
+            user_matches = [
+                match for match in matches
+                if match.user_id == self.id
+            ]
 
             if self.current_stats.playcount > 0 and not user_matches:
                 app.session.tasks.do_later(
@@ -438,32 +458,104 @@ class OsuClient(Client):
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:
             return
 
-        # Reset multiaccounting lock
-        app.session.redis.set(f'multiaccounting:{self.id}', 0)
+        multiaccounting_lock = app.session.redis.get(f'multiaccounting:{self.id}')
+        was_notified = multiaccounting_lock == b'1'
+
+        if was_notified:
+            # User has already received a notification about multiaccounting
+            # This "lock" will reset after 6 hours, giving them the notification again
+            self.logger.warning('Multiaccounting lock found, skipping check.')
+            return
 
         # Filter out current user
         other_matches = [match for match in matches if match.user_id != self.id]
         banned_matches = [match for match in other_matches if match.banned]
 
-        if banned_matches and not self.is_verified:
-            # User tries to log into an account with banned hardware matches
-            self.restrict('Multiaccounting', autoban=True)
+        if not other_matches:
             return
 
-        if other_matches:
-            # User was detected to be multiaccounting
-            # If user tries to submit a score, they will be restricted
-            # Users who are verified will not be restricted
-            officer.call(
-                f'Multiaccounting detected for "{self.name}": '
-                f'{self.info.hash.string} ({len(other_matches)} matches)'
-            )
+        # Find all matched users
+        matched_user_ids = {match.user_id for match in other_matches}
+        oldest_user_id = min(matched_user_ids | {self.id})
 
-            if self.is_verified:
+        if self.id == oldest_user_id:
+            # Allow user to use their oldest account
+            self.logger.warning('User is using their oldest account, skipping multiaccounting check.')
+            return
+
+        if banned_matches and not self.is_verified:
+            # User tries to log into an account with banned hardware matches
+            # Check if the user is eligable to be autobanned
+            # A matching disk signature could be a false-positive here, so
+            # we only check adapters and registry keys
+            matching_adapters = [
+                match for match in banned_matches
+                if match.adapters == self.info.hash.adapters_md5
+            ]
+            matching_registry_keys = [
+                match for match in banned_matches
+                if match.unique_id == self.info.hash.uninstall_id
+            ]
+
+            if matching_adapters or matching_registry_keys:
+                # buh bye, have fun with support tickets
+                self.restrict('Multiaccounting', autoban=True)
                 return
 
-            app.session.redis.set(f'multiaccounting:{self.id}', 1)
-            self.enqueue_announcement(strings.MULTIACCOUNTING_DETECTED)
+        # User was found to be multiaccounting (potentially)
+        adapters_verified = clients.is_verified(self.info.hash.adapters_md5, 0, session)
+        registry_key_verified = clients.is_verified(self.info.hash.uninstall_id, 1, session)
+        disk_signature_verified = clients.is_verified(self.info.hash.diskdrive_signature, 2, session)
+
+        # Get profile urls of matched users
+        matched_users = (
+            f"https://osu.{config.DOMAIN_NAME}/u/{user_id}"
+            for user_id in matched_user_ids
+        )
+
+        report_message = (
+            f'Potential multiaccounting for [{self.name}]({self.url}) found:\n'
+            f'Matched User(s): {" ".join(matched_users)}\n'
+        )
+
+        if not adapters_verified:
+            matching_adapters = [
+                match for match in other_matches
+                if match.adapters == self.info.hash.adapters_md5
+            ]
+            report_message += (
+                f'- Adapters: `{self.info.hash.adapters_md5}` ({len(matching_adapters)} matching)\n'
+            )
+            
+        if not registry_key_verified:
+            matching_registry_keys = [
+                match for match in other_matches
+                if match.unique_id == self.info.hash.uninstall_id
+            ]
+            report_message += (
+                f'- Registry Key: `{self.info.hash.uninstall_id}` ({len(matching_registry_keys)} matching)\n'
+            )
+            
+        if not disk_signature_verified:
+            matching_disk_signatures = [
+                match for match in other_matches
+                if match.disk_signature == self.info.hash.diskdrive_signature
+            ]
+            report_message += (
+                f'- Disk Drive Signature: `{self.info.hash.diskdrive_signature}` ({len(matching_disk_signatures)} matching)\n'
+            )
+
+        officer.call(report_message)
+        app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*6)
+
+        if self.is_verified:
+            return
+
+        self.enqueue_message(
+            strings.MULTIACCOUNTING_WARNING,
+            app.session.banchobot,
+            app.session.banchobot.name
+        )
 
     def update_status_cache(self) -> None:
         status.update(

@@ -41,9 +41,13 @@ class Channel:
         self.public = public
 
         self.logger = logging.getLogger(self.name)
-        self.users: LockedSet["Client"] = LockedSet()
+        self.users: Set["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
         self.created_at = time.time()
+        self.webhook_enabled = (
+            config.CHAT_WEBHOOK_URL and
+            name in config.CHAT_WEBHOOK_CHANNELS
+        )
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -101,6 +105,7 @@ class Channel:
             # Player does not have read access
             self.logger.warning(f'{client} tried to join channel but does not have read access.')
             client.enqueue_channel_revoked(self.display_name)
+            return
 
         if client in self.users and not client.is_tourney_client:
             # Player has already joined the channel
@@ -113,7 +118,7 @@ class Channel:
         client.channels.add(self)
         self.users.add(client)
         self.logger.info(f'{client.name} joined')
-        self.broadcast_join(client)
+        app.session.tasks.do_later(self.broadcast_join, client)
 
         if not no_response:
             client.enqueue_channel_join_success(self.display_name)
@@ -122,19 +127,34 @@ class Channel:
         client.channels.discard(self)
         self.users.discard(client)
         self.logger.info(f'{client.name} left')
-        self.broadcast_part(client)
+        app.session.tasks.do_later(self.broadcast_part, client)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
+        if "\n" in message.content:
+            return self.handle_multiline_broadcast(message, users)
+
         for user in users:
             user.enqueue_message_object(message)
 
-    def broadcast_message_to_webhook(self, message: Message) -> None:
-        if not config.CHAT_WEBHOOK_URL:
-            return
+    def handle_multiline_broadcast(self, message: Message, users: List["Client"]) -> None:
+        message_objects = [
+            Message(
+                message.sender,
+                line,
+                message.target,
+                message.sender_id
+            )
+            for line in message.content.splitlines()
+        ]
 
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        for user in users:
+            for object in message_objects:
+                user.enqueue_message_object(object)
+
+    def broadcast_message_to_webhook(self, message: Message) -> None:
+        if not self.webhook_enabled:
             return
 
         # Prevent @ mentions from being parsed as mentions
@@ -159,7 +179,7 @@ class Channel:
             (p for p in self.users if p.id == client.id and p != client),
             None
         )
-        
+
         # If another player is already in
         # the channel, no need to broadcast
         if other_player is not None:
@@ -234,7 +254,7 @@ class Channel:
             # A command was executed
             return app.session.tasks.do_later(
                 app.session.banchobot.process_and_send_response,
-                message, sender, self, priority=2
+                message, sender, self, priority=3
             )
 
         if len(message) > 512:
@@ -244,11 +264,18 @@ class Channel:
         # Apply chat filters to the message
         message, timeout = app.session.filters.apply(message)
 
-        if timeout is not None:
-            return sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+        if timeout is not None and not is_banchobot:
+            sender.silence(timeout, f'Inappropriate discussion in {self.name}')
+            officer.call(f"Message: {message}")
+            return
 
-        # Filter out sender from the target users
-        users = [user for user in self.users if user != sender]
+        app.session.tasks.do_later(
+            messages.create,
+            sender.name,
+            self.name,
+            message[:512],
+            priority=4
+        )
 
         message_object = Message(
             sender.name,
@@ -256,6 +283,9 @@ class Channel:
             self.display_name,
             sender.id
         )
+
+        # Filter out sender from the target users
+        users = [user for user in self.users if user != sender]
 
         if not do_later:
             self.broadcast_message(message_object, users)
@@ -269,18 +299,7 @@ class Channel:
             priority=2
         )
 
-        app.session.tasks.do_later(
-            messages.create,
-            sender.name,
-            self.name,
-            message[:512],
-            priority=4
-        )
-
-        if not config.CHAT_WEBHOOK_URL:
-            return
-
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        if not self.webhook_enabled:
             return
 
         app.session.tasks.do_later(
@@ -350,10 +369,7 @@ class Channel:
             priority=2
         )
 
-        if not config.CHAT_WEBHOOK_URL or not submit_to_webhook:
-            return
-
-        if self.name not in config.CHAT_WEBHOOK_CHANNELS:
+        if not self.webhook_enabled or not submit_to_webhook:
             return
 
         app.session.tasks.do_later(

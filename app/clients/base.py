@@ -69,6 +69,10 @@ class Client:
         return f'[{self.url} {self.name}]'
 
     @property
+    def last_response_delta(self) -> float:
+        return time.time() - self.last_response
+
+    @property
     def silenced(self) -> bool:
         if not self.object:
             return False
@@ -133,7 +137,7 @@ class Client:
     def current_stats(self) -> DBStats | None:
         return (
             self.object.stats[self.status.mode.value]
-            if self.object else None
+            if self.object and self.object.stats else None
         )
 
     @property
@@ -198,7 +202,14 @@ class Client:
 
     @property
     def avatar_filename(self) -> str:
-        return f"{self.id}_000.png"
+        return f"{self.id}_{self.avatar_hash}.png"
+
+    @property
+    def avatar_hash(self) -> str:
+        return (
+            self.object.avatar_hash or "unknown"
+            if self.object else "unknown"
+        )
 
     @property
     def is_staff(self) -> bool:
@@ -259,10 +270,13 @@ class Client:
             self.presence.permissions = Permissions(bancho_permissions)
             return self.object
 
-    def reload_rank(self) -> int:
+    def reload_rank(self) -> None:
         """Check if redis rank desynced from database and update it, if needed"""
         cached_rank = leaderboards.global_rank(self.id, self.status.mode.value)
         self.rankings['global'] = cached_rank
+        
+        if not self.current_stats:
+            return
 
         if cached_rank != self.current_stats.rank:
             self.current_stats.rank = cached_rank
@@ -359,12 +373,23 @@ class Client:
 
     def update_activity(self) -> None:
         """Updates the player's latest activity inside the database"""
-        app.session.tasks.do_later(
-            users.update,
+        users.update(
             user_id=self.id,
-            updates={'latest_activity': datetime.now()},
+            updates={'latest_activity': datetime.now()}
+        )
+
+    def update_activity_later(self) -> None:
+        """Schedules the player's last activity update"""
+        app.session.tasks.do_later(
+            self.update_activity,
             priority=5
         )
+        
+    def update_cache(self) -> None:
+        self.update_leaderboard_stats()
+        self.update_status_cache()
+        self.reload_rankings()
+        self.reload_rank()
 
     def close_connection(self, reason: str = "") -> None:
         """Closes the connection to the client"""

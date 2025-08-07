@@ -25,7 +25,7 @@ class Tasks:
 
         # Initialize "do later" queue which offloads tasks
         # that don't need to be executed immediately
-        self.do_later_workers = max(1, config.BANCHO_WORKERS // 2)
+        self.do_later_workers = max(1, config.BANCHO_WORKERS // 3)
         self.do_later_executor = ThreadPoolExecutor(max_workers=self.do_later_workers)
         self.do_later_futures: List[Future] = []
         self.do_later_queue = PriorityQueue()
@@ -126,7 +126,7 @@ class Tasks:
         thread.start()
         return deferred
 
-    def defer_to_reactor(self, func: Callable, *args, **kwargs) -> Deferred:
+    def defer_to_reactor(self, func: Callable, *args, delay: int = 0, **kwargs) -> Deferred:
         """
         Internal function used to defer a function call to the reactor thread.
         Note that this will block the reactor until the function completes.
@@ -139,7 +139,7 @@ class Tasks:
                 deferred.errback(e)
 
         deferred = Deferred()
-        reactor.callLater(0, run, deferred, func, *args, **kwargs)
+        reactor.callLater(delay, run, deferred, func, *args, **kwargs)
         return deferred
 
     def defer_to_reactor_thread(self, func: Callable, *args, **kwargs) -> Deferred:

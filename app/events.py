@@ -241,6 +241,7 @@ def send_activity_announcement(entry: DBActivity) -> None:
 
     if not (message := formatter(entry)):
         app.session.logger.warning(f'Text formatter returned "{message}" for type {entry.type}')
+        return
 
     # Send message in #announce channel
     bot_message(message, "#announce")

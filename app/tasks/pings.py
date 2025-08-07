@@ -5,10 +5,10 @@ import config
 import time
 import app
 
-PING_INTERVAL_IRC = 60
+PING_INTERVAL_IRC = 30
 PING_TIMEOUT_IRC = 360
-PING_INTERVAL_OSU = 15
-PING_TIMEOUT_OSU = 180
+PING_INTERVAL_OSU = 5
+PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
 def osu_tcp_pings() -> None:
@@ -16,16 +16,20 @@ def osu_tcp_pings() -> None:
     This task will handle client pings and timeouts for tcp & ws clients.
     Pings are required for tcp clients, to keep them connected.
     """
-    targets = (
-        app.session.players.tcp_osu_clients +
-        app.session.players.ws_osu_clients
-    )
+    targets = {'tcp', 'ws'}
 
-    for player in targets:
-        player.enqueue_packet(PacketType.BanchoPing)
-        last_response = (time.time() - player.last_response)
+    for player in app.session.players.osu_clients:
+        if player.protocol not in targets:
+            continue
 
-        if last_response >= PING_TIMEOUT_OSU:
+        if not player.logged_in:
+            continue
+
+        if not player.is_waiting_for_pong:
+            player.enqueue_packet(PacketType.BanchoPing)
+            player.last_ping = time.time()
+
+        if player.last_response_delta >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
 
 @app.session.tasks.submit(interval=PING_TIMEOUT_OSU, threaded=True)
@@ -36,15 +40,13 @@ def osu_http_pings() -> None:
     check if they are still connected.
     """
     for player in app.session.players.http_osu_clients:
-        last_response = (time.time() - player.last_response)
-
         if not player.connected:
             # Why the heck is this player even in the collection
             player.logger.warning('Tried to ping player, but was not connected?')
             player.close_connection()
             continue
 
-        if last_response >= PING_TIMEOUT_OSU:
+        if player.last_response_delta >= PING_TIMEOUT_OSU:
             player.close_connection('Client timed out')
 
 @app.session.tasks.submit(interval=PING_INTERVAL_IRC, threaded=True)
@@ -57,8 +59,10 @@ def irc_pings() -> None:
         if player.protocol == 'internal':
             continue
 
-        player.enqueue_command_raw('PING', params=[f'cho.{config.DOMAIN_NAME}'])
-        last_response = (time.time() - player.last_response)
+        player.enqueue_command_raw(
+            "PING", "",
+            [f"cho.{config.DOMAIN_NAME}"]
+        )
 
-        if last_response >= PING_TIMEOUT_IRC:
+        if player.last_response_delta >= PING_TIMEOUT_IRC:
             player.close_connection('Client timed out')

@@ -185,7 +185,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         client.match.kick_player(client)
         return
 
-    if (client.id in match.banned_players) and not client.is_admin:
+    if (client.id in match.banned_players) and not client.is_staff:
         client.logger.warning(f'{client.name} tried to join a match, but was banned from it')
         client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return

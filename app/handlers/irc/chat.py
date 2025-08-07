@@ -3,9 +3,8 @@ from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.common.database import messages
 from app.clients.irc import IrcClient
+from app.common import officer
 from app import session
-
-import time
 
 @register("LIST")
 @ensure_authenticated
@@ -192,6 +191,7 @@ def handle_privmsg_command(
 
     if timeout is not None:
         sender.silence(timeout, 'Inappropriate discussion in pms')
+        officer.call(f"Message: {message}")
         return False
 
     parsed_message = message.strip()
@@ -200,7 +200,7 @@ def handle_privmsg_command(
     if has_command_prefix or target is session.banchobot:
         return session.tasks.do_later(
             session.banchobot.process_and_send_response,
-            parsed_message, sender, target, priority=2
+            parsed_message, sender, target, priority=3
         )
 
     if len(message) > 512:

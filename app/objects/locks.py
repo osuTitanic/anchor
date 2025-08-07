@@ -214,15 +214,18 @@ class LockedDict(_MutableMapping, MutableMapping[K, V]):
 
     def keys(self) -> Iterable[K]:
         with self.lock.read_context():
-            return list(self.dict.keys())
+            snapshot = list(self.dict.keys())
+        return iter(snapshot)
 
     def values(self) -> Iterable[V]:
         with self.lock.read_context():
-            return list(self.dict.values())
+            snapshot = list(self.dict.values())
+        return iter(snapshot)
 
     def items(self) -> Iterable[Tuple[K, V]]:
         with self.lock.read_context():
-            return list(self.dict.items())
+            snapshot = list(self.dict.items())
+        return iter(snapshot)
 
     def setdefault(self, key: K, default: V = None) -> V:
         with self.lock.write_context():

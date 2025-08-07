@@ -88,6 +88,11 @@ class IrcClient(Client):
                 self.on_login_failed(LoginError.UserInactive)
                 return
 
+            if self.is_osu and not config.OSU_IRC_ENABLED and not self.has_preview_access:
+                self.enqueue_banchobot_message("osu! IRC connections have been disabled. Please check back later!")
+                self.close_connection("osu! IRC is disabled")
+                return
+
             if config.MAINTENANCE:
                 if not self.is_staff:
                     # Bancho is in maintenance mode
@@ -130,25 +135,25 @@ class IrcClient(Client):
                 session=session
             )
 
-            # Update cache
-            self.update_leaderboard_stats()
-            self.update_status_cache()
-            self.reload_rankings()
-            self.reload_rank()
+            # Update rank, status & rankings
+            self.update_cache()
 
         self.logged_in = True
         self.on_login_success()
 
     def on_login_success(self) -> None:
-        self.update_activity()
+        self.update_activity_later()
         self.send_welcome_sequence()
         self.enqueue_infringement_length(self.remaining_silence)
 
         # Append to player collection
         app.session.players.add(self)
 
-        # Update usercount
-        usercount.set(len(app.session.players))
+        # Update cached usercount
+        app.session.tasks.do_later(
+            app.session.players.update_usercount,
+            priority=4
+        )
 
         # Enqueue all public channels
         for channel in app.session.channels.public:
@@ -217,9 +222,15 @@ class IrcClient(Client):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        usercount.set(len(app.session.players))
-        status.delete(self.id)
-        self.update_activity()
+        def update_cache():
+            usercount.set(len(app.session.players))
+            status.delete(self.id)
+            users.update(self.id, {'latest_activity': datetime.now()})
+
+        app.session.tasks.do_later(
+            update_cache,
+            priority=4
+        )
 
         # Check if there are any other remaining clients connected
         remaining_client = app.session.players.by_id(self.id)
@@ -231,8 +242,11 @@ class IrcClient(Client):
                 QuitState.OsuRemaining
             )
 
-        user_quit = UserQuit(self, quit_state)
-        app.session.players.send_user_quit(user_quit)
+        app.session.tasks.do_later(
+            app.session.players.send_user_quit,
+            UserQuit(self, quit_state),
+            priority=2
+        )
 
     def handle_osu_login(self) -> None:
         if not self.is_osu:

@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
+    
+# Install openssl
+RUN apt-get install -y --no-install-recommends openssl; \
+    pip install pyopenssl service-identity;
 
 # Install rust toolchain
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y

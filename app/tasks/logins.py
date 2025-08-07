@@ -1,6 +1,9 @@
 
 from twisted.internet.defer import Deferred
+from functools import cache
 from typing import Callable
+
+import bcrypt
 import config
 import app
 
@@ -38,6 +41,14 @@ class LoginManager:
             function,
             *args,
             **kwargs
+        )
+
+    @staticmethod
+    @cache
+    def check_password(password: str, hashed: str) -> bool:
+        return bcrypt.checkpw(
+            password.encode(),
+            hashed.encode()
         )
 
 manager = LoginManager()
