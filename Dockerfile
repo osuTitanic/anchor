@@ -28,6 +28,7 @@ FROM python:3.14-rc-slim
 
 # Installing runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     openssl \
     libpq-dev \
     libffi-dev \
