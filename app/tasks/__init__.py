@@ -10,6 +10,7 @@ from threading import Thread
 import itertools
 import logging
 import config
+import time
 
 class Tasks:
     """
@@ -80,9 +81,10 @@ class Tasks:
         # Defer the task to a thread if specified
         # Otherwise, defer the task to the synchronous reactor
         defer_method = (
-            self.defer_to_thread
-            if threaded else
-            self.defer_to_reactor
+            self.defer_to_reactor if not threaded
+            else lambda func: self.defer_to_thread_loop(
+                func, interval=interval
+            )
         )
 
         deferred = defer_method(func)
@@ -125,6 +127,18 @@ class Tasks:
         thread.daemon = True
         thread.start()
         return deferred
+
+    def defer_to_thread_loop(self, func: Callable, *args, interval: int = 5, **kwargs) -> Deferred:
+        """
+        Internal function used to schedule a thread that runs a specified function in a loop.
+        """
+        def loop() -> None:
+            while True:
+                time.sleep(interval)
+                func(*args, **kwargs)
+                self.logger.debug(f'Task "{func.__name__}" loop finished')
+
+        return self.defer_to_thread(loop, *args, **kwargs)
 
     def defer_to_reactor(self, func: Callable, *args, delay: int = 0, **kwargs) -> Deferred:
         """
