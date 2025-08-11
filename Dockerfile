@@ -1,13 +1,14 @@
-FROM python:3.14-rc-slim
+FROM python:3.14-rc-slim AS builder
 
-# Installing/Updating build dependencies
+# Installing build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libpq-dev \
     libffi-dev \
     libssl-dev \
-    libpq-dev \
     openssl \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install rust toolchain
@@ -19,12 +20,27 @@ ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 WORKDIR /bancho
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir pyopenssl service-identity
+    pip install pyopenssl service-identity
+
+FROM python:3.14-rc-slim
+
+# Installing runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    openssl \
+    libpq-dev \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed Python packages from builder
+COPY --from=builder /usr/local /usr/local
 
 # Disable output buffering
 ENV PYTHONUNBUFFERED=1
 
 # Copy source code
+WORKDIR /bancho
 COPY . .
 
 # Generate __pycache__ directories
