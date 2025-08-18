@@ -1,6 +1,6 @@
 rosu-pp-py==3.1.0
 psycopg2-binary==2.9.10
-sqlalchemy==2.0.42
+sqlalchemy==2.0.43
 python-dotenv==1.1.1
 twisted==25.5.0
 redis==6.4.0
