@@ -307,7 +307,7 @@ def create_persistant_match(ctx: Context):
 
     match = Match(
         id=-1,
-        name=" ".join(ctx.args[0:])[:50],
+        name=" ".join(ctx.args[0:])[:128],
         password=password if is_private else "",
         host=ctx.player,
         mode=ctx.player.status.mode,

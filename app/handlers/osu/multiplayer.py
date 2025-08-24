@@ -113,7 +113,7 @@ def create_match(client: OsuClient, bancho_match: Match):
     match = Match.from_bancho_match(bancho_match, client)
 
     # Limit match name
-    match.name = match.name[:50]
+    match.name = match.name[:128]
 
     if not session.matches.append(match):
         client.logger.warning('Failed to append match to collection')
