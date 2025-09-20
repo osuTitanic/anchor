@@ -43,9 +43,9 @@ def handle_who_command(
 def handle_whois_command(
     client: IrcClient,
     prefix: str,
-    *args
+    *target_nicknames
 ) -> None:
-    if len(args) <= 0:
+    if len(target_nicknames) <= 0:
         client.enqueue_command(
             irc.ERR_NEEDMOREPARAMS,
             "WHOIS",
@@ -53,37 +53,46 @@ def handle_whois_command(
         )
         return
 
-    local_nickname = client.local_prefix
-    target_nickname = args[-1]
+    for nickname in target_nicknames:
+        if nickname == f'cho.{config.DOMAIN_NAME}':
+            continue
 
-    if not (target := app.session.players.by_name_safe(target_nickname)):
-        client.enqueue_command(irc.ERR_NOSUCHNICK, target_nickname, ":No such nick/channel")
-        return
+        if not (target := app.session.players.by_name_safe(nickname)):
+            client.enqueue_command(irc.ERR_NOSUCHNICK, nickname, ":No such nick/channel")
+            return
 
-    channel_names = [
-        channel.name
-        for channel in target.channels
-        if channel.public
-    ]
+        channel_names = [
+            channel.name
+            for channel in target.channels
+            if channel.public
+        ]
 
-    client.enqueue_command(
-        irc.RPL_WHOISUSER,
-        target.underscored_name,
-        target.url,
-        '*',
-        f':{target.url}'
-    )
-    client.enqueue_command(
-        irc.RPL_WHOISCHANNELS,
-        target.underscored_name,
-        f":{' '.join(channel_names)}"
-    )
-    client.enqueue_command(
-        irc.RPL_WHOISSERVER,
-        target.underscored_name,
-        f'cho.{config.DOMAIN_NAME}',
-        f':anchor',
-    )
+        client.enqueue_command(
+            irc.RPL_WHOISUSER,
+            target.underscored_name,
+            target.url,
+            '*',
+            f':{target.url}'
+        )
+        client.enqueue_command(
+            irc.RPL_WHOISCHANNELS,
+            target.underscored_name,
+            f":{' '.join(channel_names)}"
+        )
+        client.enqueue_command(
+            irc.RPL_WHOISSERVER,
+            target.underscored_name,
+            f'cho.{config.DOMAIN_NAME}',
+            f':anchor',
+        )
+
+        if target.is_staff:
+            client.enqueue_command(
+                irc.RPL_WHOISOPERATOR,
+                target.underscored_name,
+                f":is an IRC operator"
+            )
+
     client.enqueue_command(
         irc.RPL_ENDOFWHOIS,
         target.underscored_name,
