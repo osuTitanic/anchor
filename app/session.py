@@ -57,6 +57,7 @@ logins_per_minute = RequestCounter(window=60)
 
 osu_handlers: Dict[PacketType, Callable] = {}
 irc_handlers: Dict[str, Callable] = {}
+blocked_connections = set()
 filters = ChatFilter()
 channels = Channels()
 storage = Storage()

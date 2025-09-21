@@ -90,6 +90,12 @@ class HttpOsuHandler(Resource):
             request.getClientAddress().port
         )
 
+        if hash(player.address) in app.session.blocked_connections:
+            player.logger.warning(f'Blocked connection from {player.address}')
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
+
         player.on_login_received(
             username,
             password,

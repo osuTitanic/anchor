@@ -195,6 +195,28 @@ def reload_filter(ctx: Context) -> List[str]:
     app.session.filters.populate()
     return [f'Reloaded chat filter with {len(app.session.filters)} filters.']
 
+@system_commands.register(['block', 'blockip'], "admin", hidden=True)
+def block_connection(ctx: Context) -> List[str]:
+    """<ip> - Block an IP address from connecting to Bancho"""
+    if len(ctx.args) != 1:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <ip>']
+
+    ip = ctx.args[0]
+    app.session.blocked_connections.add(hash(ip))
+
+    return [f'Blocked IP address: {ip}']
+
+@system_commands.register(['unblock', 'unblockip'], "admin", hidden=True)
+def unblock_connection(ctx: Context) -> List[str]:
+    """<ip> - Unblock an IP address from connecting to Bancho"""
+    if len(ctx.args) != 1:
+        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <ip>']
+
+    ip = ctx.args[0]
+    app.session.blocked_connections.discard(hash(ip))
+
+    return [f'Unblocked IP address: {ip}']
+
 @system_commands.register(['spectateuser', 'spectate'], "admin")
 def spectate_user(ctx: Context):
     """<name> - Force all online players to spectate a user"""
