@@ -35,6 +35,7 @@ class TcpIrcProtocol(IrcClient, IRC):
         if hash(self.address) in app.session.blocked_connections:
             self.logger.warning(f'Blocked connection from {self.address}')
             self.close_connection('Blocked IP')
+            return
 
         # Ensure client is logged in after 8 seconds, else close connection
         reactor.callLater(8, self.handle_timeout_callback)
