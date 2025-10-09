@@ -1,4 +1,4 @@
-FROM python:3.14-rc-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Installing build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +22,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install pyopenssl service-identity
 
-FROM python:3.14-rc-slim
+FROM python:3.14-slim
 
 # Installing runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
