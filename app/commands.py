@@ -17,16 +17,7 @@ from chio import (
 
 from app.common.cache import leaderboards
 from app.common.helpers import infringements, permissions
-from app.common.database.repositories import (
-    beatmapsets,
-    beatmaps,
-    matches,
-    clients,
-    reports,
-    events,
-    scores,
-    users
-)
+from app.common.database.repositories import *
 
 from app.objects.channel import Channel, MultiplayerChannel, PythonInterpreterChannel
 from app.common.constants import Permissions, EventType, GameMode
