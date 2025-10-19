@@ -54,6 +54,7 @@ class Client:
         self.referee_matches: Set[Match] = set()
         self.channels: Set[Channel] = set()
         self.last_response = time.time()
+        self.login_time = time.time()
         self.message_limiter = RateLimiter(60, 60)
         self.invite_limiter = RateLimiter(10, 20)
         self.action_lock = Lock()
@@ -274,7 +275,7 @@ class Client:
         """Check if redis rank desynced from database and update it, if needed"""
         cached_rank = leaderboards.global_rank(self.id, self.status.mode.value)
         self.rankings['global'] = cached_rank
-        
+
         if not self.current_stats:
             return
 
@@ -448,10 +449,12 @@ class Client:
             self.on_user_unrestricted()
 
     def on_user_silenced(self) -> None:
+        """Called when the user is silenced"""
         self.reload()
         self.enqueue_infringement_length(self.remaining_silence)
 
-    def on_user_unsilenced(self):
+    def on_user_unsilenced(self) -> None:
+        """Called when the user is unsilenced"""
         self.reload()
         self.enqueue_infringement_length(-1)
 
@@ -461,6 +464,7 @@ class Client:
         until: datetime | None = None,
         autoban: bool = False
     ) -> None:
+        """Called when the user is restricted"""
         self.reload()
         until_text = ""
 
@@ -479,6 +483,7 @@ class Client:
             )
 
     def on_user_unrestricted(self) -> None:
+        """Called when the user is unrestricted"""
         self.reload()
         self.enqueue_infringement_length(-1)
 

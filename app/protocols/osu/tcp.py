@@ -27,9 +27,11 @@ class TcpOsuClient(OsuClient, Protocol):
 
     def connectionMade(self):
         if self.is_local and not config.DEBUG:
-            self.logger.info(
-                f'-> <{self.address}:{self.port}>'
-            )
+            self.logger.info(f'-> <{self.address}:{self.port}>')
+
+        if hash(self.address) in app.session.blocked_connections:
+            self.logger.warning(f'Blocked connection from {self.address}')
+            self.close_connection('Blocked IP')
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         app.session.tasks.defer_to_queue(

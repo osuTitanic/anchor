@@ -114,7 +114,7 @@ class BanchoBot(IrcClient):
                     for condition in set.conditions:
                         if not condition(ctx):
                             return
-                        
+
                 return command
 
     def send_command_response(

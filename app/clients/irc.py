@@ -171,7 +171,7 @@ class IrcClient(Client):
                 self.enqueue_players,
                 channel.users,
                 channel.name,
-                priority=2
+                priority=3
             )
 
         # Re-add matches that this player is a referee for

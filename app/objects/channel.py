@@ -496,6 +496,7 @@ class MultiplayerChannel(Channel):
             # Player does not have read access
             self.logger.warning(f'{player} tried to join channel but does not have read access.')
             player.enqueue_channel_revoked(self.resolve_name(player))
+            return
 
         if player in self.users and not player.is_tourney_client:
             # Player has already joined the channel

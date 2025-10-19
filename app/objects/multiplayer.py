@@ -786,6 +786,10 @@ class Match:
                 time.sleep(1)
                 until_next_message -= 1
 
+            if not self.countdown:
+                # Timer was cancelled
+                return
+
             remaining_time = round(self.countdown.time - time.time())
 
             self.chat.send_message(

@@ -236,11 +236,9 @@ def send_activity_announcement(entry: DBActivity) -> None:
     formatter = activity.text_formatters.get(entry.type)
 
     if not formatter:
-        app.session.logger.warning(f'No text formatter found for activity type {entry.type}')
         return
 
     if not (message := formatter(entry)):
-        app.session.logger.warning(f'Text formatter returned "{message}" for type {entry.type}')
         return
 
     # Send message in #announce channel
@@ -250,11 +248,9 @@ def send_activity_webhook(entry: DBActivity) -> None:
     formatter = activity.discord_formatters.get(entry.type)
 
     if not formatter:
-        app.session.logger.warning(f'No webhook formatter found for activity type {entry.type}')
         return
 
     if not (embed := formatter(entry)):
-        app.session.logger.warning(f'Webhook formatter returned "{embed}" for type {entry.type}')
         return
 
     # Send webhook message

@@ -33,6 +33,10 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.player.enqueue_packet = self.enqueue_packet
         self.logger.info(f'-> <{self.address}>')
 
+        if hash(self.address) in app.session.blocked_connections:
+            self.logger.warning(f'Blocked connection from {self.address}')
+            self.close_connection('Blocked IP')
+
     def onClose(self, wasClean: bool, code: int, reason: str):
         app.session.tasks.defer_to_queue(
             self.player.on_connection_lost,
