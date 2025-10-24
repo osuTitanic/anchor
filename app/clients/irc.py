@@ -304,7 +304,7 @@ class IrcClient(Client):
             "-\n"
             "- You are required to authenticate before accessing this service.\n"
             "- Please click the following link to receive your password:\n"
-           f"- https://osu.{config.DOMAIN_NAME}/account/settings/security\n"
+           f"- https://osu.{config.DOMAIN_NAME}/account/security\n"
             "-"
         )
         self.enqueue_command(irc.ERR_PASSWDMISMATCH, ":Bad authentication token.")
