@@ -339,10 +339,16 @@ class Client:
         self.stats.tscore = stats.tscore
         self.stats.playcount = stats.playcount
         self.stats.pp = round(stats.pp)
-        
+
     def update_geolocation(self) -> None:
         """Updates the player's geolocation"""
         self.location = location.fetch_geolocation(self.address)
+
+        if location.is_local_ip(self.address):
+            # This is not a very elegant solution, but should
+            # fix everyone being from France when using local IPs lol
+            self.location.set_country_code(self.object.country)
+
         self.presence.country_index = self.location.country_index
         self.presence.longitude = self.location.longitude
         self.presence.latitude = self.location.latitude
