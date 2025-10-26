@@ -1,6 +1,6 @@
 
+from app.common.database.repositories import users, messages
 from app.common.helpers import infringements, activity
-from app.common.database.repositories import users
 from app.common.database.objects import DBActivity
 from app.common.constants import GameMode
 from app.clients.base import Client
@@ -209,7 +209,8 @@ def external_message(
 def external_dm(
     sender_id: int,
     target_id: int,
-    message: str
+    message: str,
+    message_id: int
 ) -> None:
     if not (target := app.session.players.by_id(target_id)):
         return
@@ -227,6 +228,14 @@ def external_dm(
 
     if (online_sender := app.session.players.by_id(sender_id)):
         online_sender.enqueue_message(message, sender, target.name)
+
+    # We assume the message will be read
+    # This is to ensure the user won't recieve
+    # unnecessary notifications for unread messages
+    messages.update_private(
+        message_id,
+        {'read': True}
+    )
 
 @app.session.events.register('shutdown')
 def shutdown() -> None:
