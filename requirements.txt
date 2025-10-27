@@ -3,7 +3,7 @@ psycopg2-binary==2.9.11
 sqlalchemy==2.0.44
 python-dotenv==1.1.1
 twisted==25.5.0
-redis==6.4.0
+redis==7.0.0
 requests==2.32.5
 boto3-type-annotations-with-docs==0.3.1
 boto3<2
