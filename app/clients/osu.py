@@ -453,6 +453,7 @@ class OsuClient(Client):
             send_email = (
                 self.current_stats.playcount > 0
                 and not user_matches
+                and self.info.supports_unique_ids
             )
 
             if send_email:
