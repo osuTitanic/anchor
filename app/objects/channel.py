@@ -424,16 +424,6 @@ class SpectatorChannel(Channel):
 
         return client.spectating == self.player
 
-    def add(self, player: "OsuClient", no_response: bool = False) -> None:
-        if player != self.player:
-            return super().add(player, no_response)
-
-        if not player.spectators:
-            # Player does not have any spectators -> revoke channel
-            return player.enqueue_channel_revoked(self.display_name)
-
-        return super().add(player, no_response)
-
     def update_osu_clients(self) -> None:
         for player in app.session.players:
             if self.can_read(player):
