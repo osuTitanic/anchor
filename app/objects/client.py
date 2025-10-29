@@ -1,10 +1,8 @@
 
 from app.common.constants import OSU_VERSION
-from app.common.helpers import location
-from datetime import datetime
+from contextlib import suppress
 
 import hashlib
-import pytz
 import re
 
 class ClientVersion:
@@ -74,35 +72,30 @@ class ClientHash:
         return f'{self.md5}:{self.adapters}:{self.adapters_md5}:{self.uninstall_id}:{self.diskdrive_signature}'
 
     @property
-    def unknown_hardware_ids(self) -> bool:
+    def is_empty(self) -> bool:
+        return (
+            self.empty_adapters and
+            self.unknown_unique_ids
+        )
+
+    @property
+    def empty_adapters(self) -> bool:
+        return (
+            self.adapters_md5 == 'd41d8cd98f00b204e9800998ecf8427e' and
+            self.adapters == ''
+        )
+
+    @property
+    def unknown_unique_ids(self) -> bool:
         return (
             self.diskdrive_signature == 'ad921d60486366258809553a3db49a4a' or
             self.uninstall_id == 'ad921d60486366258809553a3db49a4a'
         )
 
-    @property
-    def device_id(self) -> str:
-        return hashlib.sha1(
-            ':'.join([
-                self.adapters_md5,
-                self.uninstall_id,
-                self.diskdrive_signature
-            ]).encode()
-        ).hexdigest()
-
-    @classmethod
-    def empty(cls, build_version: str):
-        return ClientHash(
-            md5=hashlib.md5(build_version.encode()).hexdigest(),
-            adapters='',
-            adapters_md5=hashlib.md5(b'').hexdigest(),
-            uninstall_id=hashlib.md5(b'unknown').hexdigest(),
-            diskdrive_signature=hashlib.md5(b'unknown').hexdigest()
-        )
-
     @classmethod
     def from_string(cls, string: str):
         args = string.split(':')
+        assert len(args) >= 3
 
         # Executable hash & mac addresses have to be present
         # starting from version b1661 and onwards
@@ -115,11 +108,9 @@ class ClientHash:
         diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
         uninstall_id = hashlib.md5(b'unknown').hexdigest()
 
-        try:
+        with suppress(IndexError):
             uninstall_id = args[3]
             diskdrive_signature = args[4]
-        except IndexError:
-            pass
 
         return ClientHash(
             md5,
@@ -129,14 +120,24 @@ class ClientHash:
             diskdrive_signature
         )
 
+    @classmethod
+    def empty(cls, build_version: str):
+        return ClientHash(
+            md5=hashlib.md5(build_version.encode()).hexdigest(),
+            adapters='',
+            adapters_md5=hashlib.md5(b'').hexdigest(),
+            uninstall_id=hashlib.md5(b'unknown').hexdigest(),
+            diskdrive_signature=hashlib.md5(b'unknown').hexdigest()
+        )
+
 class OsuClientInformation:
     def __init__(
         self,
         version: ClientVersion,
         client_hash: ClientHash,
-        utc_offset: int,
-        display_city: bool,
-        friendonly_dms: bool,
+        utc_offset: int = 0,
+        display_city: bool = False,
+        friendonly_dms: bool = False,
         protocol_version: int | None = None
     ) -> None:
         self.protocol_version = protocol_version or version.date
@@ -154,6 +155,17 @@ class OsuClientInformation:
     def supports_client_hash(self) -> bool:
         return self.version.date >= 1661
 
+    @property
+    def supports_unique_ids(self) -> bool:
+        return self.version.date >= 20120506
+
+    @classmethod
+    def empty(cls) -> "OsuClientInformation":
+        return OsuClientInformation(
+            ClientVersion.from_string('b0'),
+            ClientHash.empty('b0')
+        )
+
     @classmethod
     def from_string(cls, line: str) -> "OsuClientInformation":
         if len(args := line.split('|')) < 2:
@@ -169,12 +181,10 @@ class OsuClientInformation:
         friendonly_dms = '0'
         display_city = '0'
 
-        try:
+        with suppress(ValueError, IndexError):
             display_city = args[2]
             client_hash = args[3]
             friendonly_dms = args[4]
-        except (ValueError, IndexError):
-            pass
 
         if len(args) > 5 and args[5].isdigit():
             # Modded clients can specify a custom protocol
@@ -182,22 +192,12 @@ class OsuClientInformation:
             # is not a feature on the official clients
             custom_protocol_version = int(args[5])
 
-        try:
+        with suppress(ValueError, TypeError, IndexError, AssertionError):
             return OsuClientInformation(
                 ClientVersion.from_string(build_version),
                 ClientHash.from_string(client_hash),
-                utc_offset,
+                utc_offset=utc_offset,
                 display_city=display_city == "1",
                 friendonly_dms=friendonly_dms == "1",
                 protocol_version=custom_protocol_version
             )
-        except (ValueError, TypeError, IndexError):
-            pass
-
-    @classmethod
-    def empty(cls) -> "OsuClientInformation":
-        return OsuClientInformation(
-            ClientVersion(OSU_VERSION.match('b0'), 0),
-            ClientHash.empty('b0'),
-            0, False, False
-        )
