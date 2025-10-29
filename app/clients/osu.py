@@ -203,7 +203,7 @@ class OsuClient(Client):
                 self.enqueue_infringement_length(-1)
 
             # Check for new hardware
-            self.check_client(session)
+            self.check_hardware_info(session)
 
             if self.object.country.upper() == 'XX':
                 # We failed to get the users country on registration
@@ -419,7 +419,7 @@ class OsuClient(Client):
             session=session
         )
 
-    def check_client(self, session: Session | None = None):
+    def check_hardware_info(self, session: Session | None = None):
         if not self.info.supports_client_hash:
             # Client does not support HWIDs
             return
@@ -475,6 +475,9 @@ class OsuClient(Client):
                 )
 
         if config.ALLOW_MULTIACCOUNTING or self.is_bot:
+            return
+
+        if self.is_verified:
             return
 
         multiaccounting_lock = app.session.redis.get(f'multiaccounting:{self.id}')
@@ -566,9 +569,6 @@ class OsuClient(Client):
 
         officer.call(report_message)
         app.session.redis.set(f'multiaccounting:{self.id}', 1, ex=3600*6)
-
-        if self.is_verified:
-            return
 
         self.enqueue_message(
             strings.MULTIACCOUNTING_WARNING,
