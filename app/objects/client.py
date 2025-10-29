@@ -150,6 +150,10 @@ class OsuClientInformation:
     def is_wine(self) -> bool:
         return self.hash.adapters == 'runningunderwine'
 
+    @property
+    def supports_client_hash(self) -> bool:
+        return self.version.date >= 1661
+
     @classmethod
     def from_string(cls, line: str) -> "OsuClientInformation":
         if len(args := line.split('|')) < 2:

@@ -410,6 +410,10 @@ class OsuClient(Client):
         )
 
     def check_client(self, session: Session | None = None):
+        if not self.info.supports_client_hash:
+            # Client does not support HWIDs
+            return
+
         client = clients.fetch_without_executable(
             self.id,
             self.info.hash.adapters_md5,
@@ -449,7 +453,6 @@ class OsuClient(Client):
             send_email = (
                 self.current_stats.playcount > 0
                 and not user_matches
-                and matches
             )
 
             if send_email:
