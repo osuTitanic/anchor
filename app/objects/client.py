@@ -102,24 +102,24 @@ class ClientHash:
 
     @classmethod
     def from_string(cls, string: str):
+        args = string.split(':')
+
+        # Executable hash & mac addresses have to be present
+        # starting from version b1661 and onwards
+        md5 = args[0]
+        adapters = args[1]
+        adapters_md5 = args[2]
+
+        # Hardware IDs are not always present, but
+        # should be starting from b20120506 and onwards
+        diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
+        uninstall_id = hashlib.md5(b'unknown').hexdigest()
+
         try:
-            md5, adapters, adapters_md5, uninstall_id, diskdrive_signature = string.split(':')
-        except ValueError:
-            args = string.split(':')
-
-            md5 = args[0]
-            adapters = args[1]
-            adapters_md5 = args[2]
-
-            # Hardware IDs are not implemented
-            diskdrive_signature = hashlib.md5(b'unknown').hexdigest()
-            uninstall_id = hashlib.md5(b'unknown').hexdigest()
-
-            try:
-                uninstall_id = args[3]
-                diskdrive_signature = args[4]
-            except IndexError:
-                pass
+            uninstall_id = args[3]
+            diskdrive_signature = args[4]
+        except IndexError:
+            pass
 
         return ClientHash(
             md5,
