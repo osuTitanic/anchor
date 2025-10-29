@@ -192,6 +192,18 @@ class OsuClient(Client):
                 self.reload(self.object.preferred_mode)
                 self.enqueue_infringement_length(-1)
 
+            # Check for new hardware
+            self.check_client(session)
+
+            if self.object.country.upper() == 'XX':
+                # We failed to get the users country on registration
+                self.object.country = self.location.country_code.upper()
+                leaderboards.remove_country(self.id, self.object.country)
+                users.update(self.id, {'country': self.object.country}, session)
+
+            # Update rank, status & rankings
+            self.update_cache()
+
             # Create login attempt in db
             app.session.tasks.do_later(
                 logins.create,
@@ -213,18 +225,6 @@ class OsuClient(Client):
                 is_hidden=True,
                 session=session
             )
-
-            # Check for new hardware
-            self.check_client(session)
-
-            if self.object.country.upper() == 'XX':
-                # We failed to get the users country on registration
-                self.object.country = self.location.country_code.upper()
-                leaderboards.remove_country(self.id, self.object.country)
-                users.update(self.id, {'country': self.object.country}, session)
-
-            # Update rank, status & rankings
-            self.update_cache()
 
         self.logged_in = True
         self.on_login_success()
