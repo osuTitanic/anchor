@@ -267,8 +267,8 @@ class Client:
             self.update_status_cache()
             self.reload_rankings()
             self.reload_rank()
-            bancho_permissions = groups.get_player_permissions(self.id, session)
-            self.presence.permissions = Permissions(bancho_permissions)
+            group_permissions = groups.fetch_bancho_permissions(self.id, session)
+            self.presence.permissions = Permissions(group_permissions)
             return self.object
 
     def reload_rank(self) -> None:

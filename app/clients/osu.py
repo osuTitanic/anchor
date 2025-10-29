@@ -131,7 +131,8 @@ class OsuClient(Client):
             self.object.stats
 
             # Reload permissions
-            self.presence.permissions = Permissions(groups.get_player_permissions(self.id, session))
+            group_permissions = groups.fetch_bancho_permissions(self.id, session)
+            self.presence.permissions = Permissions(group_permissions)
 
             if self.restricted:
                 self.logger.warning('Login Failed: Restricted')
