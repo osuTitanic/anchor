@@ -86,6 +86,16 @@ class OsuClient(Client):
         self.last_response = time.time()
         self.info = info
 
+        if info.supports_client_hash and info.hash.empty_adapters:
+            self.logger.warning('Client sent empty adapters hash, despite supporting client hashes')
+            self.close_connection()
+            return
+
+        if info.supports_unique_ids and info.hash.unknown_unique_ids:
+            self.logger.warning('Client sent unknown unique ids, despite supporting unique ids')
+            self.close_connection()
+            return
+
         # Ensure adapters hash has a value
         adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()
         info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
