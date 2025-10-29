@@ -446,7 +446,13 @@ class OsuClient(Client):
                 if match.user_id == self.id
             ]
 
-            if self.current_stats.playcount > 0 and not user_matches:
+            send_email = (
+                self.current_stats.playcount > 0
+                and not user_matches
+                and matches
+            )
+
+            if send_email:
                 app.session.tasks.do_later(
                     mail.send_new_location_email,
                     self.object,
