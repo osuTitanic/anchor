@@ -94,7 +94,9 @@ class TcpIrcProtocol(IrcClient, IRC):
             "PRIVMSG",
             target.replace(" ", "_"),
             ":" + message,
-            prefix=sender.irc_formatted
+            prefix=(
+                f'{sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+            )
         )
 
     def enqueue_message_object(self, message: Message) -> None:
