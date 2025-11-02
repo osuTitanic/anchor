@@ -88,7 +88,7 @@ class ClientHash:
     @property
     def unknown_unique_ids(self) -> bool:
         return (
-            self.diskdrive_signature == 'ad921d60486366258809553a3db49a4a' or
+            self.diskdrive_signature == 'ad921d60486366258809553a3db49a4a' and
             self.uninstall_id == 'ad921d60486366258809553a3db49a4a'
         )
 
