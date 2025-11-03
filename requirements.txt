@@ -15,5 +15,5 @@ sendgrid==6.12.5
 timeago==1.0.16
 autobahn==25.10.2
 chio==1.1.20
-psutil==7.1.2
+psutil==7.1.3
 py-cpuinfo==9.0.0
