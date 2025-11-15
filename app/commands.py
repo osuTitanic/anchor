@@ -6,6 +6,7 @@ from datetime import timedelta, datetime
 from threading import Thread
 from chio import (
     ScoringType,
+    Permissions,
     SlotStatus,
     PacketType,
     SlotTeam,
@@ -20,8 +21,8 @@ from app.common.database.repositories import *
 from app.common.helpers import infringements, permissions
 
 from app.objects.channel import Channel, MultiplayerChannel, PythonInterpreterChannel
-from app.common.constants import Permissions, EventType, GameMode
 from app.objects.multiplayer import Match, MatchTimer
+from app.common.constants import EventType, GameMode
 from app.handlers.osu import spectator
 from app.clients.base import Client
 from app.faq import faq
