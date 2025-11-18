@@ -9,19 +9,11 @@ ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
 RUN apk add --no-cache \
     build-base \
     cargo \
-    curl \
-    freetype-dev \
-    git \
-    lcms2-dev \
     libffi-dev \
-    libjpeg-turbo-dev \
-    linux-headers \
-    openjpeg-dev \
     openssl-dev \
     pkgconf \
     postgresql-dev \
     rust \
-    tiff-dev \
     zlib-dev
 
 WORKDIR /tmp/build
@@ -40,16 +32,10 @@ ENV PYTHONUNBUFFERED=1 \
 # Minimal runtime libs for compiled wheels
 RUN apk add --no-cache \
     ca-certificates \
-    curl \
-    freetype \
-    lcms2 \
     libffi \
-    libjpeg-turbo \
     libstdc++ \
-    openjpeg \
     openssl \
     postgresql-libs \
-    tiff \
     zlib
 
 # Reuse site-packages & entry points from builder image
