@@ -14,7 +14,8 @@ RUN apk add --no-cache \
     pkgconf \
     postgresql-dev \
     rust \
-    zlib-dev
+    zlib-dev \
+    curl
 
 WORKDIR /tmp/build
 COPY requirements.txt ./
