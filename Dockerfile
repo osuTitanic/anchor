@@ -1,51 +1,65 @@
-FROM python:3.14-slim AS builder
+FROM python:3.14-alpine AS builder
 
-# Installing build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    libffi-dev \
-    libssl-dev \
-    openssl \
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Build toolchain & headers for native extensions
+RUN apk add --no-cache \
+    build-base \
+    cargo \
     curl \
+    freetype-dev \
     git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install rust toolchain
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
-
-# Install python dependencies
-WORKDIR /bancho
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install pyopenssl service-identity
-
-FROM python:3.14-slim
-
-# Installing runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    openssl \
-    libpq-dev \
+    lcms2-dev \
     libffi-dev \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg-turbo-dev \
+    linux-headers \
+    openjpeg-dev \
+    openssl-dev \
+    pkgconf \
+    postgresql-dev \
+    rust \
+    tiff-dev \
+    zlib-dev
 
-# Copy installed Python packages from builder
-COPY --from=builder /usr/local /usr/local
+WORKDIR /tmp/build
+COPY requirements.txt ./
 
-# Disable output buffering
-ENV PYTHONUNBUFFERED=1
+# Install Python dependencies into a relocatable prefix for reuse
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --no-compile --root /install -r requirements.txt pyopenssl service-identity
 
-# Copy source code
+FROM python:3.14-alpine
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
+
+# Minimal runtime libs for compiled wheels
+RUN apk add --no-cache \
+    ca-certificates \
+    curl \
+    freetype \
+    lcms2 \
+    libffi \
+    libjpeg-turbo \
+    libstdc++ \
+    openjpeg \
+    openssl \
+    postgresql-libs \
+    tiff \
+    zlib
+
+# Reuse site-packages & entry points from builder image
+COPY --from=builder /install/usr/local /usr/local
+
 WORKDIR /bancho
 COPY . .
 
-# Generate __pycache__ directories
-ENV PYTHONDONTWRITEBYTECODE=1
+# Byte-compile ahead of time for quicker startup
 RUN python -m compileall -q app
 
-STOPSIGNAL SIGINT
-CMD ["python3", "main.py"]
+STOPSIGNAL SIGTERM
+CMD ["python", "main.py"]
