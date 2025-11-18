@@ -14,8 +14,7 @@ RUN apk add --no-cache \
     pkgconf \
     postgresql-dev \
     rust \
-    zlib-dev \
-    curl
+    zlib-dev
 
 WORKDIR /tmp/build
 COPY requirements.txt ./
@@ -37,7 +36,8 @@ RUN apk add --no-cache \
     libstdc++ \
     openssl \
     postgresql-libs \
-    zlib
+    zlib \
+    curl
 
 # Reuse site-packages & entry points from builder image
 COPY --from=builder /install/usr/local /usr/local
