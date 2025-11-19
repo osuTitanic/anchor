@@ -21,6 +21,10 @@ def execute_task_queue():
 
             # Submit task to executor
             tasks.do_later_executor.submit(func, *args, **kwargs)
+        except TypeError as e:
+            # Queue is fucked, no idea how this happens
+            # "TypeError: '<' not supported between instances of 'TcpOsuClient' and 'TcpOsuClient'"
+            tasks.do_later_queue.queue.pop()
         except Exception as e:
             officer.call(f"Failed to execute '{func.__name__}'.", exc_info=e)
         finally:
