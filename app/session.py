@@ -28,7 +28,7 @@ database = Postgres(
 redis_pool = ConnectionPool(
     host=config.REDIS_HOST,
     port=config.REDIS_PORT,
-    max_connections=50,
+    max_connections=config.REDIS_POOLSIZE,
     decode_responses=False
 )
 
