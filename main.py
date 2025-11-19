@@ -4,6 +4,7 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.common.cache import status, usercount
 from twisted.internet import reactor
+from contextlib import suppress
 
 from app.objects.channel import Channel, PythonInterpreterChannel
 from app.banchobot import BanchoBot
@@ -115,6 +116,11 @@ def shutdown():
         os._exit(0)
 
     signal.signal(signal.SIGINT, force_exit)
+
+    # Close redis connection pool
+    with suppress(Exception):
+        app.session.redis.connection_pool.disconnect()
+        app.session.logger.info("Redis connection pool closed")
 
 def on_startup_fail(e: Exception):
     app.session.logger.fatal(f'Failed to start server: "{e}"')
