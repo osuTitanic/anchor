@@ -95,7 +95,7 @@ class TcpIrcProtocol(IrcClient, IRC):
             target.replace(" ", "_"),
             ":" + message,
             prefix=(
-                f'{sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+                f'{sender.name.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
             )
         )
 
