@@ -5,7 +5,6 @@ python-dotenv==1.2.1
 twisted==25.5.0
 redis==7.0.1
 requests==2.32.5
-boto3-type-annotations-with-docs==0.3.1
 boto3<2
 pytz==2025.2
 pytimeparse==1.1.8
