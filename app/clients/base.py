@@ -235,6 +235,10 @@ class Client:
     @property
     def friendonly_dms(self) -> bool:
         return False
+    
+    @property
+    def supports_markasread(self) -> bool:
+        return False
 
     def __repr__(self) -> str:
         return f'<{self.protocol.capitalize()}Client "{self.name}" ({self.id})>'

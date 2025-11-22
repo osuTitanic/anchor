@@ -156,6 +156,11 @@ def send_private_message(sender: OsuClient, message: Message):
     if target.away_message:
         return sender.enqueue_away_message(target)
 
+    # If the target supports the /osu-markasread.php endpoint,
+    # we mark the message as unread in the database, since
+    # we want to wait until the target actually reads it
+    is_read = False if target.supports_markasread else True
+
     target.enqueue_message(
         message.content,
         sender,
@@ -167,6 +172,7 @@ def send_private_message(sender: OsuClient, message: Message):
         sender.id,
         target.id,
         message.content[:512],
+        is_read,
         priority=4
     )
 

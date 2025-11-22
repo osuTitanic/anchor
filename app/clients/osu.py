@@ -64,6 +64,10 @@ class OsuClient(Client):
     def friendonly_dms(self) -> bool:
         return self.info.friendonly_dms
 
+    @property
+    def supports_markasread(self) -> bool:
+        return self.info.version.date >= 20191220
+
     def __repr__(self) -> str:
         return f'<{self.protocol.capitalize()}OsuClient "{self.name}" ({self.id})>'
 
