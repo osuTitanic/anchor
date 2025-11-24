@@ -13,6 +13,7 @@ from app.common.database.repositories import messages
 from app.objects.locks import LockedSet
 from app.common.webhooks import Webhook
 from app.common import officer
+from contextlib import contextmanager
 
 import logging
 import config
@@ -20,6 +21,18 @@ import time
 import app
 import sys
 import io
+import threading
+
+@contextmanager
+def non_blocking_lock(lock: threading.Lock):
+    while not lock.acquire(blocking=False):
+        pass
+
+    try:
+        yield
+    finally:
+        lock.release()
+
 
 class Channel:
     def __init__(
@@ -44,6 +57,7 @@ class Channel:
         self.users: Set["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
         self.created_at = time.time()
+        self.webhook_lock = threading.Lock()
         self.webhook_enabled = (
             config.CHAT_WEBHOOK_URL and
             name in config.CHAT_WEBHOOK_CHANNELS
@@ -164,13 +178,14 @@ class Channel:
         message_content = message_content.replace('\x01ACTION ', f'*{message.sender}')
         message_content = message_content.removesuffix('\x01')
 
-        webhook = Webhook(
-            config.CHAT_WEBHOOK_URL,
-            message_content,
-            message.sender,
-            f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
-        )
-        webhook.post()
+        with non_blocking_lock(self.webhook_lock):
+            webhook = Webhook(
+                config.CHAT_WEBHOOK_URL,
+                message_content,
+                message.sender,
+                f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
+            )
+            webhook.post()
 
     def broadcast_join(self, client: "Client") -> None:
         self.update_osu_clients()
