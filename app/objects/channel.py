@@ -166,7 +166,10 @@ class Channel:
         message_content = message_content.replace('\x01ACTION ', f'*{message.sender}')
         message_content = message_content.removesuffix('\x01')
 
-        with self.webhook_lock:
+        if not self.webhook_lock.acquire(timeout=2.5):
+            self.logger.warning('Failed to acquire webhook lock. Continuing anyways...')
+
+        try:
             webhook = Webhook(
                 config.CHAT_WEBHOOK_URL,
                 message_content,
@@ -174,6 +177,8 @@ class Channel:
                 f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
             )
             webhook.post()
+        finally:
+            self.webhook_lock.release()
 
     def broadcast_join(self, client: "Client") -> None:
         self.update_osu_clients()
