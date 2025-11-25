@@ -1,7 +1,7 @@
 
 from collections.abc import MutableMapping as _MutableMapping
 from contextlib import contextmanager
-from threading import Lock
+from threading import RLock
 from typing import (
     MutableMapping,
     Iterator,
@@ -20,26 +20,24 @@ V = TypeVar('V')
 
 class ReadWriteLock:
     def __init__(self):
-        self.write_lock = Lock()
-        self.read_lock = Lock()
+        self.write_lock = RLock()
+        self.read_lock = RLock()
         self.readers = 0
 
     def acquire_read(self):
         """Acquire a read lock."""
-        self.read_lock.acquire()
-        self.readers += 1
-        if self.readers == 1:
-            self.write_lock.acquire()
-        self.read_lock.release()
+        with self.read_lock:
+            self.readers += 1
+            if self.readers == 1:
+                self.write_lock.acquire()
 
     def release_read(self):
         """Release a read lock."""
-        assert self.readers > 0
-        self.read_lock.acquire()
-        self.readers -= 1
-        if self.readers == 0:
-            self.write_lock.release()
-        self.read_lock.release()
+        with self.read_lock:
+            assert self.readers > 0, "Attempted to release read lock without acquiring it"
+            self.readers -= 1
+            if self.readers == 0:
+                self.write_lock.release()
 
     def acquire_write(self):
         """Acquire a write lock."""
