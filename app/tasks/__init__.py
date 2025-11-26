@@ -3,6 +3,7 @@ from app.objects.executors import PriorityThreadPoolExecutor
 from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from typing import Callable, Dict, Tuple
+from contextlib import suppress
 from app.common import officer
 from threading import Thread
 
@@ -103,9 +104,10 @@ class Tasks:
         Schedule a function to be called later with a given priority.
         Lower numbers indicate higher priority.
         """
-        self.do_later_executor.submit(
-            function, *args, priority=priority, **kwargs
-        )
+        with suppress(RuntimeError):
+            self.do_later_executor.submit(
+                function, *args, priority=priority, **kwargs
+            )
 
     def defer_to_thread(self, func: Callable, *args, **kwargs) -> Deferred:
         """
