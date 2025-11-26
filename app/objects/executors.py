@@ -162,7 +162,7 @@ def _worker(*args):
         while True:
             work_item = work_queue.get(block=True)
 
-            if not work_item or work_item[0] != sys.maxsize:
+            if work_item and work_item[0] != sys.maxsize:
                 work_item = work_item[2]
                 runner(work_item)
                 del work_item
