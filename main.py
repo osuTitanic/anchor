@@ -105,6 +105,7 @@ def before_shutdown(*args):
     reactor.callLater(0.5, reactor.stop)
     app.session.events.submit('shutdown')
     app.session.tasks.shutdown = True
+    app.session.tasks.do_later_executor.shutdown(wait=False)
     app.session.tasks.do_later(lambda: None)
 
 signal.signal(signal.SIGINT, before_shutdown)
