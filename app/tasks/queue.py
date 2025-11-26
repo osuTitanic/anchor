@@ -1,5 +1,4 @@
 
-from contextlib import suppress
 from app.common import officer
 from app.session import tasks
 
@@ -25,10 +24,9 @@ def wait_for_worker() -> None:
     if current_workers < tasks.do_later_workers:
         return
 
-    with suppress(ValueError):
-        # If the number of workers is at maximum, wait for an idle worker
-        tasks.do_later_executor._idle_semaphore.acquire()
-        tasks.logger.debug("Worker available, continuing task execution.")
+    # If the number of workers is at maximum, wait for an idle worker
+    tasks.do_later_executor._idle_semaphore.acquire()
+    tasks.logger.debug("Worker available, continuing task execution.")
 
 def submit_task() -> None:
     try:
