@@ -18,6 +18,15 @@ import queue
 import sys
 
 
+class PriorityQueue(queue.PriorityQueue):
+    def put(self, item, block = True, timeout = None):
+        # An item can be "None" on shutdown signal
+        # To make the executor shut down properly we
+        # need to put a max priority item instead
+        item = item or (sys.maxsize, sys.maxsize, tuple())
+        return super().put(item, block, timeout)
+
+
 class PriorityThreadPoolExecutor(ThreadPoolExecutor):
     """
     Thread pool executor with priority queue (priorities must be different, lowest first)
@@ -32,8 +41,8 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
         """
         super(PriorityThreadPoolExecutor, self).__init__(max_workers)
 
-        # Change work queue type to queue.PriorityQueue
-        self._work_queue = queue.PriorityQueue()
+        # Change work queue type to PriorityQueue
+        self._work_queue = PriorityQueue()
 
     def submit(self, fn, *args, **kwargs):
         """
@@ -121,25 +130,6 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
         if wait:
             for t in self._threads:
                 t.join()
-
-
-def python_exit():
-    """
-
-    Cleanup before system exit
-
-    """
-    global _shutdown
-    _shutdown = True
-    items = list(_threads_queues.items())
-    for t, q in items:
-        q.put(NULL_ENTRY)
-    for t, q in items:
-        t.join()
-
-# Change default cleanup
-atexit.unregister(_python_exit)
-atexit.register(python_exit)
 
 
 def _worker(*args):
