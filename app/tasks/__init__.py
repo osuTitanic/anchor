@@ -72,6 +72,9 @@ class Tasks:
             )
 
         def on_task_failed(e: Exception) -> None:
+            if self.shutdown:
+                return
+
             officer.call(f'Task "{name}" failed: {e!r}', exc_info=e)
             on_task_done()
 
