@@ -106,7 +106,6 @@ def before_shutdown(*args):
     app.session.events.submit('shutdown')
     app.session.tasks.shutdown = True
     app.session.tasks.do_later_executor.shutdown(wait=False)
-    app.session.tasks.do_later(lambda: None)
 
 signal.signal(signal.SIGINT, before_shutdown)
 

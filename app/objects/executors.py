@@ -181,4 +181,4 @@ def _worker(*args):
 
 
 _shutdown = False
-NULL_ENTRY = (sys.maxsize, sys.maxsize, None)
+NULL_ENTRY = (sys.maxsize, sys.maxsize, tuple())
