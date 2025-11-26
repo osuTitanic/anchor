@@ -64,7 +64,6 @@ def setup():
         app.session.banchobot.channels.add(channel)
 
     app.session.logger.info('Loading tasks...')
-    importlib.import_module('app.tasks.queue')
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
     importlib.import_module('app.tasks.multiplayer')
