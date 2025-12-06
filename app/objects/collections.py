@@ -11,7 +11,7 @@ from typing import (
 
 from app.objects.locks import LockedDict, LockedSet
 from app.protocols.osu.http import HttpOsuClient
-from app.common.cache import usercount
+from app.common.cache import activity
 from app.clients.base import Client
 from app.clients.osu import OsuClient
 from app.clients.irc import IrcClient
@@ -240,7 +240,10 @@ class Players(MutableMapping[int | str, Client]):
         ]
 
     def update_usercount(self) -> None:
-        return usercount.set(len(self))
+        activity.set_all(
+            len(self.osu_id_mapping),
+            len(self.irc_id_mapping)
+        )
 
     def send_packet(self, packet: Enum, *args) -> None:
         for p in self.osu_clients:
@@ -362,6 +365,7 @@ class Matches(List[Match | None]):
             # Add match to list if free slot was found
             match.id = free
             self[free] = match
+            self.update_mp_count()
             return True
 
         return False
@@ -381,9 +385,15 @@ class Matches(List[Match | None]):
             # Remove inactive match
             self.pop(index)
 
+        # Update match count in cache
+        self.update_mp_count()
+
     def exists(self, match_id: int) -> bool:
         """Check if a match exists"""
         try:
             return self[match_id] is not None
         except IndexError:
             return False
+            
+    def update_mp_count(self) -> None:
+        activity.set_mp(len(self.active))

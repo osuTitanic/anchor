@@ -2,7 +2,7 @@
 from app.common.database.repositories import channels, wrapper
 from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
-from app.common.cache import status, usercount
+from app.common.cache import activity, status
 from twisted.internet import reactor
 from contextlib import suppress
 
@@ -72,8 +72,12 @@ def setup():
     app.session.filters.populate()
     app.session.logger.info(f'  - {len(app.session.filters)} filters loaded')
 
-    # Reset usercount
-    usercount.set(1)
+    # Reset user activity cache
+    activity.set_all(
+        osu_count=0,
+        irc_count=1,
+        mp_count=0
+    )
 
     # Reset player statuses
     for key in status.get_keys():

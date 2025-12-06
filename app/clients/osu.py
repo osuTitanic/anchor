@@ -10,8 +10,8 @@ from copy import copy
 
 from app.common.database import users, groups, stats, logins, clients
 from app.common.helpers import activity, clients as client_utils
-from app.common.cache import status, usercount, leaderboards
 from app.common.constants import GameMode, UserActivity
+from app.common.cache import status, leaderboards
 from app.common.constants import strings
 from app.common import officer, mail
 
@@ -375,9 +375,9 @@ class OsuClient(Client):
             channel.remove(self)
 
         def update_cache():
-            usercount.set(len(app.session.players))
             status.delete(self.id)
             users.update(self.id, {'latest_activity': datetime.now()})
+            app.session.players.update_usercount()
 
         app.session.tasks.do_later(
             update_cache,

@@ -1,8 +1,8 @@
 
 from app.common.database import users, groups, stats, logins
 from app.common.constants import UserActivity, strings
-from app.common.cache import usercount, status
 from app.common.helpers import activity
+from app.common.cache import status
 from app.objects.channel import Channel
 from app.clients.base import Client
 
@@ -224,9 +224,9 @@ class IrcClient(Client):
             channel.remove(self)
 
         def update_cache():
-            usercount.set(len(app.session.players))
             status.delete(self.id)
             users.update(self.id, {'latest_activity': datetime.now()})
+            app.session.players.update_usercount()
 
         app.session.tasks.do_later(
             update_cache,
