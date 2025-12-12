@@ -44,8 +44,8 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         )
 
     def onMessage(self, payload: bytes, isBinary: bool):
-        # Client may send \r\n or just \n, as well as trailing newlines
-        self.stream += payload.replace(b'\r\n', b'\n').strip(b'\n')
+        # Client may use \r\n or \n as a separator
+        self.stream += payload.strip()
 
         if self.stream.count(b'\n') != 2:
             return
