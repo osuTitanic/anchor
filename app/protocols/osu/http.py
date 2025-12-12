@@ -96,6 +96,13 @@ class HttpOsuHandler(Resource):
             request.setResponseCode(400)
             return b''
 
+        if len(password) != 32:
+            # osu! clients only send MD5-hashed passwords
+            player.logger.warning(f'Invalid login attempt: {username} / {password} / {client_data}')
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
+
         player.on_login_received(
             username,
             password,

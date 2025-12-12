@@ -54,6 +54,13 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.stream.split(b'\n', 3)
         )
 
+        if len(password) != 32:
+            # osu! clients only send MD5-hashed passwords
+            self.logger.warning(f'Invalid login attempt: {username} / {password} / {client}')
+            self.stream.clear()
+            self.close_connection('Invalid login')
+            return
+
         # Clear the login data
         self.stream.clear()
 

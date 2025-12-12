@@ -84,6 +84,13 @@ class TcpOsuClient(OsuClient, Protocol):
                 self.stream.split(b'\n', 3)
             )
 
+            if len(password) != 32:
+                # osu! clients only send MD5-hashed passwords
+                self.logger.warning(f'Invalid login attempt: {username} / {password} / {client}')
+                self.stream.clear()
+                self.close_connection('Invalid login')
+                return
+
             # We now expect bancho packets from the client
             self.dataReceived = self.packetDataReceived
             self.stream.clear()
