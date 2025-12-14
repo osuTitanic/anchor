@@ -120,10 +120,13 @@ def shutdown():
 
     signal.signal(signal.SIGINT, force_exit)
 
+    # Close database connections
+    app.session.database.engine.dispose()
+    app.session.logger.info("Database engine disposed")
+
     # Close redis connection pool
-    with suppress(Exception):
-        app.session.redis.connection_pool.disconnect()
-        app.session.logger.info("Redis connection pool closed")
+    app.session.redis.connection_pool.disconnect()
+    app.session.logger.info("Redis connection pool closed")
 
 def on_startup_fail(e: Exception):
     app.session.logger.fatal(f'Failed to start server: "{e}"')
