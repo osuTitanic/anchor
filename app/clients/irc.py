@@ -53,12 +53,17 @@ class IrcClient(Client):
         self.logger.info(f'Login attempt as "{self.name}" with IRC.')
         app.session.logins_per_minute.record()
 
+        if self.name == app.session.banchobot.name:
+            self.logger.warning('Login Failed: Attempt to login as BanchoBot')
+            self.on_login_failed(LoginError.InvalidLogin)
+            return
+
         with app.session.database.managed_session() as session:
             if not (user := users.fetch_by_safe_name(self.name, session)):
                 self.logger.warning('Login Failed: User not found')
                 self.on_login_failed(LoginError.InvalidLogin)
                 return
-            
+
             if user.irc_token != self.token:
                 self.logger.warning('Login Failed: Invalid token')
                 self.on_login_failed(LoginError.InvalidLogin)
@@ -74,7 +79,7 @@ class IrcClient(Client):
             self.object.target_relationships
             self.object.relationships
             self.object.groups
-            
+
             # Reload permissions
             group_permissions = groups.fetch_bancho_permissions(self.id, session)
             self.presence.permissions = Permissions(group_permissions)
