@@ -75,18 +75,21 @@ def process_beatmap_info_request(
 ) -> None:
     reply = BeatmapInfoReply()
 
-    for index, filenames in enumerate(filenames_chunks):
-        maps = process_filename_chunk(
-            client, filenames,
-            index * len(filenames)
-        )
-        reply.beatmaps.extend(maps)
+    with session.database.managed_session() as database_session:
+        for index, filenames in enumerate(filenames_chunks):
+            maps = process_filename_chunk(
+                client, filenames,
+                index * len(filenames),
+                database_session
+            )
+            reply.beatmaps.extend(maps)
 
-    for index, ids in enumerate(ids_chunks):
-        maps = process_id_chunk(
-            client, ids
-        )
-        reply.beatmaps.extend(maps)
+        for index, ids in enumerate(ids_chunks):
+            maps = process_id_chunk(
+                client, ids,
+                database_session
+            )
+            reply.beatmaps.extend(maps)
 
     client.logger.info(f'Sending reply with {len(reply.beatmaps)} beatmaps')
     client.enqueue_packet(PacketType.BanchoBeatmapInfoReply, reply)
@@ -94,57 +97,56 @@ def process_beatmap_info_request(
 def process_filename_chunk(
     client: OsuClient,
     filenames: List[str],
-    index_offset: int = 0
+    index_offset: int,
+    database_session: Session
 ) -> Iterator[BeatmapInfo]:
     maps: List[Tuple[int, DBBeatmap]] = []
 
     # Fetch all matching beatmaps from database
-    with session.database.managed_session() as database_session:
-        filename_beatmaps = database_session.query(DBBeatmap) \
-            .options(selectinload(DBBeatmap.beatmapset)) \
-            .filter(DBBeatmap.filename.in_(filenames)) \
-            .all()
+    filename_beatmaps = database_session.query(DBBeatmap) \
+        .options(selectinload(DBBeatmap.beatmapset)) \
+        .filter(DBBeatmap.filename.in_(filenames)) \
+        .all()
 
-        found_beatmaps = {
-            beatmap.filename: beatmap
-            for beatmap in filename_beatmaps
-        }
+    found_beatmaps = {
+        beatmap.filename: beatmap
+        for beatmap in filename_beatmaps
+    }
 
-        for index, filename in enumerate(filenames):
-            if filename not in found_beatmaps:
-                continue
+    for index, filename in enumerate(filenames):
+        if filename not in found_beatmaps:
+            continue
 
-            # The client will identify the beatmaps by their index
-            # in the "beatmapInfoSendList" array for the filenames
-            maps.append((
-                index_offset + index,
-                found_beatmaps[filename]
-            ))
+        # The client will identify the beatmaps by their index
+        # in the "beatmapInfoSendList" array for the filenames
+        maps.append((
+            index_offset + index,
+            found_beatmaps[filename]
+        ))
 
-        # Create the beatmap info response
-        return create_beatmap_info_response(client, maps, database_session)
+    # Create the beatmap info response
+    return create_beatmap_info_response(client, maps, database_session)
 
-def process_id_chunk(client: OsuClient, ids: List[int]) -> Iterator[BeatmapInfo]:
+def process_id_chunk(client: OsuClient, ids: List[int], database_session: Session) -> Iterator[BeatmapInfo]:
     maps: List[Tuple[int, DBBeatmap]] = []
 
     # Fetch all matching beatmaps from database
-    with session.database.managed_session() as database_session:
-        id_beatmaps = database_session.query(DBBeatmap) \
-            .options(selectinload(DBBeatmap.beatmapset)) \
-            .filter(DBBeatmap.id.in_(ids)) \
-            .all()
+    id_beatmaps = database_session.query(DBBeatmap) \
+        .options(selectinload(DBBeatmap.beatmapset)) \
+        .filter(DBBeatmap.id.in_(ids)) \
+        .all()
 
-        for beatmap in id_beatmaps:
-            # For the ids, the client doesn't require the index
-            # and we can just set it to -1, so that it will lookup
-            # the beatmap by its id
-            maps.append((
-                -1,
-                beatmap
-            ))
+    for beatmap in id_beatmaps:
+        # For the ids, the client doesn't require the index
+        # and we can just set it to -1, so that it will lookup
+        # the beatmap by its id
+        maps.append((
+            -1,
+            beatmap
+        ))
 
-        # Create the beatmap info response
-        return create_beatmap_info_response(client, maps, database_session)
+    # Create the beatmap info response
+    return create_beatmap_info_response(client, maps, database_session)
 
 def create_beatmap_info_response(
     client: OsuClient,
