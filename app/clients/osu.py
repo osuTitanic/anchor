@@ -405,9 +405,9 @@ class OsuClient(Client):
             return False, "okay bro, at least pick a reasonable version name next time"
 
         bypass_check = (
-            not config.DISABLE_CLIENT_VERIFICATION
-            and not self.is_staff
-            and not self.has_preview_access
+            config.DISABLE_CLIENT_VERIFICATION
+            or self.is_staff
+            or self.has_preview_access
         )
 
         if bypass_check:
