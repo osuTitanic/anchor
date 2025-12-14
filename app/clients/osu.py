@@ -24,7 +24,6 @@ from app.clients import Client
 
 import hashlib
 import logging
-import bcrypt
 import config
 import time
 import chio
@@ -159,9 +158,9 @@ class OsuClient(Client):
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
             # Check client version & executable hash
-            is_valid, response_message = self.is_valid_client(session)
+            valid, response_message = self.is_valid_client(session)
 
-            if not is_valid:
+            if not valid:
                 self.logger.warning('Login Failed: Unverified client')
                 self.on_login_failed(
                     LoginError.InvalidVersion,
@@ -203,7 +202,7 @@ class OsuClient(Client):
                 self.reload(self.object.preferred_mode)
                 self.enqueue_infringement_length(-1)
 
-            # Check for new hardware
+            # Check for new hardware & multiaccounting
             self.check_hardware_info(session)
 
             if self.object.country.upper() == 'XX':
@@ -362,7 +361,7 @@ class OsuClient(Client):
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
 
         if self.spectating:
-            self.ensure_not_spectating()
+            self.force_stop_spectating()
 
         if self.match:
             self.match.kick_player(self)
@@ -436,7 +435,7 @@ class OsuClient(Client):
             session=session
         ), strings.UNVERIFIED_CLIENT
 
-    def check_hardware_info(self, session: Session | None = None):
+    def check_hardware_info(self, session: Session) -> None:
         if not self.info.supports_client_hash:
             # Client does not support HWIDs
             return
@@ -613,11 +612,11 @@ class OsuClient(Client):
         if self.info.display_city:
             self.presence.city = self.location.city
 
-    def ensure_not_spectating(self) -> None:
-        try:
-            if not self.spectating:
-                return
+    def force_stop_spectating(self) -> None:
+        if not self.spectating:
+            return
 
+        try:
             # Leave spectator channel
             self.spectating.spectator_chat.remove(self)
 

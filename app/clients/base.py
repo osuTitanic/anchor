@@ -149,6 +149,13 @@ class Client:
         ]
 
     @property
+    def blocked(self) -> List[int]:
+        return [
+            rel.target_id for rel in self.object.relationships
+            if rel.status == 1
+        ]
+
+    @property
     def online_friends(self) -> Iterable["Client"]:
         for id in self.friends:
             if player := app.session.players.by_id(id):
@@ -235,7 +242,7 @@ class Client:
     @property
     def friendonly_dms(self) -> bool:
         return False
-    
+
     @property
     def supports_markasread(self) -> bool:
         return False

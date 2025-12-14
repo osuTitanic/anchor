@@ -20,7 +20,7 @@ class Tasks:
 
     def __init__(self) -> None:
         self.tasks: Dict[str, Tuple[int, Callable, bool]] = {}
-        self.logger = logging.getLogger('anchor')
+        self.logger = logging.getLogger('bancho')
         self.counter = itertools.count()
         self.shutdown = False
 
