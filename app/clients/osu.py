@@ -401,6 +401,10 @@ class OsuClient(Client):
         )
 
     def is_valid_client(self, session: Session) -> tuple[bool, str]:
+        if len(self.info.version.string) > 25:
+            # Version is too long to be saved in database
+            return False, "okay bro, at least pick a reasonable version name next time"
+
         bypass_check = (
             not config.DISABLE_CLIENT_VERIFICATION
             and not self.is_staff
