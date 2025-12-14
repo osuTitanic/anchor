@@ -158,21 +158,17 @@ class OsuClient(Client):
                 # Inform staff about maintenance mode
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            check_client = (
-                not config.DISABLE_CLIENT_VERIFICATION
-                and not self.is_staff
-                and not self.has_preview_access
-            )
+            # Check client version & executable hash
+            is_valid, response_message = self.is_valid_client(session)
 
-            # Check client's executable hash
-            if check_client and not self.is_valid_client(session):
+            if not is_valid:
                 self.logger.warning('Login Failed: Unverified client')
                 self.on_login_failed(
                     LoginError.InvalidVersion,
-                    strings.UNSUPPORTED_HASH
+                    response_message
                 )
                 officer.call(
-                    f'"{self.name}" tried to log in with an unverified version: '
+                    f'"{self.name}" tried to log in with an invalid client: '
                     f'{self.info.version} ({self.info.hash.md5})'
                 )
                 self.close_connection()
@@ -404,7 +400,19 @@ class OsuClient(Client):
             priority=2
         )
 
-    def is_valid_client(self, session: Session | None = None) -> bool:
+    def is_valid_client(self, session: Session) -> tuple[bool, str]:
+        bypass_check = (
+            not config.DISABLE_CLIENT_VERIFICATION
+            and not self.is_staff
+            and not self.has_preview_access
+        )
+
+        if bypass_check:
+            return True, ""
+
+        if config.BANCHO_CLIENT_CUTOFF and self.info.version.date > config.BANCHO_CLIENT_CUTOFF:
+            return False, strings.CLIENT_TOO_NEW
+
         valid_identifiers = (
             'stable', 'test', 'tourney', 'cuttingedge', 'beta'
             'ubertest', 'ce45', 'peppy', 'dev', 'arcade',
@@ -416,13 +424,13 @@ class OsuClient(Client):
                 self.info.version.date,
                 self.info.hash.md5,
                 session=session
-            )
-        
+            ), strings.UNVERIFIED_CLIENT
+
         return client_utils.is_valid_mod(
             self.info.version.identifier,
             self.info.hash.md5,
             session=session
-        )
+        ), strings.UNVERIFIED_CLIENT
 
     def check_hardware_info(self, session: Session | None = None):
         if not self.info.supports_client_hash:

@@ -25,6 +25,7 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 REDIS_POOLSIZE = int(os.environ.get('REDIS_POOLSIZE', 50))
 
 AUTOJOIN_CHANNELS = eval(os.environ.get('AUTOJOIN_CHANNELS', "['#osu', '#announce']"))
+BANCHO_CLIENT_CUTOFF = int(os.environ.get('BANCHO_CLIENT_CUTOFF', '0')) or None
 BANCHO_WORKERS = int(os.environ.get('BANCHO_WORKERS', 15))
 TCP_PORTS = eval(os.environ.get('BANCHO_TCP_PORTS', '[13381, 13382, 13383]'))
 HTTP_PORT = int(os.environ.get('BANCHO_HTTP_PORT', 5000))
