@@ -23,11 +23,11 @@ if TYPE_CHECKING:
     from .channel import Channel
 
 from app.common.database.repositories import beatmaps, events, matches
+from app.common.config import config_instance as config
 from app.common.constants import GameMode, EventType
 from app.common.database import DBMatch
 
 import logging
-import config
 import time
 import app
 

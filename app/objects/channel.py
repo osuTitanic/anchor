@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from app.clients.irc import IrcClient
     from app.clients import Client
 
+from app.common.config import config_instance as config
 from app.common.database.repositories import messages
 from app.objects.locks import LockedSet
 from app.common.webhooks import Webhook
@@ -16,7 +17,6 @@ from app.common import officer
 
 import threading
 import logging
-import config
 import time
 import app
 import sys

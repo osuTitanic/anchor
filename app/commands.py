@@ -25,12 +25,12 @@ from app.objects.multiplayer import Match, MatchTimer
 from app.common.constants import EventType, GameMode
 from app.handlers.osu import spectator
 from app.clients.base import Client
+from app.session import config
 from app.faq import faq
 
 import cpuinfo
 import logging
 import timeago
-import config
 import random
 import string
 import psutil
@@ -129,7 +129,7 @@ def status(ctx: Context) -> List[str]:
 
     # Thanks bancho.py for the inspiration ;)
     return [
-        f"Running anchor ({config.VERSION if not config.DEBUG else 'dev'})",
+        f"Running osuTitanic/anchor",
         f"  Uptime: {timedelta(seconds=uptime)}",
         f"  Domain: {config.DOMAIN_NAME}",
         f"  CPU: {cpu_name} ({thread_count} threads)",

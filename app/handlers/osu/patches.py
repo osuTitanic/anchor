@@ -1,5 +1,5 @@
 
-from config import MULTIPLAYER_MAX_SLOTS
+from app.session import config
 from copy import copy
 
 from chio.clients import b20150915, b334
@@ -15,11 +15,11 @@ b334.disable_compression = True
 
 def adjust_slot_size(match: Match) -> List[MatchSlot]:
     # Limit slots to max slots
-    slots = match.slots[:MULTIPLAYER_MAX_SLOTS]
+    slots = match.slots[:config.MULTIPLAYER_MAX_SLOTS]
 
-    if len(slots) < MULTIPLAYER_MAX_SLOTS:
+    if len(slots) < config.MULTIPLAYER_MAX_SLOTS:
         # Not enough slots -> fill empty slots
-        remaining_slots = MULTIPLAYER_MAX_SLOTS - len(slots)
+        remaining_slots = config.MULTIPLAYER_MAX_SLOTS - len(slots)
 
         for _ in range(remaining_slots):
             slot = MatchSlot(status=SlotStatus.Locked)
@@ -32,7 +32,7 @@ def write_match(cls, output: Match) -> bytes:
     match.slots = copy(match.slots)
     match.slots += (
         [MatchSlot(status=SlotStatus.Locked)] *
-        max(cls.slot_size - MULTIPLAYER_MAX_SLOTS, 0)
+        max(cls.slot_size - config.MULTIPLAYER_MAX_SLOTS, 0)
     )
 
     stream = MemoryStream()
@@ -115,6 +115,6 @@ def read_match(cls, stream: MemoryStream) -> Match:
     match.slots = adjust_slot_size(match)
     return match
 
-if MULTIPLAYER_MAX_SLOTS == 8:
+if config.MULTIPLAYER_MAX_SLOTS == 8:
     b20150915.read_match = read_match
     b20150915.write_match = write_match

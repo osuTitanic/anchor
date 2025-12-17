@@ -4,15 +4,14 @@ from app.common.constants import ANCHOR_ASCII_ART
 from app.common.logging import Console, File
 from app.common.cache import activity, status
 from twisted.internet import reactor
-from contextlib import suppress
 
 from app.objects.channel import Channel, PythonInterpreterChannel
 from app.banchobot import BanchoBot
+from app.session import config
 from app.servers import *
 
 import importlib
 import logging
-import config
 import signal
 import app
 import os
@@ -28,7 +27,7 @@ logging.basicConfig(
 
 def setup():
     app.session.logger.info(ANCHOR_ASCII_ART.removesuffix("\n"))
-    app.session.logger.info(f'Running anchor-{config.VERSION}')
+    app.session.logger.info(f'Running osuTitanic/anchor')
     os.makedirs(config.DATA_PATH, exist_ok=True)
 
     app.session.logger.info('Loading bot...')
@@ -140,14 +139,14 @@ def setup_servers():
     irc_tcp_factory = TcpIrcFactory()
 
     reactor.suggestThreadPoolSize(config.BANCHO_WORKERS)
-    reactor.listenTCP(config.HTTP_PORT, osu_http_factory)
-    reactor.listenTCP(config.WS_PORT, osu_ws_factory)
-    reactor.listenTCP(config.IRC_PORT, irc_tcp_factory)
+    reactor.listenTCP(config.BANCHO_HTTP_PORT, osu_http_factory)
+    reactor.listenTCP(config.BANCHO_WS_PORT, osu_ws_factory)
+    reactor.listenTCP(config.BANCHO_IRC_PORT, irc_tcp_factory)
 
-    for port in config.TCP_PORTS:
+    for port in config.BANCHO_TCP_PORTS:
         reactor.listenTCP(port, osu_tcp_factory)
 
-    if not config.SSL_ENABLED:
+    if not config.BANCHO_SSL_ENABLED:
         return
 
     context = app.ssl.setup(min_protocol=0)
@@ -156,7 +155,7 @@ def setup_servers():
         app.session.logger.warning('SSL support is not available, please install OpenSSL and try again.')
         return
 
-    app.ssl.listen(config.IRC_PORT_SSL, irc_tcp_factory, context)
+    app.ssl.listen(config.BANCHO_IRC_PORT_SSL, irc_tcp_factory, context)
     app.session.logger.info(f'SSL connections enabled')
 
 def main():

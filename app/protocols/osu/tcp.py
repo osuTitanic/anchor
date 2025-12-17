@@ -5,12 +5,12 @@ from twisted.internet.protocol import Protocol
 from twisted.python.failure import Failure
 from twisted.internet import reactor
 
+from app.common.config import config_instance as config
 from app.protocols.osu.streams import ByteStream
 from app.common.helpers import location
 from app.clients.osu import OsuClient
 from app.tasks import logins
 
-import config
 import app
 
 IPAddress = IPv4Address | IPv6Address

@@ -1,4 +1,5 @@
 
+from app.common.config import config_instance as config
 from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
@@ -10,7 +11,6 @@ from twisted.web.http import Request
 from twisted.web import server
 from queue import Queue, Empty
 
-import config
 import uuid
 import app
 

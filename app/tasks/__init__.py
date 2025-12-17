@@ -1,5 +1,6 @@
 
 from app.objects.executors import PriorityThreadPoolExecutor
+from app.common.config import config_instance as config
 from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from typing import Callable, Dict, Tuple
@@ -9,7 +10,6 @@ from threading import Thread
 
 import itertools
 import logging
-import config
 import time
 
 class Tasks:

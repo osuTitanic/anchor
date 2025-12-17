@@ -2,7 +2,6 @@
 from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
-from config import DOMAIN_NAME
 
 @register("QUIT")
 def handle_quit(client: IrcClient, prefix: str, *args) -> None:

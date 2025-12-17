@@ -2,8 +2,8 @@
 from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
+from app.session import config
 
-import config
 import app
 
 @register("NAMES")

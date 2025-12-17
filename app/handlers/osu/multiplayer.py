@@ -20,10 +20,10 @@ from app.objects.channel import MultiplayerChannel
 from app.objects.multiplayer import Match
 from app.common.helpers import activity
 from app.clients.osu import OsuClient
+from app.session import config
 from app import session
 
 import logging
-import config
 import time
 
 def register(packet: PacketType) -> Callable:

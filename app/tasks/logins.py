@@ -1,10 +1,10 @@
 
+from app.common.config import config_instance as config
 from twisted.internet.defer import Deferred
 from functools import cache
 from typing import Callable
 
 import bcrypt
-import config
 import app
 
 class LoginManager:

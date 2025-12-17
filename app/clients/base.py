@@ -7,6 +7,7 @@ from threading import Lock
 
 from app.common.helpers import location, permissions, infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
+from app.common.config import config_instance as config
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
@@ -23,7 +24,6 @@ from app.common.database import (
 
 import timeago
 import logging
-import config
 import pytz
 import time
 import app

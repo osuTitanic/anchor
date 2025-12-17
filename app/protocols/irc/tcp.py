@@ -4,13 +4,14 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet import reactor, threads
 from twisted.words.protocols.irc import IRC
 from twisted.python.failure import Failure
-from app.clients.irc import IrcClient
-from app.clients import Client
 from typing import List, Any
 from chio import Message
 
+from app.common.config import config_instance as config
+from app.clients.irc import IrcClient
+from app.clients import Client
+
 import logging
-import config
 import app
 
 IPAddress = IPv4Address | IPv6Address

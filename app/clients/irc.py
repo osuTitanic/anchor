@@ -1,5 +1,6 @@
 
 from app.common.database import users, groups, stats, logins
+from app.common.config import config_instance as config
 from app.common.constants import UserActivity, strings
 from app.common.helpers import activity
 from app.common.cache import status
@@ -15,7 +16,6 @@ from datetime import datetime
 from copy import copy
 
 import logging
-import config
 import time
 import app
 

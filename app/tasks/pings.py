@@ -1,7 +1,7 @@
 
+from app.session import config
 from chio import PacketType
 
-import config
 import time
 import app
 

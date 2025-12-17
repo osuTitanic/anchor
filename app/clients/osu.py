@@ -11,6 +11,7 @@ from copy import copy
 from app.common.database import users, groups, stats, logins, clients
 from app.common.helpers import activity, clients as client_utils
 from app.common.constants import GameMode, UserActivity
+from app.common.config import config_instance as config
 from app.common.cache import status, leaderboards
 from app.common.constants import strings
 from app.common import officer, mail
@@ -24,7 +25,6 @@ from app.clients import Client
 
 import hashlib
 import logging
-import config
 import time
 import chio
 import app

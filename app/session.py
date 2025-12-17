@@ -5,6 +5,7 @@ from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
 from .common.database import Postgres
 from .common.storage import Storage
+from .common.config import Config
 from .tasks import Tasks
 
 from requests.adapters import HTTPAdapter
@@ -15,15 +16,11 @@ from requests import Session
 from chio import PacketType
 
 import logging
-import config
 import time
 
-database = Postgres(
-    config.POSTGRES_USER,
-    config.POSTGRES_PASSWORD,
-    config.POSTGRES_HOST,
-    config.POSTGRES_PORT
-)
+config = Config()
+database = Postgres(config)
+storage = Storage(config)
 
 redis_pool = ConnectionPool(
     host=config.REDIS_HOST,
@@ -31,13 +28,8 @@ redis_pool = ConnectionPool(
     max_connections=config.REDIS_POOLSIZE,
     decode_responses=False
 )
-
 redis = Redis(connection_pool=redis_pool)
-
-events = EventQueue(
-    name='bancho:events',
-    connection=redis
-)
+events = EventQueue(name='bancho:events', connection=redis)
 
 logger = logging.getLogger('bancho')
 startup_time = time.time()
@@ -64,7 +56,6 @@ irc_handlers: Dict[str, Callable] = {}
 blocked_connections = set()
 filters = ChatFilter()
 channels = Channels()
-storage = Storage()
 players = Players()
 matches = Matches()
 tasks = Tasks()
