@@ -1,9 +1,7 @@
 FROM python:3.14-alpine AS builder
 
 ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Build toolchain & headers for native extensions
 RUN apk add --no-cache \
@@ -20,14 +18,14 @@ WORKDIR /tmp/build
 COPY requirements.txt ./
 
 # Install Python dependencies into a relocatable prefix for reuse
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --no-compile --root /install -r requirements.txt pyopenssl service-identity
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install --no-compile --root /install -r requirements.txt pyopenssl service-identity
 
 FROM python:3.14-alpine
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on
+    PYTHONDONTWRITEBYTECODE=1
 
 # Minimal runtime libs for compiled wheels
 RUN apk add --no-cache \
