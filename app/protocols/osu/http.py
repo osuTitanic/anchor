@@ -187,7 +187,7 @@ class HttpOsuHandler(Resource):
         return ANCHOR_WEB_RESPONSE.encode('utf-8')
 
     def render_POST(self, request: Request):
-        request.setHeader('cho-protocol', str(config.PROTOCOL_VERSION))
+        request.setHeader('cho-protocol', '18')
         request.setHeader('server', 'bancho')
         request.setResponseCode(200)
 

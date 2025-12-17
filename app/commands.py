@@ -142,13 +142,13 @@ def status(ctx: Context) -> List[str]:
 def maintenance_mode(ctx: Context) -> List[str]:
     """<on/off>"""
     # Toggle maintenance value
-    config.MAINTENANCE = not config.MAINTENANCE
+    config.BANCHO_MAINTENANCE = not config.BANCHO_MAINTENANCE
 
     if ctx.args:
         # Change maintenance value based on input
-        config.MAINTENANCE = ctx.args[0].lower() == 'on'
+        config.BANCHO_MAINTENANCE = ctx.args[0].lower() == 'on'
 
-    if config.MAINTENANCE:
+    if config.BANCHO_MAINTENANCE:
         for player in app.session.players:
             if player.is_staff:
                 continue
@@ -156,7 +156,7 @@ def maintenance_mode(ctx: Context) -> List[str]:
             player.close_connection("Server maintenance")
 
     return [
-        f'Maintenance mode is now {"enabled" if config.MAINTENANCE else "disabled"}.'
+        f'Maintenance mode is now {"enabled" if config.BANCHO_MAINTENANCE else "disabled"}.'
     ]
 
 @system_commands.register(['exec', 'python'], "admin")

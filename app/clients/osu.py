@@ -147,7 +147,7 @@ class OsuClient(Client):
                 self.on_login_failed(LoginError.UserInactive)
                 return
 
-            if config.MAINTENANCE:
+            if config.BANCHO_MAINTENANCE:
                 if not self.is_staff:
                     # Bancho is in maintenance mode
                     self.logger.warning('Login Failed: Maintenance')
