@@ -16,3 +16,4 @@ autobahn==25.12.1
 chio==1.1.20
 psutil==7.1.3
 py-cpuinfo==9.0.0
+pydantic-settings==2.12.0
