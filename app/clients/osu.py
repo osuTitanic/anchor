@@ -8,7 +8,7 @@ from typing import Any, Iterable
 from datetime import datetime
 from copy import copy
 
-from app.common.database import users, groups, stats, logins, clients
+from app.common.database import users, groups, stats, logins, clients, releases
 from app.common.helpers import activity, clients as client_utils
 from app.common.constants import GameMode, UserActivity
 from app.common.config import config_instance as config
@@ -415,6 +415,14 @@ class OsuClient(Client):
 
         if config.BANCHO_CLIENT_CUTOFF and self.info.version.date > config.BANCHO_CLIENT_CUTOFF:
             return False, strings.CLIENT_TOO_NEW
+
+        is_official_release = releases.official_file_exists(
+            self.info.hash.md5,
+            session=session
+        )
+
+        if is_official_release:
+            return True, ""
 
         valid_identifiers = (
             'stable', 'test', 'tourney', 'cuttingedge', 'beta'
