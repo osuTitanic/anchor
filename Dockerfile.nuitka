@@ -1,0 +1,72 @@
+FROM python:3.13-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+# Install build dependencies for nuitka & python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    libffi-dev \
+    libssl-dev \
+    libpq-dev \
+    patchelf \
+    ccache \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy & install python dependencies first
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
+
+# Install nuitka
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install nuitka ordered-set
+
+# Copy application code
+COPY main.py .
+COPY app ./app
+
+# Configure ccache for faster recompilation
+ENV CCACHE_DIR=/cache/ccache \
+    CCACHE_MAXSIZE=2G \
+    PATH=/usr/lib/ccache:$PATH
+
+# Compile with nuitka using cache mounts
+RUN --mount=type=cache,target=/cache/ccache \
+    --mount=type=cache,target=/root/.cache/nuitka \
+    python -m nuitka \
+      --standalone \
+      --onefile \
+      --include-package=app \
+      --include-data-file=app/common/geolite.mmdb=app/common/geolite.mmdb \
+      --include-data-files=/usr/local/lib/python3.13/site-packages/autobahn/nvx/*.c=autobahn/nvx/ \
+      --enable-plugin=pylint-warnings \
+      --output-filename=anchor \
+      --assume-yes-for-downloads \
+      --jobs=$(nproc) \
+      main.py
+
+FROM python:3.13-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libpq5 \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy compiled binary from builder
+COPY --from=builder /build/anchor .
+
+STOPSIGNAL SIGINT
+CMD ["./anchor"]
