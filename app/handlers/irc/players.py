@@ -107,6 +107,65 @@ def handle_user_who(
         f":0 {user.name}"
     )
 
+@register("ISON")
+@ensure_authenticated
+def handle_ison_command(
+    client: IrcClient,
+    prefix: str,
+    *nicknames: str
+) -> None:
+    if len(nicknames) <= 0:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "ISON", ":Not enough parameters")
+        return
+
+    online: list[str] = []
+
+    for nickname in nicknames:
+        if not nickname:
+            continue
+
+        if not (player := app.session.players.by_name_safe(nickname)):
+            continue
+
+        if player.hidden and player != client:
+            continue
+
+        online.append(client.resolve_username(player))
+
+    client.enqueue_command(irc.RPL_ISON, ":" + " ".join(online))
+
+@register("USERHOST")
+@ensure_authenticated
+def handle_userhost_command(
+    client: IrcClient,
+    prefix: str,
+    *nicknames: str
+) -> None:
+    if len(nicknames) <= 0:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "USERHOST", ":Not enough parameters")
+        return
+
+    host = f"cho.{config.DOMAIN_NAME}"
+    replies: list[str] = []
+
+    for nickname in nicknames[:5]:
+        if not nickname:
+            continue
+
+        if not (player := app.session.players.by_name_safe(nickname)):
+            continue
+
+        if player.hidden and player != client:
+            continue
+
+        nick = client.resolve_username(player)
+        oper_flag = "*" if player.is_staff else ""
+        away_flag = "-" if player.away_message else "+"
+        user = player.safe_name
+        replies.append(f"{nick}{oper_flag}={away_flag}{user}@{host}")
+
+    client.enqueue_command(irc.RPL_USERHOST, ":" + " ".join(replies))
+
 @register("WHOIS")
 @ensure_authenticated
 def handle_whois_command(
@@ -142,10 +201,19 @@ def handle_whois_command(
         client.enqueue_command(
             irc.RPL_WHOISUSER,
             target.underscored_name,
-            target.url,
+            target.safe_name,
+            f"cho.{config.DOMAIN_NAME}",
             '*',
             f':{target.url}'
         )
+
+        if target.away_message:
+            client.enqueue_command(
+                irc.RPL_AWAY,
+                target.underscored_name,
+                f":{target.away_message}"
+            )
+
         client.enqueue_command(
             irc.RPL_WHOISCHANNELS,
             target.underscored_name,
