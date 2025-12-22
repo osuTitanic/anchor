@@ -96,12 +96,19 @@ class TcpIrcProtocol(IrcClient, IRC):
         is_channel = target.startswith("#")
         recipient = target if is_channel else self.local_prefix
 
+        # Ensure sender object can be used for "resolve_username"
+        # If not, then we'll just use the sender name directly
+        sender_name = sender.name.replace(" ", "_")
+
+        if hasattr(sender, "underscored_name"):
+            sender_name = self.resolve_username(sender).replace(" ", "_")
+
         self.sendMessage(
             "PRIVMSG",
             recipient.replace(" ", "_"),
             ":" + message,
             prefix=(
-                f'{self.resolve_username(sender).replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+                f'{sender_name}!cho@{config.DOMAIN_NAME}'
             )
         )
 
