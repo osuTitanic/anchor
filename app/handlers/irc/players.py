@@ -61,7 +61,7 @@ def handle_whois_command(
         )
         return
 
-    found_target = False
+    last_target = None
 
     for nickname in target_nicknames:
         if nickname == f'cho.{config.DOMAIN_NAME}':
@@ -76,7 +76,7 @@ def handle_whois_command(
             for channel in target.channels
             if channel.public
         ]
-        found_target = True
+        last_target = target
 
         client.enqueue_command(
             irc.RPL_WHOISUSER,
@@ -104,9 +104,9 @@ def handle_whois_command(
                 f":is an IRC operator"
             )
 
-    if found_target:
+    if last_target:
         client.enqueue_command(
             irc.RPL_ENDOFWHOIS,
-            found_target.underscored_name,
+            last_target.underscored_name,
             f":End of /WHOIS list."
         )
