@@ -34,16 +34,77 @@ def handle_names_command(
 def handle_who_command(
     client: IrcClient,
     prefix: str,
-    channel: str = None
+    target: str = None
 ) -> None:
-    if not channel:
+    if not target:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "WHO", ":Not enough parameters")
         return
 
+    is_channel = target.startswith("#")
+    handler = handle_channel_who if is_channel else handle_user_who
+    handler(client, target)
+
     client.enqueue_command(
         irc.RPL_ENDOFWHO,
-        channel,
+        target,
         f":End of /WHO list."
+    )
+
+def handle_channel_who(
+    client: IrcClient,
+    channel_name: str
+) -> None:
+    if not (channel := app.session.channels.by_name(channel_name)):
+        return
+
+    # Send RPL_WHOREPLY for each user in the channel
+    for user in channel.users:
+        if user.hidden and user != client:
+            continue
+
+        away_flag = "G" if user.away_message else "H"
+        status = away_flag + user.irc_prefix
+
+        # Format: <channel> <user> <host> <server> <nick> <H|G>[*][@|+] :<hopcount> <real name>
+        client.enqueue_command(
+            irc.RPL_WHOREPLY,
+            channel_name,
+            user.safe_name,
+            f"cho.{config.DOMAIN_NAME}",
+            f"cho.{config.DOMAIN_NAME}",
+            client.resolve_username(user),
+            status,
+            f":0 {user.name}"
+        )
+
+def handle_user_who(
+    client: IrcClient,
+    nickname: str
+) -> None:
+    if not (user := app.session.players.by_name_safe(nickname)):
+        return
+
+    # Find a common channel or use * if none
+    common_channel = "*"
+
+    for channel in user.channels:
+        if channel.public and client in channel.users:
+            common_channel = channel.name
+            break
+
+    away_flag = "G" if user.away_message else "H"
+    status = away_flag + user.irc_prefix
+
+    # Format: <channel> <user> <host> <server> <nick> <H|G>[*][@|+] :<hopcount> <real name>
+    client.enqueue_command(
+        irc.RPL_WHOREPLY,
+        common_channel,
+        user.safe_name,
+        f"cho.{config.DOMAIN_NAME}",
+        f"cho.{config.DOMAIN_NAME}",
+        client.resolve_username(user),
+        status,
+        f":0 {user.name}"
     )
 
 @register("WHOIS")
