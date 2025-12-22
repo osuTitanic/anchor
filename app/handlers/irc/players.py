@@ -11,8 +11,12 @@ import app
 def handle_names_command(
     client: IrcClient,
     prefix: str,
-    channel_names: str
+    channel_names: str = None
 ) -> None:
+    if not channel_names:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "NAMES", ":Not enough parameters")
+        return
+
     for channel_name in channel_names.split(","):
         if not (channel := app.session.channels.by_name(channel_name)):
             client.enqueue_channel_revoked(channel_name)
@@ -30,8 +34,12 @@ def handle_names_command(
 def handle_who_command(
     client: IrcClient,
     prefix: str,
-    channel: str
+    channel: str = None
 ) -> None:
+    if not channel:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "WHO", ":Not enough parameters")
+        return
+
     client.enqueue_command(
         irc.RPL_ENDOFWHO,
         channel,
@@ -53,6 +61,8 @@ def handle_whois_command(
         )
         return
 
+    found_target = False
+
     for nickname in target_nicknames:
         if nickname == f'cho.{config.DOMAIN_NAME}':
             continue
@@ -66,6 +76,7 @@ def handle_whois_command(
             for channel in target.channels
             if channel.public
         ]
+        found_target = True
 
         client.enqueue_command(
             irc.RPL_WHOISUSER,
@@ -93,8 +104,9 @@ def handle_whois_command(
                 f":is an IRC operator"
             )
 
-    client.enqueue_command(
-        irc.RPL_ENDOFWHOIS,
-        target.underscored_name,
-        f":End of /WHOIS list."
-    )
+    if found_target:
+        client.enqueue_command(
+            irc.RPL_ENDOFWHOIS,
+            found_target.underscored_name,
+            f":End of /WHOIS list."
+        )

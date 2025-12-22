@@ -13,6 +13,10 @@ def handle_ping_command(
     prefix: str,
     *args
 ) -> None:
+    if len(args) <= 0:
+        client.enqueue_command(irc.ERR_NOORIGIN, ":No origin specified")
+        return
+
     client.enqueue_command_raw(
         "PONG",
         params=args

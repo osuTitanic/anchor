@@ -1,4 +1,5 @@
 
+from twisted.words.protocols import irc
 from app.handlers.irc.decorators import *
 from app.clients.irc import IrcClient
 from app import session
@@ -8,11 +9,15 @@ from app import session
 def handle_user_command(
     client: IrcClient,
     prefix: str,
-    username: str,
+    username: str = None,
     hostname: str = "",
     servername: str = "",
     realname: str = ""
 ) -> None:
+    if not username:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "USER", ":Not enough parameters")
+        return
+
     client.is_osu = (
         (realname == "osu" or realname.isdigit()) and
         hostname == "False" and
@@ -26,8 +31,12 @@ def handle_user_command(
 def handle_pass_command(
     client: IrcClient,
     prefix: str,
-    token: str
+    token: str = None
 ) -> None:
+    if not token:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "PASS", ":Not enough parameters")
+        return
+
     client.token = token
 
     if client.name != "":
@@ -38,8 +47,12 @@ def handle_pass_command(
 def handle_nick_command(
     client: IrcClient,
     prefix: str,
-    nickname: str
+    nickname: str = None
 ) -> None:
+    if not nickname:
+        client.enqueue_command(irc.ERR_NONICKNAMEGIVEN, ":No nickname given")
+        return
+
     client.name = nickname.lower()
 
     if client.is_osu:

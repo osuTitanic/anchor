@@ -37,9 +37,13 @@ def handle_list_command(
 def handle_topic_command(
     client: IrcClient,
     prefix: str,
-    channel_name: str,
+    channel_name: str = None,
     *args
 ) -> None:
+    if not channel_name:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "TOPIC", ":Not enough parameters")
+        return
+
     if not (channel := session.channels.by_name(channel_name)):
         client.enqueue_channel_revoked(channel_name)
         return
@@ -72,8 +76,12 @@ def handle_topic_command(
 def handle_join_command(
     client: IrcClient,
     prefix: str,
-    channels: str
+    channels: str = None
 ) -> None:
+    if not channels:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "JOIN", ":Not enough parameters")
+        return
+
     for channel_name in channels.split(","):
         if not (channel := session.channels.by_name(channel_name)):
             client.enqueue_channel_revoked(channel_name)
@@ -100,9 +108,13 @@ def handle_join_command(
 def handle_part_command(
     client: IrcClient,
     prefix: str,
-    channels: str,
+    channels: str = None,
     *args
 ) -> None:
+    if not channels:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "PART", ":Not enough parameters")
+        return
+
     for channel_name in channels.split(","):
         if not (channel := session.channels.by_name(channel_name)):
             client.enqueue_channel_revoked(channel_name)
@@ -117,6 +129,7 @@ def handle_mode_command(
     *args
 ) -> None:
     if len(args) <= 0:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "MODE", ":Not enough parameters")
         return
 
     is_self = args[0] == client.local_prefix
@@ -145,12 +158,20 @@ def handle_mode_command(
 def handle_privmsg_command(
     sender: IrcClient,
     prefix: str,
-    target_name: str,
-    message: str,
+    target_name: str = None,
+    message: str = None,
     *args
 ) -> None:
     if not sender.logged_in:
         sender.handle_osu_login_callback(message)
+        return
+
+    if not target_name:
+        sender.enqueue_command(irc.ERR_NORECIPIENT, ":No recipient given (PRIVMSG)")
+        return
+
+    if not message:
+        sender.enqueue_command(irc.ERR_NOTEXTTOSEND, ":No text to send")
         return
 
     if sender.silenced:
@@ -163,8 +184,9 @@ def handle_privmsg_command(
         if not channel:
             sender.enqueue_channel_revoked(target_name)
             return
-        
-        return channel.send_message(sender, message)
+
+        channel.send_message(sender, message)
+        return
 
     if not (target := session.players.by_name_safe(target_name)):
         sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":No such nick/channel")
@@ -175,11 +197,11 @@ def handle_privmsg_command(
         return
 
     if target.silenced:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is silenced.")
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":User is silenced.")
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
-        sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":User is in friend-only mode.")
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":User is in friend-only mode.")
         return
 
     if not sender.is_bot and not sender.message_limiter.allow():
@@ -192,7 +214,7 @@ def handle_privmsg_command(
     if timeout is not None:
         sender.silence(timeout, 'Inappropriate discussion in pms')
         officer.call(f"Message: {message}")
-        return False
+        return
 
     parsed_message = message.strip()
     has_command_prefix = parsed_message.startswith('!')
