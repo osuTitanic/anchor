@@ -379,6 +379,17 @@ class IrcClient(Client):
 
     def enqueue_motd(self, message: str) -> None:
         messages = message.splitlines()
+
+        if len(messages) <= 0:
+            return
+
+        if len(messages) <= 1:
+            self.enqueue_command(
+                irc.RPL_MOTDSTART,
+                ":" + messages[0]
+            )
+            return
+
         first_message = messages.pop(0)
         last_message = messages.pop(-1)
 
