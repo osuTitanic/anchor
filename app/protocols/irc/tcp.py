@@ -91,12 +91,17 @@ class TcpIrcProtocol(IrcClient, IRC):
                 message.removeprefix("\x01ACTION ").strip()
             )
 
+        # Server -> Client privmsg target must be the recipient nick (this client)
+        # for private messages, or the channel name for channel messages
+        is_channel = target.startswith("#")
+        recipient = target if is_channel else self.local_prefix
+
         self.sendMessage(
             "PRIVMSG",
-            target.replace(" ", "_"),
+            recipient.replace(" ", "_"),
             ":" + message,
             prefix=(
-                f'{sender.name.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
+                f'{self.resolve_username(sender).replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
             )
         )
 
@@ -111,9 +116,14 @@ class TcpIrcProtocol(IrcClient, IRC):
                 message_content.removeprefix("\x01ACTION ").strip()
             )
 
+        # Server -> Client privmsg target must be the recipient nick (this client)
+        # for private messages, or the channel name for channel messages
+        is_channel = message.target.startswith("#")
+        recipient = message.target if is_channel else self.local_prefix
+
         self.sendMessage(
             "PRIVMSG",
-            message.target.replace(" ", "_"),
+            recipient.replace(" ", "_"),
             ":" + message_content,
             prefix=(
                 f'{message.sender.replace(" ", "_")}!cho@{config.DOMAIN_NAME}'
