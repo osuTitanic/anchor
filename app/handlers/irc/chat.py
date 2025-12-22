@@ -93,16 +93,6 @@ def handle_join_command(
 
         channel.add(client)
 
-        if client not in channel.users:
-            return
-
-        session.tasks.do_later(
-            client.enqueue_players,
-            channel.users,
-            channel.name,
-            priority=2
-        )
-
 @register("PART")
 @ensure_authenticated
 def handle_part_command(

@@ -172,14 +172,6 @@ class IrcClient(Client):
 
             channel.add(self)
 
-            # Send users in channel
-            app.session.tasks.do_later(
-                self.enqueue_players,
-                channel.users,
-                channel.name,
-                priority=3
-            )
-
         # Re-add matches that this player is a referee for
         self.referee_matches.update([
             match for match in app.session.matches.persistent
@@ -531,7 +523,7 @@ class IrcClient(Client):
         if not (channel := app.session.channels.by_name(channel_name)):
             return
 
-        def enqueue() -> None:
+        def enqueue_topic() -> None:
             self.enqueue_command(
                 irc.RPL_TOPIC,
                 channel.name,
@@ -544,9 +536,13 @@ class IrcClient(Client):
                 f'{int(channel.created_at)}'
             )
 
-        # Avoid sending the topic too early
-        # after joining the channel
-        reactor.callLater(0.1, enqueue)
+        def enqueue_names() -> None:
+            self.enqueue_players(channel.users, channel.name)
+
+        # Send topic first, then names listing after a small delay
+        # This ensures the client processes them in the correct order
+        reactor.callLater(0.1, enqueue_topic)
+        reactor.callLater(0.2, enqueue_names)
 
     def enqueue_channel_revoked(self, channel: str) -> None:
         self.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel, ":No such channel")
