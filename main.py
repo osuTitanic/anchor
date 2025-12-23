@@ -99,8 +99,8 @@ def setup_tracy():
 def before_shutdown(*args):
     for player in app.session.players.tcp_osu_clients:
         # Enqueue server restart packet to all players
-        # They should reconnect after 20 seconds
-        player.enqueue_server_restart(20 * 1000)
+        # They should reconnect after 30 seconds
+        player.enqueue_server_restart(30 * 1000)
 
     for player in app.session.players.irc_clients:
         player.enqueue_server_restart(0)
