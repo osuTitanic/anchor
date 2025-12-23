@@ -46,5 +46,5 @@ COPY . .
 # Byte-compile ahead of time for quicker startup
 RUN python -m compileall -q app main.py
 
-STOPSIGNAL SIGTERM
+STOPSIGNAL SIGINT
 CMD ["python", "main.py"]

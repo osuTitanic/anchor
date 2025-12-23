@@ -111,7 +111,6 @@ def before_shutdown(*args):
     app.session.tasks.do_later_executor.shutdown(wait=False)
 
 signal.signal(signal.SIGINT, before_shutdown)
-signal.signal(signal.SIGTERM, before_shutdown)
 
 def shutdown():
     def force_exit(*args):
@@ -119,7 +118,6 @@ def shutdown():
         os._exit(0)
 
     signal.signal(signal.SIGINT, force_exit)
-    signal.signal(signal.SIGTERM, force_exit)
 
     # Close database connections
     app.session.database.engine.dispose()
