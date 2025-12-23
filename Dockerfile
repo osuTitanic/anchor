@@ -44,7 +44,7 @@ WORKDIR /bancho
 COPY . .
 
 # Byte-compile ahead of time for quicker startup
-RUN python -m compileall -q app
+RUN python -m compileall -q app main.py
 
-STOPSIGNAL SIGINT
+STOPSIGNAL SIGTERM
 CMD ["python", "main.py"]

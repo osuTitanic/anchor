@@ -68,5 +68,5 @@ WORKDIR /app
 # Copy compiled binary from builder
 COPY --from=builder /build/anchor .
 
-STOPSIGNAL SIGINT
+STOPSIGNAL SIGTERM
 CMD ["./anchor"]
