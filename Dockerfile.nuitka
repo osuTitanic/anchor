@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     g++ \
+    clang \
     libffi-dev \
     libssl-dev \
     libpq-dev \
@@ -20,15 +21,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy & install python dependencies first
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+    uv pip install --upgrade pip setuptools wheel && \
+    uv pip install -r requirements.txt
 
 # Install nuitka
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install nuitka ordered-set
+    uv pip install nuitka ordered-set
 
 # Copy application code
 COPY main.py .
@@ -43,18 +48,20 @@ ENV CCACHE_DIR=/cache/ccache \
 RUN --mount=type=cache,target=/cache/ccache \
     --mount=type=cache,target=/root/.cache/nuitka \
     python -m nuitka \
-      --standalone \
-      --onefile \
-      --include-package=app \
-      --include-data-file=app/common/geolite.mmdb=app/common/geolite.mmdb \
-      --include-data-files=/usr/local/lib/python3.13/site-packages/autobahn/nvx/*.c=autobahn/nvx/ \
-      --enable-plugin=pylint-warnings \
-      --output-filename=anchor \
-      --assume-yes-for-downloads \
-      --jobs=$(nproc) \
-      main.py
+        --include-data-file=app/common/geolite.mmdb=app/common/geolite.mmdb \
+        --include-data-files=/opt/venv/lib/python3.12/site-packages/autobahn/nvx/*.c=autobahn/nvx/ \
+        --include-package=app \
+        --enable-plugin=pylint-warnings \
+        --assume-yes-for-downloads \
+        --output-filename=anchor \
+        --jobs=$(nproc) \
+        --standalone \
+        --onefile \
+        --lto=yes \
+        --clang \
+        main.py
 
-FROM python:3.13-slim
+FROM debian:bookworm-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
