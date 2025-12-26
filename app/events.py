@@ -10,6 +10,7 @@ from typing import Optional
 
 import json
 import app
+import sys
 
 @app.session.events.register('bot_message')
 def bot_message(message: str, target: str):
@@ -239,7 +240,7 @@ def external_dm(
 
 @app.session.events.register('shutdown')
 def shutdown() -> None:
-    exit(0)
+    sys.exit(0)
 
 def send_activity_announcement(entry: DBActivity) -> None:
     formatter = activity.text_formatters.get(entry.type)
