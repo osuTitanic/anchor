@@ -26,7 +26,7 @@ def pong(client: OsuClient):
     client.last_pong = time()
 
 @register(PacketType.OsuExit)
-def exit(client: OsuClient, updating: bool):
+def osu_exit(client: OsuClient, updating: bool):
     client.update_activity_later()
     client.close_connection()
 
