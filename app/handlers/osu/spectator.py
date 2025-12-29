@@ -100,7 +100,7 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     session.tasks.do_later(
         broadcast_frames,
         client, bundle,
-        priority=1
+        priority=2
     )
 
 def broadcast_frames(client: OsuClient, bundle: ReplayFrameBundle):
