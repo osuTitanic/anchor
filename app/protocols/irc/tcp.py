@@ -29,7 +29,7 @@ class TcpIrcProtocol(IrcClient, IRC):
         self.connected = True
 
         if not config.IRC_ENABLED:
-            self.enqueue_welcome("IRC connections have been disabled. Please check back later!")
+            self.enqueue_error("IRC connections have been disabled. Please check back later!")
             self.close_connection('IRC is disabled')
             return
 
