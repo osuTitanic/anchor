@@ -9,11 +9,11 @@ from .common.config import Config
 from .tasks import Tasks
 
 from requests.adapters import HTTPAdapter
-from redis import Redis, ConnectionPool
 from urllib3.util.retry import Retry
 from typing import Callable, Dict
 from requests import Session
 from chio import PacketType
+from redis import Redis
 
 import logging
 import time
@@ -22,14 +22,16 @@ config = Config()
 database = Postgres(config)
 storage = Storage(config)
 
-redis_pool = ConnectionPool(
+redis = Redis(
     host=config.REDIS_HOST,
     port=config.REDIS_PORT,
-    max_connections=config.REDIS_POOLSIZE,
+    password=config.REDIS_PASS,
     decode_responses=False
 )
-redis = Redis(connection_pool=redis_pool)
-events = EventQueue(name='bancho:events', connection=redis)
+events = EventQueue(
+    name='bancho:events',
+    connection=redis
+)
 
 logger = logging.getLogger('bancho')
 startup_time = time.time()
