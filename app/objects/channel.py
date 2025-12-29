@@ -433,12 +433,12 @@ class SpectatorChannel(Channel):
         return client.spectating == self.player
 
     def update_osu_clients(self) -> None:
-        for player in app.session.players:
-            if self.can_read(player):
-                player.enqueue_channel(
-                    self.bancho_channel,
-                    autojoin=False
-                )
+        # NOTE: So apparently this would cause the client
+        #       to always open #spectator chat, which is
+        #       really annoying, so I'm disabling it for now.
+        #       This has the side-effect of the user count
+        #       not being updated on the client side.
+        return None
 
 class MultiplayerChannel(Channel):
     def __init__(self, match: "Match") -> None:
