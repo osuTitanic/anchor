@@ -2,19 +2,25 @@
 from twisted.internet.protocol import Protocol
 
 class ByteStream:
-    """Helper class for streams in twisted."""
+    """Helper class for streams in twisted"""
+
+    __slots__ = ('client', 'offset', 'buffer')
 
     def __init__(self, client: Protocol) -> None:
         self.client = client
         self.offset = 0
-        self.data = b""
+        self.buffer = bytearray()
+
+    @property
+    def data(self) -> bytes:
+        return bytes(self.buffer)
 
     def __add__(self, data: bytes) -> "ByteStream":
         self.append(data)
         return self
 
     def __repr__(self):
-        return f"{self.data}"
+        return f"{bytes(self.buffer)}"
 
     def write(self, data: bytes) -> None:
         self.client.enqueue(data)
@@ -23,38 +29,38 @@ class ByteStream:
         if size < 0:
             return self.readall()
 
-        if self.offset + size > len(self.data):
-            raise OverflowError(f"{size} exceeds available data {len(self.data) - self.offset}")
+        if self.offset + size > len(self.buffer):
+            raise OverflowError(f"{size} exceeds available data {len(self.buffer) - self.offset}")
 
-        data = self.data[self.offset:self.offset + size]
+        data = bytes(self.buffer[self.offset:self.offset + size])
         self.offset += size
         return data
 
     def readall(self) -> bytes:
-        data = self.data[self.offset:]
-        self.offset = len(self.data)
+        data = bytes(self.buffer[self.offset:])
+        self.offset = len(self.buffer)
         return data
 
     def append(self, data: bytes) -> None:
-        self.data += data
+        self.buffer.extend(data)
 
     def seek(self, offset: int) -> None:
         self.offset = offset
 
     def available(self) -> int:
-        return len(self.data) - self.offset
+        return len(self.buffer) - self.offset
 
     def reset(self) -> None:
-        self.data = self.data[self.offset:]
+        del self.buffer[:self.offset]
         self.offset = 0
 
     def clear(self) -> None:
-        self.data = b""
+        self.buffer.clear()
         self.offset = 0
 
     def count(self, byte: bytes) -> int:
-        return self.data.count(byte)
+        return self.buffer.count(byte)
     
     def split(self, byte: bytes, maxsplit: int = -1) -> tuple[bytes, ...]:
-        parts = self.data.split(byte, maxsplit)
+        parts = bytes(self.buffer).split(byte, maxsplit)
         return parts
