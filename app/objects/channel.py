@@ -403,9 +403,6 @@ class SpectatorChannel(Channel):
         return '#spectator'
 
     def can_read(self, client: "Client") -> bool:
-        if not super().can_read(client):
-            return False
-
         if Permissions.Peppy in client.permissions:
             return True
 
@@ -413,21 +410,24 @@ class SpectatorChannel(Channel):
             return True
 
         if client.is_irc:
+            return False
+
+        if not super().can_read(client):
             return False
 
         return client.spectating == self.player
 
     def can_write(self, client: "Client") -> bool:
-        if not super().can_write(client):
-            return False
-
         if Permissions.Peppy in client.permissions:
             return True
-        
+
         if client.id == self.player.id:
             return True
 
         if client.is_irc:
+            return False
+
+        if not super().can_write(client):
             return False
 
         return client.spectating == self.player
