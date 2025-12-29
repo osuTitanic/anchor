@@ -1,15 +1,13 @@
 
-from collections.abc import MutableMapping as _MutableMapping
+from collections.abc import MutableMapping as AbstractMutableMapping
+from collections.abc import Set as AbstractSet
 from contextlib import contextmanager
-from threading import Lock
+from threading import Lock, Condition
 from typing import (
-    MutableMapping,
     Iterator,
     Optional,
-    Iterable,
     TypeVar,
     Tuple,
-    List,
     Any,
     Set
 )
@@ -19,214 +17,172 @@ K = TypeVar('K')
 V = TypeVar('V')
 
 class ReadWriteLock:
+    """A read-write lock that allows multiple readers or a single writer"""
+
+    __slots__ = ('lock', 'cond', 'readers', 'writer')
+
     def __init__(self):
-        self.write_lock = Lock()
-        self.read_lock = Lock()
+        self.lock = Lock()
+        self.cond = Condition(self.lock)
         self.readers = 0
+        self.writer = False
 
     def acquire_read(self):
-        """Acquire a read lock."""
-        self.read_lock.acquire()
-        self.readers += 1
-        if self.readers == 1:
-            self.write_lock.acquire()
-        self.read_lock.release()
-
-    def release_read(self):
-        """Release a read lock."""
-        assert self.readers > 0
-        self.read_lock.acquire()
-        self.readers -= 1
-        if self.readers == 0:
-            self.write_lock.release()
-        self.read_lock.release()
+        with self.cond:
+            while self.writer:
+                self.cond.wait()
+            self.readers += 1
 
     def acquire_write(self):
-        """Acquire a write lock."""
-        self.write_lock.acquire()
+        with self.cond:
+            while self.writer or self.readers > 0:
+                self.cond.wait()
+            self.writer = True
+
+    def release_read(self):
+        with self.cond:
+            if self.readers <= 0:
+                raise RuntimeError("release_read without acquire")
+            self.readers -= 1
+            if self.readers == 0:
+                self.cond.notify_all()
 
     def release_write(self):
-        """Release a write lock."""
-        self.write_lock.release()
+        with self.cond:
+            if not self.writer:
+                raise RuntimeError("release_write without acquire")
+            self.writer = False
+            self.cond.notify_all()
 
     @contextmanager
     def read_context(self):
-        """Context manager for read lock."""
+        self.acquire_read()
         try:
-            self.acquire_read()
             yield
         finally:
             self.release_read()
 
     @contextmanager
     def write_context(self):
-        """Context manager for write lock."""
+        self.acquire_write()
         try:
-            self.acquire_write()
             yield
         finally:
             self.release_write()
 
-class LockedSet(Set[T]):
-    """A set that is thread-safe for concurrent read and write operations."""
+class LockedSet(AbstractSet[T]):
+    """A set that is thread-safe for concurrent read and write operations"""
+
+    __slots__ = ('instance', 'lock')
 
     def __init__(self) -> None:
-        self.set: Set[T] = set()
+        self.instance: Set[T] = set()
         self.lock = ReadWriteLock()
 
-    def __iter__(self) -> Iterable[T]:
+    def __iter__(self) -> Iterator[T]:
         return iter(self.snapshot())
 
     def __len__(self) -> int:
-        return len(self.snapshot())
-
-    def __contains__(self, item: T) -> bool:
-        return item in self.snapshot()
-
-    def snapshot(self) -> Set[T]:
-        """Returns a snapshot of the set."""
         with self.lock.read_context():
-            items = set(self.set)
-        return items
+            return len(self.instance)
+
+    def __contains__(self, item: object) -> bool:
+        with self.lock.read_context():
+            return item in self.instance
 
     def add(self, item: T) -> None:
         with self.lock.write_context():
-            self.set.add(item)
+            self.instance.add(item)
 
     def update(self, *args, **kwargs) -> None:
         with self.lock.write_context():
-            self.set.update(*args, **kwargs)
+            self.instance.update(*args, **kwargs)
 
     def remove(self, item: T) -> None:
         with self.lock.write_context():
-            self.set.remove(item)
+            self.instance.remove(item)
+
+    def snapshot(self) -> Set[T]:
+        with self.lock.read_context():
+            return set(self.instance)
 
     def discard(self, item: T) -> None:
         with self.lock.write_context():
-            self.set.discard(item)
+            self.instance.discard(item)
 
-class LockedList(List[T]):
-    """A list that is thread-safe for concurrent read and write operations."""
+class LockedDict(AbstractMutableMapping[K, V]):
+    """A dict that is thread-safe for concurrent read and write operations"""
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.lock = ReadWriteLock()
-
-    def __getitem__(self, index) -> T:
-        with self.lock.read_context():
-            return super().__getitem__(index)
-
-    def __setitem__(self, index: int, value: T):
-        with self.lock.write_context():
-            super().__setitem__(index, value)
-
-    def __delitem__(self, index: int):
-        with self.lock.write_context():
-            super().__delitem__(index)
-
-    def __len__(self) -> int:
-        with self.lock.read_context():
-            return super().__len__()
-
-    def __contains__(self, item: T) -> bool:
-        with self.lock.read_context():
-            return super().__contains__(item)
-
-    def __iter__(self) -> Iterable[T]:
-        with self.lock.read_context():
-            return super().__iter__()
-
-    def append(self, item: T) -> None:
-        with self.lock.write_context():
-            super().append(item)
-
-    def extend(self, iterable: Iterable[T]) -> None:
-        with self.lock.write_context():
-            super().extend(iterable)
-
-    def remove(self, item: T) -> None:
-        with self.lock.write_context():
-            super().remove(item)
-
-    def discard(self, item: T) -> None:
-        """Remove an item if it exists, without raising an error."""
-        with self.lock.write_context():
-            try:
-                super().remove(item)
-            except ValueError:
-                pass
-
-class LockedDict(_MutableMapping, MutableMapping[K, V]):
-    """A dict that is thread-safe for concurrent read and write operations."""
+    __slots__ = ('instance', 'lock')
 
     def __init__(self, *args, **kwargs):
-        self.dict: dict[K, V] = dict(*args, **kwargs)
+        self.instance: dict[K, V] = dict(*args, **kwargs)
         self.lock = ReadWriteLock()
 
     def __getitem__(self, key: K) -> V:
         with self.lock.read_context():
-            return self.dict[key]
+            return self.instance[key]
 
     def __setitem__(self, key: K, value: V) -> None:
         with self.lock.write_context():
-            self.dict[key] = value
+            self.instance[key] = value
 
     def __delitem__(self, key: K) -> None:
         with self.lock.write_context():
-            del self.dict[key]
+            del self.instance[key]
 
     def __len__(self) -> int:
         with self.lock.read_context():
-            return len(self.dict)
+            return len(self.instance)
 
     def __iter__(self) -> Iterator[K]:
         with self.lock.read_context():
-            snapshot = list(self.dict.keys())
+            snapshot = list(self.instance.keys())
         return iter(snapshot)
 
     def __contains__(self, key: object) -> bool:
         with self.lock.read_context():
-            return key in self.dict
+            return key in self.instance
 
     def __repr__(self) -> str:
         with self.lock.read_context():
-            return f"{self.__class__.__name__}({self.dict!r})"
+            return f"{self.__class__.__name__}({self.instance!r})"
 
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         with self.lock.read_context():
-            return self.dict.get(key, default)
+            return self.instance.get(key, default)
 
     def pop(self, key: K, default: Any = None) -> Any:
         with self.lock.write_context():
-            return self.dict.pop(key, default)
+            return self.instance.pop(key, default)
 
     def popitem(self) -> Tuple[K, V]:
         with self.lock.write_context():
-            return self.dict.popitem()
+            return self.instance.popitem()
 
     def clear(self) -> None:
         with self.lock.write_context():
-            self.dict.clear()
+            self.instance.clear()
 
     def update(self, *args, **kwargs) -> None:
         with self.lock.write_context():
-            self.dict.update(*args, **kwargs)
+            self.instance.update(*args, **kwargs)
 
-    def keys(self) -> Iterable[K]:
+    def keys(self) -> Iterator[K]:
         with self.lock.read_context():
-            snapshot = list(self.dict.keys())
+            snapshot = list(self.instance.keys())
         return iter(snapshot)
 
-    def values(self) -> Iterable[V]:
+    def values(self) -> Iterator[V]:
         with self.lock.read_context():
-            snapshot = list(self.dict.values())
+            snapshot = list(self.instance.values())
         return iter(snapshot)
 
-    def items(self) -> Iterable[Tuple[K, V]]:
+    def items(self) -> Iterator[Tuple[K, V]]:
         with self.lock.read_context():
-            snapshot = list(self.dict.items())
+            snapshot = list(self.instance.items())
         return iter(snapshot)
 
-    def setdefault(self, key: K, default: V = None) -> V:
+    def setdefault(self, key: K, default: Optional[V] = None) -> Optional[V]:
         with self.lock.write_context():
-            return self.dict.setdefault(key, default)
+            return self.instance.setdefault(key, default)
