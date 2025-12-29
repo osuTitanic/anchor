@@ -1,4 +1,5 @@
 
+from functools import cached_property
 import collections
 import threading
 import time
@@ -7,51 +8,56 @@ class RateLimiter:
     """A simple rate limiter that allows a certain number of requests per period."""
 
     def __init__(self, limit: int, period: float, cooldown: float = 10.0) -> None:
-        self.allowance = limit
         self.limit = limit
         self.period = period
         self.cooldown = cooldown
+        self.allowance = float(limit)
         self.lock = threading.Lock()
         self.last_check = time.monotonic()
-        self.cooldown_end = None
+        self.cooldown_end = 0.0
 
-    @property
+    @cached_property
     def rate_per_second(self) -> float:
         return (
             self.limit / self.period
             if self.period > 0 else float('inf')
         )
-        
+
     @property
     def is_on_cooldown(self) -> bool:
-        if self.cooldown_end is None:
+        if self.cooldown_end == 0.0:
             return False
 
         if time.monotonic() >= self.cooldown_end:
-            self.cooldown_end = None
+            self.cooldown_end = 0.0
             return False
 
         return True
 
     def allow(self) -> bool:
+        current_time = time.monotonic()
+
         with self.lock:
-            if self.is_on_cooldown:
+            if self.cooldown_end > 0.0 and current_time < self.cooldown_end:
                 return False
 
-            current_time = time.monotonic()
+            if self.cooldown_end > 0.0:
+                self.cooldown_end = 0.0
+
             elapsed = current_time - self.last_check
 
+            # Replenish tokens based on elapsed time
+            self.allowance = min(
+                self.limit,
+                self.allowance + elapsed * self.rate_per_second
+            )
             self.last_check = current_time
-            self.allowance += elapsed * self.rate_per_second
 
-            if self.allowance > self.limit:
-                self.allowance = self.limit
-
-            if self.allowance < 1:
+            if self.allowance < 1.0:
                 self.cooldown_end = current_time + self.cooldown
                 return False
 
-            self.allowance -= 1
+            self.allowance -= 1.0
             return True
 
 class RequestCounter:
