@@ -70,7 +70,7 @@ class BanchoBot(IrcClient):
     def resolve_command(self, ctx: Context) -> Command | None:
         # Regular commands, e.g. !roll
         for command in commands:
-            if ctx.trigger not in command.triggers:
+            if ctx.trigger.lower() not in command.triggers:
                 continue
 
             has_permission = permissions.has_permission(
@@ -90,11 +90,11 @@ class BanchoBot(IrcClient):
 
         # Command sets, e.g. !mp invite <user>
         for set in sets:
-            if set.trigger != set_trigger:
+            if set.trigger.lower() != set_trigger:
                 continue
 
             for command in set.commands:
-                if trigger not in command.triggers:
+                if trigger.lower() not in command.triggers:
                     continue
 
                 has_permission = permissions.has_permission(
