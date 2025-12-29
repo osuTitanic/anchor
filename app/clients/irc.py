@@ -359,14 +359,14 @@ class IrcClient(Client):
     def enqueue_banchobot_message(self, message: str) -> None:
         self.enqueue_message(message, app.session.banchobot, "#osu")
 
-    def enqueue_welcome(self) -> None:
+    def enqueue_welcome(self, message: str = "Welcome to osu!Bancho.") -> None:
         if self.is_osu:
-            self.enqueue_banchobot_message("Welcome to osu!Bancho.")
+            self.enqueue_banchobot_message(message)
             return
 
         self.enqueue_command(
             irc.RPL_WELCOME,
-            ":Welcome to osu!Bancho!"
+            f":{message}"
         )
 
     def enqueue_motd(self, message: str) -> None:
