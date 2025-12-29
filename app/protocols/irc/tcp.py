@@ -17,7 +17,7 @@ import app
 IPAddress = IPv4Address | IPv6Address
 
 class TcpIrcProtocol(IrcClient, IRC):
-    """TCP protocol for IRC connections, currently just a placeholder"""
+    """TCP protocol for IRC connections"""
 
     def __init__(self, address: IPAddress) -> None:
         super().__init__(address.host, address.port)
@@ -40,6 +40,11 @@ class TcpIrcProtocol(IrcClient, IRC):
 
         # Ensure client is logged in after 8 seconds, else close connection
         reactor.callLater(8, self.handle_timeout_callback)
+
+        # Enable TCP_NODELAY for lower latency &
+        # set TCP keepalive for detecting dead connections
+        self.transport.setTcpNoDelay(True)
+        self.transport.setTcpKeepAlive(True)
 
     def connectionLost(self, reason: Failure) -> None:
         self.logger.info(

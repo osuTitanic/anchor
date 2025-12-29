@@ -16,7 +16,7 @@ import app
 IPAddress = IPv4Address | IPv6Address
 
 class TcpOsuClient(OsuClient, Protocol):
-    """This class implements the tcp osu connection."""
+    """This class implements the tcp osu connection"""
 
     def __init__(self, address: IPAddress) -> None:
         super().__init__(address.host, address.port)
@@ -32,6 +32,11 @@ class TcpOsuClient(OsuClient, Protocol):
         if hash(self.address) in app.session.blocked_connections:
             self.logger.warning(f'Blocked connection from {self.address}')
             self.close_connection('Blocked IP')
+
+        # Enable TCP_NODELAY for lower latency &
+        # set TCP keepalive for detecting dead connections
+        self.transport.setTcpNoDelay(True)
+        self.transport.setTcpKeepAlive(True)
 
     def connectionLost(self, reason: Failure = Failure(ConnectionDone())):
         app.session.tasks.defer_to_queue(
