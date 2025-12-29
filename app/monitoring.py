@@ -60,17 +60,20 @@ class RequestCounter:
     def __init__(self, window: int = 60) -> None:
         self.requests = collections.deque()
         self.window = window
+        self.lock = threading.Lock()
 
     @property
     def rate(self) -> float:
         now = time.time()
-        self.cleanup(now)
-        return len(self.requests)
+        with self.lock:
+            self.cleanup(now)
+            return len(self.requests)
 
     def record(self) -> None:
         now = time.time()
-        self.requests.append(now)
-        self.cleanup(now)
+        with self.lock:
+            self.requests.append(now)
+            self.cleanup(now)
 
     def cleanup(self, now: float) -> None:
         while self.requests and now - self.requests[0] > self.window:
