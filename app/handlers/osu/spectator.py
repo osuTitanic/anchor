@@ -1,8 +1,7 @@
 
 from chio import PacketType, ReplayFrameBundle
-from typing import Callable
-
 from app.clients.osu import OsuClient
+from typing import Callable
 from app import session
 
 def register(packet: PacketType) -> Callable:
@@ -92,17 +91,58 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     if not client.spectators:
         return
 
-    if len(client.spectators) <= 256:
-        return broadcast_frames(client, bundle)
+    send_frames_directly = (
+        len(client.spectators) <= 512
+        and not client.spectator_backlog_active
+        and not client.spectator_frame_backlog
+    )
 
-    # Send them to the queue, if there
-    # are too many spectators
-    session.tasks.do_later(
-        broadcast_frames,
-        client, bundle,
+    if send_frames_directly:
+        # Low spectator count, send bundle directly
+        return broadcast_bundle(client, bundle)
+
+    # We have a lot of spectators, so we need to change
+    # our strategy of sending frames to avoid overloading
+    # the task queue with too many frame broadcasts
+    client.spectator_frame_backlog.append(bundle)
+
+    if client.spectator_backlog_active:
+        # Backlog is already active, do nothing
+        return
+
+    client.spectator_backlog_active = True
+    client.logger.debug('Starting spectator backlog processing')
+    broadcast_bundle_backlog(None, client)
+
+def broadcast_bundle(client: OsuClient, bundle: ReplayFrameBundle):
+    for p in client.spectators:
+        p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
+
+def broadcast_bundle_backlog(result, client: OsuClient):
+    if not client.spectator_backlog_active:
+        client.logger.debug('Spectator backlog processing stopped')
+        client.spectator_frame_backlog.clear()
+        return
+
+    if not client.spectator_frame_backlog:
+        client.logger.debug('Spectator backlog processing complete')
+        client.spectator_backlog_active = False
+        return
+
+    if not client.spectators:
+        client.logger.debug('No more spectators, clearing spectator backlog')
+        client.spectator_frame_backlog.clear()
+        client.spectator_backlog_active = False
+        return
+
+    next_bundle = client.spectator_frame_backlog.popleft()
+
+    # Send next bundle to spectators
+    deferred = session.tasks.defer_to_queue(
+        broadcast_bundle,
+        client, next_bundle,
         priority=2
     )
 
-def broadcast_frames(client: OsuClient, bundle: ReplayFrameBundle):
-    for p in client.spectators:
-        p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
+    # Repeat until backlog is empty
+    deferred.addBoth(broadcast_bundle_backlog, client)

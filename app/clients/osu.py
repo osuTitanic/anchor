@@ -1,11 +1,12 @@
 
 from chio.constants import LoginError, QuitState, Permissions, PresenceFilter
-from chio.types import UserQuit, Message, TitleUpdate
+from chio.types import UserQuit, Message, TitleUpdate, ReplayFrameBundle
 from chio import PacketType, BanchoIO
 
+from typing import Any, Iterable, Deque
 from sqlalchemy.orm import Session
-from typing import Any, Iterable
 from datetime import datetime
+from collections import deque
 from copy import copy
 
 from app.common.database import users, groups, stats, logins, clients, releases
@@ -37,6 +38,8 @@ class OsuClient(Client):
         self.spectating_match: Match | None = None
         self.spectator_chat: SpectatorChannel | None = None
         self.spectators: LockedSet[OsuClient] = LockedSet()
+        self.spectator_frame_backlog: Deque[ReplayFrameBundle] = deque()
+        self.spectator_backlog_active: bool = False
         self.info: OsuClientInformation = OsuClientInformation.empty()
         self.io: BanchoIO = chio.select_latest_client()
 
@@ -354,6 +357,7 @@ class OsuClient(Client):
             return
 
         self.logged_in = False
+        self.spectator_backlog_active = False
         app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
 
