@@ -53,6 +53,11 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         username, password, client = (
             self.stream.split(b'\n', 3)
         )
+        username, password, client = (
+            username.strip(),
+            password.strip(),
+            client.strip()
+        )
 
         if len(password) != 32:
             # osu! clients only send MD5-hashed passwords
