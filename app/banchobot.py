@@ -185,7 +185,6 @@ class BanchoBot(IrcClient):
                 context.message,
                 session=session
             )
-
             messages.create_private(
                 self.object.id,
                 context.player.id,

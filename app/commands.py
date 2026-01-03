@@ -1439,7 +1439,7 @@ def recent(ctx: Context):
         if not (target_player := app.session.players.by_name_safe(name)):
             return ['Player is not online']
 
-    with app.session.database.managed_session() as session:
+    with app.session.database.managed_session(autocommit=False) as session:
         recent_scores = scores.fetch_recent_all(
             user_id=target_player.id,
             limit=1,

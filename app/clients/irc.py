@@ -117,7 +117,11 @@ class IrcClient(Client):
                 return
 
             if not self.object.stats:
-                self.object.stats = [stats.create(self.id, mode, session) for mode in range(4)]
+                self.object.stats = [
+                    stats.create(self.id, mode, session)
+                    for mode in range(4)
+                ]
+                session.commit()
                 self.reload(self.object.preferred_mode)
 
             # Create login attempt in db

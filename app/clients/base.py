@@ -264,7 +264,7 @@ class Client:
 
     def reload(self, mode: int = 0) -> DBUser:
         """Re-fetch database information and apply it to the client"""
-        with app.session.database.managed_session() as session:
+        with app.session.database.managed_session(autocommit=False) as session:
             self.object = users.fetch_by_id(
                 self.id,
                 DBUser.target_relationships,

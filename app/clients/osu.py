@@ -201,7 +201,11 @@ class OsuClient(Client):
             self.status.mode = GameMode(self.object.preferred_mode)
 
             if not self.object.stats:
-                self.object.stats = [stats.create(self.id, mode, session) for mode in range(4)]
+                self.object.stats = [
+                    stats.create(self.id, mode, session)
+                    for mode in range(4)
+                ]
+                session.commit()
                 self.reload(self.object.preferred_mode)
                 self.enqueue_infringement_length(-1)
 

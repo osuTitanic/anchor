@@ -75,7 +75,7 @@ def process_beatmap_info_request(
 ) -> None:
     reply = BeatmapInfoReply()
 
-    with session.database.managed_session() as database_session:
+    with session.database.managed_session(autocommit=False) as database_session:
         for index, filenames in enumerate(filenames_chunks):
             maps = process_filename_chunk(
                 client, filenames,
