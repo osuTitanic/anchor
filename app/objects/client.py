@@ -93,7 +93,7 @@ class ClientHash:
         )
 
     @classmethod
-    def from_string(cls, string: str):
+    def from_string(cls, string: str) -> "ClientHash":
         args = string.split(':')
         assert len(args) >= 3
 
@@ -137,7 +137,7 @@ class OsuClientInformation:
         client_hash: ClientHash,
         utc_offset: int = 0,
         display_city: bool = False,
-        friendonly_dms: bool = False,
+        friendonly_dms: bool | None = False,
         protocol_version: int | None = None
     ) -> None:
         self.protocol_version = protocol_version or version.date
@@ -171,22 +171,24 @@ class OsuClientInformation:
         if len(args := line.split('|')) < 2:
             return None
 
+        if not args[1].isdigit():
+            return None
+
         # Sent in every client version
         build_version = args[0]
         utc_offset = int(args[1])
-        custom_protocol_version = None
 
         # Not sent in every client version
         client_hash = ClientHash.empty(build_version).string
-        friendonly_dms = '0'
-        display_city = '0'
+        custom_protocol_version = None
+        friendonly_dms = None
+        display_city = False
 
         with suppress(ValueError, IndexError):
-            display_city = args[2]
+            display_city = args[2] == "1"
             client_hash = args[3]
-            friendonly_dms = args[4]
+            friendonly_dms = args[4] == "1"
 
-        if len(args) > 5 and args[5].isdigit():
             # Modded clients can specify a custom protocol
             # version to make use of newer features - this
             # is not a feature on the official clients
@@ -197,7 +199,7 @@ class OsuClientInformation:
                 ClientVersion.from_string(build_version),
                 ClientHash.from_string(client_hash),
                 utc_offset=utc_offset,
-                display_city=display_city == "1",
-                friendonly_dms=friendonly_dms == "1",
+                display_city=display_city,
+                friendonly_dms=friendonly_dms,
                 protocol_version=custom_protocol_version
             )

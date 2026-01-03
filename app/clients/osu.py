@@ -218,6 +218,10 @@ class OsuClient(Client):
                 leaderboards.remove_country(self.id, self.object.country)
                 users.update(self.id, {'country': self.object.country}, session)
 
+            if self.info.friendonly_dms is None:
+                # Revert to global setting
+                self.info.friendonly_dms = self.object.friendonly_dms
+
             # Update rank, status & rankings
             self.update_cache()
 
