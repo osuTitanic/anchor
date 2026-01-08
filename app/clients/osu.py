@@ -391,6 +391,9 @@ class OsuClient(Client):
             priority=4
         )
 
+        if self.in_lobby:
+            app.session.players.send_packet(PacketType.BanchoLobbyPart, self.id)
+
         if self.is_tourney_client:
             # Clear any remaining tourney clients, if there are any
             app.session.players.clear_tournament_clients(self.id)
