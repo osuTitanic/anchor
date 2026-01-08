@@ -751,10 +751,16 @@ class OsuClient(Client):
         sender: "Client",
         target: str
     ) -> None:
+        if not message:
+            return
+
         msg = Message(sender.name, message, target, sender.id)
         self.enqueue_message_object(msg)
 
     def enqueue_message_object(self, message: Message) -> None:
+        if not message.content:
+            return
+
         self.enqueue_packet(PacketType.BanchoMessage, message)
 
     def enqueue_away_message(self, target: "Client") -> None:
