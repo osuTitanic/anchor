@@ -171,9 +171,6 @@ class OsuClientInformation:
         if len(args := line.split('|')) < 2:
             return None
 
-        if not args[1].isdigit():
-            return None
-
         # Sent in every client version
         build_version = args[0]
         utc_offset = int(args[1])
