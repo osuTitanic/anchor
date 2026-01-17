@@ -183,3 +183,20 @@ class Tasks:
 
         self.do_later(execute, priority=priority)
         return deferred
+    
+    def schedule_do_later(
+        self,
+        function: Callable,
+        *args,
+        priority: int = 0,
+        delay: int = 0,
+        **kwargs
+    ) -> None:
+        """
+        Schedule a function to be called later after a delay with a given priority.
+        Lower numbers indicate higher priority.
+        """
+        task_func = lambda: self.do_later(
+            function, *args, priority=priority, **kwargs
+        )
+        reactor.callLater(delay, task_func)
