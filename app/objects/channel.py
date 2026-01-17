@@ -50,6 +50,7 @@ class Channel:
             config.CHAT_WEBHOOK_URL and
             name in config.CHAT_WEBHOOK_CHANNELS
         )
+        self.update_scheduled = False
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -181,11 +182,11 @@ class Channel:
             self.webhook_lock.release()
 
     def broadcast_join(self, client: "Client") -> None:
-        self.update_osu_clients()
+        self.schedule_osu_update()
         self.update_irc_clients(client, is_leaving=False)
 
     def broadcast_part(self, client: "Client") -> None:
-        self.update_osu_clients()
+        self.schedule_osu_update()
         self.update_irc_clients(client, is_leaving=True)
 
     def send_message(
@@ -373,6 +374,15 @@ class Channel:
 
         for user in self.irc_users:
             enqueue_method(user, client, self.name)
+
+    def schedule_osu_update(self) -> None:
+        if not self.update_scheduled:
+            self.update_scheduled = True
+            on_done = lambda _: setattr(self, 'update_scheduled', False)
+
+            # Throttle channel updates to once every 6 seconds
+            task = app.session.tasks.schedule_do_later(self.update_osu_clients, priority=2, delay=6)
+            task.addBoth(on_done)
 
     def find_other_player(self, client: "Client") -> "Client | None":
         return next(

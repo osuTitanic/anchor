@@ -191,12 +191,13 @@ class Tasks:
         priority: int = 0,
         delay: int = 0,
         **kwargs
-    ) -> None:
+    ) -> Deferred:
         """
         Schedule a function to be called later after a delay with a given priority.
         Lower numbers indicate higher priority.
         """
         task_func = lambda: self.do_later(
-            function, *args, priority=priority, **kwargs
+            function, *args,
+            priority=priority, **kwargs
         )
-        reactor.callLater(delay, task_func)
+        return self.defer_to_reactor(task_func, delay=delay)
