@@ -286,6 +286,11 @@ class Players(MutableMapping[int | str, Client]):
         for p in self:
             p.enqueue_user_quit(quit)
 
+    def send_channel(self, channel: "Channel") -> None:
+        for p in self.osu_clients:
+            if channel.can_read(p):
+                p.enqueue_channel(channel)
+
 from .channel import Channel
 
 class Channels(Dict[str, Channel]):
