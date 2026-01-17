@@ -71,7 +71,7 @@ class Channel:
     @property
     def display_name(self) -> str:
         return self.name
-    
+
     @property
     def osu_users(self) -> List["OsuClient"]:
         return [user for user in self.users if user.is_osu]
@@ -182,61 +182,11 @@ class Channel:
 
     def broadcast_join(self, client: "Client") -> None:
         self.update_osu_clients()
-
-        other_player = next(
-            (p for p in self.users if p.id == client.id and p != client),
-            None
-        )
-
-        # If another player is already in
-        # the channel, no need to broadcast
-        if other_player is not None:
-            if not client.is_irc:
-                return
-
-            # We still want to make sure the IRC
-            # client joined the channel
-            return client.enqueue_player(client, self.name)
-
-        for user in self.irc_users:
-            user.enqueue_player(client, self.name)
+        self.update_irc_clients(client, is_leaving=False)
 
     def broadcast_part(self, client: "Client") -> None:
         self.update_osu_clients()
-        
-        if client.is_tourney_client:
-            # Do not broadcast tourney part to irc users
-            return
-
-        other_player = next(
-            (p for p in self.users if p.id == client.id),
-            None
-        )
-
-        # If another player is still in the channel,
-        # do not broadcast part to irc users
-        if other_player is not None:
-            return
-
-        for user in self.irc_users:
-            user.enqueue_part(client, self.name)
-
-    def update_osu_clients(self) -> None:
-        if not self.public:
-            # Only enqueue to users in this channel
-            for player in self.osu_users:
-                player.enqueue_channel(
-                    self,
-                    autojoin=False
-                )
-            return
-
-        for player in app.session.players.osu_clients:
-            if self.can_read(player):
-                player.enqueue_channel(
-                    self,
-                    autojoin=False
-                )
+        self.update_irc_clients(client, is_leaving=True)
 
     def send_message(
         self,
@@ -384,6 +334,50 @@ class Channel:
             self.broadcast_message_to_webhook,
             message_object,
             priority=5
+        )
+
+    def update_osu_clients(self) -> None:
+        if self.public:
+            app.session.players.send_channel(self)
+            return
+
+        # Only enqueue to users in this channel
+        for player in self.osu_users:
+            player.enqueue_channel(
+                self,
+                autojoin=False
+            )
+
+    def update_irc_clients(self, client: "Client", is_leaving: bool = False) -> None:
+        if client.is_tourney_client:
+            # Do not broadcast tourney clients to irc users
+            return
+
+        if self.find_other_player(client) is not None:
+            if is_leaving:
+                # User is still active, announcing part would
+                # make them disappear from IRC
+                return
+
+            if not client.is_irc:
+                return
+
+            # We still want to make sure the IRC client got the feedback
+            # that they joined the channel
+            return client.enqueue_player(client, self.name)
+
+        enqueue_method = (
+            IrcClient.enqueue_part if is_leaving else
+            IrcClient.enqueue_player
+        )
+
+        for user in self.irc_users:
+            enqueue_method(user, client, self.name)
+
+    def find_other_player(self, client: "Client") -> "Client | None":
+        return next(
+            (p for p in self.users if p.id == client.id and p != client),
+            None
         )
 
 class SpectatorChannel(Channel):
