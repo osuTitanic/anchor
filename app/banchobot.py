@@ -154,7 +154,8 @@ class BanchoBot(IrcClient):
             else context.target.display_name
         )
 
-        if type(context.target) is MultiplayerChannel:
+        if context.is_multiplayer:
+            # Referee players & regular players get different channel names
             target_name = context.target.resolve_name(context.player)
 
         for message in response:

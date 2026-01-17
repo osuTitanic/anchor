@@ -96,6 +96,10 @@ class Context:
     @property
     def message(self) -> str:
         return f'!{self.full_trigger} {" ".join(self.args)}'
+
+    @property
+    def is_multiplayer(self) -> bool:
+        return type(self.target) is MultiplayerChannel
     
     def set_context_object(self, key: str, value: Any) -> None:
         self.objects[key] = value
