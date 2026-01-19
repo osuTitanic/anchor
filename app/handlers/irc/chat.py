@@ -76,7 +76,8 @@ def handle_topic_command(
 def handle_join_command(
     client: IrcClient,
     prefix: str,
-    channels: str = None
+    channels: str = None,
+    *args
 ) -> None:
     if not channels:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "JOIN", ":Not enough parameters")
