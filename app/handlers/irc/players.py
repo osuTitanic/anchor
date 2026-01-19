@@ -11,7 +11,8 @@ import app
 def handle_names_command(
     client: IrcClient,
     prefix: str,
-    channel_names: str = None
+    channel_names: str = None,
+    *args
 ) -> None:
     if not channel_names:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "NAMES", ":Not enough parameters")
@@ -34,7 +35,8 @@ def handle_names_command(
 def handle_who_command(
     client: IrcClient,
     prefix: str,
-    target: str = None
+    target: str = None,
+    *args
 ) -> None:
     if not target:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "WHO", ":Not enough parameters")

@@ -12,7 +12,8 @@ def handle_user_command(
     username: str = None,
     hostname: str = "",
     servername: str = "",
-    realname: str = ""
+    realname: str = "",
+    *args
 ) -> None:
     if not username:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "USER", ":Not enough parameters")
@@ -31,7 +32,8 @@ def handle_user_command(
 def handle_pass_command(
     client: IrcClient,
     prefix: str,
-    token: str = None
+    token: str = None,
+    *args
 ) -> None:
     if not token:
         client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "PASS", ":Not enough parameters")
@@ -47,7 +49,8 @@ def handle_pass_command(
 def handle_nick_command(
     client: IrcClient,
     prefix: str,
-    nickname: str = None
+    nickname: str = None,
+    *args
 ) -> None:
     if not nickname:
         client.enqueue_command(irc.ERR_NONICKNAMEGIVEN, ":No nickname given")
