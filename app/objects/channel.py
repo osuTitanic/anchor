@@ -6,13 +6,13 @@ from code import InteractiveConsole
 if TYPE_CHECKING:
     from app.objects.multiplayer import Match
     from app.clients.osu import OsuClient
-    from app.clients.irc import IrcClient
     from app.clients import Client
 
 from app.common.config import config_instance as config
 from app.common.database.repositories import messages
 from app.objects.locks import LockedSet
 from app.common.webhooks import Webhook
+from app.clients import IrcClient
 from app.common import officer
 
 import threading
@@ -355,12 +355,12 @@ class Channel:
             return
 
         if self.find_other_player(client) is not None:
+            if not client.is_irc:
+                return
+
             if is_leaving:
                 # User is still active, announcing part would
                 # make them disappear from IRC
-                return
-
-            if not client.is_irc:
                 return
 
             # We still want to make sure the IRC client got the feedback
@@ -380,8 +380,8 @@ class Channel:
             self.update_scheduled = True
             on_done = lambda _: setattr(self, 'update_scheduled', False)
 
-            # Throttle channel updates to once every 6 seconds
-            task = app.session.tasks.schedule_do_later(self.update_osu_clients, priority=2, delay=6)
+            # Throttle channel updates to once every 8 seconds
+            task = app.session.tasks.schedule_do_later(self.update_osu_clients, priority=2, delay=8)
             task.addBoth(on_done)
 
     def find_other_player(self, client: "Client") -> "Client | None":

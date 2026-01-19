@@ -1,19 +1,21 @@
 
-from app.common.database import users, groups, stats, logins
-from app.common.config import config_instance as config
-from app.common.constants import UserActivity, strings
-from app.common.helpers import activity
-from app.common.cache import status
-from app.objects.channel import Channel
-from app.clients.base import Client
-
 from chio import Permissions, LoginError, UserQuit, Message, QuitState
-from typing import List, Any, Iterable
+from typing import List, Any, Iterable, TYPE_CHECKING
 from twisted.words.protocols import irc
 from twisted.internet import reactor
 from functools import cached_property
 from datetime import datetime
 from copy import copy
+
+if TYPE_CHECKING:
+    from app.objects.channel import Channel
+
+from app.common.database import users, groups, stats, logins
+from app.common.config import config_instance as config
+from app.common.constants import UserActivity, strings
+from app.common.helpers import activity
+from app.common.cache import status
+from app.clients.base import Client
 
 import logging
 import time
@@ -429,7 +431,7 @@ class IrcClient(Client):
     def enqueue_server_restart(self, retry_in_ms: int) -> None:
         self.enqueue_announcement("Bancho is restarting, please wait...")
 
-    def enqueue_channel(self, channel: Channel, autojoin = False):
+    def enqueue_channel(self, channel: "Channel", autojoin = False) -> None:
         if not autojoin:
             return
 

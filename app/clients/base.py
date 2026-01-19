@@ -1,9 +1,12 @@
 
 from chio.types import UserPresence, UserStats, UserStatus, Message, UserQuit
+from typing import Iterable, List, Set, TYPE_CHECKING
 from chio.constants import Mode, Permissions
-from typing import Iterable, List, Set
 from datetime import datetime
 from threading import Lock
+
+if TYPE_CHECKING:
+    from app.objects.channel import Channel
 
 from app.common.helpers import location, permissions, infringements as infringements_helper
 from app.common.database.objects import DBUser, DBStats
@@ -11,7 +14,6 @@ from app.common.config import config_instance as config
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
-from app.objects.channel import Channel
 from app.common.constants import level
 from app.monitoring import RateLimiter
 from app.common.database import (
@@ -52,7 +54,7 @@ class Client:
         self.away_message: str | None = None
         self.away_senders: Set[int] = set()
         self.referee_matches: Set[Match] = set()
-        self.channels: Set[Channel] = set()
+        self.channels: Set["Channel"] = set()
         self.last_response = time.time()
         self.login_time = time.time()
         self.message_limiter = RateLimiter(60, 60)
@@ -516,7 +518,7 @@ class Client:
     def enqueue_stats(self, player: "Client") -> None:
         ...
 
-    def enqueue_channel(self, channel: Channel, autojoin: bool = False) -> None:
+    def enqueue_channel(self, channel: "Channel", autojoin: bool = False) -> None:
         ...
 
     def enqueue_channel_join_success(self, channel: str) -> None:
