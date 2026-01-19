@@ -12,7 +12,7 @@ from app.common.config import config_instance as config
 from app.common.database.repositories import messages
 from app.objects.locks import LockedSet
 from app.common.webhooks import Webhook
-from app.clients import IrcClient
+from app.clients.irc import IrcClient
 from app.common import officer
 
 import threading
