@@ -24,8 +24,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM python:3.14-alpine
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Minimal runtime libs for compiled wheels
 RUN apk add --no-cache \
