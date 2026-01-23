@@ -166,6 +166,7 @@ def handle_privmsg_command(
         return
 
     if sender.silenced:
+        sender.logger.info('Failed to send message: Sender is silenced')
         sender.enqueue_command(irc.ERR_CANNOTSENDTOCHAN, target_name, ":You are silenced.")
         return
 
@@ -187,11 +188,23 @@ def handle_privmsg_command(
         sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":You cannot send messages to yourself.")
         return
 
+    if sender.id in target.blocked:
+        sender.logger.info('Failed to send private message: Sender was blocked by target')
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":You are blocked by this user.")
+        return
+
+    if target.id in sender.blocked:
+        sender.logger.info('Failed to send private message: Target was blocked by sender')
+        sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":You have blocked this user.")
+        return
+
     if target.silenced:
+        sender.logger.info('Failed to send private message: Target was silenced')
         sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":User is silenced.")
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
+        sender.logger.info('Failed to send private message: Target only accepts DMs from friends')
         sender.enqueue_command(irc.ERR_NOSUCHNICK, target_name, ":User is in friend-only mode.")
         return
 

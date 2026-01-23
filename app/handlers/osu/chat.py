@@ -116,15 +116,27 @@ def send_private_message(sender: OsuClient, message: Message):
     if target.id == sender.id:
         return
 
+    if sender.id in target.blocked:
+        sender.logger.info('Failed to send private message: Sender was blocked by target')
+        sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, target.name)
+        return
+
+    if target.id in sender.blocked:
+        sender.logger.info('Failed to send private message: Target was blocked by sender')
+        sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, target.name)
+        return
+
     if sender.silenced:
         sender.logger.warning('Failed to send private message: Sender was silenced')
         return
 
     if target.silenced:
+        sender.logger.info('Failed to send private message: Target was silenced')
         sender.enqueue_packet(PacketType.BanchoTargetIsSilenced, target.name)
         return
 
     if target.friendonly_dms and sender.id not in target.friends:
+        sender.logger.info('Failed to send private message: Target only accepts DMs from friends')
         sender.enqueue_packet(PacketType.BanchoUserDmsBlocked, target.name)
         return
 
