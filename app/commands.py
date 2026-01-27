@@ -543,9 +543,9 @@ def mp_abort(ctx: Context):
 
 @mp_commands.register(['map', 'setmap', 'beatmap'])
 def mp_map(ctx: Context):
-    """<beatmap_id> - Select a new beatmap by it's id"""
-    if len(ctx.args) != 1 or not ctx.args[0].isdecimal():
-        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <beatmap_id>']
+    """<beatmap_id> (<mode>) - Select a new beatmap by it's id"""
+    if len(ctx.args) <= 0 or not ctx.args[0].isdecimal():
+        return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <beatmap_id> (<mode>)']
 
     match: Match = ctx.get_context_object('match')
     beatmap_id = int(ctx.args[0])
@@ -560,8 +560,11 @@ def mp_map(ctx: Context):
     match.beatmap_checksum = map.md5
     match.beatmap_text = map.full_name
     match.mode = GameMode(map.mode)
-    match.update()
 
+    if len(ctx.args) > 1:
+        match.mode = parse_mode_from_argument(ctx.args[1]) or match.mode
+
+    match.update()
     match.logger.info(f'Selected: {map.full_name}')
     return [f'Selected beatmap: {map.link}']
 
@@ -635,6 +638,15 @@ def parse_mods_from_args(args: List[str]) -> Tuple[Mods | None, bool]:
         return Mods.from_string(mods_string), freemod
     except (ValueError, TypeError):
         return None, False
+
+def parse_mode_from_argument(arg: str) -> GameMode | None:
+    if arg.isdecimal():
+        mode_value = int(arg)
+
+        if mode_value in (0, 1, 2, 3):
+            return GameMode(mode_value)
+
+    return GameMode.from_alias(arg)
 
 @mp_commands.register(['freemod', 'fm', 'fmod'])
 def mp_freemod(ctx: Context):
