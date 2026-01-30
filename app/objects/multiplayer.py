@@ -511,7 +511,8 @@ class Match:
             if not slot.has_player:
                 continue
 
-            if slot.status == SlotStatus.NotReady:
+            # Tournament matches should always start players
+            if slot.status == SlotStatus.NotReady and not self.persistent:
                 continue
 
             if slot.status != SlotStatus.NoMap:
