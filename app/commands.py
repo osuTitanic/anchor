@@ -1175,7 +1175,7 @@ def mp_addref(ctx: Context):
     """<username> - Add a referee to this match"""
     match: Match = ctx.get_context_object('match')
 
-    is_tournament_manager = permissions.has_permission("bancho.matches.bypass_limit", user_id=ctx.player.id)
+    is_tournament_manager = permissions.has_permission("bancho.matches.force_ref", user_id=ctx.player.id)
 
     if not match:
         return ["You are not inside a match."]
@@ -1220,7 +1220,7 @@ def mp_removeref(ctx: Context):
     """<username> - Remove a referee from this match"""
     match: Match = ctx.get_context_object('match')
 
-    is_tournament_manager = permissions.has_permission("bancho.matches.bypass_limit", user_id=ctx.player.id)
+    is_tournament_manager = permissions.has_permission("bancho.matches.force_ref", user_id=ctx.player.id)
 
     if not match:
         return ["You are not inside a match."]
