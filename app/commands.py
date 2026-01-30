@@ -1175,7 +1175,10 @@ def mp_addref(ctx: Context):
     """<username> - Add a referee to this match"""
     match: Match = ctx.get_context_object('match')
 
-    is_tournament_manager = permissions.has_permission("bancho.matches.force_ref", user_id=ctx.player.id)
+    can_manage_referees = permissions.has_permission(
+        "bancho.matches.force_ref",
+        user_id=ctx.player.id
+    )
 
     if not match:
         return ["You are not inside a match."]
@@ -1183,7 +1186,7 @@ def mp_addref(ctx: Context):
     if not match.persistent:
         return ["This match is not persistent."]
 
-    if match.chat.owner != ctx.player.name and not is_tournament_manager:
+    if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
     if len(ctx.args) < 1:
@@ -1197,7 +1200,7 @@ def mp_addref(ctx: Context):
     if target.id in match.referee_players:
         return [f'{target.name} is already a referee.']
 
-    if target.id == ctx.player.id and not is_tournament_manager:
+    if target.id == ctx.player.id and not can_manage_referees:
         return ["You cannot add yourself as a referee."]
 
     if not target.is_irc and target.match == match:
@@ -1220,7 +1223,10 @@ def mp_removeref(ctx: Context):
     """<username> - Remove a referee from this match"""
     match: Match = ctx.get_context_object('match')
 
-    is_tournament_manager = permissions.has_permission("bancho.matches.force_ref", user_id=ctx.player.id)
+    can_manage_referees = permissions.has_permission(
+        "bancho.matches.force_ref",
+        user_id=ctx.player.id
+    )
 
     if not match:
         return ["You are not inside a match."]
@@ -1228,7 +1234,7 @@ def mp_removeref(ctx: Context):
     if not match.persistent:
         return ["This match is not persistent."]
 
-    if match.chat.owner != ctx.player.name and not is_tournament_manager:
+    if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
     if len(ctx.args) < 1:
@@ -1242,7 +1248,7 @@ def mp_removeref(ctx: Context):
     if target.id not in match.referee_players:
         return [f'{target.name} is not a referee.']
 
-    if target.id == ctx.player.id and not is_tournament_manager:
+    if target.id == ctx.player.id and not can_manage_referees:
         return ["You cannot remove yourself as a referee."]
 
     match.chat.remove(target)
