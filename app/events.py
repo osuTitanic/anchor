@@ -1,8 +1,9 @@
 
 from app.common.database.repositories import users, messages
+from app.common.constants import GameMode, UserActivity
+from app.common.config import config_instance as config
 from app.common.helpers import infringements, activity
 from app.common.database.objects import DBActivity
-from app.common.constants import GameMode
 from app.clients.base import Client
 from app.common import officer
 from datetime import datetime
@@ -263,8 +264,29 @@ def send_activity_webhook(entry: DBActivity) -> None:
     if not (embed := formatter(entry)):
         return
 
+    webhook_url_mapping = {
+        UserActivity.BeatmapLeaderboardRank.value: config.ANNOUNCE_EVENTS_WEBHOOK_URL,
+        UserActivity.RanksGained.value: config.ANNOUNCE_EVENTS_WEBHOOK_URL,
+        UserActivity.NumberOne.value: config.ANNOUNCE_EVENTS_WEBHOOK_URL,
+        UserActivity.PPRecord.value: config.ANNOUNCE_EVENTS_WEBHOOK_URL,
+        UserActivity.BeatmapUploaded.value: config.BEATMAP_EVENTS_WEBHOOK_URL,
+        UserActivity.BeatmapRevived.value: config.BEATMAP_EVENTS_WEBHOOK_URL,
+        UserActivity.BeatmapStatusUpdated.value: config.BEATMAP_EVENTS_WEBHOOK_URL,
+        UserActivity.BeatmapNominated.value: config.BEATMAP_EVENTS_WEBHOOK_URL,
+        UserActivity.BeatmapNuked.value: config.BEATMAP_EVENTS_WEBHOOK_URL,
+        UserActivity.ForumTopicCreated.value: config.FORUM_EVENTS_WEBHOOK_URL,
+        UserActivity.ForumPostCreated.value: config.FORUM_EVENTS_WEBHOOK_URL
+    }
+    webhook_url = webhook_url_mapping.get(
+        entry.type,
+        config.ANNOUNCE_EVENTS_WEBHOOK_URL
+    )
+
     # Send webhook message
-    officer.event(embeds=[embed])
+    officer.event(
+        embeds=[embed],
+        url=webhook_url
+    )
 
 def enqueue_stats(player: Client):
     try:
