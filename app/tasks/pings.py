@@ -23,6 +23,7 @@ def osu_tcp_pings() -> None:
             continue
 
         if not player.logged_in:
+            app.session.players.remove(player)
             continue
 
         if not player.is_waiting_for_pong:
@@ -40,6 +41,10 @@ def osu_http_pings() -> None:
     check if they are still connected.
     """
     for player in app.session.players.http_osu_clients:
+        if not player.logged_in:
+            app.session.players.remove(player)
+            continue
+        
         if not player.connected:
             # Why the heck is this player even in the collection
             player.logger.warning('Tried to ping player, but was not connected?')
@@ -57,6 +62,10 @@ def irc_pings() -> None:
     """
     for player in app.session.players.irc_clients:
         if player.protocol == 'internal':
+            continue
+
+        if not player.logged_in:
+            app.session.players.remove(player)
             continue
 
         player.enqueue_command_raw(
