@@ -366,8 +366,8 @@ class OsuClient(Client):
 
         self.logged_in = False
         self.spectator_backlog_active = False
-        app.session.channels.remove(self.spectator_chat)
         app.session.players.remove(self)
+        app.session.channels.remove(self.spectator_chat)
 
         if reason:
             self.logger.info(f'Closing connection -> <{self.address}> ({reason})')
