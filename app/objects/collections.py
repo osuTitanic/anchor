@@ -133,7 +133,7 @@ class Players(MutableMapping[int | str, Client]):
             self.remove_from_collection('in_lobby', player)
 
         if player.is_tourney_client:
-            self.remove_from_collection('tourney_clients', player)
+            self.remove_from_collection('osu_tournament_clients', player)
 
         self.remove_from_mapping('osu_id_mapping', player.id)
         self.remove_from_mapping('osu_name_mapping', player.name)
