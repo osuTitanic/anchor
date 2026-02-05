@@ -17,6 +17,7 @@ import app
 class HttpOsuClient(OsuClient):
     def __init__(self, address: str, port: int) -> None:
         super().__init__(address, port)
+        self.mcosu_version: str | None = None
         self.protocol = 'http'
         self.queue = Queue()
         self.token = ""
@@ -102,6 +103,10 @@ class HttpOsuHandler(Resource):
             request.setHeader('connection', 'close')
             request.setResponseCode(400)
             return b''
+
+        if mcosu_version := request.getHeader('x-mcosu-ver'):
+            player.mcosu_version = mcosu_version
+            player.logger.info(f'Connected with McOsu: "{mcosu_version}"')
 
         player.on_login_received(
             username,
