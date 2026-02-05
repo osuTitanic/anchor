@@ -191,7 +191,10 @@ class HttpOsuHandler(Resource):
         request.setHeader('server', 'bancho')
         request.setResponseCode(200)
 
-        if request.getHeader('User-Agent') != 'osu!':
+        is_mcosu_session = request.getHeader('x-mcosu-ver') is not None
+        is_osu_user_agent = request.getHeader('User-Agent') == 'osu!'
+
+        if not (is_mcosu_session or is_osu_user_agent):
             request.setHeader('connection', 'close')
             request.setResponseCode(403)
             return b''
