@@ -31,10 +31,29 @@ class ClientVersion:
     def identifier(self) -> str:
         return self.stream or self.name or 'stable'
 
+    @identifier.setter
+    def identifier(self, value: str) -> None:
+        self.stream = value
+        self.rebuild()
+
+    def rebuild(self) -> str:
+        version_string = f"b{self.date}"
+        if self.name:
+            version_string += self.name
+        if self.revision:
+            version_string += f".{self.revision}"
+        if self.stream or self.name:
+            version_string += self.stream or self.name
+
+        self.match = OSU_VERSION.match(version_string)
+        return version_string
+
     @classmethod
-    def from_string(cls, string: str):
+    def from_string(cls, string: str) -> "ClientVersion" | None:
         match = OSU_VERSION.match(string)
-        assert match is not None
+
+        if match is None:
+            return None
 
         date = match.group('date')
         revision = match.group('revision')
@@ -93,9 +112,11 @@ class ClientHash:
         )
 
     @classmethod
-    def from_string(cls, string: str) -> "ClientHash":
+    def from_string(cls, string: str) -> "ClientHash" | None:
         args = string.split(':')
-        assert len(args) >= 3
+
+        if len(args) < 3:
+            return None
 
         # Executable hash & mac addresses have to be present
         # starting from version b1661 and onwards
@@ -167,16 +188,18 @@ class OsuClientInformation:
         )
 
     @classmethod
-    def from_string(cls, line: str) -> "OsuClientInformation":
-        if len(args := line.split('|')) < 2:
+    def from_string(cls, line: str) -> "OsuClientInformation" | None:
+        args = line.split('|')
+
+        if len(args) < 2:
             return None
 
         # Sent in every client version
-        build_version = args[0]
+        client_version = args[0]
         utc_offset = int(args[1])
 
         # Not sent in every client version
-        client_hash = ClientHash.empty(build_version).string
+        client_hash = ClientHash.empty(client_version).string
         custom_protocol_version = None
         friendonly_dms = None
         display_city = False
@@ -191,12 +214,20 @@ class OsuClientInformation:
             # is not a feature on the official clients
             custom_protocol_version = int(args[5])
 
-        with suppress(ValueError, TypeError, IndexError, AssertionError):
-            return OsuClientInformation(
-                ClientVersion.from_string(build_version),
-                ClientHash.from_string(client_hash),
-                utc_offset=utc_offset,
-                display_city=display_city,
-                friendonly_dms=friendonly_dms,
-                protocol_version=custom_protocol_version
-            )
+        client_version_object = ClientVersion.from_string(client_version)
+        client_hash_object = ClientHash.from_string(client_hash)
+
+        if client_version_object is None:
+            return None
+
+        if client_hash_object is None:
+            return None
+
+        return OsuClientInformation(
+            client_version_object,
+            client_hash_object,
+            utc_offset=utc_offset,
+            display_city=display_city,
+            friendonly_dms=friendonly_dms,
+            protocol_version=custom_protocol_version
+        )

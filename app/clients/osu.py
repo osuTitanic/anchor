@@ -51,6 +51,9 @@ class OsuClient(Client):
         self.in_lobby = False
         self.is_osu = True
 
+        # https://neosu.net/docs/protocol.html#identification
+        self.mcosu_version: str | None = None
+
     @property
     def is_tourney_client(self) -> bool:
         return (
@@ -101,6 +104,11 @@ class OsuClient(Client):
             self.logger.warning('Client sent unknown unique ids, despite supporting unique ids')
             self.close_connection()
             return
+
+        if self.mcosu_version:
+            # Special case for mcosu / neosu clients
+            # We want them to be identified like other client mods
+            self.info.version.identifier = 'mcosu'
 
         # Ensure adapters hash has a value
         adapters_hash = hashlib.md5(info.hash.adapters.encode()).hexdigest()

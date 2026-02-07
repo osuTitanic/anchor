@@ -17,7 +17,6 @@ import app
 class HttpOsuClient(OsuClient):
     def __init__(self, address: str, port: int) -> None:
         super().__init__(address, port)
-        self.mcosu_version: str | None = None
         self.protocol = 'http'
         self.queue = Queue()
         self.token = ""
