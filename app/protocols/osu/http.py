@@ -104,7 +104,7 @@ class HttpOsuHandler(Resource):
             return b''
 
         if mcosu_version := request.getHeader('x-mcosu-ver'):
-            player.mcosu_version = mcosu_version
+            player.mcosu_version = mcosu_version[:32]
             player.logger.info(f'Connected with McOsu: "{mcosu_version}"')
 
         player.on_login_received(
