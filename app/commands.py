@@ -1520,6 +1520,9 @@ def get_client_version(ctx: Context):
     if target.is_irc:
         return [f'{target.name} is connected via. IRC.']
 
+    if target.mcosu_version:
+        return [f"{target.name} is playing with neosu ({target.mcosu_version})"]
+
     return [f"{target.name} is playing on {target.info.version.string}"]
 
 @command(['ranking', 'setranking', 'setrank'], hidden=True)
