@@ -160,7 +160,9 @@ class TcpOsuClient(OsuClient, Protocol):
             self.busy = False
 
     def handleHttpRequest(self, data: bytes) -> None:
-        self.logger.debug(f'Recieved http request: {data}')
-        self.enqueue(b'HTTP/1.1 302 Found\r\n')
-        self.enqueue(f'Location: http://c.{config.DOMAIN_NAME}\r\n'.encode())
+        self.logger.debug(f'Received http request: {data}')
+        self.enqueue(
+            f'HTTP/1.1 302 Found\r\n'.encode() +
+            f'Location: http://c.{config.DOMAIN_NAME}\r\n'.encode()
+        )
         self.close_connection()
