@@ -674,6 +674,7 @@ def change_password(client: OsuClient, update: Match):
     client.match.logger.info(
         f'Changed password to: {update.password}'
     )
+    # TODO: Do we need to send the packet back?
 
 @register(PacketType.OsuMatchStart)
 def match_start(client: OsuClient):
