@@ -1,4 +1,5 @@
 
+from autobahn.websocket.compress import PerMessageDeflateOffer, PerMessageDeflateOfferAccept
 from autobahn.twisted.websocket import WebSocketServerFactory
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.interfaces import IAddress
@@ -40,6 +41,14 @@ class WebsocketBanchoFactory(WebSocketServerFactory):
     def __init__(self):
         super().__init__()
         self.protocol = WebsocketOsuClient
+
+        # Allow per-message deflate compression
+        def accept_deflate(offers):
+            for offer in offers:
+                if isinstance(offer, PerMessageDeflateOffer):
+                    return PerMessageDeflateOfferAccept(offer)
+
+        self.setProtocolOptions(perMessageCompressionAccept=accept_deflate)
 
     def startFactory(self):
         app.session.logger.info(f'Starting factory: {self}')
