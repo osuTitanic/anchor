@@ -450,7 +450,7 @@ class OsuClient(Client):
         valid_identifiers = (
             'stable', 'test', 'tourney', 'cuttingedge', 'beta'
             'ubertest', 'ce45', 'peppy', 'dev', 'arcade',
-            'fallback', 'a', 'b', 'c', 'd', 'e'
+            'noxna', 'fallback', 'a', 'b', 'c', 'd', 'e'
         )
 
         if self.info.version.identifier in valid_identifiers:
