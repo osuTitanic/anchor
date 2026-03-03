@@ -133,7 +133,7 @@ class Channel:
 
     def remove_inactive_users(self) -> None:
         for user in self.users:
-            if not user.logged_in:
+            if user.inactive:
                 self.remove(user)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
