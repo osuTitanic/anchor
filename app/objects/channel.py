@@ -134,6 +134,7 @@ class Channel:
     def remove_inactive_users(self) -> None:
         for user in self.users:
             if user.inactive:
+                self.logger.info(f'Removing inactive user: {user.name}')
                 self.remove(user)
 
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
