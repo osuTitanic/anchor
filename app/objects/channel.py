@@ -131,6 +131,11 @@ class Channel:
         self.logger.info(f'{client.name} left')
         app.session.tasks.do_later(self.broadcast_part, client, priority=1)
 
+    def remove_inactive_users(self) -> None:
+        for user in self.users:
+            if not user.logged_in:
+                self.remove(user)
+
     def broadcast_message(self, message: Message, users: List["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
