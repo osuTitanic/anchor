@@ -66,6 +66,7 @@ def setup():
     importlib.import_module('app.tasks.pings')
     importlib.import_module('app.tasks.events')
     importlib.import_module('app.tasks.multiplayer')
+    importlib.import_module('app.tasks.channels')
 
     app.session.logger.info('Loading filters...')
     app.session.filters.populate()
