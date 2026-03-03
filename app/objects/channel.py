@@ -133,6 +133,9 @@ class Channel:
 
     def remove_inactive_users(self) -> None:
         for user in self.users:
+            if user is app.session.banchobot:
+                continue
+
             if user.inactive:
                 self.logger.info(f'Removing inactive user: {user.name}')
                 self.remove(user)
