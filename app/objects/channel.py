@@ -1,6 +1,6 @@
 
 from chio import Message, Channel as bChannel, Permissions
-from typing import TYPE_CHECKING, List, Set
+from typing import TYPE_CHECKING, List, Set, Iterator
 from code import InteractiveConsole
 
 if TYPE_CHECKING:
@@ -40,17 +40,16 @@ class Channel:
         self.write_perms = write_perms
         self.moderated = False
         self.public = public
-
-        self.logger = logging.getLogger(self.name)
         self.users: Set["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
-        self.created_at = time.time()
-        self.webhook_lock = threading.Lock()
+
         self.webhook_enabled = (
             config.CHAT_WEBHOOK_URL and
             name in config.CHAT_WEBHOOK_CHANNELS
         )
         self.update_scheduled = False
+        self.logger = logging.getLogger(self.name)
+        self.created_at = time.time()
 
     def __repr__(self) -> str:
         return f'<{self.name} - {self.topic}>'
@@ -167,19 +166,13 @@ class Channel:
         message_content = message_content.replace('\x01ACTION ', f'*{message.sender}')
         message_content = message_content.removesuffix('\x01')
 
-        if not self.webhook_lock.acquire(timeout=2.5):
-            self.logger.warning('Failed to acquire webhook lock. Continuing anyways...')
-
-        try:
-            webhook = Webhook(
-                config.CHAT_WEBHOOK_URL,
-                message_content,
-                message.sender,
-                f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
-            )
-            webhook.post()
-        finally:
-            self.webhook_lock.release()
+        webhook = Webhook(
+            config.CHAT_WEBHOOK_URL,
+            message_content,
+            message.sender,
+            f'http://a.{config.DOMAIN_NAME}/{message.sender_id}'
+        )
+        webhook.post()
 
     def broadcast_join(self, client: "Client") -> None:
         self.schedule_osu_update()
@@ -188,6 +181,12 @@ class Channel:
     def broadcast_part(self, client: "Client") -> None:
         self.schedule_osu_update()
         self.update_irc_clients(client, is_leaving=True)
+
+    def find_other_players(self, client: "Client") -> Iterator["Client"]:
+        return (p for p in self.users if p.id == client.id and p != client)
+
+    def find_other_player(self, client: "Client") -> "Client | None":
+        return next(self.find_other_players(client), None)
 
     def send_message(
         self,
@@ -383,12 +382,6 @@ class Channel:
             # Throttle channel updates to once every 8 seconds
             task = app.session.tasks.schedule_do_later(self.update_osu_clients, priority=2, delay=8)
             task.addBoth(on_done)
-
-    def find_other_player(self, client: "Client") -> "Client | None":
-        return next(
-            (p for p in self.users if p.id == client.id and p != client),
-            None
-        )
 
 class SpectatorChannel(Channel):
     def __init__(self, player: "OsuClient") -> None:
