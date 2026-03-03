@@ -26,7 +26,6 @@ class IrcClient(Client):
         super().__init__(address, port)
         self.presence.is_irc = True
         self.connected = False
-        self.logged_in = False
         self.is_osu = False
         self.token = ""
 

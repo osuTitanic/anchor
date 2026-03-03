@@ -20,6 +20,7 @@ class BanchoBot(IrcClient):
         self.reload()
         self.presence.city = "w00t p00t!"
         self.presence.country_index = 1
+        self.logged_in = True
 
     def process_and_send_response(
         self,
