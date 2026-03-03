@@ -77,6 +77,10 @@ class Client:
         return time.time() - self.last_response
 
     @property
+    def inactive(self) -> bool:
+        return self.last_response_delta >= 60*6 or not self.logged_in
+
+    @property
     def silenced(self) -> bool:
         if not self.object:
             return False

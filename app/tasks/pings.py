@@ -7,8 +7,6 @@ import app
 
 PING_INTERVAL_IRC = 30
 PING_INTERVAL_OSU = 12
-PING_TIMEOUT_IRC = 360
-PING_TIMEOUT_OSU = 260
 
 @app.session.tasks.submit(interval=PING_INTERVAL_OSU, threaded=True)
 def osu_tcp_pings() -> None:
@@ -30,28 +28,7 @@ def osu_tcp_pings() -> None:
             player.enqueue_packet(PacketType.BanchoPing)
             player.last_ping = time.time()
 
-        if player.last_response_delta >= PING_TIMEOUT_OSU:
-            player.close_connection('Client timed out')
-
-@app.session.tasks.submit(interval=PING_TIMEOUT_OSU, threaded=True)
-def osu_http_pings() -> None:
-    """
-    This task will handle client timeouts for http clients.
-    Http clients do not require pings, but we still want to
-    check if they are still connected.
-    """
-    for player in app.session.players.http_osu_clients:
-        if not player.logged_in:
-            app.session.players.remove(player)
-            continue
-        
-        if not player.connected:
-            # Why the heck is this player even in the collection
-            player.logger.warning('Tried to ping player, but was not connected?')
-            player.close_connection()
-            continue
-
-        if player.last_response_delta >= PING_TIMEOUT_OSU:
+        if player.inactive:
             player.close_connection('Client timed out')
 
 @app.session.tasks.submit(interval=PING_INTERVAL_IRC, threaded=True)
@@ -73,5 +50,26 @@ def irc_pings() -> None:
             [f"cho.{config.DOMAIN_NAME}"]
         )
 
-        if player.last_response_delta >= PING_TIMEOUT_IRC:
+        if player.inactive:
+            player.close_connection('Client timed out')
+
+@app.session.tasks.submit(interval=60*5, threaded=True)
+def osu_http_housekeeping() -> None:
+    """
+    This task will handle client timeouts for http clients.
+    Http clients do not require pings, but we still want to
+    check if they are still connected.
+    """
+    for player in app.session.players.http_osu_clients:
+        if not player.logged_in:
+            app.session.players.remove(player)
+            continue
+
+        if not player.connected:
+            # Why the heck is this player even in the collection
+            player.logger.warning('Tried to ping player, but was not connected?')
+            player.close_connection()
+            continue
+
+        if player.inactive:
             player.close_connection('Client timed out')
