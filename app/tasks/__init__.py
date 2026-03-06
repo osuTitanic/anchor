@@ -161,7 +161,7 @@ class Tasks:
         thread, using the reactor's thread pool.
         """
         return threads.deferToThread(func, *args, **kwargs)
-    
+
     def defer_to_queue(
         self,
         function: Callable,
@@ -183,7 +183,7 @@ class Tasks:
 
         self.do_later(execute, priority=priority)
         return deferred
-    
+
     def schedule_do_later(
         self,
         function: Callable,

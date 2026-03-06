@@ -45,7 +45,7 @@ class IrcClient(Client):
             return
 
         return handler(self, prefix, *params)
-    
+
     def on_login_received(self) -> None:
         if self.logged_in:
             return
@@ -347,7 +347,7 @@ class IrcClient(Client):
 
     def enqueue_command_raw(self, command: str, prefix: str = f"cho.{config.DOMAIN_NAME}", params: List[str] = [], tags: dict = {}) -> None:
         self.logger.debug(f"<- <{command}> {prefix} ({', '.join(params)}) {tags}")
-        
+
     def enqueue_command(self, command: str, *params, **tags) -> None:
         self.enqueue_command_raw(
             command,
@@ -470,7 +470,7 @@ class IrcClient(Client):
     def enqueue_player(self, player: Client, channel: str = "#osu") -> None:
         if player.hidden and player != self:
             return
-        
+
         if player.is_tourney_client:
             # Don't send tourney clients to irc players
             return
@@ -491,7 +491,7 @@ class IrcClient(Client):
             '+': '+v',
             '@': '+o'
         }
-        
+
         self.enqueue_command_raw(
             "MODE",
             app.session.banchobot.irc_formatted,
@@ -514,7 +514,7 @@ class IrcClient(Client):
     def enqueue_user_quit(self, quit: UserQuit) -> None:
         if quit.state != QuitState.Gone:
             return
-        
+
         if quit.info.hidden:
             return
 

@@ -44,7 +44,7 @@ class Slot:
 
     def __repr__(self) -> str:
         return f'<Slot [{self.player.name if self.player else None}]: {self.status.name}>'
-    
+
     @property
     def user_id(self) -> int:
         return self.player.id if self.player else -1
@@ -765,7 +765,7 @@ class Match:
 
         remaining_time = round(self.countdown.time - time.time())
         intervals = [60, 30, 10, 5, 4, 3, 2, 1]
-    
+
         if remaining_time in intervals:
             intervals.remove(remaining_time)
 

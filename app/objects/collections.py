@@ -200,7 +200,7 @@ class Players(MutableMapping[int | str, Client]):
         if not id_string.isdigit():
             return None
 
-        return self.by_id(int(id_string))            
+        return self.by_id(int(id_string))
 
     def by_token(self, token: str) -> Client | None:
         """Get an osu! player by token"""
@@ -209,7 +209,7 @@ class Players(MutableMapping[int | str, Client]):
     def by_id_osu(self, id: int) -> OsuClient | None:
         """Get an osu! player by id"""
         return self.osu_id_mapping.get(id, None)
-    
+
     def by_name_osu(self, name: str) -> OsuClient | None:
         """Get an osu! player by name"""
         return self.osu_name_mapping.get(name, None)
@@ -217,7 +217,7 @@ class Players(MutableMapping[int | str, Client]):
     def by_id_irc(self, id: int) -> IrcClient | None:
         """Get an irc player by id"""
         return self.irc_id_mapping.get(id, None)
-    
+
     def by_name_irc(self, name: str) -> IrcClient | None:
         """Get an irc player by name"""
         return self.irc_name_mapping.get(name, None)
@@ -399,6 +399,6 @@ class Matches(List[Match | None]):
             return self[match_id] is not None
         except IndexError:
             return False
-            
+
     def update_mp_count(self) -> None:
         activity.set_mp(len(self.active))

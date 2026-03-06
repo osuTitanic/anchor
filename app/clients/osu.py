@@ -594,7 +594,7 @@ class OsuClient(Client):
             report_message += (
                 f'- Adapters: `{self.info.hash.adapters_md5}` ({len(matching_adapters)} matching)\n'
             )
-            
+
         if not registry_key_verified:
             matching_registry_keys = [
                 match for match in other_matches
@@ -603,7 +603,7 @@ class OsuClient(Client):
             report_message += (
                 f'- Registry Key: `{self.info.hash.uninstall_id}` ({len(matching_registry_keys)} matching)\n'
             )
-            
+
         if not disk_signature_verified:
             matching_disk_signatures = [
                 match for match in other_matches

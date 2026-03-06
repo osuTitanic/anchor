@@ -567,7 +567,7 @@ class PythonInterpreterChannel(Channel):
         )
         self.console = InteractiveConsole()
         assert config.DEBUG
-        
+
     def broadcast_join(self, client: "Client") -> None:
         super().broadcast_join(client)
 
@@ -612,7 +612,7 @@ class PythonInterpreterChannel(Channel):
 
         output = stdout.getvalue() + stderr.getvalue()
         output = output.strip()
-        
+
         if not output:
             return
 

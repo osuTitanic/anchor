@@ -122,7 +122,7 @@ class Client:
 
         if recent.is_permanent:
             return True
-        
+
         if not recent.length:
             return True
 
@@ -197,7 +197,7 @@ class Client:
     @property
     def irc_formatted(self) -> str:
         return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
-    
+
     @property
     def irc_prefix(self) -> str:
         if self.is_staff:
@@ -409,7 +409,7 @@ class Client:
             self.update_activity,
             priority=5
         )
-        
+
     def update_cache(self) -> None:
         self.update_leaderboard_stats()
         self.update_status_cache()
@@ -434,7 +434,7 @@ class Client:
             )
             self.on_user_silenced()
             return self.object.silence_end
-    
+
     def unsilence(self, expired: bool = False) -> None:
         """Unsilences the user"""
         if not self.object:
