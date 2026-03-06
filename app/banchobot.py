@@ -17,7 +17,6 @@ class BanchoBot(IrcClient):
         super().__init__('127.0.0.1', 13381)
         self.id = 1
         self.name = "BanchoBot"
-        self.reload()
         self.presence.city = "w00t p00t!"
         self.presence.country_index = 1
         self.logged_in = True

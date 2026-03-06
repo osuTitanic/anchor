@@ -33,6 +33,7 @@ def setup():
     app.session.logger.info('Loading bot...')
     app.session.players.add(bot_player := BanchoBot())
     app.session.banchobot = bot_player
+    app.session.banchobot.reload()
     app.session.banchobot.update_activity()
 
     if not bot_player.object:
@@ -87,13 +88,13 @@ def setup():
 def setup_tracy():
     if not config.DEBUG:
         return
-    
+
     try:
         import pytracy
     except ImportError:
         app.session.logger.warning('"pytracy" module is not installed, tracy will not be available')
         return
-    
+
     pytracy.enable_tracing(True)
     app.session.logger.info('Tracy profiler enabled')
 
