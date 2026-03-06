@@ -1,15 +1,19 @@
 
 from app.objects.channel import Channel, MultiplayerChannel
 from app.commands import Context, Command, commands, sets
+from app.common.config import config_instance as config
 from app.common.helpers import permissions
 from app.common.database import messages
 from app.clients.irc import IrcClient
 from app.clients.base import Client
 
 from typing import Tuple, List, Iterable
+from collections import defaultdict
+from mistralai import Mistral
 from chio import Message
 
 import shlex
+import time
 import app
 
 class BanchoBot(IrcClient):
@@ -20,6 +24,19 @@ class BanchoBot(IrcClient):
         self.presence.city = "w00t p00t!"
         self.presence.country_index = 1
         self.logged_in = True
+
+        # Mistral integration for banchobot
+        self.sdk = None
+        self.conversations = defaultdict(list)
+
+        if not config.MISTRAL_API_KEY:
+            return
+
+        self.sdk = Mistral(
+            api_key=config.MISTRAL_API_KEY,
+            server_url=config.MISTRAL_SERVER_URL,
+            timeout_ms=config.MISTRAL_TIMEOUT_MS
+        )
 
     def process_and_send_response(
         self,
@@ -46,7 +63,14 @@ class BanchoBot(IrcClient):
         command = self.resolve_command(ctx)
 
         if not command:
-            return ctx, None, []
+            if not self.sdk:
+                return ctx, None, []
+
+            if target is not self:
+                return ctx, None, []
+
+            response = self.handle_conversation(ctx)
+            return ctx, None, response or []
 
         try:
             response = command.callback(ctx)
@@ -57,11 +81,13 @@ class BanchoBot(IrcClient):
         return ctx, command, response
 
     def parse_command(self, message: str) -> Iterable[str]:
-        if not message.startswith('!'):
-            message = f'!{message}'
+        safe_message = message.strip()
+
+        if not safe_message.startswith('!'):
+            safe_message = f'!{safe_message}'
 
         try:
-            trigger, *args = shlex.split(message.strip()[1:])
+            trigger, *args = shlex.split(safe_message[1:])
             trigger = trigger.lower()
             return trigger, *args
         except ValueError:
@@ -120,7 +146,7 @@ class BanchoBot(IrcClient):
     def send_command_response(
         self,
         context: Context,
-        command: Command,
+        command: Command | None,
         response: List[str]
     ) -> None:
         if not response:
@@ -130,7 +156,11 @@ class BanchoBot(IrcClient):
         self.update_activity_later()
 
         # Send to all users in the channel, if command is not hidden
-        if not command.hidden and context.target.is_channel:
+        if (
+            command is not None
+            and not command.hidden
+            and context.target.is_channel
+        ):
             context.target.send_message(
                 context.player,
                 context.message,
@@ -177,6 +207,57 @@ class BanchoBot(IrcClient):
             response,
             priority=4
         )
+
+    def handle_conversation(self, ctx: Context) -> List[str]:
+        if not self.sdk or ctx.target is not self:
+            return []
+
+        entry = {
+            "message": ctx.message.removeprefix('!'),
+            "response": "",
+            "timestamp": time.time()
+        }
+        conversation = self.conversations[ctx.player.id]
+        conversation.append(entry)
+
+        messages = []
+
+        for index, item in enumerate(conversation):
+            messages.append({
+                "role": "user",
+                "content": f"{ctx.player.name}: '{item['message']}'",
+                "prefix": index == len(conversation) - 1
+            })
+
+            if not item.get("response"):
+                continue
+
+            messages.append({
+                "role": "assistant",
+                "content": item["response"]
+            })
+
+        try:
+            response = self.sdk.agents.complete(
+                messages=messages,
+                agent_id=config.MISTRAL_AGENT_ID,
+                max_tokens=config.MISTRAL_MAX_TOKENS
+            )
+
+            replies = [
+                choice.message.content
+                for choice in response.choices
+                if choice.message and choice.message.content
+            ]
+
+            if replies:
+                entry["response"] = "\n".join(replies)
+
+            return replies
+        except Exception as e:
+            ctx.player.logger.error(f'Mistral request failed: {e}', exc_info=e)
+            conversation.pop()
+            return []
 
     def store_to_database(self, context: Context, response: List[str]) -> None:
         with app.session.database.managed_session() as session:

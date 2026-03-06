@@ -98,9 +98,17 @@ class Context:
         return f'!{self.full_trigger} {" ".join(self.args)}'
 
     @property
+    def is_private_message(self) -> bool:
+        return type(self.target) is Client
+
+    @property
+    def is_channel(self) -> bool:
+        return type(self.target) is Channel
+
+    @property
     def is_multiplayer(self) -> bool:
         return type(self.target) is MultiplayerChannel
-    
+
     def set_context_object(self, key: str, value: Any) -> None:
         self.objects[key] = value
 
@@ -224,7 +232,7 @@ def spectate_user(ctx: Context):
 
     if not target:
         return [f'Could not find the player "{name}".']
-    
+
     if target.is_irc:
         return ['This player is connected via. IRC.']
 
@@ -270,7 +278,7 @@ def is_host(ctx: Context) -> bool:
 
     if ctx.trigger in non_host_commands:
         return True
-    
+
     match = ctx.get_context_object('match')
 
     if not match:
@@ -600,7 +608,7 @@ def mp_mods(ctx: Context):
 
             # Set current mods to every player inside the match, if they are not speed mods
             slot.mods = mods & ~Mods.SpeedMods
-            
+
             # TODO: Fix for older clients without freemod support
             # slot.mods = []
 
@@ -1593,7 +1601,7 @@ def monitor(ctx: Context) -> List | None:
 
     if not (player := app.session.players.by_name_safe(name)):
         return ['Player is not online']
-    
+
     if player.is_irc:
         return ['Player is connected via. IRC']
 
@@ -1697,7 +1705,7 @@ def restrict(ctx: Context) -> List | None:
     if not length.startswith('perma'):
         duration = timeparse(length)
         until = datetime.now() + timedelta(seconds=duration or 0)
-        
+
         if duration is None:
             return [f'Invalid duration "{length}". Please use a valid time format.']
 
@@ -1851,7 +1859,7 @@ def rtx(ctx: Context) -> List | None:
 
     if target.is_irc:
         return [f'User "{username}" is connected via. IRC']
-    
+
     if len(ctx.args) > 1:
         message = ' '.join(ctx.args[1:])
 
@@ -1876,7 +1884,7 @@ def mp_help(ctx: Context):
 
     if faq_lang not in faq:
         return [f'Language "{faq_lang}" not found']
-    
+
     if faq_string not in faq[faq_lang]:
         return [f'FAQ "{faq_string}" not found']
 
