@@ -1,11 +1,11 @@
 rosu-pp-py==3.1.0
 psycopg2-binary==2.9.11
-sqlalchemy==2.0.47
+sqlalchemy==2.0.48
 twisted==25.5.0
-redis==7.2.1
+redis==7.3.0
 requests==2.32.5
 boto3<2
-pytz==2025.2
+pytz==2026.1.post1
 pytimeparse==1.1.8
 geoip2==5.2.0
 bcrypt==5.0.0
