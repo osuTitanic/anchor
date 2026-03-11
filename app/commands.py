@@ -284,8 +284,7 @@ def is_host(ctx: Context) -> bool:
     if not match:
         return False
 
-    return (ctx.player is match.host) or \
-           (ctx.player.id in match.referee_players) or \
+    return (ctx.player.id in match.referee_players) or \
            (ctx.player.object.is_admin)
 
 @mp_commands.condition

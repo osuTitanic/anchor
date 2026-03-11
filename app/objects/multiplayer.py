@@ -138,7 +138,7 @@ class Match:
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.score_queue: Queue[bScoreFrame] = Queue()
-        self.referee_players: Set[int] = set()
+        self.referee_players: Set[int] = set(host.id)
         self.banned_players: Set[int] = set()
 
         self.countdown: MatchTimer | None = None
