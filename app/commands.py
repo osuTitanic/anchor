@@ -1204,9 +1204,6 @@ def mp_addref(ctx: Context):
     if target.id in match.referee_players:
         return [f'{target.name} is already a referee.']
 
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot add yourself as a referee."]
-
     if not target.is_irc and target.match == match:
         # Target should now join #multi_<match.id> instead of #multiplayer
         target.enqueue_channel_revoked('#multiplayer')
@@ -1248,9 +1245,6 @@ def mp_removeref(ctx: Context):
 
     if target.id not in match.referee_players:
         return [f'{target.name} is not a referee.']
-
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot remove yourself as a referee."]
 
     match.chat.remove(target)
     match.referee_players.discard(target.id)
