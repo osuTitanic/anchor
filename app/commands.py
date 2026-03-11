@@ -1191,9 +1191,6 @@ def mp_addref(ctx: Context):
     if not match:
         return ["You are not inside a match."]
 
-    if not match.persistent:
-        return ["This match is not persistent."]
-
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
@@ -1238,9 +1235,6 @@ def mp_removeref(ctx: Context):
 
     if not match:
         return ["You are not inside a match."]
-
-    if not match.persistent:
-        return ["This match is not persistent."]
 
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
