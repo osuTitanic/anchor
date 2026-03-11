@@ -584,12 +584,12 @@ class Match:
             client.enqueue_packet(PacketType.BanchoMatchAbort)
 
         start_event = events.fetch_last_by_type(
-            player.match.db_match.id,
+            self.db_match.id,
             type=EventType.Start
         )
 
         events.create(
-            player.match.db_match.id,
+            self.db_match.id,
             type=EventType.Abort,
             data={
                 'beatmap_id': self.beatmap_id,
