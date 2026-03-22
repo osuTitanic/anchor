@@ -1,13 +1,19 @@
 
-from twisted.internet.protocol import Protocol
+from typing import Protocol, TypeVar
+
+T = TypeVar("T")
+
+class SupportsEnqueue(Protocol[T]):
+    def enqueue(self, item: T) -> None:
+        ...
 
 class ByteStream:
     """Helper class for streams in twisted"""
 
     __slots__ = ('client', 'offset', 'buffer')
 
-    def __init__(self, client: Protocol) -> None:
-        self.client = client
+    def __init__(self, target: SupportsEnqueue) -> None:
+        self.target = target
         self.offset = 0
         self.buffer = bytearray()
 
@@ -22,7 +28,7 @@ class ByteStream:
         return self
 
     def write(self, data: bytes) -> None:
-        self.client.enqueue(data)
+        self.target.enqueue(data)
 
     def read(self, size: int = -1) -> bytearray:
         if size < 0:
@@ -60,5 +66,5 @@ class ByteStream:
     def count(self, byte: bytes) -> int:
         return self.buffer.count(byte)
 
-    def split(self, byte: bytes, maxsplit: int = -1) -> tuple[bytearray, ...]:
+    def split(self, byte: bytes, maxsplit: int = -1) -> list[bytearray]:
         return self.buffer.split(byte, maxsplit)
