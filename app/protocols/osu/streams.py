@@ -10,7 +10,7 @@ class SupportsEnqueue(Protocol[T]):
 class ByteStream:
     """Helper class for streams in twisted"""
 
-    __slots__ = ('client', 'offset', 'buffer')
+    __slots__ = ('offset', 'buffer', 'target')
 
     def __init__(self, target: SupportsEnqueue) -> None:
         self.target = target
