@@ -219,6 +219,7 @@ class BanchoBot(IrcClient):
         }
         conversation = self.conversations[ctx.player.id]
         conversation.append(entry)
+        ctx.set_context_object("is_conversation", True)
 
         messages = []
 
@@ -250,10 +251,10 @@ class BanchoBot(IrcClient):
                 if choice.message and choice.message.content
             ]
             replies = [
-                line.strip()
+                line.strip().strip("```")
                 for choice in choices
                 for line in choice.splitlines()
-                if line.strip() and line.strip() != "```" # type shit
+                if line.strip()
             ]
 
             if replies:
