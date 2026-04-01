@@ -244,10 +244,16 @@ class BanchoBot(IrcClient):
                 max_tokens=config.MISTRAL_MAX_TOKENS
             )
 
-            replies = [
+            choices = [
                 choice.message.content
                 for choice in response.choices
                 if choice.message and choice.message.content
+            ]
+            replies = [
+                line.strip()
+                for choice in choices
+                for line in choice.splitlines()
+                if line.strip() and line.strip() != "```" # type shit
             ]
 
             if replies:
