@@ -1,13 +1,14 @@
 
 from app.common.database.repositories import users, messages
-from app.common.constants import GameMode, UserActivity
 from app.common.config import config_instance as config
 from app.common.helpers import infringements, activity
 from app.common.database.objects import DBActivity
+from app.common.constants import UserActivity
 from app.clients.base import Client
 from app.common import officer
 from datetime import datetime
 from typing import Optional
+from chio import Mode
 
 import json
 import app
@@ -149,7 +150,7 @@ def user_update(user_id: int, mode: int | None = None):
 
     if mode is not None:
         # Assign new mode to the player
-        player.status.mode = GameMode(mode)
+        player.status.mode = Mode(mode)
 
     # Reload player data & distribute stats
     player.reload(player.status.mode.value)

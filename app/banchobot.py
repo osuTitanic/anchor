@@ -70,7 +70,7 @@ class BanchoBot(IrcClient):
             trigger = trigger.lower()
             return trigger, *args
         except ValueError:
-            return '', []
+            return ['']
 
     def resolve_command(self, ctx: Context) -> Command | None:
         # Regular commands, e.g. !roll
