@@ -9,7 +9,6 @@ from app.clients.base import Client
 
 from typing import Tuple, List, Iterable
 from collections import defaultdict
-from mistralai import Mistral
 from chio import Message
 
 import shlex
@@ -24,19 +23,6 @@ class BanchoBot(IrcClient):
         self.presence.city = "w00t p00t!"
         self.presence.country_index = 1
         self.logged_in = True
-
-        # Mistral integration for banchobot
-        self.sdk = None
-        self.conversations = defaultdict(list)
-
-        if not config.MISTRAL_API_KEY:
-            return
-
-        self.sdk = Mistral(
-            api_key=config.MISTRAL_API_KEY,
-            server_url=config.MISTRAL_SERVER_URL,
-            timeout_ms=config.MISTRAL_TIMEOUT_MS
-        )
 
     def process_and_send_response(
         self,
@@ -63,14 +49,7 @@ class BanchoBot(IrcClient):
         command = self.resolve_command(ctx)
 
         if not command:
-            if not self.sdk:
-                return ctx, None, []
-
-            if target is not self:
-                return ctx, None, []
-
-            response = self.handle_conversation(ctx)
-            return ctx, None, response or []
+            return ctx, None, []
 
         try:
             response = command.callback(ctx)
@@ -145,11 +124,11 @@ class BanchoBot(IrcClient):
 
     def send_command_response(
         self,
-        context: Context,
+        context: Context | None,
         command: Command | None,
         response: List[str]
     ) -> None:
-        if not response:
+        if not response or not context:
             return
 
         # Update BanchoBot's activity timestamp
@@ -189,12 +168,8 @@ class BanchoBot(IrcClient):
             target_name = context.target.resolve_name(context.player)
 
         for message in response:
-            context.player.enqueue_message_object(
-                Message(
-                    self.name, message,
-                    target_name, self.id
-                )
-            )
+            message_object = Message(self.name, message, target_name, self.id)
+            context.player.enqueue_message_object(message_object)
 
         # Check if we are in DMs
         if context.target is not self:
@@ -207,64 +182,6 @@ class BanchoBot(IrcClient):
             response,
             priority=4
         )
-
-    def handle_conversation(self, ctx: Context) -> List[str]:
-        if not self.sdk or ctx.target is not self:
-            return []
-
-        entry = {
-            "message": ctx.message.removeprefix('!'),
-            "response": "",
-            "timestamp": time.time()
-        }
-        conversation = self.conversations[ctx.player.id]
-        conversation.append(entry)
-        ctx.set_context_object("is_conversation", True)
-
-        messages = []
-
-        for index, item in enumerate(conversation):
-            messages.append({
-                "role": "user",
-                "content": f"{ctx.player.name}: '{item['message']}'",
-                "prefix": index == len(conversation) - 1
-            })
-
-            if not item.get("response"):
-                continue
-
-            messages.append({
-                "role": "assistant",
-                "content": item["response"]
-            })
-
-        try:
-            response = self.sdk.agents.complete(
-                messages=messages,
-                agent_id=config.MISTRAL_AGENT_ID,
-                max_tokens=config.MISTRAL_MAX_TOKENS
-            )
-
-            choices = [
-                choice.message.content
-                for choice in response.choices
-                if choice.message and choice.message.content
-            ]
-            replies = [
-                line.strip().strip("```")
-                for choice in choices
-                for line in choice.splitlines()
-                if line.strip()
-            ]
-
-            if replies:
-                entry["response"] = "\n".join(replies)
-
-            return replies
-        except Exception as e:
-            ctx.player.logger.error(f'Mistral request failed: {e}', exc_info=e)
-            conversation.pop()
-            return []
 
     def store_to_database(self, context: Context, response: List[str]) -> None:
         with app.session.database.managed_session() as session:

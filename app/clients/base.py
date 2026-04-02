@@ -38,8 +38,8 @@ class Client:
     """
 
     def __init__(self, address: str, port: int) -> None:
-        self.id = 0
-        self.name = ""
+        self.id: int = 0
+        self.name: str = ""
         self.protocol = "internal"
         self.port = port
         self.address = address

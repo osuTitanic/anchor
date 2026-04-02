@@ -95,14 +95,7 @@ class Context:
 
     @property
     def message(self) -> str:
-        message = f'{self.full_trigger} {" ".join(self.args)}'
-
-        if self.get_context_object("is_conversation"):
-            return message
-
-        # Message was a command, not a conversation
-        # I know this is kinda hacky but it works
-        return f'!{message}'
+        return f'!{self.full_trigger} {" ".join(self.args)}'
 
     @property
     def is_private_message(self) -> bool:
