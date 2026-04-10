@@ -92,23 +92,31 @@ class WebsocketOsuClient(WebSocketServerProtocol):
 
         self.stream += payload
 
-        while self.stream.available() >= self.player.io.header_size:
-            packet, data = self.player.io.read_packet(self.stream)
+        try:
+            while self.stream.available() >= self.player.io.header_size:
+                packet, data = self.player.io.read_packet(self.stream)
 
-            # Clear the data that was read
-            self.stream.reset()
+                # Clear the data that was read
+                self.stream.reset()
 
-            deferred = app.session.tasks.defer_to_reactor_thread(
-                self.player.on_packet_received,
-                packet, data
-            )
-
-            deferred.addErrback(
-                lambda f: (
-                    self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
-                    self.close_connection(f.getErrorMessage())
+                deferred = app.session.tasks.defer_to_reactor_thread(
+                    self.player.on_packet_received,
+                    packet, data
                 )
-            )
+
+                deferred.addErrback(
+                    lambda f: (
+                        self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                        self.close_connection(f.getErrorMessage())
+                    )
+                )
+        except OverflowError:
+            # Wait for more data
+            self.stream.seek(0)
+
+        except Exception as e:
+            self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
+            self.close_connection('Request processing error')
 
     def close_connection(self, reason: str = ""):
         self.player.close_connection(reason)
