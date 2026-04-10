@@ -2,6 +2,7 @@
 
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
+from twisted.internet import reactor
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
@@ -118,17 +119,36 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
             self.close_connection('Request processing error')
 
-    def close_connection(self, reason: str = ""):
-        self.player.close_connection(reason)
-
     def enqueue_packet(self, packet: PacketType, *args) -> None:
         self.player.io.write_packet(self.stream, packet, *args)
         self.logger.debug(f'<- "{packet.name}": {list(args)}')
 
     def enqueue(self, data: bytes):
+        reactor.callFromThread(self.do_enqueue, data) # type: ignore
+
+    def close_connection(self, reason: str = ""):
+        reactor.callFromThread(self.do_close, reason) # type: ignore
+        self.player.close_connection(reason)
+
+    def do_enqueue(self, data: bytes):
         if self.state != self.STATE_OPEN:
             self.logger.debug('Cannot send data to a closed channel')
             self.player.close_connection()
             return
 
         self.sendMessage(data, isBinary=True)
+
+    def do_close(self, reason: str | None = "") -> None:
+        if self.state == self.STATE_CLOSED:
+            # Connection is already closed
+            return
+
+        if self.state == self.STATE_OPEN:
+            code = self.CLOSE_STATUS_CODE_NORMAL if reason else None
+            reason = reason or None
+            self.sendClose(code, reason)
+            return
+
+        if (transport := getattr(self, 'transport', None)):
+            # If the connection is not open, we can just close the transport immediately
+            transport.loseConnection()
