@@ -5,7 +5,7 @@ twisted==25.5.0
 redis==7.4.0
 requests==2.33.1
 boto3<2
-pytz==2026.1.post1
+pytz==2026.2
 pytimeparse==1.1.8
 geoip2==5.2.0
 bcrypt==5.0.0
