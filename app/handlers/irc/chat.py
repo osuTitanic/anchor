@@ -216,7 +216,7 @@ def handle_privmsg_command(
     message, timeout = session.filters.apply(message)
 
     if timeout is not None:
-        sender.silence(timeout, 'Inappropriate discussion in pms')
+        sender.silence(timeout, 'Inappropriate discussion in private messages')
         officer.call(f"Message: {message}")
         return
 
@@ -233,15 +233,25 @@ def handle_privmsg_command(
         # Limit message size
         message = message[:497] + '... (truncated)'
 
-    target.enqueue_message(
-        message,
-        sender,
-        sender.name
-    )
-
     sender.logger.info(
         f'[PM -> {target.name}]: {message}'
     )
+
+    # Enqueue to irc & osu!
+    recipients = (
+        session.players.by_id_osu(target.id),
+        session.players.by_id_irc(target.id)
+    )
+
+    for recipient in recipients:
+        if not recipient:
+            continue
+
+        recipient.enqueue_message(
+            message,
+            sender,
+            sender.name
+        )
 
     session.tasks.do_later(
         messages.create_private,
@@ -252,4 +262,4 @@ def handle_privmsg_command(
     )
 
     if target.away_message:
-        return sender.enqueue_away_message(target)
+        sender.enqueue_away_message(target)

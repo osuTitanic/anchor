@@ -157,7 +157,7 @@ def send_private_message(sender: OsuClient, message: Message):
     message.content, timeout = session.filters.apply(message.content)
 
     if timeout is not None:
-        sender.silence(timeout, 'Inappropriate discussion in pms')
+        sender.silence(timeout, 'Inappropriate discussion in private messages')
         officer.call(f"Message: {message.content}")
         return False
 
@@ -165,19 +165,30 @@ def send_private_message(sender: OsuClient, message: Message):
         # Limit message size
         message.content = message.content[:497] + '... (truncated)'
 
-    if target.away_message:
-        return sender.enqueue_away_message(target)
+    sender.logger.info(
+        f'[PM -> {target.name}]: {message.content}'
+    )
+
+    # Enqueue to irc & osu!
+    recipients = (
+        session.players.by_id_osu(target.id),
+        session.players.by_id_irc(target.id)
+    )
+
+    for recipient in recipients:
+        if not recipient:
+            continue
+
+        recipient.enqueue_message(
+            message.content,
+            sender,
+            sender.name
+        )
 
     # If the target supports the /osu-markasread.php endpoint,
     # we mark the message as unread in the database, since
     # we want to wait until the target actually reads it
     is_read = False if target.supports_markasread else True
-
-    target.enqueue_message(
-        message.content,
-        sender,
-        sender.name
-    )
 
     session.tasks.do_later(
         messages.create_private,
@@ -188,9 +199,8 @@ def send_private_message(sender: OsuClient, message: Message):
         priority=4
     )
 
-    sender.logger.info(
-        f'[PM -> {target.name}]: {message.content}'
-    )
+    if target.away_message:
+        sender.enqueue_away_message(target)
 
 @register(PacketType.OsuSetIrcAwayMessage)
 def away_message(client: OsuClient, message: Message):
