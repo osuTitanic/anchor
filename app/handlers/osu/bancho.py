@@ -1,6 +1,6 @@
 
-from typing import Callable, List, Tuple, Iterator
-from sqlalchemy.orm import selectinload, Session
+from typing import Callable, Dict, List, Tuple, Iterator
+from sqlalchemy.orm import load_only, selectinload, Session
 from time import time
 from chio import (
     BeatmapInfoRequest,
@@ -11,7 +11,7 @@ from chio import (
     Rank
 )
 
-from app.common.database.objects import DBBeatmap, DBScore
+from app.common.database.objects import DBBeatmap, DBBeatmapset, DBScore
 from app.clients.osu import OsuClient
 from app import session
 
@@ -76,13 +76,16 @@ def process_beatmap_info_request(
     reply = BeatmapInfoReply()
 
     with session.database.managed_session(autocommit=False) as database_session:
-        for index, filenames in enumerate(filenames_chunks):
+        filename_offset = 0
+
+        for filenames in filenames_chunks:
             maps = process_filename_chunk(
                 client, filenames,
-                index * len(filenames),
+                filename_offset,
                 database_session
             )
             reply.beatmaps.extend(maps)
+            filename_offset += len(filenames)
 
         for index, ids in enumerate(ids_chunks):
             maps = process_id_chunk(
@@ -104,7 +107,7 @@ def process_filename_chunk(
 
     # Fetch all matching beatmaps from database
     filename_beatmaps = database_session.query(DBBeatmap) \
-        .options(selectinload(DBBeatmap.beatmapset)) \
+        .options(*beatmap_info_load()) \
         .filter(DBBeatmap.filename.in_(filenames)) \
         .all()
 
@@ -132,7 +135,7 @@ def process_id_chunk(client: OsuClient, ids: List[int], database_session: Sessio
 
     # Fetch all matching beatmaps from database
     id_beatmaps = database_session.query(DBBeatmap) \
-        .options(selectinload(DBBeatmap.beatmapset)) \
+        .options(*beatmap_info_load()) \
         .filter(DBBeatmap.id.in_(ids)) \
         .all()
 
@@ -153,6 +156,12 @@ def create_beatmap_info_response(
     maps: List[Tuple[int, DBBeatmap]],
     database_session: Session
 ) -> Iterator[BeatmapInfo]:
+    grade_lookup = perform_grade_lookup(
+        client.id,
+        [beatmap.id for _, beatmap in maps],
+        database_session
+    )
+
     for index, beatmap in maps:
         if beatmap.status <= -3:
             # Not submitted
@@ -168,26 +177,10 @@ def create_beatmap_info_response(
              3: RankedStatus.Qualified,
              4: RankedStatus.Loved,
         }
-
-        # Get personal best in every mode for this beatmap
-        grades = {
-            0: Rank.N,
-            1: Rank.N,
-            2: Rank.N,
-            3: Rank.N
-        }
-
-        for mode in range(4):
-            grade = database_session.query(DBScore.grade) \
-                .filter(DBScore.beatmap_id == beatmap.id) \
-                .filter(DBScore.user_id == client.id) \
-                .filter(DBScore.mode == mode) \
-                .filter(DBScore.status_score == 3) \
-                .filter(DBScore.hidden == False) \
-                .scalar()
-
-            if grade:
-                grades[mode] = Rank[grade]
+        grades = grade_lookup.get(
+            beatmap.id,
+            default_grades()
+        )
 
         yield BeatmapInfo(
             index,
@@ -201,3 +194,57 @@ def create_beatmap_info_response(
             grades[1], # Taiko
             grades[3], # Mania
         )
+
+def perform_grade_lookup(
+    user_id: int,
+    beatmap_ids: List[int],
+    database_session: Session
+) -> Dict[int, Dict[int, Rank]]:
+    if not beatmap_ids:
+        return {}
+
+    rows = database_session.query(
+        DBScore.beatmap_id,
+        DBScore.mode,
+        DBScore.grade
+    ) \
+        .filter(DBScore.beatmap_id.in_(beatmap_ids)) \
+        .filter(DBScore.user_id == user_id) \
+        .filter(DBScore.mode.in_((0, 1, 2, 3))) \
+        .filter(DBScore.status_score == 3) \
+        .filter(DBScore.hidden == False) \
+        .all()
+
+    grade_lookup = {}
+
+    for beatmap_id, mode, grade in rows:
+        grades = grade_lookup.setdefault(
+            beatmap_id,
+            default_grades()
+        )
+        grades[mode] = Rank[grade]
+
+    return grade_lookup
+
+def default_grades() -> Dict[int, Rank]:
+    return {
+        0: Rank.N,
+        1: Rank.N,
+        2: Rank.N,
+        3: Rank.N
+    }
+
+def beatmap_info_load():
+    return (
+        load_only(
+            DBBeatmap.id,
+            DBBeatmap.set_id,
+            DBBeatmap.status,
+            DBBeatmap.md5,
+            DBBeatmap.filename
+        ),
+        selectinload(DBBeatmap.beatmapset).load_only(
+            DBBeatmapset.id,
+            DBBeatmapset.topic_id
+        )
+    )
