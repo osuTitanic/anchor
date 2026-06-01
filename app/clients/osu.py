@@ -350,7 +350,7 @@ class OsuClient(Client):
             return
 
         app.session.packets_per_minute.record()
-        self.logger.debug(f'-> "{packet.name}": {data}')
+        self.logger.debug('-> "%s": %r', packet.name, data)
 
         if not (handler_function := app.session.osu_handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
@@ -676,7 +676,7 @@ class OsuClient(Client):
             self.spectating = None
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        self.logger.debug('<- "%s": %r', packet.name, args)
 
     def enqueue_error(self, error: LoginError = LoginError.ServerError, message: str = "") -> None:
         self.enqueue_packet(PacketType.BanchoLoginReply, error)

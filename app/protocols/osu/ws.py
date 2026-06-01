@@ -121,7 +121,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
         self.player.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        self.logger.debug('<- "%s": %r', packet.name, args)
 
     def enqueue(self, data: bytes):
         reactor.callFromThread(self.do_enqueue, data) # type: ignore
