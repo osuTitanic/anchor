@@ -39,7 +39,7 @@ def start_spectating(client: OsuClient, player_id: int):
     target.enqueue_packet(PacketType.BanchoSpectatorJoined, client.id)
 
     # Enqueue fellow spectators
-    for p in target.spectators:
+    for p in target.spectators.snapshot_list():
         client.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, p.id)
         p.enqueue_packet(PacketType.BanchoFellowSpectatorJoined, client.id)
 
@@ -69,7 +69,7 @@ def stop_spectating(client: OsuClient):
     client.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, client.id)
 
     # Enqueue to others
-    for p in client.spectating.spectators:
+    for p in client.spectating.spectators.snapshot_list():
         p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, client.id)
 
     client.logger.info(f'Stopped spectating "{client.spectating.name}".')
@@ -83,7 +83,7 @@ def cant_spectate(client: OsuClient):
     client.logger.info(f"Player is missing beatmap to spectate.")
     client.spectating.enqueue_packet(PacketType.BanchoSpectatorCantSpectate, client.id)
 
-    for p in client.spectating.spectators:
+    for p in client.spectating.spectators.snapshot_list():
         p.enqueue_packet(PacketType.BanchoSpectatorCantSpectate, client.id)
 
 @register(PacketType.OsuSpectateFrames)
@@ -115,7 +115,7 @@ def send_frames(client: OsuClient, bundle: ReplayFrameBundle):
     broadcast_bundle_backlog(None, client)
 
 def broadcast_bundle(client: OsuClient, bundle: ReplayFrameBundle):
-    for p in client.spectators:
+    for p in client.spectators.snapshot_list():
         p.enqueue_packet(PacketType.BanchoSpectateFrames, bundle)
 
 def broadcast_bundle_backlog(result, client: OsuClient):

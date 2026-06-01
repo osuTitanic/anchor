@@ -542,7 +542,7 @@ class IrcClient(Client):
             )
 
         def enqueue_names() -> None:
-            self.enqueue_players(channel.users, channel.name)
+            self.enqueue_players(channel.users.snapshot_list(), channel.name)
 
         # Send topic first, then names listing after a small delay
         # This ensures the client processes them in the correct order

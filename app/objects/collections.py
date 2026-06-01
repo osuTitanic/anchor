@@ -1,5 +1,6 @@
 
 from enum import Enum
+from itertools import chain
 from typing import (
     MutableMapping,
     Iterator,
@@ -20,37 +21,43 @@ from chio import UserQuit
 class Players(MutableMapping[int | str, Client]):
     def __init__(self) -> None:
         # Lookup by id & name for osu! and irc clients
-        self.irc_id_mapping: Dict[int, IrcClient] = LockedDict()
-        self.irc_name_mapping: Dict[str, IrcClient] = LockedDict()
-        self.irc_safe_name_mapping: Dict[str, IrcClient] = LockedDict()
-        self.osu_id_mapping: Dict[int, OsuClient] = LockedDict()
-        self.osu_name_mapping: Dict[str, OsuClient] = LockedDict()
-        self.osu_safe_name_mapping: Dict[str, OsuClient] = LockedDict()
+        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
+        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
+        self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
+        self.osu_safe_name_mapping: LockedDict[str, OsuClient] = LockedDict()
 
         # osu! specific
-        self.osu_token_mapping: Dict[str, HttpOsuClient] = LockedDict()
-        self.osu_tournament_clients: Set[OsuClient] = LockedSet()
-        self.osu_in_lobby: Set[OsuClient] = LockedSet()
+        self.osu_token_mapping: LockedDict[str, HttpOsuClient] = LockedDict()
+        self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
+        self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
 
     @property
     def osu_clients(self) -> Iterable[OsuClient]:
-        return self.osu_id_mapping.values()
+        return self.osu_id_mapping.values_snapshot()
 
     @property
     def irc_clients(self) -> Iterable[IrcClient]:
-        return self.irc_id_mapping.values()
+        return self.irc_id_mapping.values_snapshot()
 
     @property
     def http_osu_clients(self) -> Iterable[HttpOsuClient]:
-        return self.osu_token_mapping.values()
+        return self.osu_token_mapping.values_snapshot()
 
     @property
     def tcp_osu_clients(self) -> Iterable[OsuClient]:
-        return [p for p in self.osu_clients if p.protocol == 'tcp']
+        return [
+            p for p in self.osu_id_mapping.values_snapshot()
+            if p.protocol == 'tcp'
+        ]
 
     @property
     def ws_osu_clients(self) -> Iterable[OsuClient]:
-        return [p for p in self.osu_clients if p.protocol == 'ws']
+        return [
+            p for p in self.osu_id_mapping.values_snapshot()
+            if p.protocol == 'ws'
+        ]
 
     def __repr__(self) -> str:
         return '<Players>'
@@ -83,9 +90,9 @@ class Players(MutableMapping[int | str, Client]):
             self.remove(player)
 
     def __iter__(self):
-        snapshot_osu = list(self.osu_id_mapping.values())
-        snapshot_irc = list(self.irc_id_mapping.values())
-        return iter(snapshot_osu + snapshot_irc)
+        snapshot_osu = self.osu_id_mapping.values_snapshot()
+        snapshot_irc = self.irc_id_mapping.values_snapshot()
+        return chain(snapshot_osu, snapshot_irc)
 
     def __contains__(self, player: Client) -> bool:
         """Check if a player is in the collection"""
@@ -224,7 +231,10 @@ class Players(MutableMapping[int | str, Client]):
 
     def tournament_clients(self, id: int) -> List[OsuClient]:
         """Get all connected tournament clients for a player"""
-        return [p for p in self.osu_tournament_clients if p.id == id]
+        return [
+            p for p in self.osu_tournament_clients.snapshot_list()
+            if p.id == id
+        ]
 
     def clear_tournament_clients(self, id: int) -> None:
         """Clear all tourney clients by player id"""
@@ -234,7 +244,7 @@ class Players(MutableMapping[int | str, Client]):
     def by_rank(self, rank: int, mode: int) -> List[Client]:
         """Get all players with the specified rank & mode"""
         return [
-            p for p in self.osu_clients
+            p for p in self.osu_id_mapping.values_snapshot()
             if mode == p.status.mode
             and rank == p.rankings.get('global')
         ]
@@ -320,7 +330,7 @@ class Channels(Dict[str, Channel]):
         if not c:
             return
 
-        for p in c.users:
+        for p in c.users.snapshot_list():
             p.enqueue_channel_revoked(c.display_name)
             p.channels.discard(c)
 

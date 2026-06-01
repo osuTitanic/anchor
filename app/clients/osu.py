@@ -311,7 +311,7 @@ class OsuClient(Client):
         self.enqueue_infringement_length(self.remaining_silence)
 
         # Enqueue players in lobby
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             self.enqueue_packet(PacketType.BanchoLobbyJoin, player.id)
 
         # Re-add matches that this player is a referee for
@@ -661,7 +661,7 @@ class OsuClient(Client):
             self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)
 
             # Enqueue to others
-            for p in self.spectating.spectators:
+            for p in self.spectating.spectators.snapshot_list():
                 p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, self.id)
 
             # If target has no spectators anymore

@@ -243,7 +243,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    for client in session.players.osu_tournament_clients:
+    for client in session.players.osu_tournament_clients.snapshot_list():
         # Ensure that all tourney clients got the client's presence
         client.enqueue_presence(client)
         client.enqueue_stats(client)
@@ -325,7 +325,7 @@ def leave_match(client: OsuClient):
         # No players in match anymore -> Disband match
         client.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
 
-        for p in session.players.osu_in_lobby:
+        for p in session.players.osu_in_lobby.snapshot_list():
             p.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
 
         session.channels.remove(client.match.chat)

@@ -174,7 +174,7 @@ class Match:
     def tourney_clients(self) -> List["OsuClient"]:
         """Return all tournament clients"""
         return [
-            client for client in app.session.players.osu_tournament_clients
+            client for client in app.session.players.osu_tournament_clients.snapshot_list()
             if client.spectating_match is self
         ]
 
@@ -276,7 +276,7 @@ class Match:
             self.password = " "
 
         # Enqueue to lobby players
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             player.enqueue_packet(PacketType.BanchoMatchUpdate, self)
 
         # Re-apply password
@@ -476,7 +476,7 @@ class Match:
             # match from their collection
             player.referee_matches.discard(self)
 
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
 
         app.session.matches.remove(self)

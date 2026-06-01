@@ -167,7 +167,7 @@ def distribute_stats(client: OsuClient):
     # Enqueue stats to themselves
     client.enqueue_stats(client)
 
-    for p in client.spectators:
+    for p in client.spectators.snapshot_list():
         # Ensure that all spectators get the latest status
         p.enqueue_stats(client)
 

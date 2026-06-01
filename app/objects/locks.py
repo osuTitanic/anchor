@@ -80,7 +80,7 @@ class LockedSet(AbstractSet[T]):
         self.lock = ReadWriteLock()
 
     def __iter__(self) -> Iterator[T]:
-        return iter(self.snapshot())
+        return iter(self.snapshot_list())
 
     def __len__(self) -> int:
         with self.lock.read_context():
@@ -105,6 +105,17 @@ class LockedSet(AbstractSet[T]):
     def snapshot(self) -> Set[T]:
         with self.lock.read_context():
             return set(self.instance)
+
+    def snapshot_list(self) -> list[T]:
+        with self.lock.read_context():
+            return list(self.instance)
+
+    def snapshot_without(self, excluded: T) -> list[T]:
+        with self.lock.read_context():
+            return [
+                item for item in self.instance
+                if item != excluded
+            ]
 
     def discard(self, item: T) -> None:
         with self.lock.write_context():
@@ -136,9 +147,7 @@ class LockedDict(AbstractMutableMapping[K, V]):
             return len(self.instance)
 
     def __iter__(self) -> Iterator[K]:
-        with self.lock.read_context():
-            snapshot = list(self.instance.keys())
-        return iter(snapshot)
+        return iter(self.keys_snapshot())
 
     def __contains__(self, key: object) -> bool:
         with self.lock.read_context():
@@ -169,19 +178,25 @@ class LockedDict(AbstractMutableMapping[K, V]):
             self.instance.update(*args, **kwargs)
 
     def keys(self) -> Iterator[K]:
-        with self.lock.read_context():
-            snapshot = list(self.instance.keys())
-        return iter(snapshot)
+        return iter(self.keys_snapshot())
 
     def values(self) -> Iterator[V]:
-        with self.lock.read_context():
-            snapshot = list(self.instance.values())
-        return iter(snapshot)
+        return iter(self.values_snapshot())
 
     def items(self) -> Iterator[Tuple[K, V]]:
+        return iter(self.items_snapshot())
+
+    def keys_snapshot(self) -> list[K]:
         with self.lock.read_context():
-            snapshot = list(self.instance.items())
-        return iter(snapshot)
+            return list(self.instance.keys())
+
+    def values_snapshot(self) -> list[V]:
+        with self.lock.read_context():
+            return list(self.instance.values())
+
+    def items_snapshot(self) -> list[Tuple[K, V]]:
+        with self.lock.read_context():
+            return list(self.instance.items())
 
     def setdefault(self, key: K, default: Optional[V] = None) -> Optional[V]:
         with self.lock.write_context():
