@@ -130,24 +130,15 @@ class TcpOsuClient(OsuClient, Protocol):
 
         try:
             self.busy = True
+            packets = []
 
             while self.stream.available() >= self.io.header_size:
-                packet, data = self.io.read_packet(self.stream)
+                packet, packet_data = self.io.read_packet(self.stream)
 
                 # Clear the data that was read
                 self.stream.reset()
+                packets.append((packet, packet_data))
 
-                deferred = app.session.tasks.defer_to_reactor_thread(
-                    self.on_packet_received,
-                    packet, data
-                )
-
-                deferred.addErrback(
-                    lambda f: (
-                        self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
-                        self.close_connection(f.getErrorMessage())
-                    )
-                )
         except OverflowError:
             # Wait for more data
             self.stream.seek(0)
@@ -155,9 +146,24 @@ class TcpOsuClient(OsuClient, Protocol):
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
             self.close_connection('Request processing error')
+            packets.clear()
 
         finally:
             self.busy = False
+
+        if not packets:
+            return
+
+        deferred = app.session.tasks.defer_to_reactor_thread(
+            self.on_packets_received,
+            packets
+        )
+        deferred.addErrback(
+            lambda f: (
+                self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                self.close_connection(f.getErrorMessage())
+            )
+        )
 
     def handleHttpRequest(self, data: bytes) -> None:
         self.logger.debug(f'Received http request: {data}')

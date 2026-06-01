@@ -150,10 +150,7 @@ class HttpOsuHandler(Resource):
 
     def process_request(self, player: HttpOsuClient, request: Request) -> bytes:
         packets = player.io.read_many_packets_from_bytes(request.content.read())
-
-        for packet, data in packets:
-            player.on_packet_received(packet, data)
-
+        player.on_packets_received(packets)
         return player.dequeue()
 
     def on_request_success(self, result: bytes, request: Request) -> None:

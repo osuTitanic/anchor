@@ -22,6 +22,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.player = OsuClient(None, None)
         self.stream = ByteStream(self)
         self.player.protocol = 'ws'
+        self.player.enqueue = self.enqueue
 
     @property
     def address(self):
@@ -92,25 +93,16 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             return
 
         self.stream += payload
+        packets = []
 
         try:
             while self.stream.available() >= self.player.io.header_size:
-                packet, data = self.player.io.read_packet(self.stream)
+                packet, packet_data = self.player.io.read_packet(self.stream)
 
                 # Clear the data that was read
                 self.stream.reset()
+                packets.append((packet, packet_data))
 
-                deferred = app.session.tasks.defer_to_reactor_thread(
-                    self.player.on_packet_received,
-                    packet, data
-                )
-
-                deferred.addErrback(
-                    lambda f: (
-                        self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
-                        self.close_connection(f.getErrorMessage())
-                    )
-                )
         except OverflowError:
             # Wait for more data
             self.stream.seek(0)
@@ -118,6 +110,21 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
             self.close_connection('Request processing error')
+            packets.clear()
+
+        if not packets:
+            return
+
+        deferred = app.session.tasks.defer_to_reactor_thread(
+            self.player.on_packets_received,
+            packets
+        )
+        deferred.addErrback(
+            lambda f: (
+                self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                self.close_connection(f.getErrorMessage())
+            )
+        )
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
         self.player.io.write_packet(self.stream, packet, *args)
