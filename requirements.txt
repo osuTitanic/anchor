@@ -2,7 +2,7 @@ rosu-pp-py==4.0.2
 psycopg2-binary==2.9.12
 sqlalchemy==2.0.50
 twisted==26.4.0
-redis==7.4.0
+redis==8.0.0
 requests==2.34.2
 boto3<2
 pytz==2026.2
