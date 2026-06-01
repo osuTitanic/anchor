@@ -49,16 +49,26 @@ class HttpOsuClient(OsuClient):
     def enqueue(self, data: bytes):
         self.queue.put(data)
 
-    def dequeue(self, max=2**15) -> bytes:
-        data = b""
+    def dequeue(self, max_size=2**15) -> bytes:
+        chunks: list[bytes] = []
+        total = 0
 
-        while len(data) < max:
+        while total < max_size:
             try:
-                data += self.queue.get_nowait()
+                chunk = self.queue.get_nowait()
             except Empty:
                 break
 
-        return data
+            chunks.append(chunk)
+            total += len(chunk)
+
+        if not chunks:
+            return b""
+
+        if len(chunks) == 1:
+            return chunks[0]
+
+        return b"".join(chunks)
 
 class HttpOsuHandler(Resource):
     isLeaf = True
