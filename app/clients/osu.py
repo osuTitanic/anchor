@@ -339,6 +339,10 @@ class OsuClient(Client):
         self.logger.warning(f'<{self.address}> -> Lost connection: "{reason}".')
         return self.close_connection()
 
+    def on_packets_received(self, packets: Iterable[tuple[PacketType, Any]]) -> None:
+        for packet, data in packets:
+            self.on_packet_received(packet, data)
+
     def on_packet_received(self, packet: PacketType, data: Any) -> None:
         self.last_response = time.time()
 
