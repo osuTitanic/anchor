@@ -43,7 +43,7 @@ WORKDIR /bancho
 COPY . .
 
 # Byte-compile ahead of time for quicker startup
-RUN python -m compileall -q app main.py
+RUN python -m compileall -q /usr/local/lib/python3.14/site-packages app main.py
 
 STOPSIGNAL SIGINT
 CMD ["python", "main.py"]
