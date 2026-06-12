@@ -94,23 +94,28 @@ class WebsocketOsuClient(WebSocketServerProtocol):
 
         self.stream += payload
         packets = []
+        consumed_offset = 0
 
         try:
             while self.stream.available() >= self.player.io.header_size:
                 packet, packet_data = self.player.io.read_packet(self.stream)
 
-                # Clear the data that was read
-                self.stream.reset()
+                # Remember how much data was fully consumed
+                consumed_offset = self.stream.offset
                 packets.append((packet, packet_data))
 
         except OverflowError:
             # Wait for more data
-            self.stream.seek(0)
+            self.stream.seek(consumed_offset)
 
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
             self.close_connection('Request processing error')
             packets.clear()
+
+        finally:
+            # Clear the data that was read
+            self.stream.reset()
 
         if not packets:
             return

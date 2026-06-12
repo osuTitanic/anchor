@@ -128,6 +128,8 @@ class TcpOsuClient(OsuClient, Protocol):
         if self.busy:
             return
 
+        consumed_offset = 0
+
         try:
             self.busy = True
             packets = []
@@ -135,13 +137,13 @@ class TcpOsuClient(OsuClient, Protocol):
             while self.stream.available() >= self.io.header_size:
                 packet, packet_data = self.io.read_packet(self.stream)
 
-                # Clear the data that was read
-                self.stream.reset()
+                # Remember how much data was fully consumed
+                consumed_offset = self.stream.offset
                 packets.append((packet, packet_data))
 
         except OverflowError:
             # Wait for more data
-            self.stream.seek(0)
+            self.stream.seek(consumed_offset)
 
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
@@ -149,6 +151,8 @@ class TcpOsuClient(OsuClient, Protocol):
             packets.clear()
 
         finally:
+            # Clear the data that was read
+            self.stream.reset()
             self.busy = False
 
         if not packets:

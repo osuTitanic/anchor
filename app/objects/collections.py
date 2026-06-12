@@ -255,7 +255,7 @@ class Players(MutableMapping[int | str, Client]):
             len(self.irc_id_mapping)
         )
 
-    def send_packet(self, packet: Enum, *args) -> None:
+    def send_packet(self, packet, *args) -> None:
         for p in self.osu_clients:
             p.enqueue_packet(packet, *args)
 
@@ -346,7 +346,7 @@ class Matches(List[Match | None]):
     def __init__(self) -> None:
         super().__init__([None])
 
-    def __iter__(self) -> Iterator[Match]:
+    def __iter__(self) -> Iterator[Match | None]:
         return super().__iter__()
 
     def __repr__(self) -> str:
