@@ -34,22 +34,18 @@ def register(packet: PacketType) -> Callable:
 
 @register(PacketType.OsuLobbyJoin)
 def join_lobby(client: OsuClient):
-    for p in session.players.osu_clients:
-        p.enqueue_packet(PacketType.BanchoLobbyJoin, client.id)
-
-    session.players.osu_in_lobby.add(client)
     client.in_lobby = True
+    session.players.send_packet(PacketType.BanchoLobbyJoin, client.id)
+    session.players.osu_in_lobby.add(client)
 
     for match in session.matches.active:
         client.enqueue_packet(PacketType.BanchoMatchNew, match)
 
 @register(PacketType.OsuLobbyPart)
 def part_lobby(client: OsuClient):
-    session.players.osu_in_lobby.discard(client)
     client.in_lobby = False
-
-    for p in session.players.osu_clients:
-        p.enqueue_packet(PacketType.BanchoLobbyPart, client.id)
+    session.players.osu_in_lobby.discard(client)
+    session.players.send_packet(PacketType.BanchoLobbyPart, client.id)
 
 @register(PacketType.OsuInvite)
 def invite(client: OsuClient, target_id: int):
