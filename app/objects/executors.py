@@ -10,10 +10,10 @@ from concurrent.futures.thread import (
     _base
 )
 
+import itertools
 import threading
 import weakref
 import atexit
-import random
 import queue
 import sys
 
@@ -44,6 +44,9 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
         # Change work queue type to PriorityQueue
         self._work_queue = PriorityQueue()
 
+        # Tie-breaker for items with equal priority
+        self._submission_counter = itertools.count()
+
     def submit(self, fn, *args, **kwargs):
         """
         Sending the function to the execution queue
@@ -67,7 +70,7 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
                 raise RuntimeError('cannot schedule new futures after interpreter shutdown')
 
             priority = kwargs.get('priority', 0)
-            second_priority = random.randint(0, sys.maxsize-1)
+            second_priority = next(self._submission_counter)
 
             if 'priority' in kwargs:
                 del kwargs['priority']
