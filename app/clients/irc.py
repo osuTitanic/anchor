@@ -287,6 +287,7 @@ class IrcClient(Client):
 
     def send_welcome_sequence(self) -> None:
         self.enqueue_welcome()
+        self.enqueue_isupport()
         self.enqueue_motd(
             strings.ANCHOR_ASCII_ART +
             f'web:    https://osu.{config.DOMAIN_NAME}\n'
@@ -360,6 +361,20 @@ class IrcClient(Client):
 
     def enqueue_banchobot_message(self, message: str) -> None:
         self.enqueue_message(message, app.session.banchobot, "#osu")
+
+    def enqueue_isupport(self) -> None:
+        if self.is_osu:
+            return
+
+        self.enqueue_command(
+            irc.RPL_ISUPPORT,
+            "NETWORK=Bancho",
+            "CASEMAPPING=ascii",
+            "CHANTYPES=#",
+            "PREFIX=(ov)@+",
+            "NICKLEN=15",
+            ":are supported by this server"
+        )
 
     def enqueue_welcome(self, message: str = "Welcome to osu!Bancho.") -> None:
         if self.is_osu:
