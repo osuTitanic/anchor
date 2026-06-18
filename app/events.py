@@ -219,22 +219,28 @@ def external_dm(
     message: str,
     message_id: int
 ) -> None:
-    if not (target := app.session.players.by_id(target_id)):
+    target_osu_session = app.session.players.by_id_osu(target_id)
+    target_irc_sessions = app.session.players.by_id_irc_all(target_id)
+
+    if not target_osu_session and not target_irc_sessions:
         return
 
     if not (sender := users.fetch_by_id(sender_id)):
         return
 
-    target.logger.info(
-        f'(external) [{sender.name} -> {target.name}]: {message}'
-    )
+    target = target_osu_session or target_irc_sessions[0]
+    target.logger.info(f'(external) [{sender.name} -> {target.name}]: {message}')
 
-    target.enqueue_message(
-        message, sender, target.name
-    )
+    for recipient in (target_osu_session, *target_irc_sessions):
+        if recipient:
+            recipient.enqueue_message(message, sender, target.name)
 
-    if (online_sender := app.session.players.by_id(sender_id)):
-        online_sender.enqueue_message(message, sender, target.name)
+    # Send messages back to active sessions from sender
+    if (sender_osu_session := app.session.players.by_id_osu(sender_id)):
+        sender_osu_session.enqueue_message(message, sender, target.name)
+
+    for sender_irc_session in app.session.players.by_id_irc_all(sender_id):
+        sender_irc_session.enqueue_message(message, sender, target.name)
 
     # We assume the message will be read
     # This is to ensure the user won't recieve
