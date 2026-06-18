@@ -709,7 +709,7 @@ class Match:
                     self.chat.name
                 )
 
-            if referee_client := app.session.players.by_id_irc(referee):
+            for referee_client in app.session.players.by_id_irc_all(referee):
                 referee_client.enqueue_message(
                     message,
                     sender,
