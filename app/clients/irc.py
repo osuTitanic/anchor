@@ -219,13 +219,16 @@ class IrcClient(Client):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        def update_cache():
-            status.delete(self.id)
+        def post_connection_close():
             users.update(self.id, {'latest_activity': datetime.now()})
-            app.session.players.update_usercount()
+
+            # Only remove status when no irc sessions remain
+            if not app.session.players.by_id(self.id):
+                status.delete(self.id)
+                app.session.players.update_usercount()
 
         app.session.tasks.do_later(
-            update_cache,
+            post_connection_close,
             priority=4
         )
 
