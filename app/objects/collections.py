@@ -172,6 +172,18 @@ class Players(MutableMapping[int | str, Client]):
         self.remove_from_mapping('irc_name_mapping', player.name)
         self.remove_from_mapping('irc_safe_name_mapping', player.safe_name)
 
+        # Check if other session remain & assign them to mapping
+        other_irc_session = next((session for session in self.irc_clients if session.id == player.id), None)
+
+        if not other_irc_session:
+            # User has logged out of all irc sessions
+            return
+
+        # Set new "primary" irc session
+        self.irc_id_mapping[player.id] = other_irc_session
+        self.irc_name_mapping[player.name] = other_irc_session
+        self.irc_safe_name_mapping[player.safe_name] = other_irc_session
+
     def remove_from_mapping(self, name: str, key: Any) -> None:
         try:
             del getattr(self, name)[key]
