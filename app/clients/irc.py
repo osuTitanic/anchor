@@ -437,10 +437,17 @@ class IrcClient(Client):
         chunk_size = 15
         chunk = []
 
+        # Avoid sending duplicate users
+        seen_ids: set[int] = set()
+
         for player in players:
             if player.hidden and player != self:
                 continue
 
+            if player.id in seen_ids:
+                continue
+
+            seen_ids.add(player.id)
             chunk.append(player.irc_prefix + self.resolve_username(player))
 
             if len(chunk) < chunk_size:

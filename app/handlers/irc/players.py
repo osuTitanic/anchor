@@ -60,9 +60,16 @@ def handle_channel_who(
         return
 
     # Send RPL_WHOREPLY for each user in the channel
+    seen_ids: set[int] = set()
+
     for user in channel.users.snapshot_list():
         if user.hidden and user != client:
             continue
+
+        if user.id in seen_ids:
+            continue
+
+        seen_ids.add(user.id)
 
         away_flag = "G" if user.away_message else "H"
         status = away_flag + user.irc_prefix
