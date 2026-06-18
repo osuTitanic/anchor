@@ -7,6 +7,7 @@ from typing import (
     Iterable,
     Dict,
     List,
+    Any,
     Set
 )
 
@@ -20,10 +21,7 @@ from chio import UserQuit
 
 class Players(MutableMapping[int | str, Client]):
     def __init__(self) -> None:
-        # Lookup by id & name for osu! and irc clients
-        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
-        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
-        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        # Lookup by id & name for osu! clients
         self.osu_id_mapping: LockedDict[int, OsuClient] = LockedDict()
         self.osu_name_mapping: LockedDict[str, OsuClient] = LockedDict()
         self.osu_safe_name_mapping: LockedDict[str, OsuClient] = LockedDict()
@@ -33,13 +31,21 @@ class Players(MutableMapping[int | str, Client]):
         self.osu_tournament_clients: LockedSet[OsuClient] = LockedSet()
         self.osu_in_lobby: LockedSet[OsuClient] = LockedSet()
 
+        # Every connected irc client (multiple sessions per-user allowed)
+        self.irc_clients_set: LockedSet[IrcClient] = LockedSet()
+
+        # Helper mappings for irc clients
+        self.irc_id_mapping: LockedDict[int, IrcClient] = LockedDict()
+        self.irc_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+        self.irc_safe_name_mapping: LockedDict[str, IrcClient] = LockedDict()
+
     @property
     def osu_clients(self) -> Iterable[OsuClient]:
         return self.osu_id_mapping.values_snapshot()
 
     @property
     def irc_clients(self) -> Iterable[IrcClient]:
-        return self.irc_id_mapping.values_snapshot()
+        return self.irc_clients_set.snapshot_list()
 
     @property
     def http_osu_clients(self) -> Iterable[HttpOsuClient]:
@@ -69,7 +75,7 @@ class Players(MutableMapping[int | str, Client]):
         """Set a player in the collection"""
         return self.add(value)
 
-    def __getitem__(self, key: int | str) -> Client | None:
+    def __getitem__(self, key: int | str) -> Client | None: # type: ignore and shut up
         """Get a player by id or name"""
         if isinstance(key, int):
             return self.by_id(key)
@@ -91,20 +97,20 @@ class Players(MutableMapping[int | str, Client]):
 
     def __iter__(self):
         snapshot_osu = self.osu_id_mapping.values_snapshot()
-        snapshot_irc = self.irc_id_mapping.values_snapshot()
+        snapshot_irc = self.irc_clients_set.snapshot_list()
         return chain(snapshot_osu, snapshot_irc)
 
-    def __contains__(self, player: Client) -> bool:
+    def __contains__(self, player: object) -> bool:
         """Check if a player is in the collection"""
         if isinstance(player, OsuClient):
             return player.id in self.osu_id_mapping
         elif isinstance(player, IrcClient):
-            return player.id in self.irc_id_mapping
+            return player in self.irc_clients_set
         return False
 
-    def get(self, value: int | str) -> Client:
+    def get(self, value: int | str, default: Any = None) -> Client:
         """Get a player by id or name"""
-        return self[value]
+        return self[value] or default
 
     def add(self, player: Client) -> None:
         """Append a player to the collection"""
@@ -127,6 +133,7 @@ class Players(MutableMapping[int | str, Client]):
         self.osu_safe_name_mapping[player.safe_name] = player
 
         if player.protocol == 'http':
+            assert isinstance(player, HttpOsuClient)
             self.osu_token_mapping[player.token] = player
 
         if player.is_tourney_client:
@@ -147,10 +154,12 @@ class Players(MutableMapping[int | str, Client]):
         self.remove_from_mapping('osu_safe_name_mapping', player.safe_name)
 
         if player.protocol == 'http':
+            assert isinstance(player, HttpOsuClient)
             self.remove_from_mapping('osu_token_mapping', player.token)
 
     def add_irc(self, player: IrcClient) -> None:
         """Append a player to the collection"""
+        self.irc_clients_set.add(player)
         self.irc_id_mapping[player.id] = player
         self.irc_name_mapping[player.name] = player
         self.irc_safe_name_mapping[player.safe_name] = player
@@ -158,11 +167,12 @@ class Players(MutableMapping[int | str, Client]):
 
     def remove_irc(self, player: IrcClient) -> None:
         """Remove a player from the collection"""
+        self.irc_clients_set.discard(player)
         self.remove_from_mapping('irc_id_mapping', player.id)
         self.remove_from_mapping('irc_name_mapping', player.name)
         self.remove_from_mapping('irc_safe_name_mapping', player.safe_name)
 
-    def remove_from_mapping(self, name: str, key: str) -> None:
+    def remove_from_mapping(self, name: str, key: Any) -> None:
         try:
             del getattr(self, name)[key]
         except (KeyError, ValueError, AttributeError):
@@ -225,9 +235,16 @@ class Players(MutableMapping[int | str, Client]):
         """Get an irc player by id"""
         return self.irc_id_mapping.get(id, None)
 
+    def by_id_irc_all(self, id: int) -> List[IrcClient]:
+        """Get all connected IRC clients for this user id"""
+        return [p for p in self.irc_clients_set if p.id == id]
+
     def by_name_irc(self, name: str) -> IrcClient | None:
         """Get an irc player by name"""
         return self.irc_name_mapping.get(name, None)
+
+    def by_name_irc_all(self, name: str) -> List[IrcClient]:
+        return [p for p in self.irc_clients_set if p.name == name]
 
     def tournament_clients(self, id: int) -> List[OsuClient]:
         """Get all connected tournament clients for a player"""
