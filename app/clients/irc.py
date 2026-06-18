@@ -42,6 +42,7 @@ class IrcClient(Client):
         app.session.packets_per_minute.record()
 
         if not (handler := app.session.irc_handlers.get(command)):
+            self.enqueue_command(irc.ERR_UNKNOWNCOMMAND, command, ":Unknown command")
             return
 
         return handler(self, prefix, *params)
