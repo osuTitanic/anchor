@@ -49,7 +49,7 @@ class Client:
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
-        self.object: DBUser | None = None
+        self.object: DBUser
 
         self.away_message: str | None = None
         self.away_senders: Set[int] = set()
