@@ -52,10 +52,11 @@ def bancho_event(
 
 @app.session.events.register('logout')
 def logout(user_id: int):
-    if not (player := app.session.players.by_id(user_id)):
-        return
+    if (player_osu := app.session.players.by_id_osu(user_id)):
+        player_osu.close_connection("Kicked by logout event")
 
-    player.close_connection("Kicked by logout event")
+    for player_irc in app.session.players.by_id_irc_all(user_id):
+        player_irc.close_connection("Kicked by logout event")
 
 @app.session.events.register('restrict')
 def restrict(
@@ -77,7 +78,7 @@ def restrict(
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_restricted(reason, until, autoban)
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_restricted(reason, until, autoban)
 
 @app.session.events.register('unrestrict')
@@ -96,7 +97,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_unrestricted()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_unrestricted()
 
 @app.session.events.register('silence')
@@ -113,7 +114,7 @@ def silence(user_id: int, duration: int, reason: str = ''):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_silenced()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_silenced()
 
 @app.session.events.register('update_user_silence')
@@ -124,7 +125,7 @@ def update_user_silence(user_id: int):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_silenced()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_silenced()
 
 @app.session.events.register('announcement')
@@ -134,10 +135,11 @@ def announcement(message: str):
 
 @app.session.events.register('user_announcement')
 def user_announcement(user_id: int, message: str):
-    if not (player := app.session.players.by_id(user_id)):
-        return
+    if (session_osu := app.session.players.by_id_osu(user_id)):
+        session_osu.enqueue_announcement(message)
 
-    player.enqueue_announcement(message)
+    for session_irc in app.session.players.by_id_irc_all(user_id):
+        session_irc.enqueue_announcement(message)
 
 @app.session.events.register('user_update')
 def user_update(user_id: int, mode: int | None = None):
@@ -181,11 +183,13 @@ def link_discord_user(user_id: int, code: str):
         app.session.logger.warning('Failed to link user to discord: Already linked!')
         return
 
-    player.enqueue_message(
-        f'Your verification code is: "{code}". Please type it into discord to link your account!',
-        app.session.banchobot,
-        player.name
-    )
+    link_message = f'Your verification code is: "{code}". Please type it into discord to link your account!'
+
+    if (player_osu := app.session.players.by_id_osu(user_id)):
+        player_osu.enqueue_message(link_message, app.session.banchobot, player_osu.name)
+
+    for player_irc in app.session.players.by_id_irc_all(user_id):
+        player_irc.enqueue_message(link_message, app.session.banchobot, player_irc.name)
 
 @app.session.events.register('external_message')
 def external_message(
@@ -215,22 +219,28 @@ def external_dm(
     message: str,
     message_id: int
 ) -> None:
-    if not (target := app.session.players.by_id(target_id)):
+    target_osu_session = app.session.players.by_id_osu(target_id)
+    target_irc_sessions = app.session.players.by_id_irc_all(target_id)
+
+    if not target_osu_session and not target_irc_sessions:
         return
 
     if not (sender := users.fetch_by_id(sender_id)):
         return
 
-    target.logger.info(
-        f'(external) [{sender.name} -> {target.name}]: {message}'
-    )
+    target = target_osu_session or target_irc_sessions[0]
+    target.logger.info(f'(external) [{sender.name} -> {target.name}]: {message}')
 
-    target.enqueue_message(
-        message, sender, target.name
-    )
+    for recipient in (target_osu_session, *target_irc_sessions):
+        if recipient:
+            recipient.enqueue_message(message, sender, target.name)
 
-    if (online_sender := app.session.players.by_id(sender_id)):
-        online_sender.enqueue_message(message, sender, target.name)
+    # Send messages back to active sessions from sender
+    if (sender_osu_session := app.session.players.by_id_osu(sender_id)):
+        sender_osu_session.enqueue_message(message, sender, target.name)
+
+    for sender_irc_session in app.session.players.by_id_irc_all(sender_id):
+        sender_irc_session.enqueue_message(message, sender, target.name)
 
     # We assume the message will be read
     # This is to ensure the user won't recieve
