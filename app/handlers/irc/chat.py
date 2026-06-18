@@ -263,3 +263,45 @@ def handle_privmsg_command(
 
     if target.away_message:
         sender.enqueue_away_message(target)
+
+@register("KICK")
+@ensure_authenticated
+def handle_kick_command(
+    client: IrcClient,
+    prefix: str,
+    channel_name: str = None,
+    nick: str = None,
+    reason: str = None,
+    *args
+) -> None:
+    if not channel_name or not nick:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "KICK", ":Not enough parameters")
+        return
+
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel_name, ":No such channel")
+        return
+
+    if not client.is_staff:
+        client.enqueue_command(irc.ERR_CHANOPRIVSNEEDED, channel_name, ":You're not a channel operator")
+        return
+
+    if not (target := session.players.by_name_safe(nick)):
+        client.enqueue_command(irc.ERR_NOSUCHNICK, nick, ":No such nick/channel")
+        return
+
+    if target not in channel.users:
+        client.enqueue_command(irc.ERR_USERNOTINCHANNEL, nick, channel_name, ":They aren't on that channel")
+        return
+
+    reason = reason or "No reason given"
+    kick_sender_prefix = f"{client.local_prefix}!cho@{session.config.DOMAIN_NAME}"
+
+    for user in channel.irc_users:
+        user.enqueue_command_raw(
+            "KICK",
+            prefix=kick_sender_prefix,
+            params=[channel.name, user.resolve_username(target), f":{reason}"]
+        )
+
+    channel.remove(target)
