@@ -195,10 +195,6 @@ class Client:
         return self.presence.is_irc
 
     @property
-    def is_osu(self) -> bool:
-        return False
-
-    @property
     def irc_formatted(self) -> str:
         return f"{self.underscored_name}!cho@{config.DOMAIN_NAME}"
 
