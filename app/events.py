@@ -183,11 +183,13 @@ def link_discord_user(user_id: int, code: str):
         app.session.logger.warning('Failed to link user to discord: Already linked!')
         return
 
-    player.enqueue_message(
-        f'Your verification code is: "{code}". Please type it into discord to link your account!',
-        app.session.banchobot,
-        player.name
-    )
+    link_message = f'Your verification code is: "{code}". Please type it into discord to link your account!'
+
+    if (player_osu := app.session.players.by_id_osu(user_id)):
+        player_osu.enqueue_message(link_message, app.session.banchobot, player_osu.name)
+
+    for player_irc in app.session.players.by_id_irc_all(user_id):
+        player_irc.enqueue_message(link_message, app.session.banchobot, player_irc.name)
 
 @app.session.events.register('external_message')
 def external_message(
