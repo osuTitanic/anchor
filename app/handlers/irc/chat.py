@@ -264,6 +264,47 @@ def handle_privmsg_command(
     if target.away_message:
         sender.enqueue_away_message(target)
 
+@register("INVITE")
+@ensure_authenticated
+def handle_invite_command(
+    client: IrcClient,
+    prefix: str,
+    nick: str = None,
+    channel_name: str = None,
+    *args
+) -> None:
+    if not nick or not channel_name:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "INVITE", ":Not enough parameters")
+        return
+
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel_name, ":No such channel")
+        return
+
+    if client not in channel.users:
+        client.enqueue_command(irc.ERR_NOTONCHANNEL, channel_name, ":You're not on that channel")
+        return
+
+    if not (target := session.players.by_name_safe(nick)):
+        client.enqueue_command(irc.ERR_NOSUCHNICK, nick, ":No such nick/channel")
+        return
+
+    if target in channel.users:
+        client.enqueue_command(irc.ERR_USERONCHANNEL, nick, channel_name, ":is already on channel")
+        return
+
+    client.enqueue_command(irc.RPL_INVITING, channel_name, target.local_prefix)
+    inviter_prefix = f"{client.local_prefix}!cho@{session.config.DOMAIN_NAME}"
+
+    for irc_session in session.players.by_id_irc_all(target.id):
+        irc_session.enqueue_command_raw(
+            "INVITE",
+            prefix=inviter_prefix,
+            params=[irc_session.local_prefix, channel_name]
+        )
+
+    # TODO: Implement invites for osu sessions too?
+
 @register("KICK")
 @ensure_authenticated
 def handle_kick_command(
