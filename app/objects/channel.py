@@ -1,6 +1,6 @@
 
+from typing import TYPE_CHECKING, List, Set, Iterator, Iterable
 from chio import Message, Channel as bChannel, Permissions
-from typing import TYPE_CHECKING, List, Set, Iterator
 from code import InteractiveConsole
 
 if TYPE_CHECKING:
@@ -146,7 +146,7 @@ class Channel:
                 self.logger.info(f'Removing inactive user: {user.name}')
                 self.remove(user)
 
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+    def broadcast_message(self, message: Message, users: Iterable["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         if "\n" in message.content:
@@ -561,7 +561,7 @@ class MultiplayerChannel(Channel):
             channel_object.name = self.resolve_name(player)
             player.enqueue_channel(channel_object)
 
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+    def broadcast_message(self, message: Message, users: Iterable["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         for user in users:
@@ -601,7 +601,9 @@ class PythonInterpreterChannel(Channel):
     def send_message(
         self,
         sender: "Client",
-        message: str
+        message: str,
+        ignore_commands: bool = False,
+        do_later: bool = False
     ) -> None:
         if not sender.object.is_admin:
             sender.enqueue_channel_revoked(self.display_name)
