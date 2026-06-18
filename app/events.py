@@ -293,6 +293,9 @@ def send_activity_webhook(entry: DBActivity) -> None:
         config.ANNOUNCE_EVENTS_WEBHOOK_URL
     )
 
+    if not webhook_url:
+        return
+
     # Send webhook message
     officer.event(
         embeds=[embed],
