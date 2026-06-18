@@ -331,6 +331,10 @@ def handle_kick_command(
         client.enqueue_command(irc.ERR_NOSUCHNICK, nick, ":No such nick/channel")
         return
 
+    if target is session.banchobot:
+        client.enqueue_command(irc.ERR_CHANOPRIVSNEEDED, channel_name, ":You cannot kick BanchoBot")
+        return
+
     if target not in channel.users:
         client.enqueue_command(irc.ERR_USERNOTINCHANNEL, nick, channel_name, ":They aren't on that channel")
         return
