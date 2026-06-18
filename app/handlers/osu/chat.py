@@ -170,10 +170,10 @@ def send_private_message(sender: OsuClient, message: Message):
     )
 
     # Enqueue to irc & osu!
-    recipients = (
+    recipients = [
         session.players.by_id_osu(target.id),
-        session.players.by_id_irc(target.id)
-    )
+        *session.players.by_id_irc_all(target.id)
+    ]
 
     for recipient in recipients:
         if not recipient:

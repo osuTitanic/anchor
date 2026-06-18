@@ -52,10 +52,11 @@ def bancho_event(
 
 @app.session.events.register('logout')
 def logout(user_id: int):
-    if not (player := app.session.players.by_id(user_id)):
-        return
+    if (player_osu := app.session.players.by_id_osu(user_id)):
+        player_osu.close_connection("Kicked by logout event")
 
-    player.close_connection("Kicked by logout event")
+    for player_irc in app.session.players.by_id_irc_all(user_id):
+        player_irc.close_connection("Kicked by logout event")
 
 @app.session.events.register('restrict')
 def restrict(
@@ -77,7 +78,7 @@ def restrict(
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_restricted(reason, until, autoban)
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_restricted(reason, until, autoban)
 
 @app.session.events.register('unrestrict')
@@ -96,7 +97,7 @@ def unrestrict(user_id: int, restore_scores: bool = True):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_unrestricted()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_unrestricted()
 
 @app.session.events.register('silence')
@@ -113,7 +114,7 @@ def silence(user_id: int, duration: int, reason: str = ''):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_silenced()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_silenced()
 
 @app.session.events.register('update_user_silence')
@@ -124,7 +125,7 @@ def update_user_silence(user_id: int):
     if (player_osu := app.session.players.by_id_osu(user.id)):
         player_osu.on_user_silenced()
 
-    if (player_irc := app.session.players.by_id_irc(user.id)):
+    for player_irc in app.session.players.by_id_irc_all(user.id):
         player_irc.on_user_silenced()
 
 @app.session.events.register('announcement')
