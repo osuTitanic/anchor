@@ -786,7 +786,7 @@ def match_complete(client: OsuClient):
 
     client.match.send_referee_message(
         f'{client.name} finished playing '
-        f'(Score: {slot.last_frame.total_score}, {"FAILED" if slot.has_failed else "PASSED"})',
+        f'(Score: {slot.last_frame.total_score if slot.last_frame else 0}, {"FAILED" if slot.has_failed else "PASSED"})',
         session.banchobot
     )
 
