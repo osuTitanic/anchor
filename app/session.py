@@ -1,5 +1,6 @@
 
 from .objects.collections import Players, Channels, Matches
+from .common.helpers.beatmaps import BeatmapResources
 from .common.helpers.filter import ChatFilter
 from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
@@ -35,6 +36,7 @@ events = EventQueue(
     name='bancho:events',
     connection=redis
 )
+beatmaps = BeatmapResources(storage, redis)
 
 logger = logging.getLogger('bancho')
 startup_time = time.time()

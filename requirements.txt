@@ -16,3 +16,5 @@ chio==1.1.20
 psutil==7.2.2
 py-cpuinfo==9.0.0
 pydantic-settings==2.14.2
+pillow==12.2.0
+zipstream-ng==1.9.2

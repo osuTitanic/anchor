@@ -161,7 +161,7 @@ def on_status_change(client: OsuClient, mode_changed: bool):
 
     if client.status.beatmap_id not in (0, -1):
         # Cache beatmap to make score submission faster
-        session.storage.cache_beatmap(client.status.beatmap_id)
+        session.beatmaps.cache_beatmap(client.status.beatmap_id)
 
 def distribute_stats(client: OsuClient):
     # Enqueue stats to themselves
