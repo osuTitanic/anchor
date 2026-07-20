@@ -7,7 +7,7 @@ requests==2.34.2
 boto3<2
 pytz==2026.2
 pytimeparse==1.1.8
-geoip2==5.2.0
+geoip2==5.3.0
 bcrypt==5.0.0
 sendgrid==6.12.5
 timeago==1.0.16
