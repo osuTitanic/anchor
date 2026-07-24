@@ -66,7 +66,7 @@ class OsuClient(Client):
 
     @property
     def friendonly_dms(self) -> bool:
-        return self.info.friendonly_dms
+        return self.info.friendonly_dms or False
 
     @property
     def supports_markasread(self) -> bool:
@@ -168,20 +168,12 @@ class OsuClient(Client):
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
             # Check client version & executable hash
+            unverified_client_warning = ""
             valid, response_message = self.is_valid_client(session)
 
             if not valid:
-                self.logger.warning('Login Failed: Unverified client')
-                self.on_login_failed(
-                    LoginError.InvalidVersion,
-                    response_message
-                )
-                officer.call(
-                    f'"{self.name}" tried to log in with an invalid client: '
-                    f'{self.info.version} ({self.info.hash.md5})'
-                )
-                self.close_connection()
-                return
+                unverified_client_warning = response_message + ' Scores submitted with this client will not be accepted.'
+                self.logger.warning('Login Warning: Unverified client')
 
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id_osu(user.id)):
@@ -256,6 +248,15 @@ class OsuClient(Client):
 
         self.logged_in = True
         self.on_login_success()
+
+        if unverified_client_warning:
+            # User logged in with a client that was not whitelisted / approved
+            # We need to notify them that they cannot submit scores with it
+            self.enqueue_message(
+                unverified_client_warning,
+                app.session.banchobot,
+                app.session.banchobot.name
+            )
 
     def on_login_success(self) -> None:
         self.spectator_chat = SpectatorChannel(self)
@@ -428,7 +429,7 @@ class OsuClient(Client):
     def is_valid_client(self, session: Session) -> tuple[bool, str]:
         if len(self.info.version.string) > 25:
             # Version is too long to be saved in database
-            return False, "okay bro, at least pick a reasonable version name next time"
+            return False, "Okay bro, at least pick a reasonable version name next time."
 
         bypass_check = (
             config.DISABLE_CLIENT_VERIFICATION
