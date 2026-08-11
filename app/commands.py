@@ -284,8 +284,7 @@ def is_host(ctx: Context) -> bool:
     if not match:
         return False
 
-    return (ctx.player is match.host) or \
-           (ctx.player.id in match.referee_players) or \
+    return (ctx.player.id in match.referee_players) or \
            (ctx.player.object.is_admin)
 
 @mp_commands.condition
@@ -1191,9 +1190,6 @@ def mp_addref(ctx: Context):
     if not match:
         return ["You are not inside a match."]
 
-    if not match.persistent:
-        return ["This match is not persistent."]
-
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
@@ -1207,9 +1203,6 @@ def mp_addref(ctx: Context):
 
     if target.id in match.referee_players:
         return [f'{target.name} is already a referee.']
-
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot add yourself as a referee."]
 
     if not target.is_irc and target.match == match:
         # Target should now join #multi_<match.id> instead of #multiplayer
@@ -1239,9 +1232,6 @@ def mp_removeref(ctx: Context):
     if not match:
         return ["You are not inside a match."]
 
-    if not match.persistent:
-        return ["This match is not persistent."]
-
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
@@ -1255,9 +1245,6 @@ def mp_removeref(ctx: Context):
 
     if target.id not in match.referee_players:
         return [f'{target.name} is not a referee.']
-
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot remove yourself as a referee."]
 
     match.chat.remove(target)
     match.referee_players.discard(target.id)
