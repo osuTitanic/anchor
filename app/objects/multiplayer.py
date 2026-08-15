@@ -640,7 +640,8 @@ class Match:
         ranking_type = {
             ScoringType.Score: lambda s: s.last_frame.total_score,
             ScoringType.Accuracy: lambda s: s.last_frame.accuracy(self.mode),
-            ScoringType.Combo: lambda s: s.last_frame.max_combo
+            ScoringType.Combo: lambda s: s.last_frame.max_combo,
+            ScoringType.ScoreV2: lambda s: s.last_frame.total_score
         }[self.scoring_type]
 
         slots = [slot for slot in self.slots if slot.last_frame]
