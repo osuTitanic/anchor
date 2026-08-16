@@ -1535,7 +1535,7 @@ def get_client_version(ctx: Context):
 
 @command(['ranking', 'setranking', 'setrank'], hidden=True)
 def set_preferred_ranking(ctx: Context):
-    """<ranking (global/ppv1/tscore/rscore) - Set your preferred ranking type"""
+    """<ranking (global/ppv1/tscore/rscore/clears) - Set your preferred ranking type"""
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{ctx.trigger} <ranking (global/ppv1/tscore/rscore/clears)>']
 
