@@ -24,6 +24,7 @@ from app.objects.channel import Channel, MultiplayerChannel, PythonInterpreterCh
 from app.objects.multiplayer import Match, MatchTimer
 from app.common.constants import EventType, GameMode
 from app.handlers.osu import spectator
+from app.clients.irc import IrcClient
 from app.clients.base import Client
 from app.session import config
 from app.faq import faq
@@ -123,6 +124,12 @@ sets = [
 
 @system_commands.condition
 def is_admin(ctx: Context) -> bool:
+    if isinstance(ctx.player, IrcClient) and ctx.player.is_osu:
+        # IRC-based osu! clients are a slight security nightmare for
+        # us, since they don't have a proper authentication system
+        # We will not allow them to use any admin commands
+        return False
+
     return ctx.player.object.is_admin
 
 @system_commands.register(['status', 'info'], "admin")
