@@ -393,7 +393,8 @@ class Client:
             self.stats,
             self.status,
             hash=ClientHash.empty("b0").string,
-            version=0
+            version=0,
+            version_string="Unknown"
         )
 
     def update_activity(self) -> None:

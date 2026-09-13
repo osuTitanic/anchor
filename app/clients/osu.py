@@ -633,7 +633,8 @@ class OsuClient(Client):
             self.stats,
             self.status,
             self.info.hash.string,
-            self.info.version.date
+            self.info.version.date,
+            self.info.version.string
         )
 
     def update_object(self, mode: int = 0) -> None:
