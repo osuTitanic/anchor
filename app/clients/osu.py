@@ -1,6 +1,8 @@
 
-from chio.constants import LoginError, QuitState, Permissions, PresenceFilter
-from chio.types import UserQuit, Message, TitleUpdate, ReplayFrameBundle
+from chio.constants import LoginError, QuitState, Permissions, PresenceFilter, SlotStatus
+from chio.types import UserQuit, Message, TitleUpdate, ReplayFrameBundle, ScoreFrame, MatchSlot
+from chio.clients import b20130303, b20151106
+from chio.io import MemoryStream
 from chio import PacketType, BanchoIO
 
 from typing import Any, Iterable, Deque
@@ -29,6 +31,32 @@ import logging
 import time
 import chio
 import app
+
+# Digital Client 6.1.43 adds 16 player matches and the b20151106 ScoreV2 extension
+class DigitalClientIO(b20130303):
+    slot_size = 16
+
+    @classmethod
+    def write_match(cls, output):
+        match = copy(output)
+        match.slots = copy(match.slots[:cls.slot_size])
+        match.slots += [MatchSlot(status=SlotStatus.Locked)] * max(cls.slot_size - len(match.slots), 0)
+        return b20130303.write_match(match)
+
+    @classmethod
+    def read_match(cls, stream: MemoryStream):
+        match = super().read_match(stream)
+        match.slots = match.slots[:config.MULTIPLAYER_MAX_SLOTS]
+        return match
+
+    @classmethod
+    def write_score_frame(cls, stream: MemoryStream, frame: ScoreFrame) -> None:
+        b20151106.write_score_frame(stream, frame)
+
+    @classmethod
+    def read_score_frame(cls, stream: MemoryStream) -> ScoreFrame:
+        return b20151106.read_score_frame(stream)
+
 
 class OsuClient(Client):
     def __init__(self, address: str, port: int) -> None:
@@ -114,7 +142,13 @@ class OsuClient(Client):
         info.hash.adapters_md5 = info.hash.adapters_md5 or adapters_hash
 
         # Select the correct client/io object
-        self.io = chio.select_client(info.protocol_version)
+        if (
+            info.version.string == 'b20130303.digital' and
+            info.protocol_version == 20151106
+        ):
+            self.io = DigitalClientIO()
+        else:
+            self.io = chio.select_client(info.protocol_version)
 
         # Send protocol version
         self.enqueue_packet(
