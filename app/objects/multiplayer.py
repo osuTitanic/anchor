@@ -245,8 +245,9 @@ class Match:
 
         return None, None
 
-    def get_free(self) -> int:
-        for index, slot in enumerate(self.slots):
+    def get_free(self, slot_size: int | None = None) -> int:
+        slots = self.slots if slot_size is None else self.slots[:slot_size]
+        for index, slot in enumerate(slots):
             if slot.status == SlotStatus.Open:
                 return index
 

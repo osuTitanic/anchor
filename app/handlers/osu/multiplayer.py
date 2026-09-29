@@ -116,8 +116,12 @@ def create_match(client: OsuClient, bancho_match: Match):
         client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
-    for index, slot in enumerate(bancho_match.slots):
-        match.slots[index].status = slot.status
+    for index, slot in enumerate(match.slots):
+        slot.status = (
+            bancho_match.slots[index].status
+            if index < len(bancho_match.slots)
+            else SlotStatus.Locked
+        )
 
     match.logger = logging.getLogger(f'multi_{match.id}')
     match.chat = MultiplayerChannel(match)
@@ -193,7 +197,7 @@ def join_match(client: OsuClient, match_join: MatchJoin):
             client.enqueue_packet(PacketType.BanchoMatchJoinFail)
             return
 
-        if (slot_id := match.get_free()) is None:
+        if (slot_id := match.get_free(client.io.slot_size)) is None:
             # Match is full
             client.logger.warning('Failed to join match: Match full')
             client.enqueue_packet(PacketType.BanchoMatchJoinFail)
@@ -386,7 +390,7 @@ def change_slot(client: OsuClient, slot_id: int):
     if not client.match:
         return
 
-    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
+    if not 0 <= slot_id < min(config.MULTIPLAYER_MAX_SLOTS, client.io.slot_size):
         return
 
     if client.match.slots[slot_id].status != SlotStatus.Open:
@@ -575,7 +579,7 @@ def lock(client: OsuClient, slot_id: int):
 
     client.match.last_activity = time.time()
 
-    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
+    if not 0 <= slot_id < min(config.MULTIPLAYER_MAX_SLOTS, client.io.slot_size):
         return
 
     slot = client.match.slots[slot_id]
@@ -630,7 +634,7 @@ def transfer_host(client: OsuClient, slot_id: int):
 
     client.match.last_activity = time.time()
 
-    if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
+    if not 0 <= slot_id < min(config.MULTIPLAYER_MAX_SLOTS, client.io.slot_size):
         return
 
     if not (target := client.match.slots[slot_id].player):

@@ -840,7 +840,7 @@ def mp_force_invite(ctx: Context):
     if target.match is not None:
         target.match.kick_player(target)
 
-    if (slot_id := match.get_free()) is None:
+    if (slot_id := match.get_free(target.io.slot_size)) is None:
         return ['This match is full.']
 
     # Join the chat
@@ -1053,11 +1053,11 @@ def mp_move(ctx: Context):
 
     match: Match = ctx.get_context_object('match')
     name = ctx.args[0]
-    slot_id = max(1, min(int(ctx.args[1]), config.MULTIPLAYER_MAX_SLOTS))
 
     if not (player := match.get_player(name)):
         return [f'Could not find player {name}.']
 
+    slot_id = max(1, min(int(ctx.args[1]), config.MULTIPLAYER_MAX_SLOTS, player.io.slot_size))
     old_slot = match.get_slot(player)
 
     # Check if slot is already used
