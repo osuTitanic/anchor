@@ -1,6 +1,5 @@
-rosu-pp-py==4.0.2
 psycopg[binary]==3.3.6
-sqlalchemy==2.1.1
+sqlalchemy==2.0.54
 twisted==26.4.0
 redis==8.1.0
 requests==2.34.2
