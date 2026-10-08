@@ -1,4 +1,4 @@
-psycopg[binary]==3.3.6
+psycopg2-binary==2.9.13
 sqlalchemy==2.0.54
 twisted==26.4.0
 redis==8.1.0
