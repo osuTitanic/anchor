@@ -1,5 +1,5 @@
 psycopg2-binary==2.9.13
-sqlalchemy==2.0.54
+sqlalchemy==2.1.4
 twisted==26.4.0
 redis==8.1.0
 requests==2.34.2
