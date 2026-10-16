@@ -230,6 +230,7 @@ class OsuClient(Client):
                 self.id,
                 self.address,
                 self.info.version.string,
+                country=self.location.country_code,
                 priority=4
             )
 

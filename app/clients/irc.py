@@ -126,6 +126,7 @@ class IrcClient(Client):
                 self.id,
                 self.address,
                 "irc",
+                country=self.location.country_code,
                 priority=4
             )
 
