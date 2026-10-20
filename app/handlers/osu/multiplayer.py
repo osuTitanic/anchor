@@ -160,13 +160,12 @@ def create_match(client: OsuClient, bancho_match: Match):
 
 @register(PacketType.OsuMatchJoin)
 def join_match(client: OsuClient, match_join: MatchJoin):
-    if not session.matches.exists(match_join.match_id):
+    if not (match := session.matches.get(match_join.match_id)):
         client.logger.warning(f'{client.name} tried to join a match that does not exist')
         client.enqueue_packet(PacketType.BanchoMatchDisband, match_join.match_id)
         client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
-    match = session.matches[match_join.match_id]
     match.last_activity = time.time()
 
     if client.is_tourney_client:
@@ -807,12 +806,10 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
     client.logger.debug(f'Requesting tourney match info ({match_id})')
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
         client.enqueue_packet(PacketType.BanchoMatchDisband, match_id)
         return
-
-    match = session.matches[match_id]
 
     # Clear password for tourney clients
     match_password = copy(match.password)
@@ -837,11 +834,10 @@ def tourney_join_match_channel(client: OsuClient, match_id: int):
         client.logger.warning('Tried to join tourney match channel, but was not in tourney client.')
         return
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to join tourney match channel, but match was not found in active matches.')
         return
 
-    match = session.matches[match_id]
     match.chat.add(client)
     client.enqueue_channel(match.chat.bancho_channel, autojoin=True)
 
@@ -855,10 +851,9 @@ def tourney_leave_match_channel(client: OsuClient, match_id: int):
         client.logger.warning('Tried to leave tourney match channel, but was not in tourney client.')
         return
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to leave tourney match channel, but match was not found in active matches.')
         return
 
-    match = session.matches[match_id]
     match.chat.remove(client)
     client.enqueue_channel_revoked(match.chat.display_name)
