@@ -914,9 +914,13 @@ def mp_settings(ctx: Context):
         f'[http://osu.{config.DOMAIN_NAME}/b/{match.beatmap_id} {match.beatmap_text}]'
         if match.beatmap_id > 0 else match.beatmap_text
     )
+    history_link = (
+        f"([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])"
+        if match.db_match is not None else ""
+    )
 
     return [
-        f"Room Name: {match.name} ([http://osu.{config.DOMAIN_NAME}/mp/{match.db_match.id} View History])",
+        f"Room Name: {match.name} {history_link}",
         f"Beatmap: {beatmap_link}",
         f"Active Mods: +{match.mods.short} {'(Freemod)' if match.freemod else ''}",
         f"Team Mode: {match.team_type.name}",
@@ -929,7 +933,7 @@ def mp_settings(ctx: Context):
             f"{f' +{slot.mods.short}' if slot.mods > 0 else ''} [{f'Host' if match.host == slot.player else ''}]"
             f"{f' ({slot.player.info.version.string})'}"
             for slot in match.slots
-            if slot.has_player
+            if slot.player is not None
         ]
     ]
 
