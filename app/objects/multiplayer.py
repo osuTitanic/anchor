@@ -35,7 +35,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: "OsuClient" | None = None
+        self.player: Optional["OsuClient"] = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -107,7 +107,7 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: "OsuClient",
+        host: Optional["OsuClient"],
         beatmap_id: int = -1,
         beatmap_name: str = "",
         beatmap_hash: str = "",
@@ -529,6 +529,20 @@ class Match:
         matches.update(self.db_match.id, {'ended_at': datetime.now()})
         events.create(self.db_match.id, type=EventType.Disband)
 
+    def start_safe(self) -> tuple[str, int]:
+        if self.starting:
+            time_remaining = round(self.starting.time - time.time())
+            return "start_timer", time_remaining
+
+        if not self.player_slots:
+            return "no_players", 0
+
+        if any([s.status == SlotStatus.NotReady for s in self.slots]):
+            return "not_ready", 0
+
+        self.start()
+        return "", 0
+
     def start(self):
         if self.player_count <= 0:
             self.logger.warning('Host tried to start match without any players')
@@ -738,6 +752,36 @@ class Match:
             }
         )
 
+    def create_start_timer(self, duration: int, override: bool = False) -> int:
+        if self.starting and not override:
+            time_remaining = round(self.starting.time - time.time())
+            return time_remaining
+
+        if duration < 0:
+            duration = 0
+
+        if duration > 60*5:
+            duration = 60*5
+
+        self.starting = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=self.execute_start_timer,
+                daemon=True
+            )
+        )
+        self.starting.start()
+        return duration
+
+    def abort_start_timer(self) -> bool:
+        if not self.starting:
+            return False
+
+        # The timer thread will check if 'starting'
+        # is None and kill itself when it is
+        self.starting = None
+        return True
+
     def execute_start_timer(self) -> None:
         if not self.starting:
             self.logger.warning('Tried to execute starting timer, but match was not starting.')
@@ -779,6 +823,34 @@ class Match:
         time.sleep(1)
         self.starting = None
         self.start()
+
+    def create_countdown(self, duration: int, override: bool = False) -> int:
+        if self.countdown and not override:
+            time_remaining = round(self.countdown.time - time.time())
+            return time_remaining
+
+        if duration < 0:
+            duration = 0
+
+        if duration > 60*15:
+            duration = 60*15
+
+        self.countdown = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=self.execute_countdown,
+                daemon=True
+            )
+        )
+        self.countdown.start()
+        return duration
+
+    def abort_countdown(self) -> bool:
+        if not self.countdown:
+            return False
+
+        self.countdown = None
+        return True
 
     def execute_countdown(self) -> None:
         if not self.countdown:

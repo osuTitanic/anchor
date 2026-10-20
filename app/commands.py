@@ -3,7 +3,6 @@ from typing import List, NamedTuple, Callable, Tuple, Dict, Any
 from pytimeparse.timeparse import timeparse
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
-from threading import Thread
 from chio import (
     ScoringType,
     Permissions,
@@ -21,7 +20,7 @@ from app.common.database.repositories import *
 from app.common.helpers import infringements, permissions
 
 from app.objects.channel import Channel, MultiplayerChannel, PythonInterpreterChannel
-from app.objects.multiplayer import Match, MatchTimer
+from app.objects.multiplayer import Match
 from app.common.constants import EventType, GameMode
 from app.handlers.osu import spectator
 from app.clients.irc import IrcClient
@@ -327,7 +326,10 @@ def create_persistant_match(ctx: Context):
     if len(ctx.args) < 1:
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
-    is_tournament_manager = permissions.has_permission("bancho.matches.bypass_limit", user_id=ctx.player.id)
+    is_tournament_manager = permissions.has_permission(
+        "bancho.matches.bypass_limit",
+        user_id=ctx.player.id
+    )
 
     # Tournament managers should be able to freely manage matches
     if len(ctx.player.referee_matches) > 3 and not is_tournament_manager:
@@ -336,7 +338,7 @@ def create_persistant_match(ctx: Context):
     if ctx.player.is_tourney_client:
         return ['You cannot create a persistant match inside of a tourney client.']
 
-    if not ctx.player.is_irc and ctx.player.match:
+    if isinstance(ctx.player, OsuClient) and ctx.player.match:
         return ['Please leave your current match first.']
 
     is_private = ctx.trigger in ('makeprivate', 'createprivate')
@@ -346,7 +348,7 @@ def create_persistant_match(ctx: Context):
         id=-1,
         name=" ".join(ctx.args[0:])[:128],
         password=password if is_private else "",
-        host=ctx.player,
+        host=None,
         mode=ctx.player.status.mode,
         persistant=True
     )
@@ -355,7 +357,7 @@ def create_persistant_match(ctx: Context):
         ctx.player.logger.warning('Failed to append match to collection')
         return ['Could not create match.']
 
-    ctx.player.referee_matches.add(match.id)
+    ctx.player.referee_matches.add(match)
     match.referee_players.add(ctx.player.id)
     match.chat = MultiplayerChannel(match)
     match.logger = logging.getLogger(f'multi_{match.id}')
@@ -376,9 +378,8 @@ def create_persistant_match(ctx: Context):
 
     ctx.player.enqueue_channel(channel_object, autojoin=True)
     match.chat.add(ctx.player)
-    match.host = None
 
-    if not ctx.player.is_irc:
+    if isinstance(ctx.player, OsuClient):
         slot = match.slots[0]
         slot.status = SlotStatus.NotReady
         slot.player = ctx.player
@@ -424,27 +425,21 @@ def mp_start(ctx: Context):
         return ['This match is already running.']
 
     if not ctx.args:
-        # Check if match is starting
-        if match.starting:
-            time_remaining = round(match.starting.time - time.time())
-            return [f'Match starts in {time_remaining} seconds.']
+        result, remaining = match.start_safe()
 
-        if not match.player_slots:
+        if remaining != 0:
+            return [f'Match starts in {remaining} {"seconds" if remaining != 1 else "second"}.']
+
+        if result == "no_players":
             return ['There are no players inside this match.']
 
-        # Check if players are ready
-        if any([s.status == SlotStatus.NotReady for s in match.slots]):
+        if result == "not_ready":
             return [f'Not all players are ready ("!{mp_commands.trigger}" {ctx.trigger} force" to start anyways)']
 
-        return match.start()
+        return [] # Match has started
 
     if ctx.args[0].isdecimal():
         # Host wants to start a timer
-        if match.starting:
-            # Timer is already running
-            time_remaining = round(match.starting.time - time.time())
-            return [f'Match starts in {time_remaining} seconds.']
-
         duration = int(ctx.args[0])
 
         if duration < 0:
@@ -453,28 +448,21 @@ def mp_start(ctx: Context):
         if duration > 60*5:
             return ['Please lower your duration!']
 
-        match.starting = MatchTimer(
-            time.time() + duration,
-            Thread(
-                target=match.execute_start_timer,
-                daemon=True
-            )
+        remaining = match.create_start_timer(
+            duration,
+            override=False
         )
-        match.starting.start()
+        return [f'Match starts in {remaining} {"seconds" if remaining != 1 else "second"}.']
 
-        return [f'Match starts in {duration} {"seconds" if duration != 1 else "second"}.']
-
-    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
+    if ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
-        if not match.starting:
-            return ['Match timer is not active!']
+        result = match.abort_start_timer()
+        message = 'Match timer was cancelled.' if result else 'Match timer is not active!'
+        return [message]
 
-        # The timer thread will check if 'starting' is None
-        match.starting = None
-        return ['Match timer was cancelled.']
-
-    elif ctx.args[0] in ('force', 'f'):
-        return match.start()
+    if ctx.args[0] in ('force', 'f'):
+        match.start()
+        return []
 
     return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <force/seconds/cancel>']
 
@@ -490,16 +478,11 @@ def mp_timer(ctx: Context):
         time_remaining = round(match.countdown.time - time.time())
         return [f'Countdown ends in {time_remaining} seconds.']
 
-    elif not ctx.args:
+    if not ctx.args:
         return ['Countdown is not active.']
 
-    elif ctx.args[0].isdecimal():
+    if ctx.args[0].isdecimal():
         # Host wants to start a timer
-        if match.countdown:
-            # Timer is already running
-            time_remaining = round(match.countdown.time - time.time())
-            return [f'Countdown ends in {time_remaining} seconds.']
-
         duration = int(ctx.args[0])
 
         if duration < 0:
@@ -508,25 +491,17 @@ def mp_timer(ctx: Context):
         if duration > 60*15:
             return ['Please lower your duration!']
 
-        match.countdown = MatchTimer(
-            time.time() + duration,
-            Thread(
-                target=match.execute_countdown,
-                daemon=True
-            )
+        remaining = match.create_countdown(
+            duration,
+            override=False
         )
-        match.countdown.start()
+        return [f'Countdown ends in {remaining} {"seconds" if remaining != 1 else "second"}.']
 
-        return [f'Countdown ends in {duration} {"seconds" if duration != 1 else "second"}.']
-
-    elif ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
+    if ctx.args[0] in ('stop', 'abort', 'cancel', 'c'):
         # Host wants to cancel the timer
-        if not match.countdown:
-            return ['Countdown is not active!']
-
-        # The countdown thread will check if 'starting' is None
-        match.countdown = None
-        return ['Countdown was cancelled.']
+        result = match.abort_countdown()
+        message = 'Countdown was cancelled.' if result else 'Countdown is not active!'
+        return [message]
 
 @mp_commands.register(['aborttimer', 'stoptimer', 'canceltimer'])
 def mp_abort_timer(ctx: Context):
