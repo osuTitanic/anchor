@@ -514,6 +514,14 @@ class Match:
         self.logger.info(f'Changed host to: {target.name}')
         self.update()
 
+    def clear_host(self) -> bool:
+        if self.host is None:
+            return False
+
+        self.host = None
+        self.update()
+        return True
+
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.match = None

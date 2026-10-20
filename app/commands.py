@@ -655,8 +655,7 @@ def mp_clearhost(ctx: Context):
     if ctx.player.id not in match.referee_players:
         return ['You are not a referee.']
 
-    match.host = None
-    match.update()
+    match.clear_host()
     return ['Host was cleared.']
 
 bot_invites = [
