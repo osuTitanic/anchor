@@ -761,27 +761,14 @@ def mp_force_invite(ctx: Context):
 def mp_lock(ctx: Context):
     """- Lock all unsued slots in the match."""
     match: Match = ctx.get_context_object('match')
-
-    for slot in match.slots:
-        if slot.has_player:
-            match.kick_player(slot.player)
-
-        if slot.status == SlotStatus.Open:
-            slot.status = SlotStatus.Locked
-
-    match.update()
+    match.lock_slots()
     return ['Locked all unused slots.']
 
 @mp_commands.register(['unlock'])
 def mp_unlock(ctx: Context):
     """- Unlock all locked slots in the match."""
     match: Match = ctx.get_context_object('match')
-
-    for slot in match.slots:
-        if slot.status == SlotStatus.Locked:
-            slot.status = SlotStatus.Open
-
-    match.update()
+    match.unlock_slots()
     return ['Unlocked all locked slots.']
 
 @mp_commands.register(['kick', 'remove'])

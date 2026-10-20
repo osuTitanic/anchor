@@ -639,6 +639,20 @@ class Match:
             }
         )
 
+    def lock_slots(self) -> None:
+        for slot in self.slots:
+            if slot.status == SlotStatus.Open:
+                slot.status = SlotStatus.Locked
+
+        self.update()
+
+    def unlock_slots(self) -> None:
+        for slot in self.slots:
+            if slot.status == SlotStatus.Locked:
+                slot.status = SlotStatus.Open
+
+        self.update()
+
     def close(self):
         # Shutdown pending match timers
         self.starting = None
