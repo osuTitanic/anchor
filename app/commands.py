@@ -623,31 +623,7 @@ def mp_freemod(ctx: Context):
     if match.freemod == freemod:
         return [f'Freemod is already {"enabled" if freemod else "disabled"}.']
 
-    match.unready_players()
-    match.freemod = freemod
-    match.logger.info(f'Freemod: {freemod}')
-
-    if freemod:
-        for slot in match.slots:
-            if slot.status.value & SlotStatus.HasPlayer.value:
-                # Set current mods to every player inside the match, if they are not speed mods
-                slot.mods = match.mods & ~Mods.SpeedMods
-
-                # TODO: Fix for older clients without freemod support
-                # slot.mods = []
-
-            # The speedmods are kept in the match mods
-            match.mods = match.mods & ~Mods.FreeModAllowed
-    else:
-        # Keep mods from host, if the host exists
-        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
-        match.mods |= host_mods
-
-        # Reset any mod from players
-        for slot in match.slots:
-            slot.mods = Mods.NoMod
-
-    match.update()
+    match.set_mods(match.mods, freemod)
     return [f'Freemod is now {"enabled" if freemod else "disabled"}.']
 
 @mp_commands.register(['host', 'sethost'])

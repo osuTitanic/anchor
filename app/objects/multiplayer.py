@@ -450,6 +450,7 @@ class Match:
         return beatmap
 
     def set_mods(self, mods: Mods, freemod: bool) -> None:
+        self.unready_players()
         self.freemod = freemod
         self.mods = mods
 
