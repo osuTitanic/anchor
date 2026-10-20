@@ -449,6 +449,40 @@ class Match:
         self.send_bot_message(f'Selected: {beatmap.link}')
         return beatmap
 
+    def set_mods(self, mods: Mods, freemod: bool) -> None:
+        self.freemod = freemod
+        self.mods = mods
+        self.logger.info(f'Updated match mods to {self.mods.short}.')
+
+        if self.freemod:
+            # We have freemod enabled, meaning:
+            # -> Transfer non-speed-changing mods to all player slots
+            # -> Keep speed-changing mods in the match mods
+            for slot in self.slots:
+                if not slot.has_player:
+                    continue
+
+                # Set current mods to every player inside the match, if they are not speed mods
+                slot.mods = self.mods & ~Mods.SpeedMods
+
+                # TODO: Fix for older clients without freemod support
+                # slot.mods = []
+
+            # The speedmods are kept in the match mods
+            self.mods = mods & ~Mods.FreeModAllowed
+            self.update()
+            return
+
+        # Keep mods from host, if the host exists
+        host_mods = self.host_slot.mods if self.host_slot else Mods.NoMod
+        self.mods |= host_mods
+
+        # Reset any mod from players, if freemod was enabled previously
+        for slot in self.slots:
+            slot.mods = Mods.NoMod
+
+        self.update()
+
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.match = None

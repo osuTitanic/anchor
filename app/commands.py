@@ -571,33 +571,7 @@ def mp_mods(ctx: Context):
     if mods == match.mods and freemod == match.freemod:
         return [f'Mods are already set to {match.mods.short}{"FM" if freemod else ""}.']
 
-    match.freemod = freemod
-    match.mods = mods
-
-    if match.freemod:
-        for slot in match.slots:
-            if not (slot.status.value & SlotStatus.HasPlayer.value):
-                continue
-
-            # Set current mods to every player inside the match, if they are not speed mods
-            slot.mods = mods & ~Mods.SpeedMods
-
-            # TODO: Fix for older clients without freemod support
-            # slot.mods = []
-
-        # The speedmods are kept in the match mods
-        match.mods = mods & ~Mods.FreeModAllowed
-    else:
-        # Keep mods from host, if the host exists
-        host_mods = match.host_slot.mods if match.host_slot else Mods.NoMod
-        match.mods |= host_mods
-
-        # Reset any mod from players
-        for slot in match.slots:
-            slot.mods = Mods.NoMod
-
-    match.logger.info(f'Updated match mods to {match.mods.short}.')
-    match.update()
+    match.set_mods(mods, freemod)
     return [f'Updated match mods to {match.mods.short}{"FM" if freemod else ""}.']
 
 def parse_mods_from_args(args: List[str]) -> Tuple[Mods | None, bool]:
