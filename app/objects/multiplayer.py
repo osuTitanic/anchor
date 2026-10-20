@@ -551,15 +551,17 @@ class Match:
         old_slot = self.get_slot(target)
         assert old_slot is not None, "Old slot should not be None"
 
-        # Check if slot is already used
-        target_slot = self.slots[target_slot_id-1]
+        target_slot_index = target_slot_id - 1
+        target_slot = self.slots[target_slot_index]
 
         if target_slot.player is not None:
-            # TODO: Swap players
-            return False
-
-        target_slot.copy_from(old_slot)
-        old_slot.reset()
+            # Swap the players in the slots
+            old_slot_index = self.slots.index(old_slot)
+            self.slots[old_slot_index], self.slots[target_slot_index] = target_slot, old_slot
+        else:
+            # Move the player to the new slot
+            target_slot.copy_from(old_slot)
+            old_slot.reset()
 
         self.update()
         return True
