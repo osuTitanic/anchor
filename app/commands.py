@@ -901,16 +901,9 @@ def mp_move(ctx: Context):
     if not (player := match.get_player(name)):
         return [f'Could not find player {name}.']
 
-    old_slot = match.get_slot(player)
+    if not match.move_player(player, slot_id):
+        return [f'This slot is already in use.']
 
-    # Check if slot is already used
-    if (slot := match.slots[slot_id-1]).has_player:
-        return [f'This slot is already in use by {slot.player.name}.']
-
-    slot.copy_from(old_slot)
-    old_slot.reset()
-
-    match.update()
     return [f'Moved {player.name} into slot {slot_id}.']
 
 @mp_commands.register(['settings'], hidden=True)

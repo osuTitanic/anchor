@@ -544,6 +544,26 @@ class Match:
         self.update()
         return True
 
+    def move_player(self, target: "OsuClient", target_slot_id: int) -> bool:
+        if target not in self.players:
+            return False
+
+        old_slot = self.get_slot(target)
+        assert old_slot is not None, "Old slot should not be None"
+
+        # Check if slot is already used
+        target_slot = self.slots[target_slot_id-1]
+
+        if target_slot.player is not None:
+            # TODO: Swap players
+            return False
+
+        target_slot.copy_from(old_slot)
+        old_slot.reset()
+
+        self.update()
+        return True
+
     def invite_player(self, target: "OsuClient", force: bool = False) -> None:
         if target.match is self:
             return
