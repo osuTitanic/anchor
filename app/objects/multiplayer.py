@@ -1,8 +1,8 @@
 
-from typing import TYPE_CHECKING, Tuple, List, Set
-from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Tuple, List
 from threading import Thread, Timer
 from dataclasses import dataclass
+from datetime import datetime
 from queue import Queue
 from copy import copy
 from chio import (
@@ -26,6 +26,7 @@ from app.common.database.repositories import beatmaps, events, matches
 from app.common.config import config_instance as config
 from app.common.constants import GameMode, EventType
 from app.common.database import DBMatch
+from app.objects.locks import LockedSet
 
 import logging
 import time
@@ -138,8 +139,8 @@ class Match:
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.score_queue: Queue[bScoreFrame] = Queue()
-        self.referee_players: Set[int] = set()
-        self.banned_players: Set[int] = set()
+        self.referee_players: LockedSet[int] = LockedSet()
+        self.banned_players: LockedSet[int] = LockedSet()
 
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
