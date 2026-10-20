@@ -456,6 +456,22 @@ class Match:
         if update:
             self.update()
 
+    def set_team(self, target: "OsuClient", team: SlotTeam) -> bool:
+        slot = self.get_slot(target)
+
+        if slot is None:
+            return False
+
+        if team == SlotTeam.Neutral and self.ffa:
+            self.set_team_type(TeamType.HeadToHead, update=False)
+
+        elif team != SlotTeam.Neutral and not self.ffa:
+            self.set_team_type(TeamType.TeamVs, update=False)
+
+        slot.team = team
+        self.update()
+        return True
+
     def set_beatmap(self, beatmap_id: int, mode: GameMode | None = None) -> DBBeatmap | None:
         beatmap = beatmaps.fetch_by_id(beatmap_id)
 
