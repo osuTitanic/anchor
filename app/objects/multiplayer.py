@@ -440,6 +440,10 @@ class Match:
 
         matches.update(self.db_match.id, {"name": name})
 
+    def set_password(self, password: str) -> None:
+        self.password = password
+        self.update()
+
     def set_team_type(self, mode: TeamType, update: bool = True):
         self.team_type = mode
 
@@ -564,6 +568,38 @@ class Match:
             old_slot.reset()
 
         self.update()
+        return True
+
+    def add_referee(self, target: "Client") -> bool:
+        if target.id in self.referee_players:
+            return False
+
+        if not target.is_irc and target.match is match: # type: ignore
+            # Target should now join #multi_<match.id> instead of #multiplayer
+            target.enqueue_channel_revoked('#multiplayer')
+
+        self.referee_players.add(target.id)
+        target.referee_matches.add(self)
+
+        if self.chat is not None:
+            channel = self.chat.bancho_channel
+            channel.name = self.chat.resolve_name(target) # type: ignore
+            target.enqueue_channel(channel, autojoin=True)
+            self.chat.add(target)
+
+        return True
+
+    def remove_referee(self, target: "Client") -> bool:
+        if target.id not in self.referee_players:
+            return False
+
+        if self.chat is not None:
+            channel_name = self.chat.resolve_name(target) # type: ignore
+            self.chat.remove(target)
+            target.enqueue_channel_revoked(channel_name)
+
+        self.referee_players.discard(target.id)
+        target.referee_matches.discard(self)
         return True
 
     def invite_player(self, target: "OsuClient", force: bool = False) -> None:
