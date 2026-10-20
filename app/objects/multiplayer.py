@@ -587,6 +587,11 @@ class Match:
         if (slot := self.get_slot(player)):
             slot.reset()
 
+        if all(slot.empty for slot in self.slots) and not self.persistent:
+            self.close()
+            self.logger.info(f'Match was disbanded after kicking {player.name}.')
+            return
+
         if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
