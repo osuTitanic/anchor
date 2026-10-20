@@ -950,19 +950,10 @@ def mp_team(ctx: Context):
     if team not in ("Red", "Blue", "Neutral"):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name> <red/blue>']
 
-    if team == "Neutral" and match.ffa:
-        match.team_type = TeamType.HeadToHead
-
-    elif team != "Neutral" and not match.ffa:
-        match.team_type = TeamType.TeamVs
-
     if not (player := match.get_player(name)):
         return [f'Could not find player "{name}"']
 
-    slot = match.get_slot(player)
-    slot.team = SlotTeam[team]
-
-    match.update()
+    match.set_team(player, SlotTeam[team])
     return [f"Moved {player.name} to team {team}."]
 
 @mp_commands.register(['password', 'setpassword', 'pass'])
@@ -971,12 +962,10 @@ def mp_password(ctx: Context):
     match: Match = ctx.get_context_object('match')
 
     if not ctx.args:
-        match.password = ""
-        match.update()
+        match.set_password("")
         return ["Match password was reset."]
 
-    match.password = " ".join(ctx.args[0:])
-    match.update()
+    match.set_password(" ".join(ctx.args[0:]))
     return ["Match password was set."]
 
 @mp_commands.register(['link', 'url'])
@@ -1058,19 +1047,7 @@ def mp_addref(ctx: Context):
     if target.id == ctx.player.id and not can_manage_referees:
         return ["You cannot add yourself as a referee."]
 
-    if not target.is_irc and target.match == match:
-        # Target should now join #multi_<match.id> instead of #multiplayer
-        target.enqueue_channel_revoked('#multiplayer')
-
-    match.referee_players.add(target.id)
-    target.referee_matches.add(match)
-
-    channel_object = match.chat.bancho_channel
-    channel_object.name = match.chat.resolve_name(target)
-
-    target.enqueue_channel(channel_object, autojoin=True)
-    match.chat.add(target)
-
+    match.add_referee(target)
     return [f'Added "{target.name}" as a match referee.']
 
 @mp_commands.register(['removeref', 'remref', 'removereferee'])
@@ -1106,11 +1083,7 @@ def mp_removeref(ctx: Context):
     if target.id == ctx.player.id and not can_manage_referees:
         return ["You cannot remove yourself as a referee."]
 
-    match.chat.remove(target)
-    match.referee_players.discard(target.id)
-    target.referee_matches.discard(match)
-    target.enqueue_channel_revoked(match.chat.bancho_channel.name)
-
+    match.remove_referee(target)
     return [f'Removed "{target.name}" from match referee status.']
 
 def command(
