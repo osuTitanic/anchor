@@ -848,15 +848,7 @@ def mp_name(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <name>']
 
     match: Match = ctx.get_context_object('match')
-    name = ' '.join(ctx.args[0:]).strip()
-
-    match.name = name
-    match.update()
-
-    matches.update(
-        match.db_match.id,
-        {"name": name}
-    )
+    match.set_name(' '.join(ctx.args[0:]).strip())
 
 @mp_commands.register(['set'])
 def mp_set(ctx: Context):

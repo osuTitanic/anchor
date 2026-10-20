@@ -431,6 +431,15 @@ class Match:
 
         self.update()
 
+    def set_name(self, name: str) -> None:
+        self.name = name
+        self.update()
+
+        if not self.db_match:
+            return
+
+        matches.update(self.db_match.id, {"name": name})
+
     def set_beatmap(self, beatmap_id: int, mode: GameMode | None = None) -> DBBeatmap | None:
         beatmap = beatmaps.fetch_by_id(beatmap_id)
 
