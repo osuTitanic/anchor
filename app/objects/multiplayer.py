@@ -14,6 +14,7 @@ from chio import (
     MatchType,
     TeamType,
     SlotTeam,
+    Message,
     Mods
 )
 
@@ -522,6 +523,59 @@ class Match:
         self.update()
         return True
 
+    def invite_player(self, target: "OsuClient", force: bool = False) -> None:
+        if target.match is self:
+            return
+
+        if not force:
+            target.enqueue_packet(
+                PacketType.BanchoInvite,
+                Message(
+                    app.session.banchobot.name,
+                    f'You have been invited to a multiplayer match: {self.embed}',
+                    app.session.banchobot.name,
+                    app.session.banchobot.id
+                )
+            )
+            return
+
+        # Now we force invite the player, wohoo !!!
+
+        if target.match is not None:
+            target.match.kick_player(target)
+
+        if (slot_id := self.get_free()) is None:
+            self.logger.warning(f'Could not invite {target.name}, match is full.')
+            return
+
+        if self.chat:
+            # Join the chat
+            target.enqueue_channel(self.chat.bancho_channel, autojoin=True)
+            self.chat.add(target)
+
+        slot = self.slots[slot_id]
+
+        if self.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
+            slot.team = SlotTeam.Red
+
+        slot.status = SlotStatus.NotReady
+        slot.player = target
+
+        target.match = self
+        target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
+
+        self.logger.info(f'{target.name} joined, welcome.')
+        self.update()
+
+    def ban_player(self, player: "OsuClient"):
+        self.banned_players.add(player.id)
+
+        if player in self.players:
+            self.kick_player(player)
+
+    def unban_player(self, player: "OsuClient"):
+        self.banned_players.discard(player.id)
+
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.match = None
@@ -579,15 +633,6 @@ class Match:
                 'name': player.name
             }
         )
-
-    def ban_player(self, player: "OsuClient"):
-        self.banned_players.add(player.id)
-
-        if player in self.players:
-            self.kick_player(player)
-
-    def unban_player(self, player: "OsuClient"):
-        self.banned_players.discard(player.id)
 
     def close(self):
         # Shutdown pending match timers
