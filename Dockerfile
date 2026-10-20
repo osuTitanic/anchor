@@ -1,7 +1,6 @@
-FROM python:3.14-alpine AS builder
+FROM shadowebtechnologies/python:3.14t-alpine AS builder
 
-ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Build toolchain & headers for native extensions
 RUN apk add --no-cache \
@@ -17,14 +16,16 @@ RUN apk add --no-cache \
 WORKDIR /tmp/build
 COPY requirements.txt ./
 
-# Install Python dependencies into a relocatable prefix for reuse
+# Install python dependencies into a venv
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
-    pip install --no-compile --root /install -r requirements.txt pyopenssl service-identity
+    python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --upgrade pip setuptools wheel && \
+    /opt/venv/bin/pip install --no-compile -r requirements.txt pyopenssl service-identity
 
-FROM python:3.14-alpine
+FROM shadowebtechnologies/python:3.14t-alpine
 
-ENV PYTHONUNBUFFERED=1
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
 
 # Minimal runtime libs for compiled wheels
 RUN apk add --no-cache \
@@ -36,14 +37,14 @@ RUN apk add --no-cache \
     zlib \
     curl
 
-# Reuse site-packages & entry points from builder image
-COPY --from=builder /install/usr/local /usr/local
+# Reuse the virtual environment from the builder image
+COPY --from=builder /opt/venv /opt/venv
 
 WORKDIR /bancho
 COPY . .
 
 # Byte-compile ahead of time for quicker startup
-RUN python -m compileall -q /usr/local/lib/python3.14/site-packages app main.py
+RUN python -m compileall -q /opt/venv/lib/python3.14t/site-packages app main.py
 
 STOPSIGNAL SIGINT
 CMD ["python", "main.py"]
