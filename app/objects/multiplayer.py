@@ -1,5 +1,5 @@
 
-from typing import TYPE_CHECKING, Tuple, List
+from typing import TYPE_CHECKING, Tuple, List, Optional
 from threading import Thread, Timer
 from dataclasses import dataclass
 from datetime import datetime
@@ -169,7 +169,7 @@ class Match:
     @property
     def players(self) -> List["OsuClient"]:
         """Return all players"""
-        return [slot.player for slot in self.player_slots]
+        return [slot.player for slot in self.player_slots] # type: ignore
 
     @property
     def tourney_clients(self) -> List["OsuClient"]:
@@ -221,7 +221,7 @@ class Match:
                 # NOTE: Clients in version b323 and below don't have the
                 #       MATCH_LOAD_COMPLETE packet so we can just ignore them
                 slot.status == SlotStatus.Playing and
-                slot.player.info.protocol_version > 323
+                slot.player.info.protocol_version > 323 # type: ignore
             )
         ]
 
@@ -239,21 +239,21 @@ class Match:
 
         return None
 
-    def get_slot_with_id(self, player: "OsuClient") -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "OsuClient") -> Tuple[Slot | None, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
 
         return None, None
 
-    def get_free(self) -> int:
+    def get_free(self) -> int | None:
         for index, slot in enumerate(self.slots):
             if slot.status == SlotStatus.Open:
                 return index
 
         return None
 
-    def get_player(self, name: str) -> "OsuClient":
+    def get_player(self, name: str) -> Optional["OsuClient"]:
         safe_name = name.lower().replace(" ", "_")
 
         for player in self.players:
@@ -261,6 +261,32 @@ class Match:
                 return player
 
         return None
+
+    def send_bot_message(self, message: str) -> None:
+        if not self.chat:
+            self.logger.warning("Chat is not initialized, cannot send message!")
+            return
+
+        self.chat.send_message(app.session.banchobot, message)
+
+    def send_referee_message(self, message: str, sender: "Client") -> None:
+        if not self.chat:
+            return
+
+        for referee in self.referee_players:
+            if referee_client := app.session.players.by_id_osu(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
+            for referee_client in app.session.players.by_id_irc_all(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
 
     def update(self, lobby=True) -> None:
         # Enqueue to our players
@@ -314,8 +340,9 @@ class Match:
                 # The speedmods are kept in the match mods
                 self.mods = self.mods & ~Mods.FreeModAllowed
             else:
-                # Keep mods from host
-                self.mods |= self.host_slot.mods
+                if self.host_slot:
+                    # Keep mods from host
+                    self.mods |= self.host_slot.mods
 
                 # Reset any mod from players
                 for slot in self.slots:
@@ -358,10 +385,7 @@ class Match:
                 self.mode             = new_match.mode
                 beatmap_text          = new_match.beatmap_text
 
-            self.chat.send_message(
-                app.session.banchobot,
-                f'Selected: {beatmap_text}'
-            )
+            self.send_bot_message(f'Selected: {beatmap_text}')
 
         if self.team_type != new_match.team_type:
             # Changed team type
@@ -378,7 +402,6 @@ class Match:
                     slot.team = new_team
 
             self.team_type = new_match.team_type
-
             self.logger.info(f'Team type: {self.team_type.name}')
 
         if self.type != new_match.type:
@@ -399,19 +422,21 @@ class Match:
             self.name = new_match.name
             self.logger.info(f'Name: {self.name}')
 
-            # Update match name
-            matches.update(
-                self.db_match.id,
-                {"name": self.name}
-            )
+            if self.db_match:
+                matches.update(
+                    self.db_match.id,
+                    {"name": self.name}
+                )
 
         self.update()
 
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
-        player.enqueue_channel_revoked(self.chat.resolve_name(player))
-        self.chat.remove(player)
         player.match = None
+
+        if self.chat is not None:
+            player.enqueue_channel_revoked(self.chat.resolve_name(player)) # type: ignore
+            self.chat.remove(player)
 
         if (slot := self.get_slot(player)):
             slot.reset()
@@ -419,18 +444,19 @@ class Match:
         if player == self.host and not self.persistent:
             # Transfer host to next player
             for slot in self.slots:
-                if slot.has_player:
+                if slot.player is not None:
                     self.host = slot.player
                     self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
 
-            events.create(
-                self.db_match.id,
-                type=EventType.Host,
-                data={
-                    'new': {'id': self.host_id, 'name': self.host.name},
-                    'previous': {'id': player.id, 'name': player.name}
-                }
-            )
+            if self.db_match:
+                events.create(
+                    self.db_match.id,
+                    type=EventType.Host,
+                    data={
+                        'new': {'id': self.host_id, 'name': self.host.name},
+                        'previous': {'id': player.id, 'name': player.name}
+                    }
+                )
 
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
@@ -438,6 +464,9 @@ class Match:
         if all(slot.empty for slot in self.slots) and not self.persistent:
             self.close()
             self.logger.info('Match was disbanded.')
+            return
+
+        if not self.db_match:
             return
 
         if not matches.exists(self.db_match.id):
@@ -482,6 +511,7 @@ class Match:
 
         app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
+        self.logger.info('Match was closed.')
 
         if not self.db_match:
             return
@@ -526,10 +556,7 @@ class Match:
 
         if not playing_slots:
             self.logger.info('Could not start match, because no one was ready.')
-            self.chat.send_message(
-                app.session.banchobot,
-                'Match was not started, because no players were ready.'
-            )
+            self.send_bot_message('Match was not started, because no players were ready.')
             return
 
         self.logger.info('Match started')
@@ -537,15 +564,17 @@ class Match:
         self.update()
 
         for slot in playing_slots:
-            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self)
+            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self) # type: ignore
 
-        self.chat.send_message(
-            app.session.banchobot,
+        self.send_bot_message(
             'The match has started. Good luck, have fun!'
         )
 
         # Start score update loop
         self.schedule_score_updates()
+
+        if not self.db_match:
+            return
 
         events.create(
             self.db_match.id,
@@ -565,16 +594,20 @@ class Match:
         )
 
     def abort(self):
+        if not self.in_progress:
+            return
+
         # Players that have been playing this round
         players = [
             slot.player for slot in self.slots
             if slot.status.value & SlotStatus.Playing.value
-            and slot.has_player
+            and slot.player is not None
         ]
 
         self.in_progress = False
         self.unready_players(SlotStatus.Playing)
         self.update()
+        self.logger.info('Match was aborted.')
 
         # The join success packet will reset the players to the setup screen
         for player in players:
@@ -583,6 +616,9 @@ class Match:
         # Send abort to tourney clients
         for client in self.tourney_clients:
             client.enqueue_packet(PacketType.BanchoMatchAbort)
+
+        if not self.db_match:
+            return
 
         start_event = events.fetch_last_by_type(
             self.db_match.id,
@@ -613,7 +649,7 @@ class Match:
         # Get players that have been playing this round
         players = [
             slot.player for slot in self.slots
-            if slot.completed
+            if slot.player and slot.completed
         ]
 
         self.unready_players(SlotStatus.Complete)
@@ -622,13 +658,12 @@ class Match:
         for p in players:
             p.enqueue_packet(PacketType.BanchoMatchComplete)
 
-        self.logger.info('Match finished')
         self.update()
+        self.logger.info('Match finished')
+        self.send_bot_message('The match has finished!')
 
-        self.chat.send_message(
-            app.session.banchobot,
-            'The match has finished!'
-        )
+        if not self.db_match:
+            return
 
         start_event = events.fetch_last_by_type(
             self.db_match.id,
@@ -698,25 +733,10 @@ class Match:
                         'place': rank + 1
                     }
                     for rank, slot in match_results
+                    if slot.player and slot.last_frame
                 ]
             }
         )
-
-    def send_referee_message(self, message: str, sender: "Client") -> None:
-        for referee in self.referee_players:
-            if referee_client := app.session.players.by_id_osu(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
-
-            for referee_client in app.session.players.by_id_irc_all(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
 
     def execute_start_timer(self) -> None:
         if not self.starting:
@@ -749,12 +769,12 @@ class Match:
 
             remaining_time = round(self.starting.time - time.time())
 
-            self.chat.send_message(
-                app.session.banchobot,
+            self.send_bot_message(
                 f'Match starts in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
-
-            self.logger.debug(f'Match countdown running: {remaining_time} seconds left')
+            self.logger.debug(
+                f'Match countdown running: {remaining_time} seconds left'
+            )
 
         time.sleep(1)
         self.starting = None
@@ -795,20 +815,17 @@ class Match:
 
             remaining_time = round(self.countdown.time - time.time())
 
-            self.chat.send_message(
-                app.session.banchobot,
+            self.send_bot_message(
                 f'Countdown ends in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
-
-            self.logger.debug(f'Countdown running: {remaining_time} seconds left')
+            self.logger.debug(
+                f'Countdown running: {remaining_time} seconds left'
+            )
 
         time.sleep(1)
         self.countdown = None
 
-        self.chat.send_message(
-            app.session.banchobot,
-            'Countdown finished.'
-        )
+        self.send_bot_message('Countdown finished.')
 
     def schedule_score_updates(self) -> None:
         if not self.in_progress:

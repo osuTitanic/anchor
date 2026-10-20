@@ -436,7 +436,7 @@ class Channels(MutableMapping[str, Channel]):
         with self.lock:
             self[c.name] = c
 
-    def remove(self, c: Channel) -> None:
+    def remove(self, c: Channel | None) -> None:
         """Remove a channel from the collection"""
         if not c:
             return

@@ -25,6 +25,7 @@ from app.objects.multiplayer import Match, MatchTimer
 from app.common.constants import EventType, GameMode
 from app.handlers.osu import spectator
 from app.clients.irc import IrcClient
+from app.clients.osu import OsuClient
 from app.clients.base import Client
 from app.session import config
 from app.faq import faq
@@ -265,7 +266,7 @@ def spectate_user(ctx: Context):
     return [f'All online players are now spectating {target.name}.']
 
 def resolve_match(ctx: Context) -> Match | None:
-    if type(ctx.target) != MultiplayerChannel:
+    if not isinstance(ctx.target, MultiplayerChannel):
         # User is not inside a multiplayer channel
         return None
 
@@ -543,7 +544,6 @@ def mp_abort_timer(ctx: Context):
 def mp_close(ctx: Context):
     """- Close a match and kick all players"""
     match: Match = ctx.get_context_object('match')
-    match.logger.info('Match was closed.')
     match.close()
     return ['Match was closed.']
 
@@ -556,7 +556,6 @@ def mp_abort(ctx: Context):
         return ["Nothing to abort."]
 
     match.abort()
-    match.logger.info('Match was aborted.')
     return ['Match aborted.']
 
 @mp_commands.register(['map', 'setmap', 'beatmap'])
