@@ -488,6 +488,32 @@ class Match:
 
         self.update()
 
+    def set_host(self, target: "OsuClient") -> None:
+        if target is self.host:
+            return
+
+        if self.db_match:
+            events.create(
+                self.db_match.id,
+                type=EventType.Host,
+                data={
+                    'new': {
+                        'id': target.id,
+                        'name': target.name
+                    },
+                    'previous': {
+                        'id': self.host_id,
+                        'name': self.host.name if self.host else 'Unknown'
+                    }
+                },
+                priority=2
+            )
+
+        self.host = target
+        self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
+        self.logger.info(f'Changed host to: {target.name}')
+        self.update()
+
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.match = None
@@ -511,8 +537,14 @@ class Match:
                     self.db_match.id,
                     type=EventType.Host,
                     data={
-                        'new': {'id': self.host_id, 'name': self.host.name},
-                        'previous': {'id': player.id, 'name': player.name}
+                        'new': {
+                            'id': self.host_id,
+                            'name': self.host.name if self.host else 'Unknown'
+                        },
+                        'previous': {
+                            'id': player.id,
+                            'name': player.name
+                        }
                     }
                 )
 
