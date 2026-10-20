@@ -541,20 +541,16 @@ def mp_map(ctx: Context):
     if beatmap_id == match.beatmap_id:
         return ['That map was already selected.']
 
-    if not (map := beatmaps.fetch_by_id(beatmap_id)):
+    mode = (
+        parse_mode_from_argument(ctx.args[1])
+        if len(ctx.args) > 1 else None
+    )
+    beatmap = match.set_beatmap(beatmap_id, mode)
+
+    if not beatmap:
         return ['Could not find that beatmap.']
 
-    match.beatmap_id = map.id
-    match.beatmap_checksum = map.md5
-    match.beatmap_text = map.full_name
-    match.mode = GameMode(map.mode)
-
-    if len(ctx.args) > 1:
-        match.mode = parse_mode_from_argument(ctx.args[1]) or match.mode
-
-    match.update()
-    match.logger.info(f'Selected: {map.full_name}')
-    return [f'Selected beatmap: {map.link}']
+    return []
 
 @mp_commands.register(['mods', 'setmods'])
 def mp_mods(ctx: Context):

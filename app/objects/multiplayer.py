@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 from app.common.database.repositories import beatmaps, events, matches
 from app.common.config import config_instance as config
 from app.common.constants import GameMode, EventType
-from app.common.database import DBMatch
+from app.common.database import DBMatch, DBBeatmap
 from app.objects.locks import LockedSet
 
 import logging
@@ -429,6 +429,25 @@ class Match:
                 )
 
         self.update()
+
+    def set_beatmap(self, beatmap_id: int, mode: GameMode | None = None) -> DBBeatmap | None:
+        beatmap = beatmaps.fetch_by_id(beatmap_id)
+
+        if not beatmap:
+            return None
+
+        self.beatmap_id = beatmap.id
+        self.beatmap_text = beatmap.full_name
+        self.beatmap_checksum = beatmap.md5
+        self.mode = GameMode(beatmap.mode)
+
+        if mode is not None:
+            self.mode = mode
+
+        self.update()
+        self.logger.info(f'Selected: {beatmap.full_name}')
+        self.send_bot_message(f'Selected: {beatmap.link}')
+        return beatmap
 
     def kick_player(self, player: "OsuClient"):
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
