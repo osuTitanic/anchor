@@ -547,8 +547,7 @@ class Match:
                         'id': self.host_id,
                         'name': self.host.name if self.host else 'Unknown'
                     }
-                },
-                priority=2
+                }
             )
 
         self.host = target
@@ -590,7 +589,7 @@ class Match:
         if target.id in self.referee_players:
             return False
 
-        if not target.is_irc and target.match is match: # type: ignore
+        if not target.is_irc and target.match is self: # type: ignore
             # Target should now join #multi_<match.id> instead of #multiplayer
             target.enqueue_channel_revoked('#multiplayer')
 
@@ -657,7 +656,7 @@ class Match:
         slot.player = target
 
         target.match = self
-        target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, match)
+        target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self)
 
         self.logger.info(f'{target.name} joined, welcome.')
         self.update()
