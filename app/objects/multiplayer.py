@@ -639,6 +639,22 @@ class Match:
             }
         )
 
+    def toggle_slot_lock(self, slot_id: int) -> None:
+        if slot_id < 0 or slot_id >= len(self.slots):
+            return
+
+        slot = self.slots[slot_id]
+
+        if slot.player is not None:
+            self.kick_player(slot.player)
+
+        slot.status = (
+            SlotStatus.Open
+            if slot.status == SlotStatus.Locked
+            else SlotStatus.Locked
+        )
+        self.update()
+
     def lock_slots(self) -> None:
         for slot in self.slots:
             if slot.status == SlotStatus.Open:
