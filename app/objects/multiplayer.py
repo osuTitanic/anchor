@@ -555,6 +555,21 @@ class Match:
         self.logger.info(f'Changed host to: {target.name}')
         self.update()
 
+    def set_next_host(self) -> bool:
+        target = next(
+            (
+                slot.player for slot in self.slots
+                if slot.player is not None and slot.player is not self.host
+            ),
+            None
+        )
+
+        if target is None:
+            return False
+
+        self.set_host(target)
+        return True
+
     def clear_host(self) -> bool:
         if self.host is None:
             return False
@@ -683,31 +698,19 @@ class Match:
         if (slot := self.get_slot(player)):
             slot.reset()
 
-        if self.close_if_empty():
-            return
+        if player is self.host:
+            if self.beatmap_id == -1:
+                # Host was choosing beatmap; reset beatmap to previous
+                self.beatmap_id = self.previous_beatmap_id
+                self.beatmap_checksum = self.previous_beatmap_hash
+                self.beatmap_text = self.previous_beatmap_name
 
-        if player == self.host and not self.persistent:
-            # Transfer host to next player
-            for slot in self.slots:
-                if slot.player is not None:
-                    self.host = slot.player
-                    self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
-
-            if self.db_match:
-                events.create(
-                    self.db_match.id,
-                    type=EventType.Host,
-                    data={
-                        'new': {
-                            'id': self.host_id,
-                            'name': self.host.name if self.host else 'Unknown'
-                        },
-                        'previous': {
-                            'id': player.id,
-                            'name': player.name
-                        }
-                    }
-                )
+            if self.persistent:
+                # Persistent matches can remain hostless
+                self.clear_host()
+            else:
+                # Transfer to any other player in the match
+                self.set_next_host()
 
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
@@ -825,7 +828,7 @@ class Match:
         )
 
         if not last_game:
-            # No games were played
+            # No games were played -> delete match
             matches.delete(self.db_match.id)
             return
 
