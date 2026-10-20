@@ -452,7 +452,11 @@ class Match:
     def set_mods(self, mods: Mods, freemod: bool) -> None:
         self.freemod = freemod
         self.mods = mods
-        self.logger.info(f'Updated match mods to {self.mods.short}.')
+
+        self.logger.info(
+            f'Updated match mods to {self.mods.short} '
+            f'{"with freemod" if self.freemod else ""}'
+        )
 
         if self.freemod:
             # We have freemod enabled, meaning:
