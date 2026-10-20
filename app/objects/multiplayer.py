@@ -440,6 +440,18 @@ class Match:
 
         matches.update(self.db_match.id, {"name": name})
 
+    def set_team_type(self, mode: TeamType, update: bool = True):
+        self.team_type = mode
+
+        if update:
+            self.update()
+
+    def set_scoring_type(self, mode: ScoringType, update: bool = True):
+        self.scoring_type = mode
+
+        if update:
+            self.update()
+
     def set_beatmap(self, beatmap_id: int, mode: GameMode | None = None) -> DBBeatmap | None:
         beatmap = beatmaps.fetch_by_id(beatmap_id)
 
@@ -582,6 +594,8 @@ class Match:
         if player in self.players:
             self.kick_player(player)
 
+        self.close_if_empty()
+
     def unban_player(self, player: "OsuClient"):
         self.banned_players.discard(player.id)
 
@@ -596,9 +610,7 @@ class Match:
         if (slot := self.get_slot(player)):
             slot.reset()
 
-        if all(slot.empty for slot in self.slots) and not self.persistent:
-            self.close()
-            self.logger.info(f'Match was disbanded after kicking {player.name}.')
+        if self.close_if_empty():
             return
 
         if player == self.host and not self.persistent:
@@ -627,11 +639,6 @@ class Match:
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
 
-        if all(slot.empty for slot in self.slots) and not self.persistent:
-            self.close()
-            self.logger.info('Match was disbanded.')
-            return
-
         if not self.db_match:
             return
 
@@ -648,6 +655,29 @@ class Match:
             }
         )
 
+    def set_slot_size(self, size: int, update: bool = True):
+        size = max(1, min(size, len(self.slots)))
+
+        for slot in self.slots[size:]:
+            if slot.player is not None:
+                self.kick_player(slot.player)
+
+            slot.reset(SlotStatus.Locked)
+
+        for slot in self.slots[0:size]:
+            if slot.player is not None:
+                continue
+
+            slot.reset()
+
+        if not update:
+            return
+
+        if self.close_if_empty():
+            return
+
+        self.update()
+
     def toggle_slot_lock(self, slot_id: int) -> None:
         if slot_id < 0 or slot_id >= len(self.slots):
             return
@@ -656,6 +686,9 @@ class Match:
 
         if slot.player is not None:
             self.kick_player(slot.player)
+
+        if self.close_if_empty():
+            return
 
         slot.status = (
             SlotStatus.Open
@@ -677,6 +710,15 @@ class Match:
                 slot.status = SlotStatus.Open
 
         self.update()
+
+    def close_if_empty(self) -> bool:
+        is_empty = all(slot.empty for slot in self.slots)
+
+        if is_empty and not self.persistent:
+            self.close()
+            return True
+
+        return False
 
     def close(self):
         # Shutdown pending match timers

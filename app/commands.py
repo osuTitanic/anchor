@@ -815,9 +815,7 @@ def mp_ban(ctx: Context):
 
     match.ban_player(player)
 
-    if all(slot.empty for slot in match.slots) and not match.persistent:
-        match.close()
-        match.logger.info('Match was disbanded.')
+    if match.close_if_empty():
         return
 
     return ["Player was banned from the match."]
@@ -864,23 +862,11 @@ def mp_set(ctx: Context):
             match.scoring_type = ScoringType(int(ctx.args[1]))
 
         if len(ctx.args) > 2:
-            size = max(1, min(int(ctx.args[2]), config.MULTIPLAYER_MAX_SLOTS))
+            size = int(ctx.args[2])
+            match.set_slot_size(size, update=False)
 
-            for slot in match.slots[size:]:
-                if slot.has_player:
-                    match.kick_player(slot.player)
-
-                slot.reset(SlotStatus.Locked)
-
-            for slot in match.slots[0:size]:
-                if slot.has_player:
-                    continue
-
-                slot.reset()
-
-            if all(slot.empty for slot in match.slots) and not match.persistent:
-                match.close()
-                return ["Match was disbanded."]
+        if match.close_if_empty():
+            return
 
         match.update()
     except ValueError:
@@ -897,25 +883,9 @@ def mp_size(ctx: Context):
         return [f'Invalid syntax: !{mp_commands.trigger} {ctx.trigger} <size>']
 
     match: Match = ctx.get_context_object('match')
-    size = max(1, min(int(ctx.args[0]), config.MULTIPLAYER_MAX_SLOTS))
+    match.set_slot_size(int(ctx.args[0]))
 
-    for slot in match.slots[size:]:
-        if slot.has_player:
-            match.kick_player(slot.player)
-
-        slot.reset(SlotStatus.Locked)
-
-    for slot in match.slots[0:size]:
-        if slot.has_player:
-            continue
-
-        slot.reset()
-
-    if all(slot.empty for slot in match.slots) and not match.persistent:
-        match.close()
-        return ["Match was disbanded."]
-
-    match.update()
+    size = len([slot for slot in match.slots if not slot.locked])
     return [f"Changed slot size to {size}."]
 
 @mp_commands.register(['move'])
