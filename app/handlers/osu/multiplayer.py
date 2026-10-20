@@ -284,7 +284,7 @@ def leave_match(client: OsuClient):
 
     slot.reset(status)
 
-    if match.chat and client.id not in match.referee_players:
+    if client.id not in match.referee_players:
         channel_leave(
             client,
             match.chat.display_name,
@@ -330,9 +330,6 @@ def leave_match(client: OsuClient):
         else:
             # Transfer to any other player in the match
             match.set_next_host()
-
-    if client.match.chat and client.id not in client.match.referee_players:
-        client.match.chat.remove(client)
 
     client.match.send_referee_message(
         f"{client.name} left the game.",
@@ -768,9 +765,6 @@ def tourney_join_match_channel(client: OsuClient, match_id: int):
         client.logger.warning('Tried to join tourney match channel, but match was not found in active matches.')
         return
 
-    if not match.chat:
-        return
-
     match.chat.add(client)
     client.enqueue_channel(match.chat.bancho_channel, autojoin=True)
 
@@ -786,9 +780,6 @@ def tourney_leave_match_channel(client: OsuClient, match_id: int):
 
     if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to leave tourney match channel, but match was not found in active matches.')
-        return
-
-    if not match.chat:
         return
 
     match.chat.remove(client)

@@ -460,7 +460,7 @@ class MultiplayerChannel(Channel):
         super().__init__(
             name=f'#multi_{match.id}',
             topic=match.name,
-            owner=match.host.name,
+            owner=match.host.name if match.host else "BanchoBot",
             read_perms=1,
             write_perms=1,
             public=False

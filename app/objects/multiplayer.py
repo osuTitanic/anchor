@@ -21,7 +21,7 @@ from chio import (
 if TYPE_CHECKING:
     from ..clients.osu import OsuClient
     from ..clients.base import Client
-    from .channel import Channel
+    from .channel import MultiplayerChannel
 
 from app.common.database.repositories import beatmaps, events, matches
 from app.common.config import config_instance as config
@@ -120,6 +120,7 @@ class Match:
         self.name = name
         self.password = password
         self.host = host
+        self.chat: "MultiplayerChannel"
 
         self.beatmap_id = beatmap_id
         self.beatmap_text = beatmap_name
@@ -148,7 +149,6 @@ class Match:
         self.completion_timer: Timer | None = None
         self.score_thread: Thread | None = None
         self.db_match: DBMatch | None = None
-        self.chat: "Channel" | None = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
@@ -264,16 +264,9 @@ class Match:
         return None
 
     def send_bot_message(self, message: str) -> None:
-        if not self.chat:
-            self.logger.warning("Chat is not initialized, cannot send message!")
-            return
-
         self.chat.send_message(app.session.banchobot, message)
 
     def send_referee_message(self, message: str, sender: "Client") -> None:
-        if not self.chat:
-            return
-
         for referee in self.referee_players:
             if referee_client := app.session.players.by_id_osu(referee):
                 referee_client.enqueue_message(
@@ -611,11 +604,10 @@ class Match:
         self.referee_players.add(target.id)
         target.referee_matches.add(self)
 
-        if self.chat is not None:
-            channel = self.chat.bancho_channel
-            channel.name = self.chat.resolve_name(target) # type: ignore
-            target.enqueue_channel(channel, autojoin=True)
-            self.chat.add(target)
+        channel = self.chat.bancho_channel
+        channel.name = self.chat.resolve_name(target)
+        target.enqueue_channel(channel, autojoin=True)
+        self.chat.add(target)
 
         return True
 
@@ -623,10 +615,9 @@ class Match:
         if target.id not in self.referee_players:
             return False
 
-        if self.chat is not None:
-            channel_name = self.chat.resolve_name(target) # type: ignore
-            self.chat.remove(target)
-            target.enqueue_channel_revoked(channel_name)
+        channel_name = self.chat.resolve_name(target)
+        self.chat.remove(target)
+        target.enqueue_channel_revoked(channel_name)
 
         self.referee_players.discard(target.id)
         target.referee_matches.discard(self)
@@ -657,10 +648,9 @@ class Match:
             self.logger.warning(f'Could not invite {target.name}, match is full.')
             return
 
-        if self.chat:
-            # Join the chat
-            target.enqueue_channel(self.chat.bancho_channel, autojoin=True)
-            self.chat.add(target)
+        # Join the chat
+        target.enqueue_channel(self.chat.bancho_channel, autojoin=True)
+        self.chat.add(target)
 
         slot = self.slots[slot_id]
 
@@ -691,9 +681,8 @@ class Match:
         player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
         player.match = None
 
-        if self.chat is not None:
-            player.enqueue_channel_revoked(self.chat.resolve_name(player)) # type: ignore
-            self.chat.remove(player)
+        player.enqueue_channel_revoked(self.chat.resolve_name(player))
+        self.chat.remove(player)
 
         if (slot := self.get_slot(player)):
             slot.reset()
