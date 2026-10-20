@@ -492,8 +492,9 @@ class Match:
         self.banned_players.discard(player.id)
 
     def close(self):
-        # Shutdown pending match timer
+        # Shutdown pending match timers
         self.starting = None
+        self.countdown = None
 
         if self.in_progress:
             for player in self.players:
