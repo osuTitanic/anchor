@@ -252,7 +252,7 @@ class Players(MutableMapping[int | str, Client]):
 
         return self.by_id(int(id_string))
 
-    def by_token(self, token: str) -> Client | None:
+    def by_token(self, token: str) -> HttpOsuClient | None:
         """Get an osu! player by token"""
         with self.lock:
             return self.osu_token_mapping.get(token, None)

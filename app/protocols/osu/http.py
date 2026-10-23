@@ -1,15 +1,18 @@
 
-from app.common.config import config_instance as config
 from app.common.constants import ANCHOR_WEB_RESPONSE
 from app.clients.osu import OsuClient
 from app.common.helpers import ip
 from app.tasks import logins
 
+from concurrent.futures import Future
 from twisted.python.failure import Failure
+from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet import reactor
 from twisted.web.resource import Resource
 from twisted.web.http import Request
 from twisted.web import server
 from queue import Queue, Empty
+from typing import Any
 
 import uuid
 import app
@@ -80,6 +83,11 @@ class HttpOsuHandler(Resource):
         return server.NOT_DONE_YET
 
     def process_login(self, request: Request) -> bytes:
+        if not request.content:
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
+
         login_data = request.content.read()
 
         if login_data.count(b'\n') < 3:
@@ -94,7 +102,6 @@ class HttpOsuHandler(Resource):
         username, password, client_data = (
             login_data.decode().splitlines()
         )
-
         player = HttpOsuClient(
             ip.resolve_ip_address_twisted(request),
             request.getClientAddress().port
@@ -122,12 +129,10 @@ class HttpOsuHandler(Resource):
             password,
             client_data
         )
-
         request.setHeader(
             'cho-token',
             player.token
         )
-
         return player.dequeue()
 
     def on_login_success(self, result: bytes, request: Request) -> None:
@@ -135,7 +140,7 @@ class HttpOsuHandler(Resource):
             return
 
         request.setHeader('connection', 'keep-alive')
-        request.write(result)
+        request.write(result) # type: ignore
         request.finish()
 
     def on_login_error(self, failure: Failure, request: Request) -> None:
@@ -149,26 +154,67 @@ class HttpOsuHandler(Resource):
 
         server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.write(server_error)
+        request.write(server_error) # type: ignore
         request.finish()
 
     def handle_request(self, player: HttpOsuClient, request: Request):
-        d = app.session.tasks.defer_to_reactor_thread(self.process_request, player, request)
+        if not request.content:
+            request.setHeader('connection', 'close')
+            request.setResponseCode(400)
+            return b''
+
+        data = request.content.read()
+        d = app.session.tasks.defer_to_reactor_thread(self.process_request, player, data)
+        # ensure that all packets have been handled before we respond
+        # this makes osu! a bit less sluggish to use imo. you can notice it w/ the !help command.
+        d.addCallback(self.wait_for_handlers)
+        d.addCallback(self.on_request_success, player, request)
         d.addErrback(self.on_request_error, player, request)
-        d.addCallback(self.on_request_success, request)
         return server.NOT_DONE_YET
 
-    def process_request(self, player: HttpOsuClient, request: Request) -> bytes:
-        packets = player.io.read_many_packets_from_bytes(request.content.read())
-        player.on_packets_received(packets)
-        return player.dequeue()
+    def process_request(self, player: HttpOsuClient, data: bytes) -> list[Future]:
+        packets = player.io.read_many_packets_from_bytes(data)
+        pending = []
 
-    def on_request_success(self, result: bytes, request: Request) -> None:
+        for packet, payload in packets:
+            result = player.on_packet_received(packet, payload)
+
+            # Packet handler functions may respond w/ futures
+            # e.g. the message handler
+            if isinstance(result, Future):
+                pending.append(result)
+
+        # pass pending list of futures on to wait_for_handlers
+        return pending
+
+    def wait_for_handlers(self, pending: list[Future]) -> Deferred:
+        deferreds = []
+
+        for future in pending:
+            deferred = Deferred()
+            # add_done_callback doesn't actually wait for completion of the future
+            # which is kinda weird but eh, we'll work with it...
+            future.add_done_callback(
+                lambda future, deferred=deferred: reactor.callFromThread(
+                    self.wait_for_future,
+                    future, deferred
+                )
+            )
+            deferreds.append(deferred)
+
+        # wait for every handler before responding
+        done = DeferredList(deferreds, consumeErrors=True)
+        # check for any errors in the results
+        # if found, they will be passed to on_request_error
+        done.addCallback(self.check_results)
+        return done
+
+    def on_request_success(self, result, player: HttpOsuClient, request: Request) -> None:
         if request.finished or request._disconnected:
             return
 
         request.setHeader('connection', 'keep-alive')
-        request.write(result)
+        request.write(player.dequeue()) # type: ignore
         request.finish()
 
     def on_request_error(self, failure: Failure, player: HttpOsuClient, request: Request) -> None:
@@ -180,7 +226,7 @@ class HttpOsuHandler(Resource):
 
         server_error = self.server_error_packet()
         request.setHeader('connection', 'close')
-        request.write(server_error)
+        request.write(server_error) # type: ignore
         request.finish()
 
     def force_reconnect(self) -> bytes:
@@ -222,3 +268,18 @@ class HttpOsuHandler(Resource):
             return b''
 
         return self.handle_request(player, request)
+
+    @staticmethod
+    def wait_for_future(future: Future, deferred: Deferred) -> None:
+        try:
+            result = future.result()
+        except Exception:
+            deferred.errback()
+        else:
+            deferred.callback(result)
+
+    @staticmethod
+    def check_results(results: list[tuple[bool, Any]]):
+        for succeeded, result in results:
+            if not succeeded:
+                return result
