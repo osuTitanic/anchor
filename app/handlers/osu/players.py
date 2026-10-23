@@ -95,7 +95,7 @@ def receive_updates(client: OsuClient, filter: PresenceFilter):
         else client.online_friends
     )
 
-    session.tasks.do_later(
+    return session.tasks.do_later(
         client.enqueue_players,
         players,
         priority=3
@@ -138,7 +138,8 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mods = status.mods
     client.status.mode = status.mode
     client.status.text = status.text
-    session.tasks.do_later(
+
+    return session.tasks.do_later(
         on_status_change,
         client, mode_changed
     )

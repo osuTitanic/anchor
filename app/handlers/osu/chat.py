@@ -100,7 +100,7 @@ def send_message(client: OsuClient, message: Message):
     if message.content.startswith('/me'):
         message.content = f'\x01ACTION{message.content.removeprefix("/me")}\x01'
 
-    channel.send_message(client, message.content.strip())
+    return channel.send_message(client, message.content.strip())
 
 @register(PacketType.OsuPrivateMessage)
 def send_private_message(sender: OsuClient, message: Message):

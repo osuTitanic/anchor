@@ -345,7 +345,7 @@ class OsuClient(Client):
         for packet, data in packets:
             self.on_packet_received(packet, data)
 
-    def on_packet_received(self, packet: PacketType, data: Any) -> None:
+    def on_packet_received(self, packet: PacketType, data: Any) -> Any:
         self.last_response = time.time()
 
         if not self.logged_in:

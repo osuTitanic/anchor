@@ -60,7 +60,7 @@ def beatmap_info(client: OsuClient, info: BeatmapInfoRequest):
         for i in range(0, len(info.ids), 100)
     ]
 
-    session.tasks.do_later(
+    return session.tasks.do_later(
         process_beatmap_info_request,
         client,
         filenames_chunks,
