@@ -1,5 +1,5 @@
 psycopg[c]==3.3.6
-sqlalchemy==2.1.5
+sqlalchemy==2.1.6
 twisted==26.10.0rc1
 redis==8.1.0
 requests==2.34.2
