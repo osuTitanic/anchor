@@ -14,6 +14,6 @@ autobahn==26.10.2
 chio==1.1.21
 psutil==7.2.2
 py-cpuinfo==9.0.0
-pydantic-settings==2.16.0
+pydantic-settings==2.16.1
 pillow==13.0.0
 zipstream-ng==1.9.3
