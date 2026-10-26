@@ -5,7 +5,7 @@ redis==8.1.0
 requests==2.34.2
 boto3<2
 pytz==2026.5
-pytimeparse==1.1.9
+pytimeparse==1.1.10
 geoip2==5.3.0
 bcrypt==5.0.0
 sendgrid==6.12.5
