@@ -248,7 +248,6 @@ class Channel:
         app.session.tasks.do_later(
             messages.create,
             sender.id,
-            sender.name,
             self.name,
             message[:512],
             priority=4
