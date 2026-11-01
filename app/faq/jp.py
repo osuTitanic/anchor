@@ -11,7 +11,7 @@ strings = {
     "aspire": "Aspireは枠にはまらない、自由な表現が出来るマッピングコンテストです。Aspire 2017は[http://osu.ppy.sh/news/156171674413 こちら]で詳細を確認できます。",
     "ask": "とりあえず質問してみましょう。",
     "attention": "迷惑ですので、やめてください。",
-    "avatar-change": " [https://osu.ppy.sh/home/account/edit#avatar こちら]から、アバターを変更できます。",
+    "avatar-change": " [https://osu.titanic.sh/account/profile#avatar こちら]から、アバターを変更できます。",
     "bahasa": "Jika anda mahu berbicara sepenuhnya dalam bahasa Inggeris, sila gunakan #english. Penggunaan bahasa Inggeris yang minimum adalah dibenarkan, tetapi perlu diingatkan bahawa channel ini dikhaskan untuk bahasa Malaysia.",
     "balkan": "Za Jugoslovenski jezik, molim te koristi kanal #balkan.\nNa ovom kanalu se samo sme govoriti engleski. Ako nastaviš da govoriš na Jugoslovenskom, možeš biti kažnjen.",
     "banchobot": "こんにちは！BanchoBotです。はじめまして。私は自動的に動作するBotなので、残念ながらあなたと会話はできません。",
