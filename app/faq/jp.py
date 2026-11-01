@@ -96,7 +96,7 @@ strings = {
     "import": "[http://i.imgur.com/kpX2N3m.jpg osu! にビートマップを読み込む方法についてはこれを読んでください。]",
     "indonesian": "Pembicaraan di #osu dikhususkan dalam Bahasa Inggris. \nUntuk mengobrol dalam Bahasa Indonesia, silakan kunjungi #indonesian dengan cara mengklik tombol (+) dan memilih #indonesian pada daftar pilihan yang muncul.",
     "inheriting": "EditorウィンドウのF6ウィンドウで「過去のタイミング設定を引き継ぐ(Inherit previous timing settings)」ボックスにチェックを入れると、タイミング区間は以降タイミングに影響を与えません。音量やビートマップのサンプルのみを変更できる便利な項目です。また、2倍や0.5倍のBPMを持つタイミング区間を引き継ぐことも可能です。もしこのようなタイミング区間を使っているのであれば、この機能を使ってみてください。",
-    "irc": "IRC サーバー: irc.ppy.sh:6667\nパスワード: https://osu.ppy.sh/p/irc\n詳細はhttps://osu.ppy.sh/wiki/IRCを読んでください。",
+    "irc": "IRC サーバー: irc.titanic.sh:6667\nパスワード: https://osu.titanic.sh/account/security\n詳細はhttps://osu.ppy.sh/wiki/IRCを読んでください。",
     "italian": "Per favore entra nel canale #italian per parlare italiano.\nIl canale #osu è solo per la lingua inglese. I moderatori hanno il diritto di silenziarti se continui a parlare la lingua sbagliata nel canale sbagliato.",
     "japanese": "日本語での会話の場合、#japanese を利用してください。クリックで開きます。",
     "keys": "オプション内でキーの配置など変更できます。osu!maniaのキー配置だけ「osu!maniaのレイアウト」ボタンから変更できます。",
