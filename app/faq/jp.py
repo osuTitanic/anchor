@@ -70,7 +70,7 @@ strings = {
     "flow": "[https://osu.ppy.sh/news/61334266941 こちらの記事]ではマッピングの流れを理解するのに役立つ情報を読むことができます。",
     "french": "#osu est un canal de discussion où seul l'anglais est autorisé. \nPour accéder au canal francophone, cliquez sur le bouton jaune « + » puis sur « #french ».",
     "friend": "ユーザーを友達として追加したい時は/addfriend ユーザ名 で、できます。また、(F9で表示)オンラインユーザーリスト上かチャット内でそのユーザーの名前をクリックして「フレンドに追加する」を選択する方法もあります。そのユーザのプロフィールページで Add as Friend も利用できます。",
-    "friends-list": "ゲーム内でオンラインの友達はF9キーを押し、上部のフィルターをフレンドに切り替えると表示されます。フレンドすべてを表示したい場合はosu!ホームページでログイン後Settingsで見れます。",
+    "friends-list": "ゲーム内でオンラインの友達はF9キーを押し、上部のフィルターをフレンドに切り替えると表示されます。フレンドすべてを表示したい場合はTitanic!ホームページでログイン後Settingsで見れます。",
     "fullscreen": "オプションメニューの「グラフィックス」で、ウィンドウモードか、フルスクリーンモードでプレイするかを選択することができます。\nキーボードのAlt + Enterキーを押すことでも、切り替えることができます。\n注意：フルスクリーンモードでは、 OpenGLが無効になります。",
     "german": "Bitte benutze den #german Channel, um Deutsch zu reden.\nIn diesem Channel darf nur Englisch gesprochen werden. Solltest du weiterhin Deutsch sprechen, kannst du bestraft werden.",
     "glossary": "osu! [[glossary]]で、様々な専門用語を確認することができます。",
