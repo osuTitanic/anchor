@@ -141,11 +141,12 @@ class Match:
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.score_queue: Queue[bScoreFrame] = Queue()
-        self.referee_players: LockedSet[int] = LockedSet()
+        self.privileged_players: LockedSet[int] = LockedSet() # players that can use !mp commands
+        self.referee_players: LockedSet[int] = LockedSet() # only for tourney matches, similar to "privileged"
         self.banned_players: LockedSet[int] = LockedSet()
 
         if host is not None:
-            self.referee_players.add(host.id)
+            self.privileged_players.add(host.id)
 
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
@@ -596,6 +597,20 @@ class Match:
         self.update()
         return True
 
+    def add_privileged(self, target: "Client") -> bool:
+        if target.id in self.privileged_players:
+            return False
+
+        self.privileged_players.add(target.id)
+        return True
+
+    def remove_privileged(self, target: "Client") -> bool:
+        if target.id not in self.privileged_players:
+            return False
+
+        self.privileged_players.discard(target.id)
+        return True
+
     def add_referee(self, target: "Client") -> bool:
         if target.id in self.referee_players:
             return False
@@ -611,7 +626,6 @@ class Match:
         channel.name = self.chat.resolve_name(target)
         target.enqueue_channel(channel, autojoin=True)
         self.chat.add(target)
-
         return True
 
     def remove_referee(self, target: "Client") -> bool:

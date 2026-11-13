@@ -282,7 +282,8 @@ def is_host(ctx: Context) -> bool:
     if not match:
         return False
 
-    return (ctx.player.id in match.referee_players) or \
+    return (ctx.player.id in match.privileged_players) or \
+           (ctx.player.id in match.referee_players) or \
            (ctx.player.object.is_admin)
 
 @mp_commands.condition
@@ -1028,10 +1029,18 @@ def mp_addref(ctx: Context):
     if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
-    if target.id in match.referee_players:
+    if not match.persistent and target not in match.players:
+        return [f'{target.name} is not in this match.']
+
+    target_operation = (
+        match.add_referee if match.persistent else
+        match.add_privileged
+    )
+    was_added = target_operation(target)
+
+    if not was_added:
         return [f'{target.name} is already a referee.']
 
-    match.add_referee(target)
     return [f'Added "{target.name}" as a match referee.']
 
 @mp_commands.register(['removeref', 'remref', 'removereferee'])
@@ -1058,10 +1067,15 @@ def mp_removeref(ctx: Context):
     if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
-    if target.id not in match.referee_players:
+    target_operation = (
+        match.remove_referee if match.persistent else
+        match.remove_privileged
+    )
+    was_removed = target_operation(target)
+
+    if not was_removed:
         return [f'{target.name} is not a referee.']
 
-    match.remove_referee(target)
     return [f'Removed "{target.name}" from match referee status.']
 
 def command(
