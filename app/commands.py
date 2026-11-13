@@ -282,7 +282,7 @@ def is_host(ctx: Context) -> bool:
     if not match:
         return False
 
-    return (ctx.player is match.host) or \
+    return (ctx.player.id in match.privileged_players) or \
            (ctx.player.id in match.referee_players) or \
            (ctx.player.object.is_admin)
 
@@ -357,7 +357,7 @@ def create_persistant_match(ctx: Context):
     match.db_match = matches.create(
         match.name,
         match.id,
-        match.host_id
+        ctx.player.id
     )
 
     app.session.logger.info(
@@ -1018,9 +1018,6 @@ def mp_addref(ctx: Context):
     if not match:
         return ["You are not inside a match."]
 
-    if not match.persistent:
-        return ["This match is not persistent."]
-
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
@@ -1032,13 +1029,18 @@ def mp_addref(ctx: Context):
     if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
-    if target.id in match.referee_players:
+    if not match.persistent and target not in match.players:
+        return [f'{target.name} is not in this match.']
+
+    target_operation = (
+        match.add_referee if match.persistent else
+        match.add_privileged
+    )
+    was_added = target_operation(target)
+
+    if not was_added:
         return [f'{target.name} is already a referee.']
 
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot add yourself as a referee."]
-
-    match.add_referee(target)
     return [f'Added "{target.name}" as a match referee.']
 
 @mp_commands.register(['removeref', 'remref', 'removereferee'])
@@ -1054,9 +1056,6 @@ def mp_removeref(ctx: Context):
     if not match:
         return ["You are not inside a match."]
 
-    if not match.persistent:
-        return ["This match is not persistent."]
-
     if match.chat.owner != ctx.player.name and not can_manage_referees:
         return ["You are not the owner of this match."]
 
@@ -1068,13 +1067,15 @@ def mp_removeref(ctx: Context):
     if not (target := app.session.players.by_name_or_id(name)):
         return [f'Could not find player "{name}".']
 
-    if target.id not in match.referee_players:
+    target_operation = (
+        match.remove_referee if match.persistent else
+        match.remove_privileged
+    )
+    was_removed = target_operation(target)
+
+    if not was_removed:
         return [f'{target.name} is not a referee.']
 
-    if target.id == ctx.player.id and not can_manage_referees:
-        return ["You cannot remove yourself as a referee."]
-
-    match.remove_referee(target)
     return [f'Removed "{target.name}" from match referee status.']
 
 def command(
