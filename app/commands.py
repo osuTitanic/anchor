@@ -357,7 +357,7 @@ def create_persistant_match(ctx: Context):
     match.db_match = matches.create(
         match.name,
         match.id,
-        match.host_id
+        ctx.player.id
     )
 
     app.session.logger.info(
