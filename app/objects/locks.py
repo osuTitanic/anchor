@@ -1,8 +1,13 @@
 
-from collections.abc import MutableMapping as AbstractMutableMapping
-from collections.abc import Set as AbstractSet
 from contextlib import contextmanager
 from threading import Lock, Condition
+from collections.abc import (
+    MutableMapping as AbstractMutableMapping,
+    Set as AbstractSet,
+    ValuesView,
+    ItemsView,
+    KeysView
+)
 from typing import (
     Iterator,
     Optional,
@@ -19,32 +24,40 @@ V = TypeVar('V')
 class ReadWriteLock:
     """A read-write lock that allows multiple readers or a single writer"""
 
-    __slots__ = ('lock', 'cond', 'readers', 'writer')
+    __slots__ = ('lock', 'cond', 'readers', 'writer', 'writers_waiting')
 
     def __init__(self):
         self.lock = Lock()
         self.cond = Condition(self.lock)
         self.readers = 0
         self.writer = False
+        self.writers_waiting = 0
 
     def acquire_read(self):
         with self.cond:
-            while self.writer:
-                self.cond.wait()
+            # Wait until there are no active writers or waiting writers
+            while self.writer or self.writers_waiting: self.cond.wait()
             self.readers += 1
 
     def acquire_write(self):
         with self.cond:
-            while self.writer or self.readers > 0:
-                self.cond.wait()
-            self.writer = True
+            self.writers_waiting += 1
+            try:
+                # Wait until there are no active readers or writers
+                while self.writer or self.readers > 0: self.cond.wait()
+                # Set the writer flag to indicate that a writer has acquired the lock
+                self.writer = True
+            finally:
+                self.writers_waiting -= 1
 
     def release_read(self):
         with self.cond:
             if self.readers <= 0:
                 raise RuntimeError("release_read without acquire")
+
             self.readers -= 1
             if self.readers == 0:
+                # Notify waiting writers that there are no more active readers
                 self.cond.notify_all()
 
     def release_write(self):
@@ -80,7 +93,10 @@ class LockedSet(AbstractSet[T]):
         self.lock = ReadWriteLock()
 
     def __iter__(self) -> Iterator[T]:
-        return iter(self.snapshot())
+        return iter(self.snapshot_list())
+
+    def __copy__(self) -> Set[T]:
+        return self.snapshot()
 
     def __len__(self) -> int:
         with self.lock.read_context():
@@ -106,9 +122,24 @@ class LockedSet(AbstractSet[T]):
         with self.lock.read_context():
             return set(self.instance)
 
+    def snapshot_list(self) -> list[T]:
+        with self.lock.read_context():
+            return list(self.instance)
+
+    def snapshot_without(self, excluded: T) -> list[T]:
+        with self.lock.read_context():
+            return [
+                item for item in self.instance
+                if item != excluded
+            ]
+
     def discard(self, item: T) -> None:
         with self.lock.write_context():
             self.instance.discard(item)
+
+    def clear(self) -> None:
+        with self.lock.write_context():
+            self.instance.clear()
 
 class LockedDict(AbstractMutableMapping[K, V]):
     """A dict that is thread-safe for concurrent read and write operations"""
@@ -136,9 +167,7 @@ class LockedDict(AbstractMutableMapping[K, V]):
             return len(self.instance)
 
     def __iter__(self) -> Iterator[K]:
-        with self.lock.read_context():
-            snapshot = list(self.instance.keys())
-        return iter(snapshot)
+        return iter(self.keys_snapshot())
 
     def __contains__(self, key: object) -> bool:
         with self.lock.read_context():
@@ -168,20 +197,29 @@ class LockedDict(AbstractMutableMapping[K, V]):
         with self.lock.write_context():
             self.instance.update(*args, **kwargs)
 
-    def keys(self) -> Iterator[K]:
+    def keys(self) -> KeysView[K]:
         with self.lock.read_context():
-            snapshot = list(self.instance.keys())
-        return iter(snapshot)
+            return dict(self.instance).keys()
 
-    def values(self) -> Iterator[V]:
+    def values(self) -> ValuesView[V]:
         with self.lock.read_context():
-            snapshot = list(self.instance.values())
-        return iter(snapshot)
+            return dict(self.instance).values()
 
-    def items(self) -> Iterator[Tuple[K, V]]:
+    def items(self) -> ItemsView[K, V]:
         with self.lock.read_context():
-            snapshot = list(self.instance.items())
-        return iter(snapshot)
+            return dict(self.instance).items()
+
+    def keys_snapshot(self) -> list[K]:
+        with self.lock.read_context():
+            return list(self.instance.keys())
+
+    def values_snapshot(self) -> list[V]:
+        with self.lock.read_context():
+            return list(self.instance.values())
+
+    def items_snapshot(self) -> list[Tuple[K, V]]:
+        with self.lock.read_context():
+            return list(self.instance.items())
 
     def setdefault(self, key: K, default: Optional[V] = None) -> Optional[V]:
         with self.lock.write_context():

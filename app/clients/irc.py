@@ -42,6 +42,7 @@ class IrcClient(Client):
         app.session.packets_per_minute.record()
 
         if not (handler := app.session.irc_handlers.get(command)):
+            self.enqueue_command(irc.ERR_UNKNOWNCOMMAND, command, ":Unknown command")
             return
 
         return handler(self, prefix, *params)
@@ -111,12 +112,6 @@ class IrcClient(Client):
                 # Inform staff about maintenance mode
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
-            if (other_user := app.session.players.by_id_irc(user.id)):
-                # Another user is online with this account on irc
-                other_user.enqueue_error(strings.LOGGED_IN_FROM_ANOTHER_LOCATION)
-                other_user.close_connection("Logged in from another location")
-                return
-
             if not self.object.stats:
                 self.object.stats = [
                     stats.create(self.id, mode, session)
@@ -131,6 +126,7 @@ class IrcClient(Client):
                 self.id,
                 self.address,
                 "irc",
+                country=self.location.country_code,
                 priority=4
             )
 
@@ -225,13 +221,16 @@ class IrcClient(Client):
         for channel in copy(self.channels):
             channel.remove(self)
 
-        def update_cache():
-            status.delete(self.id)
+        def post_connection_close():
             users.update(self.id, {'latest_activity': datetime.now()})
-            app.session.players.update_usercount()
+
+            # Only remove status when no irc sessions remain
+            if not app.session.players.by_id(self.id):
+                status.delete(self.id)
+                app.session.players.update_usercount()
 
         app.session.tasks.do_later(
-            update_cache,
+            post_connection_close,
             priority=4
         )
 
@@ -290,6 +289,7 @@ class IrcClient(Client):
 
     def send_welcome_sequence(self) -> None:
         self.enqueue_welcome()
+        self.enqueue_isupport()
         self.enqueue_motd(
             strings.ANCHOR_ASCII_ART +
             f'web:    https://osu.{config.DOMAIN_NAME}\n'
@@ -363,6 +363,20 @@ class IrcClient(Client):
 
     def enqueue_banchobot_message(self, message: str) -> None:
         self.enqueue_message(message, app.session.banchobot, "#osu")
+
+    def enqueue_isupport(self) -> None:
+        if self.is_osu:
+            return
+
+        self.enqueue_command(
+            irc.RPL_ISUPPORT,
+            "NETWORK=Bancho",
+            "CASEMAPPING=ascii",
+            "CHANTYPES=#",
+            "PREFIX=(ov)@+",
+            "NICKLEN=15",
+            ":are supported by this server"
+        )
 
     def enqueue_welcome(self, message: str = "Welcome to osu!Bancho.") -> None:
         if self.is_osu:
@@ -440,10 +454,17 @@ class IrcClient(Client):
         chunk_size = 15
         chunk = []
 
+        # Avoid sending duplicate users
+        seen_ids: set[int] = set()
+
         for player in players:
             if player.hidden and player != self:
                 continue
 
+            if player.id in seen_ids:
+                continue
+
+            seen_ids.add(player.id)
             chunk.append(player.irc_prefix + self.resolve_username(player))
 
             if len(chunk) < chunk_size:
@@ -542,7 +563,7 @@ class IrcClient(Client):
             )
 
         def enqueue_names() -> None:
-            self.enqueue_players(channel.users, channel.name)
+            self.enqueue_players(channel.users.snapshot_list(), channel.name)
 
         # Send topic first, then names listing after a small delay
         # This ensures the client processes them in the correct order

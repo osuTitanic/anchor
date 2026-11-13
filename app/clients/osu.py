@@ -66,7 +66,7 @@ class OsuClient(Client):
 
     @property
     def friendonly_dms(self) -> bool:
-        return self.info.friendonly_dms
+        return self.info.friendonly_dms or False
 
     @property
     def supports_markasread(self) -> bool:
@@ -168,20 +168,12 @@ class OsuClient(Client):
                 self.enqueue_announcement(strings.MAINTENANCE_MODE_ADMIN)
 
             # Check client version & executable hash
+            unverified_client_warning = ""
             valid, response_message = self.is_valid_client(session)
 
             if not valid:
-                self.logger.warning('Login Failed: Unverified client')
-                self.on_login_failed(
-                    LoginError.InvalidVersion,
-                    response_message
-                )
-                officer.call(
-                    f'"{self.name}" tried to log in with an invalid client: '
-                    f'{self.info.version} ({self.info.hash.md5})'
-                )
-                self.close_connection()
-                return
+                unverified_client_warning = response_message + ' Scores submitted with this client will not be accepted.'
+                self.logger.warning('Login Warning: Unverified client')
 
             if not self.is_tourney_client:
                 if (other_user := app.session.players.by_id_osu(user.id)):
@@ -238,6 +230,7 @@ class OsuClient(Client):
                 self.id,
                 self.address,
                 self.info.version.string,
+                country=self.location.country_code,
                 priority=4
             )
 
@@ -256,6 +249,15 @@ class OsuClient(Client):
 
         self.logged_in = True
         self.on_login_success()
+
+        if unverified_client_warning:
+            # User logged in with a client that was not whitelisted / approved
+            # We need to notify them that they cannot submit scores with it
+            self.enqueue_message(
+                unverified_client_warning,
+                app.session.banchobot,
+                app.session.banchobot.name
+            )
 
     def on_login_success(self) -> None:
         self.spectator_chat = SpectatorChannel(self)
@@ -311,7 +313,7 @@ class OsuClient(Client):
         self.enqueue_infringement_length(self.remaining_silence)
 
         # Enqueue players in lobby
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             self.enqueue_packet(PacketType.BanchoLobbyJoin, player.id)
 
         # Re-add matches that this player is a referee for
@@ -339,14 +341,18 @@ class OsuClient(Client):
         self.logger.warning(f'<{self.address}> -> Lost connection: "{reason}".')
         return self.close_connection()
 
-    def on_packet_received(self, packet: PacketType, data: Any) -> None:
+    def on_packets_received(self, packets: Iterable[tuple[PacketType, Any]]) -> None:
+        for packet, data in packets:
+            self.on_packet_received(packet, data)
+
+    def on_packet_received(self, packet: PacketType, data: Any) -> Any:
         self.last_response = time.time()
 
         if not self.logged_in:
             return
 
         app.session.packets_per_minute.record()
-        self.logger.debug(f'-> "{packet.name}": {data}')
+        self.logger.debug('-> "%s": %r', packet.name, data)
 
         if not (handler_function := app.session.osu_handlers.get(packet)):
             self.logger.warning(f'Could not find a handler function for "{packet}".')
@@ -424,7 +430,7 @@ class OsuClient(Client):
     def is_valid_client(self, session: Session) -> tuple[bool, str]:
         if len(self.info.version.string) > 25:
             # Version is too long to be saved in database
-            return False, "okay bro, at least pick a reasonable version name next time"
+            return False, "Okay bro, at least pick a reasonable version name next time."
 
         bypass_check = (
             config.DISABLE_CLIENT_VERIFICATION
@@ -628,7 +634,8 @@ class OsuClient(Client):
             self.stats,
             self.status,
             self.info.hash.string,
-            self.info.version.date
+            self.info.version.date,
+            self.info.version.string
         )
 
     def update_object(self, mode: int = 0) -> None:
@@ -657,7 +664,7 @@ class OsuClient(Client):
             self.spectating.enqueue_packet(PacketType.BanchoSpectatorLeft, self.id)
 
             # Enqueue to others
-            for p in self.spectating.spectators:
+            for p in self.spectating.spectators.snapshot_list():
                 p.enqueue_packet(PacketType.BanchoFellowSpectatorLeft, self.id)
 
             # If target has no spectators anymore
@@ -672,7 +679,7 @@ class OsuClient(Client):
             self.spectating = None
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        self.logger.debug('<- "%s": %r', packet.name, args)
 
     def enqueue_error(self, error: LoginError = LoginError.ServerError, message: str = "") -> None:
         self.enqueue_packet(PacketType.BanchoLoginReply, error)

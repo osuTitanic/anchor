@@ -216,7 +216,7 @@ def handle_privmsg_command(
     message, timeout = session.filters.apply(message)
 
     if timeout is not None:
-        sender.silence(timeout, 'Inappropriate discussion in pms')
+        sender.silence(timeout, 'Inappropriate discussion in private messages')
         officer.call(f"Message: {message}")
         return
 
@@ -233,15 +233,25 @@ def handle_privmsg_command(
         # Limit message size
         message = message[:497] + '... (truncated)'
 
-    target.enqueue_message(
-        message,
-        sender,
-        sender.name
-    )
-
     sender.logger.info(
         f'[PM -> {target.name}]: {message}'
     )
+
+    # Enqueue to irc & osu!
+    recipients = [
+        session.players.by_id_osu(target.id),
+        *session.players.by_id_irc_all(target.id)
+    ]
+
+    for recipient in recipients:
+        if not recipient:
+            continue
+
+        recipient.enqueue_message(
+            message,
+            sender,
+            sender.name
+        )
 
     session.tasks.do_later(
         messages.create_private,
@@ -252,4 +262,91 @@ def handle_privmsg_command(
     )
 
     if target.away_message:
-        return sender.enqueue_away_message(target)
+        sender.enqueue_away_message(target)
+
+@register("INVITE")
+@ensure_authenticated
+def handle_invite_command(
+    client: IrcClient,
+    prefix: str,
+    nick: str = None,
+    channel_name: str = None,
+    *args
+) -> None:
+    if not nick or not channel_name:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "INVITE", ":Not enough parameters")
+        return
+
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel_name, ":No such channel")
+        return
+
+    if client not in channel.users:
+        client.enqueue_command(irc.ERR_NOTONCHANNEL, channel_name, ":You're not on that channel")
+        return
+
+    if not (target := session.players.by_name_safe(nick)):
+        client.enqueue_command(irc.ERR_NOSUCHNICK, nick, ":No such nick/channel")
+        return
+
+    if target in channel.users:
+        client.enqueue_command(irc.ERR_USERONCHANNEL, nick, channel_name, ":is already on channel")
+        return
+
+    client.enqueue_command(irc.RPL_INVITING, channel_name, target.local_prefix)
+    inviter_prefix = f"{client.local_prefix}!cho@{session.config.DOMAIN_NAME}"
+
+    for irc_session in session.players.by_id_irc_all(target.id):
+        irc_session.enqueue_command_raw(
+            "INVITE",
+            prefix=inviter_prefix,
+            params=[irc_session.local_prefix, channel_name]
+        )
+
+    # TODO: Implement invites for osu sessions too?
+
+@register("KICK")
+@ensure_authenticated
+def handle_kick_command(
+    client: IrcClient,
+    prefix: str,
+    channel_name: str = None,
+    nick: str = None,
+    reason: str = None,
+    *args
+) -> None:
+    if not channel_name or not nick:
+        client.enqueue_command(irc.ERR_NEEDMOREPARAMS, "KICK", ":Not enough parameters")
+        return
+
+    if not (channel := session.channels.by_name(channel_name)):
+        client.enqueue_command(irc.ERR_NOSUCHCHANNEL, channel_name, ":No such channel")
+        return
+
+    if not client.is_staff:
+        client.enqueue_command(irc.ERR_CHANOPRIVSNEEDED, channel_name, ":You're not a channel operator")
+        return
+
+    if not (target := session.players.by_name_safe(nick)):
+        client.enqueue_command(irc.ERR_NOSUCHNICK, nick, ":No such nick/channel")
+        return
+
+    if target is session.banchobot:
+        client.enqueue_command(irc.ERR_CHANOPRIVSNEEDED, channel_name, ":You cannot kick BanchoBot")
+        return
+
+    if target not in channel.users:
+        client.enqueue_command(irc.ERR_USERNOTINCHANNEL, nick, channel_name, ":They aren't on that channel")
+        return
+
+    reason = reason or "No reason given"
+    kick_sender_prefix = f"{client.local_prefix}!cho@{session.config.DOMAIN_NAME}"
+
+    for user in channel.irc_users:
+        user.enqueue_command_raw(
+            "KICK",
+            prefix=kick_sender_prefix,
+            params=[channel.name, user.resolve_username(target), f":{reason}"]
+        )
+
+    channel.remove(target)

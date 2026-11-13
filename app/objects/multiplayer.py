@@ -1,8 +1,8 @@
 
-from typing import TYPE_CHECKING, Tuple, List, Set
-from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Tuple, List, Optional
 from threading import Thread, Timer
 from dataclasses import dataclass
+from datetime import datetime
 from queue import Queue
 from copy import copy
 from chio import (
@@ -14,18 +14,20 @@ from chio import (
     MatchType,
     TeamType,
     SlotTeam,
+    Message,
     Mods
 )
 
 if TYPE_CHECKING:
     from ..clients.osu import OsuClient
     from ..clients.base import Client
-    from .channel import Channel
+    from .channel import MultiplayerChannel
 
 from app.common.database.repositories import beatmaps, events, matches
 from app.common.config import config_instance as config
 from app.common.constants import GameMode, EventType
-from app.common.database import DBMatch
+from app.common.database import DBMatch, DBBeatmap
+from app.objects.locks import LockedSet
 
 import logging
 import time
@@ -34,7 +36,7 @@ import app
 class Slot:
     def __init__(self) -> None:
         self.last_frame: bScoreFrame | None = None
-        self.player: "OsuClient" | None = None
+        self.player: Optional["OsuClient"] = None
         self.status = SlotStatus.Open
         self.team = SlotTeam.Neutral
         self.mods = Mods.NoMod
@@ -106,7 +108,7 @@ class Match:
         id: int,
         name: str,
         password: str,
-        host: "OsuClient",
+        host: Optional["OsuClient"],
         beatmap_id: int = -1,
         beatmap_name: str = "",
         beatmap_hash: str = "",
@@ -118,6 +120,7 @@ class Match:
         self.name = name
         self.password = password
         self.host = host
+        self.chat: "MultiplayerChannel"
 
         self.beatmap_id = beatmap_id
         self.beatmap_text = beatmap_name
@@ -138,15 +141,17 @@ class Match:
 
         self.slots = [Slot() for _ in range(config.MULTIPLAYER_MAX_SLOTS)]
         self.score_queue: Queue[bScoreFrame] = Queue()
-        self.referee_players: Set[int] = set([host.id])
-        self.banned_players: Set[int] = set()
+        self.referee_players: LockedSet[int] = LockedSet()
+        self.banned_players: LockedSet[int] = LockedSet()
+
+        if host is not None:
+            self.referee_players.add(host.id)
 
         self.countdown: MatchTimer | None = None
         self.starting: MatchTimer | None = None
         self.completion_timer: Timer | None = None
         self.score_thread: Thread | None = None
         self.db_match: DBMatch | None = None
-        self.chat: "Channel" | None = None
 
         self.logger = logging.getLogger(f'multi_{self.id}')
         self.last_activity = time.time()
@@ -168,13 +173,13 @@ class Match:
     @property
     def players(self) -> List["OsuClient"]:
         """Return all players"""
-        return [slot.player for slot in self.player_slots]
+        return [slot.player for slot in self.player_slots] # type: ignore
 
     @property
     def tourney_clients(self) -> List["OsuClient"]:
         """Return all tournament clients"""
         return [
-            client for client in app.session.players.osu_tournament_clients
+            client for client in app.session.players.osu_tournament_clients.snapshot_list()
             if client.spectating_match is self
         ]
 
@@ -220,7 +225,7 @@ class Match:
                 # NOTE: Clients in version b323 and below don't have the
                 #       MATCH_LOAD_COMPLETE packet so we can just ignore them
                 slot.status == SlotStatus.Playing and
-                slot.player.info.protocol_version > 323
+                slot.player.info.protocol_version > 323 # type: ignore
             )
         ]
 
@@ -238,21 +243,21 @@ class Match:
 
         return None
 
-    def get_slot_with_id(self, player: "OsuClient") -> Tuple[Slot, int | None]:
+    def get_slot_with_id(self, player: "OsuClient") -> Tuple[Slot | None, int | None]:
         for index, slot in enumerate(self.slots):
             if player is slot.player:
                 return slot, index
 
         return None, None
 
-    def get_free(self) -> int:
+    def get_free(self) -> int | None:
         for index, slot in enumerate(self.slots):
             if slot.status == SlotStatus.Open:
                 return index
 
         return None
 
-    def get_player(self, name: str) -> "OsuClient":
+    def get_player(self, name: str) -> Optional["OsuClient"]:
         safe_name = name.lower().replace(" ", "_")
 
         for player in self.players:
@@ -260,6 +265,25 @@ class Match:
                 return player
 
         return None
+
+    def send_bot_message(self, message: str) -> None:
+        self.chat.send_message(app.session.banchobot, message)
+
+    def send_referee_message(self, message: str, sender: "Client") -> None:
+        for referee in self.referee_players:
+            if referee_client := app.session.players.by_id_osu(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
+
+            for referee_client in app.session.players.by_id_irc_all(referee):
+                referee_client.enqueue_message(
+                    message,
+                    sender,
+                    self.chat.name
+                )
 
     def update(self, lobby=True) -> None:
         # Enqueue to our players
@@ -276,7 +300,7 @@ class Match:
             self.password = " "
 
         # Enqueue to lobby players
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             player.enqueue_packet(PacketType.BanchoMatchUpdate, self)
 
         # Re-apply password
@@ -313,8 +337,9 @@ class Match:
                 # The speedmods are kept in the match mods
                 self.mods = self.mods & ~Mods.FreeModAllowed
             else:
-                # Keep mods from host
-                self.mods |= self.host_slot.mods
+                if self.host_slot:
+                    # Keep mods from host
+                    self.mods |= self.host_slot.mods
 
                 # Reset any mod from players
                 for slot in self.slots:
@@ -357,10 +382,7 @@ class Match:
                 self.mode             = new_match.mode
                 beatmap_text          = new_match.beatmap_text
 
-            self.chat.send_message(
-                app.session.banchobot,
-                f'Selected: {beatmap_text}'
-            )
+            self.send_bot_message(f'Selected: {beatmap_text}')
 
         if self.team_type != new_match.team_type:
             # Changed team type
@@ -377,7 +399,6 @@ class Match:
                     slot.team = new_team
 
             self.team_type = new_match.team_type
-
             self.logger.info(f'Team type: {self.team_type.name}')
 
         if self.type != new_match.type:
@@ -398,45 +419,295 @@ class Match:
             self.name = new_match.name
             self.logger.info(f'Name: {self.name}')
 
-            # Update match name
-            matches.update(
-                self.db_match.id,
-                {"name": self.name}
-            )
+            if self.db_match:
+                matches.update(
+                    self.db_match.id,
+                    {"name": self.name}
+                )
 
         self.update()
 
-    def kick_player(self, player: "OsuClient"):
-        player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
-        player.enqueue_channel_revoked(self.chat.resolve_name(player))
-        self.chat.remove(player)
-        player.match = None
+    def set_name(self, name: str) -> None:
+        self.name = name
+        self.update()
 
-        if (slot := self.get_slot(player)):
-            slot.reset()
+        if not self.db_match:
+            return
 
-        if player == self.host and not self.persistent:
-            # Transfer host to next player
+        matches.update(self.db_match.id, {"name": name})
+
+    def set_password(self, password: str) -> None:
+        self.password = password
+        self.update()
+
+    def set_team_type(self, mode: TeamType, update: bool = True):
+        self.team_type = mode
+
+        if update:
+            self.update()
+
+    def set_scoring_type(self, mode: ScoringType, update: bool = True):
+        self.scoring_type = mode
+
+        if update:
+            self.update()
+
+    def set_team(self, target: "OsuClient", team: SlotTeam) -> bool:
+        slot = self.get_slot(target)
+
+        if slot is None:
+            return False
+
+        if team == SlotTeam.Neutral and self.ffa:
+            self.set_team_type(TeamType.HeadToHead, update=False)
+
+        elif team != SlotTeam.Neutral and not self.ffa:
+            self.set_team_type(TeamType.TeamVs, update=False)
+
+        slot.team = team
+        self.update()
+        return True
+
+    def set_beatmap(self, beatmap_id: int, mode: GameMode | None = None) -> DBBeatmap | None:
+        beatmap = beatmaps.fetch_by_id(beatmap_id)
+
+        if not beatmap:
+            return None
+
+        self.beatmap_id = beatmap.id
+        self.beatmap_text = beatmap.full_name
+        self.beatmap_checksum = beatmap.md5
+        self.mode = GameMode(beatmap.mode)
+
+        if mode is not None:
+            self.mode = mode
+
+        self.update()
+        self.logger.info(f'Selected: {beatmap.full_name}')
+        self.send_bot_message(f'Selected: {beatmap.link}')
+        return beatmap
+
+    def set_mods(self, mods: Mods, freemod: bool) -> None:
+        self.unready_players()
+        self.freemod = freemod
+        self.mods = mods
+
+        self.logger.info(
+            f'Updated match mods to {self.mods.short} '
+            f'{"with freemod" if self.freemod else ""}'
+        )
+
+        if self.freemod:
+            # We have freemod enabled, meaning:
+            # -> Transfer non-speed-changing mods to all player slots
+            # -> Keep speed-changing mods in the match mods
             for slot in self.slots:
-                if slot.has_player:
-                    self.host = slot.player
-                    self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
+                if not slot.has_player:
+                    continue
 
+                # Set current mods to every player inside the match, if they are not speed mods
+                slot.mods = self.mods & ~Mods.SpeedMods
+
+                # TODO: Fix for older clients without freemod support
+                # slot.mods = []
+
+            # The speedmods are kept in the match mods
+            self.mods = mods & ~Mods.FreeModAllowed
+            self.update()
+            return
+
+        # Keep mods from host, if the host exists
+        host_mods = self.host_slot.mods if self.host_slot else Mods.NoMod
+        self.mods |= host_mods
+
+        # Reset any mod from players, if freemod was enabled previously
+        for slot in self.slots:
+            slot.mods = Mods.NoMod
+
+        self.update()
+
+    def set_host(self, target: "OsuClient") -> None:
+        if target is self.host:
+            return
+
+        if self.db_match:
             events.create(
                 self.db_match.id,
                 type=EventType.Host,
                 data={
-                    'new': {'id': self.host_id, 'name': self.host.name},
-                    'previous': {'id': player.id, 'name': player.name}
+                    'new': {
+                        'id': target.id,
+                        'name': target.name
+                    },
+                    'previous': {
+                        'id': self.host_id,
+                        'name': self.host.name if self.host else 'Unknown'
+                    }
                 }
             )
+
+        self.host = target
+        self.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
+        self.logger.info(f'Changed host to: {target.name}')
+        self.update()
+
+    def set_next_host(self) -> bool:
+        target = next(
+            (
+                slot.player for slot in self.slots
+                if slot.player is not None and slot.player is not self.host
+            ),
+            None
+        )
+
+        if target is None:
+            return False
+
+        self.set_host(target)
+        return True
+
+    def clear_host(self) -> bool:
+        if self.host is None:
+            return False
+
+        self.host = None
+        self.update()
+        return True
+
+    def move_player(self, target: "OsuClient", target_slot_id: int) -> bool:
+        if target not in self.players:
+            return False
+
+        old_slot = self.get_slot(target)
+        assert old_slot is not None, "Old slot should not be None"
+
+        target_slot_index = target_slot_id - 1
+        target_slot = self.slots[target_slot_index]
+
+        if target_slot.player is not None:
+            # Swap the players in the slots
+            old_slot_index = self.slots.index(old_slot)
+            self.slots[old_slot_index], self.slots[target_slot_index] = target_slot, old_slot
+        else:
+            # Move the player to the new slot
+            target_slot.copy_from(old_slot)
+            old_slot.reset()
+
+        self.update()
+        return True
+
+    def add_referee(self, target: "Client") -> bool:
+        if target.id in self.referee_players:
+            return False
+
+        if not target.is_irc and target.match is self: # type: ignore
+            # Target should now join #multi_<match.id> instead of #multiplayer
+            target.enqueue_channel_revoked('#multiplayer')
+
+        self.referee_players.add(target.id)
+        target.referee_matches.add(self)
+
+        channel = self.chat.bancho_channel
+        channel.name = self.chat.resolve_name(target)
+        target.enqueue_channel(channel, autojoin=True)
+        self.chat.add(target)
+
+        return True
+
+    def remove_referee(self, target: "Client") -> bool:
+        if target.id not in self.referee_players:
+            return False
+
+        channel_name = self.chat.resolve_name(target)
+        self.chat.remove(target)
+        target.enqueue_channel_revoked(channel_name)
+
+        self.referee_players.discard(target.id)
+        target.referee_matches.discard(self)
+        return True
+
+    def invite_player(self, target: "OsuClient", force: bool = False) -> None:
+        if target.match is self:
+            return
+
+        if not force:
+            target.enqueue_packet(
+                PacketType.BanchoInvite,
+                Message(
+                    app.session.banchobot.name,
+                    f'You have been invited to a multiplayer match: {self.embed}',
+                    app.session.banchobot.name,
+                    app.session.banchobot.id
+                )
+            )
+            return
+
+        # Now we force invite the player, wohoo !!!
+
+        if target.match is not None:
+            target.match.kick_player(target)
+
+        if (slot_id := self.get_free()) is None:
+            self.logger.warning(f'Could not invite {target.name}, match is full.')
+            return
+
+        # Join the chat
+        target.enqueue_channel(self.chat.bancho_channel, autojoin=True)
+        self.chat.add(target)
+
+        slot = self.slots[slot_id]
+
+        if self.team_type in (TeamType.TeamVs, TeamType.TagTeamVs):
+            slot.team = SlotTeam.Red
+
+        slot.status = SlotStatus.NotReady
+        slot.player = target
+
+        target.match = self
+        target.enqueue_packet(PacketType.BanchoMatchJoinSuccess, self)
+
+        self.logger.info(f'{target.name} joined, welcome.')
+        self.update()
+
+    def ban_player(self, player: "OsuClient"):
+        self.banned_players.add(player.id)
+
+        if player in self.players:
+            self.kick_player(player)
+
+        self.close_if_empty()
+
+    def unban_player(self, player: "OsuClient"):
+        self.banned_players.discard(player.id)
+
+    def kick_player(self, player: "OsuClient"):
+        player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
+        player.match = None
+
+        player.enqueue_channel_revoked(self.chat.resolve_name(player))
+        self.chat.remove(player)
+
+        if (slot := self.get_slot(player)):
+            slot.reset()
+
+        if player is self.host:
+            if self.beatmap_id == -1:
+                # Host was choosing beatmap; reset beatmap to previous
+                self.beatmap_id = self.previous_beatmap_id
+                self.beatmap_checksum = self.previous_beatmap_hash
+                self.beatmap_text = self.previous_beatmap_name
+
+            if self.persistent:
+                # Persistent matches can remain hostless
+                self.clear_host()
+            else:
+                # Transfer to any other player in the match
+                self.set_next_host()
 
         self.logger.info(f'{player.name} was kicked from the match')
         self.update()
 
-        if all(slot.empty for slot in self.slots) and not self.persistent:
-            self.close()
-            self.logger.info('Match was disbanded.')
+        if not self.db_match:
             return
 
         if not matches.exists(self.db_match.id):
@@ -452,18 +723,75 @@ class Match:
             }
         )
 
-    def ban_player(self, player: "OsuClient"):
-        self.banned_players.add(player.id)
+    def set_slot_size(self, size: int, update: bool = True):
+        size = max(1, min(size, len(self.slots)))
 
-        if player in self.players:
-            self.kick_player(player)
+        for slot in self.slots[size:]:
+            if slot.player is not None:
+                self.kick_player(slot.player)
 
-    def unban_player(self, player: "OsuClient"):
-        self.banned_players.discard(player.id)
+            slot.reset(SlotStatus.Locked)
+
+        for slot in self.slots[0:size]:
+            if slot.player is not None:
+                continue
+
+            slot.reset()
+
+        if not update:
+            return
+
+        if self.close_if_empty():
+            return
+
+        self.update()
+
+    def toggle_slot_lock(self, slot_id: int) -> None:
+        if slot_id < 0 or slot_id >= len(self.slots):
+            return
+
+        slot = self.slots[slot_id]
+
+        if slot.player is not None:
+            self.kick_player(slot.player)
+
+        if self.close_if_empty():
+            return
+
+        slot.status = (
+            SlotStatus.Open
+            if slot.status == SlotStatus.Locked
+            else SlotStatus.Locked
+        )
+        self.update()
+
+    def lock_slots(self) -> None:
+        for slot in self.slots:
+            if slot.status == SlotStatus.Open:
+                slot.status = SlotStatus.Locked
+
+        self.update()
+
+    def unlock_slots(self) -> None:
+        for slot in self.slots:
+            if slot.status == SlotStatus.Locked:
+                slot.status = SlotStatus.Open
+
+        self.update()
+
+    def close_if_empty(self) -> bool:
+        is_empty = all(slot.empty for slot in self.slots)
+
+        if is_empty and not self.persistent:
+            self.close()
+            return True
+
+        return False
 
     def close(self):
-        # Shutdown pending match timer
+        # Shutdown pending match timers
         self.starting = None
+        self.countdown = None
 
         if self.in_progress:
             for player in self.players:
@@ -476,11 +804,12 @@ class Match:
             # match from their collection
             player.referee_matches.discard(self)
 
-        for player in app.session.players.osu_in_lobby:
+        for player in app.session.players.osu_in_lobby.snapshot_list():
             player.enqueue_packet(PacketType.BanchoMatchDisband, self.id)
 
         app.session.matches.remove(self)
         app.session.channels.remove(self.chat)
+        self.logger.info('Match was closed.')
 
         if not self.db_match:
             return
@@ -491,12 +820,26 @@ class Match:
         )
 
         if not last_game:
-            # No games were played
+            # No games were played -> delete match
             matches.delete(self.db_match.id)
             return
 
         matches.update(self.db_match.id, {'ended_at': datetime.now()})
         events.create(self.db_match.id, type=EventType.Disband)
+
+    def start_safe(self) -> tuple[str, int]:
+        if self.starting:
+            time_remaining = round(self.starting.time - time.time())
+            return "start_timer", time_remaining
+
+        if not self.player_slots:
+            return "no_players", 0
+
+        if any([s.status == SlotStatus.NotReady for s in self.slots]):
+            return "not_ready", 0
+
+        self.start()
+        return "", 0
 
     def start(self):
         if self.player_count <= 0:
@@ -525,10 +868,7 @@ class Match:
 
         if not playing_slots:
             self.logger.info('Could not start match, because no one was ready.')
-            self.chat.send_message(
-                app.session.banchobot,
-                'Match was not started, because no players were ready.'
-            )
+            self.send_bot_message('Match was not started, because no players were ready.')
             return
 
         self.logger.info('Match started')
@@ -536,15 +876,17 @@ class Match:
         self.update()
 
         for slot in playing_slots:
-            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self)
+            slot.player.enqueue_packet(PacketType.BanchoMatchStart, self) # type: ignore
 
-        self.chat.send_message(
-            app.session.banchobot,
+        self.send_bot_message(
             'The match has started. Good luck, have fun!'
         )
 
         # Start score update loop
         self.schedule_score_updates()
+
+        if not self.db_match:
+            return
 
         events.create(
             self.db_match.id,
@@ -564,16 +906,20 @@ class Match:
         )
 
     def abort(self):
+        if not self.in_progress:
+            return
+
         # Players that have been playing this round
         players = [
             slot.player for slot in self.slots
             if slot.status.value & SlotStatus.Playing.value
-            and slot.has_player
+            and slot.player is not None
         ]
 
         self.in_progress = False
         self.unready_players(SlotStatus.Playing)
         self.update()
+        self.logger.info('Match was aborted.')
 
         # The join success packet will reset the players to the setup screen
         for player in players:
@@ -582,6 +928,9 @@ class Match:
         # Send abort to tourney clients
         for client in self.tourney_clients:
             client.enqueue_packet(PacketType.BanchoMatchAbort)
+
+        if not self.db_match:
+            return
 
         start_event = events.fetch_last_by_type(
             self.db_match.id,
@@ -612,7 +961,7 @@ class Match:
         # Get players that have been playing this round
         players = [
             slot.player for slot in self.slots
-            if slot.completed
+            if slot.player and slot.completed
         ]
 
         self.unready_players(SlotStatus.Complete)
@@ -621,13 +970,12 @@ class Match:
         for p in players:
             p.enqueue_packet(PacketType.BanchoMatchComplete)
 
-        self.logger.info('Match finished')
         self.update()
+        self.logger.info('Match finished')
+        self.send_bot_message('The match has finished!')
 
-        self.chat.send_message(
-            app.session.banchobot,
-            'The match has finished!'
-        )
+        if not self.db_match:
+            return
 
         start_event = events.fetch_last_by_type(
             self.db_match.id,
@@ -640,7 +988,8 @@ class Match:
         ranking_type = {
             ScoringType.Score: lambda s: s.last_frame.total_score,
             ScoringType.Accuracy: lambda s: s.last_frame.accuracy(self.mode),
-            ScoringType.Combo: lambda s: s.last_frame.max_combo
+            ScoringType.Combo: lambda s: s.last_frame.max_combo,
+            ScoringType.ScoreV2: lambda s: s.last_frame.total_score
         }[self.scoring_type]
 
         slots = [slot for slot in self.slots if slot.last_frame]
@@ -696,25 +1045,40 @@ class Match:
                         'place': rank + 1
                     }
                     for rank, slot in match_results
+                    if slot.player and slot.last_frame
                 ]
             }
         )
 
-    def send_referee_message(self, message: str, sender: "Client") -> None:
-        for referee in self.referee_players:
-            if referee_client := app.session.players.by_id_osu(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
+    def create_start_timer(self, duration: int, override: bool = False) -> int:
+        if self.starting and not override:
+            time_remaining = round(self.starting.time - time.time())
+            return time_remaining
 
-            if referee_client := app.session.players.by_id_irc(referee):
-                referee_client.enqueue_message(
-                    message,
-                    sender,
-                    self.chat.name
-                )
+        if duration < 0:
+            duration = 0
+
+        if duration > 60*5:
+            duration = 60*5
+
+        self.starting = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=self.execute_start_timer,
+                daemon=True
+            )
+        )
+        self.starting.start()
+        return duration
+
+    def abort_start_timer(self) -> bool:
+        if not self.starting:
+            return False
+
+        # The timer thread will check if 'starting'
+        # is None and kill itself when it is
+        self.starting = None
+        return True
 
     def execute_start_timer(self) -> None:
         if not self.starting:
@@ -747,16 +1111,44 @@ class Match:
 
             remaining_time = round(self.starting.time - time.time())
 
-            self.chat.send_message(
-                app.session.banchobot,
+            self.send_bot_message(
                 f'Match starts in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
-
-            self.logger.debug(f'Match countdown running: {remaining_time} seconds left')
+            self.logger.debug(
+                f'Match countdown running: {remaining_time} seconds left'
+            )
 
         time.sleep(1)
         self.starting = None
         self.start()
+
+    def create_countdown(self, duration: int, override: bool = False) -> int:
+        if self.countdown and not override:
+            time_remaining = round(self.countdown.time - time.time())
+            return time_remaining
+
+        if duration < 0:
+            duration = 0
+
+        if duration > 60*15:
+            duration = 60*15
+
+        self.countdown = MatchTimer(
+            time.time() + duration,
+            Thread(
+                target=self.execute_countdown,
+                daemon=True
+            )
+        )
+        self.countdown.start()
+        return duration
+
+    def abort_countdown(self) -> bool:
+        if not self.countdown:
+            return False
+
+        self.countdown = None
+        return True
 
     def execute_countdown(self) -> None:
         if not self.countdown:
@@ -793,20 +1185,17 @@ class Match:
 
             remaining_time = round(self.countdown.time - time.time())
 
-            self.chat.send_message(
-                app.session.banchobot,
+            self.send_bot_message(
                 f'Countdown ends in {remaining_time} {"seconds" if remaining_time != 1 else "second"}.'
             )
-
-            self.logger.debug(f'Countdown running: {remaining_time} seconds left')
+            self.logger.debug(
+                f'Countdown running: {remaining_time} seconds left'
+            )
 
         time.sleep(1)
         self.countdown = None
 
-        self.chat.send_message(
-            app.session.banchobot,
-            'Countdown finished.'
-        )
+        self.send_bot_message('Countdown finished.')
 
     def schedule_score_updates(self) -> None:
         if not self.in_progress:

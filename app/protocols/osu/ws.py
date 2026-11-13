@@ -2,6 +2,7 @@
 
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.websocket.protocol import ConnectionRequest
+from twisted.internet import reactor
 from chio import PacketType
 
 from app.protocols.osu.streams import ByteStream
@@ -21,6 +22,7 @@ class WebsocketOsuClient(WebSocketServerProtocol):
         self.player = OsuClient(None, None)
         self.stream = ByteStream(self)
         self.player.protocol = 'ws'
+        self.player.enqueue = self.enqueue
 
     @property
     def address(self):
@@ -91,36 +93,74 @@ class WebsocketOsuClient(WebSocketServerProtocol):
             return
 
         self.stream += payload
+        packets = []
+        consumed_offset = 0
 
-        while self.stream.available() >= self.player.io.header_size:
-            packet, data = self.player.io.read_packet(self.stream)
+        try:
+            while self.stream.available() >= self.player.io.header_size:
+                packet, packet_data = self.player.io.read_packet(self.stream)
 
+                # Remember how much data was fully consumed
+                consumed_offset = self.stream.offset
+                packets.append((packet, packet_data))
+
+        except OverflowError:
+            # Wait for more data
+            self.stream.seek(consumed_offset)
+
+        except Exception as e:
+            self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
+            self.close_connection('Request processing error')
+            packets.clear()
+
+        finally:
             # Clear the data that was read
             self.stream.reset()
 
-            deferred = app.session.tasks.defer_to_reactor_thread(
-                self.player.on_packet_received,
-                packet, data
-            )
+        if not packets:
+            return
 
-            deferred.addErrback(
-                lambda f: (
-                    self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
-                    self.close_connection(f.getErrorMessage())
-                )
+        deferred = app.session.tasks.defer_to_reactor_thread(
+            self.player.on_packets_received,
+            packets
+        )
+        deferred.addErrback(
+            lambda f: (
+                self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                self.close_connection(f.getErrorMessage())
             )
-
-    def close_connection(self, reason: str = ""):
-        self.player.close_connection(reason)
+        )
 
     def enqueue_packet(self, packet: PacketType, *args) -> None:
         self.player.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        self.logger.debug('<- "%s": %r', packet.name, args)
 
     def enqueue(self, data: bytes):
+        reactor.callFromThread(self.do_enqueue, data) # type: ignore
+
+    def close_connection(self, reason: str = ""):
+        reactor.callFromThread(self.do_close, reason) # type: ignore
+        self.player.close_connection(reason)
+
+    def do_enqueue(self, data: bytes):
         if self.state != self.STATE_OPEN:
             self.logger.debug('Cannot send data to a closed channel')
             self.player.close_connection()
             return
 
         self.sendMessage(data, isBinary=True)
+
+    def do_close(self, reason: str | None = "") -> None:
+        if self.state == self.STATE_CLOSED:
+            # Connection is already closed
+            return
+
+        if self.state == self.STATE_OPEN:
+            code = self.CLOSE_STATUS_CODE_NORMAL if reason else None
+            reason = reason or None
+            self.sendClose(code, reason)
+            return
+
+        if (transport := getattr(self, 'transport', None)):
+            # If the connection is not open, we can just close the transport immediately
+            transport.loseConnection()

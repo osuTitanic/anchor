@@ -25,7 +25,7 @@ def handle_names_command(
 
         app.session.tasks.do_later(
             client.enqueue_players,
-            channel.users,
+            channel.users.snapshot_list(),
             channel.name,
             priority=3
         )
@@ -60,9 +60,16 @@ def handle_channel_who(
         return
 
     # Send RPL_WHOREPLY for each user in the channel
-    for user in channel.users:
+    seen_ids: set[int] = set()
+
+    for user in channel.users.snapshot_list():
         if user.hidden and user != client:
             continue
+
+        if user.id in seen_ids:
+            continue
+
+        seen_ids.add(user.id)
 
         away_flag = "G" if user.away_message else "H"
         status = away_flag + user.irc_prefix

@@ -1,6 +1,6 @@
 
 from chio.types import UserPresence, UserStats, UserStatus, Message, UserQuit
-from typing import Iterable, List, Set, TYPE_CHECKING
+from typing import Iterable, List, TYPE_CHECKING
 from chio.constants import Mode, Permissions
 from datetime import datetime
 from threading import Lock
@@ -14,6 +14,7 @@ from app.common.config import config_instance as config
 from app.common.cache import leaderboards, status
 from app.objects.client import ClientHash
 from app.objects.multiplayer import Match
+from app.objects.locks import LockedSet
 from app.common.constants import level
 from app.monitoring import RateLimiter
 from app.common.database import (
@@ -38,8 +39,8 @@ class Client:
     """
 
     def __init__(self, address: str, port: int) -> None:
-        self.id = 0
-        self.name = ""
+        self.id: int = 0
+        self.name: str = ""
         self.protocol = "internal"
         self.port = port
         self.address = address
@@ -49,12 +50,12 @@ class Client:
         self.stats = UserStats()
         self.status = UserStatus()
         self.presence = UserPresence()
-        self.object: DBUser | None = None
+        self.object: DBUser
 
         self.away_message: str | None = None
-        self.away_senders: Set[int] = set()
-        self.referee_matches: Set[Match] = set()
-        self.channels: Set["Channel"] = set()
+        self.away_senders: LockedSet[int] = LockedSet()
+        self.referee_matches: LockedSet[Match] = LockedSet()
+        self.channels: LockedSet["Channel"] = LockedSet()
         self.last_response = time.time()
         self.login_time = time.time()
         self.message_limiter = RateLimiter(60, 60)
@@ -393,7 +394,8 @@ class Client:
             self.stats,
             self.status,
             hash=ClientHash.empty("b0").string,
-            version=0
+            version=0,
+            version_string="Unknown"
         )
 
     def update_activity(self) -> None:

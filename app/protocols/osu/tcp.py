@@ -54,7 +54,7 @@ class TcpOsuClient(OsuClient, Protocol):
 
     def enqueue_packet(self, packet, *args):
         self.io.write_packet(self.stream, packet, *args)
-        self.logger.debug(f'<- "{packet.name}": {list(args)}')
+        self.logger.debug('<- "%s": %r', packet.name, args)
 
     def close_connection(self, reason: str = "") -> None:
         reactor.callFromThread(self.transport.loseConnection)
@@ -128,36 +128,46 @@ class TcpOsuClient(OsuClient, Protocol):
         if self.busy:
             return
 
+        consumed_offset = 0
+
         try:
             self.busy = True
+            packets = []
 
             while self.stream.available() >= self.io.header_size:
-                packet, data = self.io.read_packet(self.stream)
+                packet, packet_data = self.io.read_packet(self.stream)
 
-                # Clear the data that was read
-                self.stream.reset()
+                # Remember how much data was fully consumed
+                consumed_offset = self.stream.offset
+                packets.append((packet, packet_data))
 
-                deferred = app.session.tasks.defer_to_reactor_thread(
-                    self.on_packet_received,
-                    packet, data
-                )
-
-                deferred.addErrback(
-                    lambda f: (
-                        self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
-                        self.close_connection(f.getErrorMessage())
-                    )
-                )
         except OverflowError:
             # Wait for more data
-            self.stream.seek(0)
+            self.stream.seek(consumed_offset)
 
         except Exception as e:
             self.logger.error(f'Error while receiving packet: {e}', exc_info=e)
             self.close_connection('Request processing error')
+            packets.clear()
 
         finally:
+            # Clear the data that was read
+            self.stream.reset()
             self.busy = False
+
+        if not packets:
+            return
+
+        deferred = app.session.tasks.defer_to_reactor_thread(
+            self.on_packets_received,
+            packets
+        )
+        deferred.addErrback(
+            lambda f: (
+                self.logger.error(f'Error while processing packet: {f.getErrorMessage()}', exc_info=f.value),
+                self.close_connection(f.getErrorMessage())
+            )
+        )
 
     def handleHttpRequest(self, data: bytes) -> None:
         self.logger.debug(f'Received http request: {data}')

@@ -95,7 +95,7 @@ def receive_updates(client: OsuClient, filter: PresenceFilter):
         else client.online_friends
     )
 
-    session.tasks.do_later(
+    return session.tasks.do_later(
         client.enqueue_players,
         players,
         priority=3
@@ -138,7 +138,8 @@ def change_status(client: OsuClient, status: UserStatus):
     client.status.mods = status.mods
     client.status.mode = status.mode
     client.status.text = status.text
-    session.tasks.do_later(
+
+    return session.tasks.do_later(
         on_status_change,
         client, mode_changed
     )
@@ -161,13 +162,13 @@ def on_status_change(client: OsuClient, mode_changed: bool):
 
     if client.status.beatmap_id not in (0, -1):
         # Cache beatmap to make score submission faster
-        session.storage.cache_beatmap(client.status.beatmap_id)
+        session.beatmaps.cache_beatmap(client.status.beatmap_id)
 
 def distribute_stats(client: OsuClient):
     # Enqueue stats to themselves
     client.enqueue_stats(client)
 
-    for p in client.spectators:
+    for p in client.spectators.snapshot_list():
         # Ensure that all spectators get the latest status
         p.enqueue_stats(client)
 

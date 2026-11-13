@@ -1,5 +1,6 @@
 
 from .objects.collections import Players, Channels, Matches
+from .common.helpers.beatmaps import BeatmapResources
 from .common.helpers.filter import ChatFilter
 from .common.cache.events import EventQueue
 from .monitoring import RequestCounter
@@ -8,12 +9,15 @@ from .common.storage import Storage
 from .common.config import Config
 from .tasks import Tasks
 
+from typing import Callable, Dict, TYPE_CHECKING
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from typing import Callable, Dict
 from requests import Session
 from chio import PacketType
 from redis import Redis
+
+if TYPE_CHECKING:
+    from .banchobot import BanchoBot
 
 import logging
 import time
@@ -32,15 +36,16 @@ events = EventQueue(
     name='bancho:events',
     connection=redis
 )
+beatmaps = BeatmapResources(storage, redis)
 
 logger = logging.getLogger('bancho')
 startup_time = time.time()
-banchobot = None
+banchobot: "BanchoBot"
 
 requests = Session()
-requests.headers = {
+requests.headers.update({
     'User-Agent': f'osuTitanic/anchor ({config.DOMAIN_NAME})'
-}
+})
 
 retries = Retry(
     total=4,

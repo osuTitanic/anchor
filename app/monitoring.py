@@ -64,23 +64,30 @@ class RequestCounter:
     """Class to count requests made over a certain time period."""
 
     def __init__(self, window: int = 60) -> None:
+        # Queue will track counts of requests per second as (timestamp, count)
         self.requests = collections.deque()
-        self.window = window
         self.lock = threading.Lock()
+        self.window = window
 
     @property
     def rate(self) -> float:
         now = time.time()
         with self.lock:
             self.cleanup(now)
-            return len(self.requests)
+            return sum(count for _, count in self.requests)
 
     def record(self) -> None:
         now = time.time()
+        second = int(now)
         with self.lock:
-            self.requests.append(now)
+            if self.requests and self.requests[-1][0] == second:
+                self.requests[-1][1] += 1
+                return
+
+            self.requests.append([second, 1])
             self.cleanup(now)
 
     def cleanup(self, now: float) -> None:
-        while self.requests and now - self.requests[0] > self.window:
+        cutoff = now - self.window
+        while self.requests and self.requests[0][0] <= cutoff:
             self.requests.popleft()

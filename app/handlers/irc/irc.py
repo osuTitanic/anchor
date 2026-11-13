@@ -22,6 +22,10 @@ def handle_ping_command(
         params=args
     )
 
+@register("PONG")
+def handle_pong_command(client: IrcClient, prefix: str, *args) -> None:
+    pass
+
 @register("AWAY")
 @ensure_authenticated
 def handle_away_command(

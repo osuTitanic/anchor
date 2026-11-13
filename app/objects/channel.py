@@ -1,6 +1,6 @@
 
+from typing import TYPE_CHECKING, List, Set, Iterator, Iterable
 from chio import Message, Channel as bChannel, Permissions
-from typing import TYPE_CHECKING, List, Set, Iterator
 from code import InteractiveConsole
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class Channel:
         self.write_perms = write_perms
         self.moderated = False
         self.public = public
-        self.users: Set["Client"] = LockedSet()
+        self.users: LockedSet["Client"] = LockedSet()
         self.users.add(app.session.banchobot)
 
         self.webhook_enabled = (
@@ -74,11 +74,17 @@ class Channel:
 
     @property
     def osu_users(self) -> List["OsuClient"]:
-        return [user for user in self.users if user.is_osu]
+        return [
+            user for user in self.users.snapshot_list()
+            if user.is_osu
+        ]
 
     @property
     def irc_users(self) -> List["IrcClient"]:
-        return [user for user in self.users if user.is_irc]
+        return [
+            user for user in self.users.snapshot_list()
+            if user.is_irc
+        ]
 
     @property
     def user_ids(self) -> Set[int]:
@@ -132,7 +138,7 @@ class Channel:
         app.session.tasks.do_later(self.broadcast_part, client, priority=1)
 
     def remove_inactive_users(self) -> None:
-        for user in self.users:
+        for user in self.users.snapshot_list():
             if user is app.session.banchobot:
                 continue
 
@@ -140,7 +146,7 @@ class Channel:
                 self.logger.info(f'Removing inactive user: {user.name}')
                 self.remove(user)
 
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+    def broadcast_message(self, message: Message, users: Iterable["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         if "\n" in message.content:
@@ -192,7 +198,10 @@ class Channel:
         self.update_irc_clients(client, is_leaving=True)
 
     def find_other_players(self, client: "Client") -> Iterator["Client"]:
-        return (p for p in self.users if p.id == client.id and p != client)
+        return (
+            p for p in self.users.snapshot_list()
+            if p.id == client.id and p != client
+        )
 
     def find_other_player(self, client: "Client") -> "Client | None":
         return next(self.find_other_players(client), None)
@@ -238,7 +247,7 @@ class Channel:
 
         app.session.tasks.do_later(
             messages.create,
-            sender.name,
+            sender.id,
             self.name,
             message[:512],
             priority=4
@@ -252,7 +261,7 @@ class Channel:
         )
 
         # Filter out sender from the target users
-        users = [user for user in self.users if user != sender]
+        users = self.users.snapshot_without(sender)
 
         if not do_later:
             self.broadcast_message(message_object, users)
@@ -332,7 +341,7 @@ class Channel:
         app.session.tasks.do_later(
             self.broadcast_message,
             message_object,
-            users=self.users,
+            users=self.users.snapshot_list(),
             priority=2
         )
 
@@ -451,7 +460,7 @@ class MultiplayerChannel(Channel):
         super().__init__(
             name=f'#multi_{match.id}',
             topic=match.name,
-            owner=match.host.name,
+            owner=match.host.name if match.host else "BanchoBot",
             read_perms=1,
             write_perms=1,
             public=False
@@ -529,7 +538,10 @@ class MultiplayerChannel(Channel):
         self.update_osu_clients()
 
         other_player = next(
-            (p for p in self.users if p.id == player.id),
+            (
+                p for p in self.users.snapshot_list()
+                if p.id == player.id
+            ),
             None
         )
 
@@ -545,11 +557,11 @@ class MultiplayerChannel(Channel):
         channel_object = self.bancho_channel
 
         # Only enqueue to users in this channel
-        for player in self.users:
+        for player in self.users.snapshot_list():
             channel_object.name = self.resolve_name(player)
             player.enqueue_channel(channel_object)
 
-    def broadcast_message(self, message: Message, users: List["Client"]) -> None:
+    def broadcast_message(self, message: Message, users: Iterable["Client"]) -> None:
         self.logger.info(f'[{message.sender}]: {message.content}')
 
         for user in users:
@@ -589,7 +601,9 @@ class PythonInterpreterChannel(Channel):
     def send_message(
         self,
         sender: "Client",
-        message: str
+        message: str,
+        ignore_commands: bool = False,
+        do_later: bool = False
     ) -> None:
         if not sender.object.is_admin:
             sender.enqueue_channel_revoked(self.display_name)

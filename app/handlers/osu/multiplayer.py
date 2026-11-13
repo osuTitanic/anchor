@@ -1,5 +1,4 @@
 
-from datetime import datetime
 from typing import Callable
 from copy import copy
 from chio import (
@@ -34,22 +33,18 @@ def register(packet: PacketType) -> Callable:
 
 @register(PacketType.OsuLobbyJoin)
 def join_lobby(client: OsuClient):
-    for p in session.players.osu_clients:
-        p.enqueue_packet(PacketType.BanchoLobbyJoin, client.id)
-
-    session.players.osu_in_lobby.add(client)
     client.in_lobby = True
+    session.players.send_packet(PacketType.BanchoLobbyJoin, client.id)
+    session.players.osu_in_lobby.add(client)
 
     for match in session.matches.active:
         client.enqueue_packet(PacketType.BanchoMatchNew, match)
 
 @register(PacketType.OsuLobbyPart)
 def part_lobby(client: OsuClient):
-    session.players.osu_in_lobby.discard(client)
     client.in_lobby = False
-
-    for p in session.players.osu_clients:
-        p.enqueue_packet(PacketType.BanchoLobbyPart, client.id)
+    session.players.osu_in_lobby.discard(client)
+    session.players.send_packet(PacketType.BanchoLobbyPart, client.id)
 
 @register(PacketType.OsuInvite)
 def invite(client: OsuClient, target_id: int):
@@ -164,13 +159,12 @@ def create_match(client: OsuClient, bancho_match: Match):
 
 @register(PacketType.OsuMatchJoin)
 def join_match(client: OsuClient, match_join: MatchJoin):
-    if not session.matches.exists(match_join.match_id):
+    if not (match := session.matches.get(match_join.match_id)):
         client.logger.warning(f'{client.name} tried to join a match that does not exist')
         client.enqueue_packet(PacketType.BanchoMatchDisband, match_join.match_id)
         client.enqueue_packet(PacketType.BanchoMatchJoinFail)
         return
 
-    match = session.matches[match_join.match_id]
     match.last_activity = time.time()
 
     if client.is_tourney_client:
@@ -243,10 +237,13 @@ def join_match(client: OsuClient, match_join: MatchJoin):
         # Force-revoke #multiplayer
         client.enqueue_channel_revoked('#multiplayer')
 
-    for client in session.players.osu_tournament_clients:
+    for client in session.players.osu_tournament_clients.snapshot_list():
         # Ensure that all tourney clients got the client's presence
         client.enqueue_presence(client)
         client.enqueue_stats(client)
+
+    if not match.db_match:
+        return
 
     events.create(
         match.db_match.id,
@@ -256,7 +253,6 @@ def join_match(client: OsuClient, match_join: MatchJoin):
             'name': client.name
         }
     )
-
     activity.submit(
         client.id, match.mode.value,
         UserActivity.UserMatchJoined,
@@ -274,9 +270,10 @@ def leave_match(client: OsuClient):
     if not client.match:
         return
 
-    client.match.last_activity = time.time()
+    match = client.match
+    match.last_activity = time.time()
 
-    if not (slot := client.match.get_slot(client)):
+    if not (slot := match.get_slot(client)):
         return
 
     status = (
@@ -287,101 +284,57 @@ def leave_match(client: OsuClient):
 
     slot.reset(status)
 
-    if client.id not in client.match.referee_players:
+    if client.id not in match.referee_players:
         channel_leave(
             client,
-            client.match.chat.display_name,
+            match.chat.display_name,
             kick=True
         )
 
-    events.create(
-        client.match.db_match.id,
-        type=EventType.Leave,
-        data={
-            'user_id': client.id,
-            'name': client.name
-        }
-    )
-
-    activity.submit(
-        client.id, client.match.mode.value,
-        UserActivity.UserMatchLeft,
-        {
-            'username': client.name,
-            'match_id': client.match.db_match.id,
-            'match_name': client.match.name
-        },
-        is_hidden=True,
-        session=None
-    )
-
-    if (client is client.match.host and client.match.beatmap_id == -1):
-        # Host was choosing beatmap; reset beatmap to previous
-        client.match.beatmap_id = client.match.previous_beatmap_id
-        client.match.beatmap_checksum = client.match.previous_beatmap_hash
-        client.match.beatmap_text = client.match.previous_beatmap_name
-
-    if all(slot.empty for slot in client.match.slots) and not client.match.persistent:
-        # No players in match anymore -> Disband match
-        client.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
-
-        for p in session.players.osu_in_lobby:
-            p.enqueue_packet(PacketType.BanchoMatchDisband, client.match.id)
-
-        session.channels.remove(client.match.chat)
-        session.matches.remove(client.match)
-        client.match.starting = None
-
-        match_id = client.match.db_match.id
-
-        # Fetch last game event
-        last_game = events.fetch_last_by_type(
-            match_id,
-            type=EventType.Result
+    if match.db_match:
+        events.create(
+            match.db_match.id,
+            type=EventType.Leave,
+            data={
+                'user_id': client.id,
+                'name': client.name
+            }
+        )
+        activity.submit(
+            client.id, match.mode.value,
+            UserActivity.UserMatchLeft,
+            {
+                'username': client.name,
+                'match_id': match.db_match.id,
+                'match_name': match.name
+            },
+            is_hidden=True,
+            session=None
         )
 
-        if not last_game:
-            # No games were played -> delete match
-            matches.delete(match_id)
-        else:
-            matches.update(match_id, {'ended_at': datetime.now()})
-            events.create(match_id, type=EventType.Disband)
+    if (client is match.host and match.beatmap_id == -1):
+        # Host was choosing beatmap; reset beatmap to previous
+        match.beatmap_id = match.previous_beatmap_id
+        match.beatmap_checksum = match.previous_beatmap_hash
+        match.beatmap_text = match.previous_beatmap_name
 
-        if not client.match:
-            return
-
-        client.match.logger.info('Match was disbanded.')
+    if match.close_if_empty():
+        client.enqueue_packet(PacketType.BanchoMatchDisband, match.id)
         client.match = None
         return
 
-    if client.match.persistent and client is client.match.host:
-        # This match has referee players, so we don't need a host
-        client.match.host = None
-
-    elif client is client.match.host:
-        # Player was host, transfer to next client
-        for slot in client.match.slots:
-            if slot.status.value & SlotStatus.HasPlayer.value:
-                client.match.host = slot.player
-                client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
-
-        events.create(
-            client.match.db_match.id,
-            type=EventType.Host,
-            data={
-                'previous': {'id': client.id, 'name': client.name},
-                'new': {'id': client.match.host_id, 'name': client.match.host.name}
-            }
-        )
-
-    if client.id not in client.match.referee_players:
-        client.match.chat.remove(client)
+    if client is match.host:
+        if match.persistent:
+            # Persistent matches can remain hostless
+            match.clear_host()
+        else:
+            # Transfer to any other player in the match
+            match.set_next_host()
 
     client.match.send_referee_message(
         f"{client.name} left the game.",
         session.banchobot
     )
-
     client.match.update()
     client.match = None
 
@@ -398,13 +351,9 @@ def change_slot(client: OsuClient, slot_id: int):
 
     client.match.last_activity = time.time()
 
-    if not (slot := client.match.get_slot(client)):
+    if not client.match.move_player(client, slot_id + 1):
         return
 
-    client.match.slots[slot_id].copy_from(slot)
-    slot.reset()
-
-    client.match.update()
     client.match.send_referee_message(
         f'{client.name} moved to slot {slot_id + 1}.',
         session.banchobot
@@ -454,11 +403,7 @@ def change_beatmap(client: OsuClient, new_match: Match):
         match.mode             = new_match.mode
         beatmap_text           = new_match.beatmap_text
 
-    match.chat.send_message(
-        session.banchobot,
-        f'Selected: {beatmap_text}'
-    )
-
+    match.send_bot_message(f'Selected: {beatmap_text}')
     match.update()
 
 @register(PacketType.OsuMatchChangeMods)
@@ -582,22 +527,11 @@ def lock(client: OsuClient, slot_id: int):
     if not 0 <= slot_id < config.MULTIPLAYER_MAX_SLOTS:
         return
 
-    slot = client.match.slots[slot_id]
-
-    if slot.player is client:
+    if client.match.slots[slot_id].player is client:
         # Player can't kick themselves
         return
 
-    if slot.has_player:
-        client.match.kick_player(slot.player)
-
-    slot.status = (
-        SlotStatus.Open
-        if slot.status == SlotStatus.Locked
-        else SlotStatus.Locked
-    )
-
-    client.match.update()
+    client.match.toggle_slot_lock(slot_id)
 
 @register(PacketType.OsuMatchChangeTeam)
 def change_team(client: OsuClient):
@@ -612,15 +546,17 @@ def change_team(client: OsuClient):
     if not (slot := client.match.get_slot(client)):
         return
 
-    slot.team = {
+    team = {
         SlotTeam.Neutral: SlotTeam.Red,
         SlotTeam.Blue: SlotTeam.Red,
         SlotTeam.Red: SlotTeam.Blue
     }[slot.team]
 
-    client.match.update()
+    if not client.match.set_team(client, team):
+        return
+
     client.match.send_referee_message(
-        f'{client.name} joined team {slot.team.name}.',
+        f'{client.name} joined team {team.name}.',
         session.banchobot
     )
 
@@ -645,20 +581,7 @@ def transfer_host(client: OsuClient, slot_id: int):
         client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
         return
 
-    client.match.host = target
-    client.match.host.enqueue_packet(PacketType.BanchoMatchTransferHost)
-
-    events.create(
-        client.match.db_match.id,
-        type=EventType.Host,
-        data={
-            'new': {'id': target.id, 'name': target.name},
-            'previous': {'id': client.id, 'name': client.name}
-        }
-    )
-
-    client.match.logger.info(f'Changed host to: {target.name}')
-    client.match.update()
+    client.match.set_host(target)
 
 @register(PacketType.OsuMatchChangePassword)
 def change_password(client: OsuClient, update: Match):
@@ -668,12 +591,8 @@ def change_password(client: OsuClient, update: Match):
     if client is not client.match.host:
         return
 
-    client.match.password = update.password
-    client.match.update()
-
-    client.match.logger.info(
-        f'Changed password to: {update.password}'
-    )
+    client.match.set_password(update.password)
+    client.match.logger.info(f'Changed password to: {update.password}')
     # TODO: Do we need to send the packet back?
 
 @register(PacketType.OsuMatchStart)
@@ -703,6 +622,9 @@ def load_complete(client: OsuClient):
 
     if all(client.match.loaded_players):
         for slot in client.match.slots:
+            if slot.player is None:
+                continue
+
             if not slot.has_map:
                 continue
 
@@ -744,7 +666,7 @@ def player_failed(client: OsuClient):
         return
 
     slot, slot_id = client.match.get_slot_with_id(client)
-    assert slot_id is not None
+    assert slot is not None
 
     slot.has_failed = True
 
@@ -790,7 +712,7 @@ def match_complete(client: OsuClient):
 
     client.match.send_referee_message(
         f'{client.name} finished playing '
-        f'(Score: {slot.last_frame.total_score}, {"FAILED" if slot.has_failed else "PASSED"})',
+        f'(Score: {slot.last_frame.total_score if slot.last_frame else 0}, {"FAILED" if slot.has_failed else "PASSED"})',
         session.banchobot
     )
 
@@ -811,12 +733,10 @@ def tourney_match_info(client: OsuClient, match_id: int):
 
     client.logger.debug(f'Requesting tourney match info ({match_id})')
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to request tourney match info, but match was not found in active matches.')
         client.enqueue_packet(PacketType.BanchoMatchDisband, match_id)
         return
-
-    match = session.matches[match_id]
 
     # Clear password for tourney clients
     match_password = copy(match.password)
@@ -841,11 +761,10 @@ def tourney_join_match_channel(client: OsuClient, match_id: int):
         client.logger.warning('Tried to join tourney match channel, but was not in tourney client.')
         return
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to join tourney match channel, but match was not found in active matches.')
         return
 
-    match = session.matches[match_id]
     match.chat.add(client)
     client.enqueue_channel(match.chat.bancho_channel, autojoin=True)
 
@@ -859,10 +778,9 @@ def tourney_leave_match_channel(client: OsuClient, match_id: int):
         client.logger.warning('Tried to leave tourney match channel, but was not in tourney client.')
         return
 
-    if not session.matches.exists(match_id):
+    if not (match := session.matches.get(match_id)):
         client.logger.warning('Tried to leave tourney match channel, but match was not found in active matches.')
         return
 
-    match = session.matches[match_id]
     match.chat.remove(client)
     client.enqueue_channel_revoked(match.chat.display_name)

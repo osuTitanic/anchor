@@ -5,6 +5,7 @@ from twisted.internet import reactor, threads
 from twisted.internet.defer import Deferred
 from typing import Callable, Dict, Tuple
 from contextlib import suppress
+from concurrent.futures import Future
 from app.common import officer
 from threading import Thread
 
@@ -99,13 +100,13 @@ class Tasks:
         *args,
         priority: int = 0,
         **kwargs
-    ) -> None:
+    ) -> Future | None:
         """
         Schedule a function to be called later with a given priority.
         Lower numbers indicate higher priority.
         """
         with suppress(RuntimeError):
-            self.do_later_executor.submit(
+            return self.do_later_executor.submit(
                 function, *args, priority=priority, **kwargs
             )
 
