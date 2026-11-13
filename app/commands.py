@@ -178,15 +178,6 @@ def maintenance_mode(ctx: Context) -> List[str]:
         f'Maintenance mode is now {"enabled" if config.BANCHO_MAINTENANCE else "disabled"}.'
     ]
 
-@system_commands.register(['exec', 'python'], "admin")
-def execute_console(ctx: Context):
-    """<input> - Execute any python code"""
-    if not ctx.args:
-        return [f'Invalid syntax: !{system_commands.trigger} {ctx.trigger} <input>']
-
-    input = ' '.join(ctx.args)
-    return [str(eval(input))]
-
 @system_commands.register(['restart', 'enqueuerestart'], "admin")
 def enqueue_restart(ctx: Context):
     """<retry_time> - Enqueue a server restart to all clients"""
