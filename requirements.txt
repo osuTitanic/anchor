@@ -1,4 +1,4 @@
-psycopg[c]==3.3.8
+psycopg[c]==3.3.9
 sqlalchemy==2.1.8
 twisted==26.10.0
 redis==8.1.0
