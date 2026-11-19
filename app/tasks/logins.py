@@ -46,9 +46,12 @@ class LoginManager:
     @staticmethod
     @cache
     def check_password(password: str, hashed: str) -> bool:
-        return bcrypt.checkpw(
-            password.encode(),
-            hashed.encode()
-        )
+        try:
+            return bcrypt.checkpw(
+                password.encode(),
+                hashed.encode()
+            )
+        except ValueError:
+            return False
 
 manager = LoginManager()
