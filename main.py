@@ -17,7 +17,7 @@ import app
 import os
 
 logging.basicConfig(
-    handlers=[Console, File],
+    handlers=[Console],
     level=(
         logging.DEBUG
         if config.DEBUG
