@@ -40,11 +40,19 @@ RUN apk add --no-cache \
 # Reuse the virtual environment from the builder image
 COPY --from=builder /opt/venv /opt/venv
 
+RUN addgroup -g 10001 -S sailor && \
+    adduser -u 10001 -S -D -G sailor -h /home/sailor sailor
+
 WORKDIR /bancho
 COPY . .
 
 # Byte-compile ahead of time for quicker startup
 RUN python -m compileall -q /opt/venv/lib/python3.14t/site-packages app main.py
+
+RUN mkdir -p /bancho/.data && \
+    chown sailor:sailor /bancho/.data
+
+USER sailor:sailor
 
 STOPSIGNAL SIGINT
 CMD ["python", "main.py"]
