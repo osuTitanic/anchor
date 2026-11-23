@@ -14,6 +14,7 @@ import importlib
 import logging
 import signal
 import app
+import sys
 import os
 
 logging.basicConfig(
@@ -28,6 +29,7 @@ logging.basicConfig(
 def setup():
     app.session.logger.info(ANCHOR_ASCII_ART.removesuffix("\n"))
     app.session.logger.info(f'Running osuTitanic/anchor')
+    app.session.logger.info(f'Python version: {sys.version} (gil={sys._is_gil_enabled()})')
     os.makedirs(config.DATA_PATH, exist_ok=True)
 
     app.session.logger.info('Loading bot...')
